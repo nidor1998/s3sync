@@ -1,0 +1,10 @@
+pub mod canned_acl;
+pub mod checksum_algorithm;
+pub mod human_bytes;
+pub mod metadata;
+pub mod regex;
+pub mod sse;
+pub mod storage_class;
+pub mod storage_path;
+pub mod tagging;
+pub mod url;
