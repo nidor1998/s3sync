@@ -1,0 +1,6 @@
+[default]
+region = us-west-1
+
+[profile aws]
+region = ap-northeast-1
+
