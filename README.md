@@ -1,11 +1,14 @@
 # s3sync
 
+![CI](https://github.com/nidor1998/s3sync/workflows/CI/badge.svg) [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
+[![DeepSource](https://app.deepsource.com/gh/nidor1998/s3sync.svg/?label=active+issues&show_trend=true&token=Q3EjeUmx8Fu-ndXKEG133W-t)](https://app.deepsource.com/gh/nidor1998/s3sync/?ref=repository-badge)
+
 ## Overview
 s3sync is a reliable, very fast, and powerful synchronization tool for S3.  
 It can be used to synchronize local directories with S3 bucket, and also to synchronize S3 to s3 bucket.
 Supports multipart upload, versioning, metadata.
 
-**[AWS SDK for rust](https://github.com/awslabs/aws-sdk-rust) is not production ready yet and is not recommended for production use, so s3sync is also not recommended for production use. Buy any feedback is welcome. I will continue to improve s3sync.**
+**[AWS SDK for rust](https://github.com/awslabs/aws-sdk-rust) is not production ready yet and is not recommended for production use, so s3sync is also not recommended for production use. But any feedback is welcome. I will continue to improve s3sync.**
 
 ## Features
 - Reliable: In-depth end-to-end object integrity check  
