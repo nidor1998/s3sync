@@ -402,9 +402,9 @@ By default, s3sync shows warning and error messages.
 
 Instead of `-v`, you can use `RUST_LOG` environment variable.
 
-#### `--aws-sdk-traing`
-For troubleshooting, s3sync can output the AWS SDK for Rust's training information.  
-Instead of `--aws-sdk-traing`, you can use `RUST_LOG` environment variable.
+#### `--aws-sdk-tracing`
+For troubleshooting, s3sync can output the AWS SDK for Rust's tracing information.  
+Instead of `--aws-sdk-tracing`, you can use `RUST_LOG` environment variable.
 
 #### `--filter-include-regexp`, `--filter-exclude-regexp`  
 You can specify the regular expression to filter the source objects.  
