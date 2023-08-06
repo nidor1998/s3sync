@@ -143,6 +143,8 @@ mod tests {
                 .conf()
                 .credentials_cache()
                 .as_ref()
+                .unwrap()
+                .as_ref()
                 .provide_cached_credentials()
                 .await
                 .unwrap()
@@ -157,6 +159,8 @@ mod tests {
                 .unwrap()
                 .conf()
                 .credentials_cache()
+                .as_ref()
+                .unwrap()
                 .as_ref()
                 .provide_cached_credentials()
                 .await
@@ -195,6 +199,8 @@ mod tests {
                 .conf()
                 .credentials_cache()
                 .as_ref()
+                .unwrap()
+                .as_ref()
                 .provide_cached_credentials()
                 .await
                 .unwrap()
@@ -229,6 +235,8 @@ mod tests {
                 .unwrap()
                 .conf()
                 .credentials_cache()
+                .as_ref()
+                .unwrap()
                 .as_ref()
                 .provide_cached_credentials()
                 .await
@@ -270,6 +278,8 @@ mod tests {
                 .unwrap()
                 .conf()
                 .credentials_cache()
+                .as_ref()
+                .unwrap()
                 .as_ref()
                 .provide_cached_credentials()
                 .await

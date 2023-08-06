@@ -151,7 +151,7 @@ impl ClientConfig {
 
 fn create_no_verify_ssl_http_connector() -> HttpsConnector<HttpConnector> {
     let mut root_store = rustls::RootCertStore::empty();
-    root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+    root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
         rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
             ta.subject,
             ta.spki,
@@ -220,6 +220,8 @@ mod tests {
             .conf()
             .credentials_cache()
             .as_ref()
+            .unwrap()
+            .as_ref()
             .provide_cached_credentials()
             .await
             .unwrap();
@@ -275,6 +277,8 @@ mod tests {
             .conf()
             .credentials_cache()
             .as_ref()
+            .unwrap()
+            .as_ref()
             .provide_cached_credentials()
             .await
             .unwrap();
@@ -318,6 +322,8 @@ mod tests {
         let credentials = client
             .conf()
             .credentials_cache()
+            .as_ref()
+            .unwrap()
             .as_ref()
             .provide_cached_credentials()
             .await
@@ -373,6 +379,8 @@ mod tests {
         let credentials = client
             .conf()
             .credentials_cache()
+            .as_ref()
+            .unwrap()
             .as_ref()
             .provide_cached_credentials()
             .await
@@ -431,6 +439,8 @@ mod tests {
             .conf()
             .credentials_cache()
             .as_ref()
+            .unwrap()
+            .as_ref()
             .provide_cached_credentials()
             .await
             .unwrap();
@@ -463,6 +473,8 @@ mod tests {
         let credentials = client
             .conf()
             .credentials_cache()
+            .as_ref()
+            .unwrap()
             .as_ref()
             .provide_cached_credentials()
             .await
