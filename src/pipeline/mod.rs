@@ -593,7 +593,7 @@ mod tests {
 
     use super::*;
 
-    const WAITING_TIME_MILLIS_FOR_ASYNC_TASK_START: u64 = 100;
+    const WAITING_TIME_MILLIS_FOR_ASYNC_TASK_START: u64 = 500;
     const TEST_SOURCE_OBJECTS_COUNT: usize = 6;
     const TEST_SYNC_OBJECTS_COUNT: usize = 1;
 
