@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "very fast, and powerful synchronization command line tool for S3."
@@ -8,7 +8,7 @@ license = "Apache-2.0"
 rust-version = "1.70"
 repository = "https://github.com/nidor1998/s3sync"
 homepage = "https://github.com/nidor1998/s3sync"
-documentation = "https://github.com/nidor1998/s3sync"
+documentation = "https://docs.rs/s3sync"
 readme = "README.md"
 keywords = ["s3", "sync"]
 categories = ["command-line-utilities", "filesystem"]
@@ -17,13 +17,13 @@ categories = ["command-line-utilities", "filesystem"]
 anyhow = { version = "1.0.71" }
 async-trait = "0.1.68"
 async-channel = "1.8.0"
-aws-config = "0.55.2"
-aws-sdk-s3 = "0.28.0"
-aws-smithy-client = "0.55.3"
-aws-smithy-http = "0.55.3"
-aws-smithy-types = "0.55.3"
-aws-smithy-types-convert = { version = "0.55.3", features = ["convert-chrono"] }
-aws-types = "0.55.3"
+aws-config = "0.56.0"
+aws-sdk-s3 = "0.29.0"
+aws-smithy-client = "0.56.0"
+aws-smithy-http = "0.56.0"
+aws-smithy-types = "0.56.0"
+aws-smithy-types-convert = { version = "0.56.0", features = ["convert-chrono"] }
+aws-types = "0.56.0"
 base64 = "0.21.2"
 byte-unit = "4.0.19"
 bytes = "1.4.0"

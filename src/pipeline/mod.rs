@@ -561,7 +561,7 @@ impl Pipeline {
         self.has_error.load(Ordering::SeqCst)
     }
 
-    fn close_stats_sender(&self) {
+    pub fn close_stats_sender(&self) {
         self.source.get_stats_sender().close();
         self.target.get_stats_sender().close();
     }
@@ -593,7 +593,7 @@ mod tests {
 
     use super::*;
 
-    const WAITING_TIME_MILLIS_FOR_ASYNC_TASK_START: u64 = 100;
+    const WAITING_TIME_MILLIS_FOR_ASYNC_TASK_START: u64 = 500;
     const TEST_SOURCE_OBJECTS_COUNT: usize = 6;
     const TEST_SYNC_OBJECTS_COUNT: usize = 1;
 

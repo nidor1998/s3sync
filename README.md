@@ -10,6 +10,40 @@ Supports multipart upload, versioning, metadata.
 
 **[AWS SDK for rust](https://github.com/awslabs/aws-sdk-rust) is not production ready yet and is not recommended for production use, so s3sync is also not recommended for production use. But any feedback is welcome. I will continue to improve s3sync.**
 
+
+## As a library
+s3sync can be used as a library.
+
+```rust
+use s3sync::config::args::parse_from_args;
+use s3sync::config::Config;
+use s3sync::pipeline::Pipeline;
+use s3sync::types::token::create_pipeline_cancellation_token;
+
+#[tokio::main]
+async fn main() {
+    // You can use all the arguments for s3sync binary here.
+    let args = vec!["program_name", "./src", "s3://test-bucket/src/"];
+
+    // s3sync library converts the arguments to Config.
+    let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+    // Create a cancellation token for the pipeline.
+    // You can use this token to cancel the pipeline.
+    let cancellation_token = create_pipeline_cancellation_token();
+    let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+    // You can close statistics sender to stop statistics collection, if needed.
+    // Statistics collection consumes some Memory, so it is recommended to close it if you don't need it.
+    pipeline.close_stats_sender();
+
+    // Run the pipeline. In this simple example, we run the pipeline synchronously.
+    pipeline.run().await;
+
+    assert!(!pipeline.has_error());
+}
+```
+
 ## Features
 - Reliable: In-depth end-to-end object integrity check  
 s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
