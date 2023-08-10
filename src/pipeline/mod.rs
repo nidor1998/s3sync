@@ -561,7 +561,7 @@ impl Pipeline {
         self.has_error.load(Ordering::SeqCst)
     }
 
-    fn close_stats_sender(&self) {
+    pub fn close_stats_sender(&self) {
         self.source.get_stats_sender().close();
         self.target.get_stats_sender().close();
     }
