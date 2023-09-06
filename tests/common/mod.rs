@@ -66,7 +66,7 @@ pub static SEMAPHORE: Lazy<Arc<Semaphore>> = Lazy::new(|| Arc::new(Semaphore::ne
 
 pub const TOUCH_FILE_SECS_FROM_NOW: i64 = 10;
 pub const SLEEP_SECS_BEFORE_RESYNC: u64 = 5;
-pub const SLEEP_SECS_AFTER_DELETE_BUCKET: u64 = 3;
+pub const SLEEP_SECS_AFTER_DELETE_BUCKET: u64 = 10;
 
 pub const TEST_SSE_C_KEY_1: &str = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=";
 pub const TEST_SSE_C_KEY_1_MD5: &str = "zZ5FnqcIqUjVwvWmyog4zw==";

@@ -196,13 +196,30 @@ impl ObjectSyncer {
     }
 
     async fn sync_object(&self, object: S3syncObject) -> Result<()> {
+        let key = object.key();
+
+        if self.is_incompatible_object_with_local_storage(&object) {
+            self.base
+                .send_stats(SyncSkip {
+                    key: object.key().to_string(),
+                })
+                .await;
+
+            warn!(
+                worker_index = self.worker_index,
+                key = key,
+                size = object.size(),
+                "skip directory name suffix and non zero size object for local storage "
+            );
+
+            return Ok(());
+        }
+
         let head_object_checker = HeadObjectChecker::new(
             self.base.config.clone(),
             dyn_clone::clone_box(&*(*self.base.target.as_ref().unwrap())),
             self.worker_index,
         );
-
-        let key = object.key();
 
         if head_object_checker.is_sync_required(&object).await? {
             return self.sync_or_delete_object(object).await;
@@ -225,6 +242,11 @@ impl ObjectSyncer {
             .await;
 
         Ok(())
+    }
+
+    fn is_incompatible_object_with_local_storage(&self, object: &S3syncObject) -> bool {
+        self.base.target.as_ref().unwrap().is_local_storage()
+            && is_object_with_directory_name_suffix_and_none_zero_size(object)
     }
 
     async fn sync_object_versions(&self, object: S3syncObject) -> Result<()> {
@@ -755,6 +777,10 @@ fn build_tagging(tag_set: &[Tag]) -> Tagging {
     }
 
     tagging_builder.build()
+}
+
+fn is_object_with_directory_name_suffix_and_none_zero_size(object: &S3syncObject) -> bool {
+    object.key().ends_with('/') && object.size() != 0
 }
 
 #[cfg(test)]
@@ -1297,6 +1323,54 @@ mod tests {
             generate_tagging_string(&get_object_tagging_output).unwrap(),
             expected_value
         );
+    }
+    #[test]
+    fn is_object_with_directory_name_suffix_and_size_zero_size_test() {
+        init_dummy_tracing_subscriber();
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test/")
+                .size(1)
+                .last_modified(DateTime::from_secs(0))
+                .build(),
+        );
+        assert!(is_object_with_directory_name_suffix_and_none_zero_size(
+            &object
+        ));
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test/")
+                .size(0)
+                .last_modified(DateTime::from_secs(0))
+                .build(),
+        );
+        assert!(!is_object_with_directory_name_suffix_and_none_zero_size(
+            &object
+        ));
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .size(0)
+                .last_modified(DateTime::from_secs(0))
+                .build(),
+        );
+        assert!(!is_object_with_directory_name_suffix_and_none_zero_size(
+            &object
+        ));
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .size(1)
+                .last_modified(DateTime::from_secs(0))
+                .build(),
+        );
+        assert!(!is_object_with_directory_name_suffix_and_none_zero_size(
+            &object
+        ));
     }
 
     fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError> {
