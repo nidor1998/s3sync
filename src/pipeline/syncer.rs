@@ -998,7 +998,7 @@ mod tests {
         use std::fs;
         use std::os::unix::fs::PermissionsExt;
 
-        if nix::unistd::geteuid().is_root() {
+        if nix::unistd::Uid::effective().is_root() {
             panic!("run tests from root");
         }
 
