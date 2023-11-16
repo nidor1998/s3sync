@@ -12,9 +12,10 @@ use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
+use aws_smithy_http::body::SdkBody;
 use aws_smithy_http::result::SdkError;
 use aws_smithy_types::error::metadata::ProvideErrorMetadata;
-use http::StatusCode;
+use http::{Response, StatusCode};
 use tracing::{error, info, trace, warn};
 
 use crate::pipeline::head_object_checker::HeadObjectChecker;
@@ -633,46 +634,46 @@ impl ObjectSyncer {
 }
 
 fn is_force_retryable_error(e: &Error) -> bool {
-    if let Some(error) = e.downcast_ref::<SdkError<HeadObjectError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<GetObjectError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<GetObjectError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<GetObjectTaggingError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<GetObjectTaggingError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<GetObjectAttributesError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<GetObjectAttributesError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<PutObjectError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<PutObjectError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<PutObjectTaggingError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<PutObjectTaggingError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<DeleteObjectError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<DeleteObjectError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<DeleteObjectTaggingError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<DeleteObjectTaggingError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
-    if let Some(error) = e.downcast_ref::<SdkError<ListObjectVersionsError>>() {
+    if let Some(error) = e.downcast_ref::<SdkError<ListObjectVersionsError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
     false
 }
 
-fn is_force_sdk_retryable_error<E>(e: &SdkError<E>) -> bool {
+fn is_force_sdk_retryable_error<E, R>(e: &SdkError<E, R>) -> bool {
     !matches!(
         e,
         SdkError::ConstructionFailure(_) | SdkError::ServiceError(_)
@@ -680,13 +681,15 @@ fn is_force_sdk_retryable_error<E>(e: &SdkError<E>) -> bool {
 }
 
 fn is_not_found_error(result: &Error) -> bool {
-    if let Some(SdkError::ServiceError(e)) = result.downcast_ref::<SdkError<GetObjectError>>() {
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<GetObjectError, Response<SdkBody>>>()
+    {
         if e.err().is_no_such_key() {
             return true;
         }
     }
     if let Some(SdkError::ServiceError(e)) =
-        result.downcast_ref::<SdkError<GetObjectTaggingError>>()
+        result.downcast_ref::<SdkError<GetObjectTaggingError, Response<SdkBody>>>()
     {
         if e.raw().http().status() == StatusCode::NOT_FOUND {
             return true;
@@ -697,14 +700,16 @@ fn is_not_found_error(result: &Error) -> bool {
 }
 
 fn is_access_denied_error(result: &Error) -> bool {
-    if let Some(SdkError::ServiceError(e)) = result.downcast_ref::<SdkError<GetObjectError>>() {
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<GetObjectError, Response<SdkBody>>>()
+    {
         if let Some(code) = e.err().code() {
             return code == "AccessDenied";
         }
     }
 
     if let Some(SdkError::ServiceError(e)) =
-        result.downcast_ref::<SdkError<GetObjectTaggingError>>()
+        result.downcast_ref::<SdkError<GetObjectTaggingError, Response<SdkBody>>>()
     {
         if let Some(code) = e.err().code() {
             return code == "AccessDenied";

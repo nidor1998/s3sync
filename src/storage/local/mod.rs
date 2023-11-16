@@ -1539,7 +1539,7 @@ mod tests {
         if let Some(SdkError::ServiceError(e)) = head_object_output
             .err()
             .unwrap()
-            .downcast_ref::<SdkError<HeadObjectError>>()
+            .downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>()
         {
             assert!(e.err().is_not_found());
             return;
@@ -1604,7 +1604,7 @@ mod tests {
             head_object_output
                 .err()
                 .unwrap()
-                .downcast_ref::<SdkError<HeadObjectError>>(),
+                .downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>(),
             Some(SdkError::ServiceError(_))
         ) {
             panic!("ServiceError occurred");
