@@ -788,7 +788,6 @@ mod tests {
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
     use aws_sdk_s3::types::Object;
     use aws_smithy_http::body::SdkBody;
-    use aws_smithy_http::result::CreateUnhandledError;
     use aws_smithy_types::DateTime;
     use http::Response;
 
