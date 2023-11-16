@@ -4,7 +4,7 @@ use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
 use aws_config::profile::profile_file::{ProfileFileKind, ProfileFiles};
 use aws_config::retry::RetryConfig;
 use aws_config::ConfigLoader;
-use aws_sdk_s3::config::Builder;
+use aws_sdk_s3::config::{Builder, SharedHttpClient};
 use aws_sdk_s3::Client;
 use aws_types::region::Region;
 use aws_types::SdkConfig;
@@ -15,7 +15,7 @@ use rustls::client::ServerCertVerified;
 use rustls::client::ServerCertVerifier;
 use rustls::ServerName;
 
-use aws_smithy_runtime::client::http::hyper_014::HyperConnector;
+use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
 
 use crate::config::ClientConfig;
 
@@ -37,19 +37,23 @@ impl ServerCertVerifier for NoCertificateVerification {
 
 impl ClientConfig {
     pub async fn create_client(&self) -> Client {
-        let mut config_builder =
+        let config_builder =
             Builder::from(&self.load_sdk_config().await).force_path_style(self.force_path_style);
 
         if self.https_proxy.is_some() || self.http_proxy.is_some() {
-            config_builder.set_http_connector(self.create_proxy());
+            return Client::from_conf(config_builder.http_client(self.create_proxy()).build());
         } else if self.no_verify_ssl {
-            config_builder.set_http_connector(create_no_verify_ssl_connector());
+            return Client::from_conf(
+                config_builder
+                    .http_client(create_no_verify_ssl_connector())
+                    .build(),
+            );
         }
 
         Client::from_conf(config_builder.build())
     }
 
-    fn create_proxy(&self) -> Option<impl Into<HyperConnector>> {
+    fn create_proxy(&self) -> SharedHttpClient {
         let connector = HttpConnector::new();
         let mut proxy_connector = ProxyConnector::new(connector).unwrap();
 
@@ -64,7 +68,7 @@ impl ClientConfig {
             }
         }
 
-        Some(HyperConnector::builder().build(proxy_connector))
+        HyperClientBuilder::new().build(proxy_connector)
     }
 
     async fn load_sdk_config(&self) -> SdkConfig {
@@ -176,13 +180,14 @@ fn create_no_verify_ssl_http_connector() -> HttpsConnector<HttpConnector> {
         .build()
 }
 
-fn create_no_verify_ssl_connector() -> Option<impl Into<HyperConnector>> {
-    Some(HyperConnector::builder().build(create_no_verify_ssl_http_connector()))
+fn create_no_verify_ssl_connector() -> SharedHttpClient {
+    HyperClientBuilder::new().build(create_no_verify_ssl_http_connector())
 }
 
 #[cfg(test)]
 mod tests {
     use crate::types::{AccessKeys, ClientConfigLocation};
+    use aws_sdk_s3::config::ProvideCredentials;
 
     use super::*;
 
@@ -217,20 +222,17 @@ mod tests {
         let client = client_config.create_client().await;
 
         let credentials = client
-            .conf()
-            .credentials_cache()
-            .as_ref()
+            .config()
+            .credentials_provider()
             .unwrap()
-            .as_ref()
-            .provide_cached_credentials()
+            .provide_credentials()
             .await
             .unwrap();
-
         assert_eq!(credentials.access_key_id(), "my_access_key");
         assert_eq!(credentials.secret_access_key(), "my_secret_access_key");
         assert_eq!(credentials.session_token().unwrap(), "my_session_token");
 
-        let retry_config = client.conf().retry_config().unwrap();
+        let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
         assert_eq!(
             retry_config.initial_backoff(),
@@ -238,7 +240,7 @@ mod tests {
         );
 
         assert_eq!(
-            client.conf().region().unwrap().to_string(),
+            client.config().region().unwrap().to_string(),
             "my-region".to_string()
         );
     }
@@ -274,12 +276,10 @@ mod tests {
         let client = client_config.create_client().await;
 
         let credentials = client
-            .conf()
-            .credentials_cache()
-            .as_ref()
+            .config()
+            .credentials_provider()
             .unwrap()
-            .as_ref()
-            .provide_cached_credentials()
+            .provide_credentials()
             .await
             .unwrap();
 
@@ -287,7 +287,7 @@ mod tests {
         assert_eq!(credentials.secret_access_key(), "my_secret_access_key");
         assert_eq!(credentials.session_token().unwrap(), "my_session_token");
 
-        let retry_config = client.conf().retry_config().unwrap();
+        let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
         assert_eq!(
             retry_config.initial_backoff(),
@@ -320,12 +320,10 @@ mod tests {
         let client = client_config.create_client().await;
 
         let credentials = client
-            .conf()
-            .credentials_cache()
-            .as_ref()
+            .config()
+            .credentials_provider()
             .unwrap()
-            .as_ref()
-            .provide_cached_credentials()
+            .provide_credentials()
             .await
             .unwrap();
 
@@ -339,7 +337,7 @@ mod tests {
             "my_aws_profile_session_token"
         );
 
-        let retry_config = client.conf().retry_config().unwrap();
+        let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
         assert_eq!(
             retry_config.initial_backoff(),
@@ -347,7 +345,7 @@ mod tests {
         );
 
         assert_eq!(
-            client.conf().region().unwrap().to_string(),
+            client.config().region().unwrap().to_string(),
             "my-region".to_string()
         );
     }
@@ -377,12 +375,10 @@ mod tests {
         let client = client_config.create_client().await;
 
         let credentials = client
-            .conf()
-            .credentials_cache()
-            .as_ref()
+            .config()
+            .credentials_provider()
             .unwrap()
-            .as_ref()
-            .provide_cached_credentials()
+            .provide_credentials()
             .await
             .unwrap();
 
@@ -396,7 +392,7 @@ mod tests {
             "my_default_profile_session_token"
         );
 
-        let retry_config = client.conf().retry_config().unwrap();
+        let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
         assert_eq!(
             retry_config.initial_backoff(),
@@ -404,7 +400,7 @@ mod tests {
         );
 
         assert_eq!(
-            client.conf().region().unwrap().to_string(),
+            client.config().region().unwrap().to_string(),
             "us-west-1".to_string()
         );
     }
@@ -436,8 +432,8 @@ mod tests {
         let client = client_config.create_client().await;
 
         let _ = client
-            .conf()
-            .credentials_cache()
+            .config()
+            .identity_cache()
             .as_ref()
             .unwrap()
             .as_ref()
@@ -471,12 +467,10 @@ mod tests {
         let client = client_config.create_client().await;
 
         let credentials = client
-            .conf()
-            .credentials_cache()
-            .as_ref()
+            .config()
+            .credentials_provider()
             .unwrap()
-            .as_ref()
-            .provide_cached_credentials()
+            .provide_credentials()
             .await
             .unwrap();
 
@@ -490,7 +484,7 @@ mod tests {
             "my_aws_profile_session_token"
         );
 
-        let retry_config = client.conf().retry_config().unwrap();
+        let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
         assert_eq!(
             retry_config.initial_backoff(),
@@ -498,7 +492,7 @@ mod tests {
         );
 
         assert_eq!(
-            client.conf().region().unwrap().to_string(),
+            client.config().region().unwrap().to_string(),
             "my-region2".to_string()
         );
     }
