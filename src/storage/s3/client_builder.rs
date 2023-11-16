@@ -6,7 +6,6 @@ use aws_config::retry::RetryConfig;
 use aws_config::ConfigLoader;
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::Client;
-use aws_smithy_client::hyper_ext;
 use aws_types::region::Region;
 use aws_types::SdkConfig;
 use hyper::client::HttpConnector;
@@ -15,6 +14,8 @@ use hyper_rustls::HttpsConnector;
 use rustls::client::ServerCertVerified;
 use rustls::client::ServerCertVerifier;
 use rustls::ServerName;
+
+use aws_smithy_runtime::client::http::hyper_014::HyperConnector;
 
 use crate::config::ClientConfig;
 
@@ -48,7 +49,7 @@ impl ClientConfig {
         Client::from_conf(config_builder.build())
     }
 
-    fn create_proxy(&self) -> Option<impl Into<aws_smithy_client::http_connector::HttpConnector>> {
+    fn create_proxy(&self) -> Option<impl Into<HyperConnector>> {
         let connector = HttpConnector::new();
         let mut proxy_connector = ProxyConnector::new(connector).unwrap();
 
@@ -63,7 +64,7 @@ impl ClientConfig {
             }
         }
 
-        Some(aws_smithy_client::hyper_ext::Adapter::builder().build(proxy_connector))
+        Some(HyperConnector::builder().build(proxy_connector))
     }
 
     async fn load_sdk_config(&self) -> SdkConfig {
@@ -175,9 +176,8 @@ fn create_no_verify_ssl_http_connector() -> HttpsConnector<HttpConnector> {
         .build()
 }
 
-fn create_no_verify_ssl_connector(
-) -> Option<impl Into<aws_smithy_client::http_connector::HttpConnector>> {
-    Some(hyper_ext::Adapter::builder().build(create_no_verify_ssl_http_connector()))
+fn create_no_verify_ssl_connector() -> Option<impl Into<HyperConnector>> {
+    Some(HyperConnector::builder().build(create_no_verify_ssl_http_connector()))
 }
 
 #[cfg(test)]
