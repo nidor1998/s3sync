@@ -788,9 +788,9 @@ mod tests {
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
     use aws_sdk_s3::types::Object;
     use aws_smithy_http::body::SdkBody;
-    use aws_smithy_http::operation::Response;
     use aws_smithy_http::result::CreateUnhandledError;
     use aws_smithy_types::DateTime;
+    use http::Response;
 
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
@@ -1373,56 +1373,51 @@ mod tests {
         ));
     }
 
-    fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError> {
+    fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         let head_object_error =
             HeadObjectError::NotFound(aws_sdk_s3::types::error::NotFound::builder().build());
-        let response = Response::new(
-            http::Response::builder()
-                .status(404)
-                .body(SdkBody::from(r#""#))
-                .unwrap(),
-        );
+        let response = http::Response::builder()
+            .status(404)
+            .body(SdkBody::from(r#""#))
+            .unwrap();
 
         SdkError::service_error(head_object_error, response)
     }
 
-    fn build_get_object_tagging_not_found_error() -> SdkError<GetObjectTaggingError> {
+    fn build_get_object_tagging_not_found_error(
+    ) -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
         let unhandled_error =
             GetObjectTaggingError::create_unhandled_error(anyhow!("Not found").into(), None);
 
-        let response = Response::new(
-            http::Response::builder()
-                .status(404)
-                .body(SdkBody::from(r#""#))
-                .unwrap(),
-        );
+        let response = http::Response::builder()
+            .status(404)
+            .body(SdkBody::from(r#""#))
+            .unwrap();
 
         SdkError::service_error(unhandled_error, response)
     }
 
-    fn build_head_object_construction_error() -> SdkError<HeadObjectError> {
+    fn build_head_object_construction_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         SdkError::construction_failure("construction_failure")
     }
 
-    fn build_head_object_timeout_error() -> SdkError<HeadObjectError> {
+    fn build_head_object_timeout_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_get_object_no_such_key_error() -> SdkError<GetObjectError> {
+    fn build_get_object_no_such_key_error() -> SdkError<GetObjectError, Response<SdkBody>> {
         let get_object_error = GetObjectError::NoSuchKey(
             aws_sdk_s3::types::error::builders::NoSuchKeyBuilder::default().build(),
         );
-        let response = Response::new(
-            http::Response::builder()
-                .status(404)
-                .body(SdkBody::from(r#""#))
-                .unwrap(),
-        );
+        let response = http::Response::builder()
+            .status(404)
+            .body(SdkBody::from(r#""#))
+            .unwrap();
 
         SdkError::service_error(get_object_error, response)
     }
 
-    fn build_get_object_access_denied_error() -> SdkError<GetObjectError> {
+    fn build_get_object_access_denied_error() -> SdkError<GetObjectError, Response<SdkBody>> {
         let unhandled_error = GetObjectError::create_unhandled_error(
             anyhow!("Access Denied").into(),
             Some(
@@ -1432,17 +1427,16 @@ mod tests {
             ),
         );
 
-        let response = Response::new(
-            http::Response::builder()
-                .status(403)
-                .body(SdkBody::from(r#""#))
-                .unwrap(),
-        );
+        let response = http::Response::builder()
+            .status(403)
+            .body(SdkBody::from(r#""#))
+            .unwrap();
 
         SdkError::service_error(unhandled_error, response)
     }
 
-    fn build_get_object_tagging_access_denied_error() -> SdkError<GetObjectTaggingError> {
+    fn build_get_object_tagging_access_denied_error(
+    ) -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
         let unhandled_error = GetObjectTaggingError::create_unhandled_error(
             anyhow!("Access Denied").into(),
             Some(
@@ -1452,53 +1446,56 @@ mod tests {
             ),
         );
 
-        let response = Response::new(
-            http::Response::builder()
-                .status(403)
-                .body(SdkBody::from(r#""#))
-                .unwrap(),
-        );
+        let response = http::Response::builder()
+            .status(403)
+            .body(SdkBody::from(r#""#))
+            .unwrap();
 
         SdkError::service_error(unhandled_error, response)
     }
 
-    fn build_get_object_construction_error() -> SdkError<GetObjectError> {
+    fn build_get_object_construction_error() -> SdkError<GetObjectError, Response<SdkBody>> {
         SdkError::construction_failure("construction_failure")
     }
 
-    fn build_get_object_timeout_error() -> SdkError<GetObjectError> {
+    fn build_get_object_timeout_error() -> SdkError<GetObjectError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_put_object_construction_error() -> SdkError<PutObjectError> {
+    fn build_put_object_construction_error() -> SdkError<PutObjectError, Response<SdkBody>> {
         SdkError::construction_failure("construction_failure")
     }
 
-    fn build_put_object_timeout_error() -> SdkError<PutObjectError> {
+    fn build_put_object_timeout_error() -> SdkError<PutObjectError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_get_object_tagging_timeout_error() -> SdkError<GetObjectTaggingError> {
+    fn build_get_object_tagging_timeout_error() -> SdkError<GetObjectTaggingError, Response<SdkBody>>
+    {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_put_object_tagging_timeout_error() -> SdkError<PutObjectTaggingError> {
+    fn build_put_object_tagging_timeout_error() -> SdkError<PutObjectTaggingError, Response<SdkBody>>
+    {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_delete_object_tagging_timeout_error() -> SdkError<DeleteObjectTaggingError> {
+    fn build_delete_object_tagging_timeout_error(
+    ) -> SdkError<DeleteObjectTaggingError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_get_object_attributes_timeout_error() -> SdkError<GetObjectAttributesError> {
+    fn build_get_object_attributes_timeout_error(
+    ) -> SdkError<GetObjectAttributesError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_delete_object_timeout_error() -> SdkError<DeleteObjectError> {
+    fn build_delete_object_timeout_error() -> SdkError<DeleteObjectError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_list_object_versions_timeout_error() -> SdkError<ListObjectVersionsError> {
+    fn build_list_object_versions_timeout_error(
+    ) -> SdkError<ListObjectVersionsError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 

@@ -22,10 +22,10 @@ use aws_sdk_s3::types::{
 use aws_sdk_s3::Client;
 use aws_smithy_http::body::SdkBody;
 use aws_smithy_http::byte_stream::ByteStream;
-use aws_smithy_http::operation::Response;
 use aws_smithy_http::result::SdkError;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
+use http::Response;
 use leaky_bucket::RateLimiter;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
@@ -822,15 +822,13 @@ fn build_object_from_dir_entry(
         .build()
 }
 
-fn build_not_found_response() -> (HeadObjectError, Response) {
+fn build_not_found_response() -> (HeadObjectError, Response<SdkBody>) {
     let head_object_error =
         HeadObjectError::NotFound(aws_sdk_s3::types::error::NotFound::builder().build());
-    let response = Response::new(
-        http::Response::builder()
-            .status(404)
-            .body(SdkBody::from(r#""#))
-            .unwrap(),
-    );
+    let response = http::Response::builder()
+        .status(404)
+        .body(SdkBody::from(r#""#))
+        .unwrap();
     (head_object_error, response)
 }
 

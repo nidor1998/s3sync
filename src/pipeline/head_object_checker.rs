@@ -184,8 +184,8 @@ mod tests {
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::types::Object;
     use aws_smithy_http::body::SdkBody;
-    use aws_smithy_http::operation::Response;
     use aws_smithy_types::DateTime;
+    use http::Response;
 
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
@@ -363,20 +363,18 @@ mod tests {
             .unwrap());
     }
 
-    fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError> {
+    fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         let not_found = aws_sdk_s3::types::error::NotFound::builder().build();
         let head_object_error = HeadObjectError::NotFound(not_found);
-        let response = Response::new(
-            http::Response::builder()
-                .status(404)
-                .body(SdkBody::from(r#""#))
-                .unwrap(),
-        );
+        let response = http::Response::builder()
+            .status(404)
+            .body(SdkBody::from(r#""#))
+            .unwrap();
 
         SdkError::service_error(head_object_error, response)
     }
 
-    fn build_head_object_timeout_error() -> SdkError<HeadObjectError> {
+    fn build_head_object_timeout_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
