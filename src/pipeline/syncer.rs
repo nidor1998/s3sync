@@ -22,9 +22,9 @@ use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
 use crate::storage::e_tag_verify;
 use crate::types;
+use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey};
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
-use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey};
 
 use super::stage::Stage;
 
@@ -367,18 +367,18 @@ impl ObjectSyncer {
             .get_object_tagging(key, None)
             .await?;
 
-        let source_tagging_map = tag_set_to_map(source_tagging.tag_set().unwrap());
-        let target_tagging_map = tag_set_to_map(target_tagging.tag_set().unwrap());
+        let source_tagging_map = tag_set_to_map(source_tagging.tag_set());
+        let target_tagging_map = tag_set_to_map(target_tagging.tag_set());
 
         if source_tagging_map != target_tagging_map {
             trace!(
                 worker_index = self.worker_index,
                 key = key,
                 "new tagging = {:?}.",
-                source_tagging.tag_set().as_ref().unwrap()
+                source_tagging.tag_set().as_ref()
             );
 
-            if source_tagging.tag_set().as_ref().unwrap().is_empty() {
+            if source_tagging.tag_set().as_ref().is_empty() {
                 self.base
                     .target
                     .as_ref()
@@ -390,7 +390,7 @@ impl ObjectSyncer {
                     .target
                     .as_ref()
                     .unwrap()
-                    .put_object_tagging(key, None, build_tagging(source_tagging.tag_set().unwrap()))
+                    .put_object_tagging(key, None, build_tagging(source_tagging.tag_set()))
                     .await?;
             }
 
@@ -755,16 +755,11 @@ fn generate_tagging_string(
     }
 
     let mut tags_key_value_string = "".to_string();
-    for tag in get_object_tagging_output
-        .clone()
-        .unwrap()
-        .tag_set()
-        .unwrap()
-    {
+    for tag in get_object_tagging_output.clone().unwrap().tag_set() {
         let tag_string = format!(
             "{}={}",
-            urlencoding::encode(tag.key().unwrap()),
-            urlencoding::encode(tag.value().unwrap()),
+            urlencoding::encode(tag.key()),
+            urlencoding::encode(tag.value()),
         );
         if !tags_key_value_string.is_empty() {
             tags_key_value_string = tags_key_value_string.add("&");
@@ -796,11 +791,11 @@ mod tests {
     use aws_smithy_types::DateTime;
     use http::Response;
 
+    use crate::Config;
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
     use crate::storage::StoragePair;
     use crate::types::token::create_pipeline_cancellation_token;
-    use crate::Config;
 
     use super::*;
 
@@ -1271,7 +1266,7 @@ mod tests {
         ];
 
         let tagging = build_tagging(&tags);
-        assert_eq!(tagging.tag_set().unwrap().len(), 2);
+        assert_eq!(tagging.tag_set().len(), 2);
     }
 
     #[test]
