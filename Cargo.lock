@@ -364,12 +364,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aws-smithy-client"
-version = "0.57.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09955c867db74999fbc60d1a544b4606832807c0e4e0cce1274b97a6b1990878"
-
-[[package]]
 name = "aws-smithy-eventstream"
 version = "0.57.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2041,8 +2035,8 @@ dependencies = [
  "async-trait",
  "aws-config",
  "aws-sdk-s3",
- "aws-smithy-client",
  "aws-smithy-http",
+ "aws-smithy-runtime",
  "aws-smithy-types",
  "aws-smithy-types-convert",
  "aws-types",
