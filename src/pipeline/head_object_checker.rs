@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
+use aws_smithy_http::body::SdkBody;
 use aws_smithy_http::result::SdkError;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
+use http::Response;
 use tracing::{debug, warn};
 
 use crate::storage::Storage;
@@ -170,7 +172,9 @@ fn check_target_local_storage_allow_overwrite(
 }
 
 fn is_head_object_not_found_error(result: &anyhow::Error) -> bool {
-    if let Some(SdkError::ServiceError(e)) = result.downcast_ref::<SdkError<HeadObjectError>>() {
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>()
+    {
         if e.err().is_not_found() {
             return true;
         }
