@@ -22,9 +22,9 @@ use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
 use crate::storage::e_tag_verify;
 use crate::types;
-use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey};
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
+use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey};
 
 use super::stage::Stage;
 
@@ -691,7 +691,7 @@ fn is_not_found_error(result: &Error) -> bool {
     if let Some(SdkError::ServiceError(e)) =
         result.downcast_ref::<SdkError<GetObjectTaggingError, Response<SdkBody>>>()
     {
-        if e.raw().http().status() == StatusCode::NOT_FOUND {
+        if e.raw().status() == StatusCode::NOT_FOUND {
             return true;
         }
     }
@@ -738,10 +738,7 @@ fn is_cancelled_error(e: &Error) -> bool {
 fn tag_set_to_map(tag_set: &[Tag]) -> HashMap<String, String> {
     let mut map = HashMap::<_, _>::new();
     for tag in tag_set {
-        map.insert(
-            tag.key().as_ref().unwrap().to_string(),
-            tag.value().as_ref().unwrap().to_string(),
-        );
+        map.insert(tag.key().to_string(), tag.value().to_string());
     }
 
     map
@@ -776,7 +773,7 @@ fn build_tagging(tag_set: &[Tag]) -> Tagging {
         tagging_builder = tagging_builder.tag_set(tag.clone());
     }
 
-    tagging_builder.build()
+    tagging_builder.build().unwrap()
 }
 
 fn is_object_with_directory_name_suffix_and_none_zero_size(object: &S3syncObject) -> bool {
@@ -787,15 +784,16 @@ fn is_object_with_directory_name_suffix_and_none_zero_size(object: &S3syncObject
 mod tests {
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
     use aws_sdk_s3::types::Object;
+    use aws_smithy_runtime_api::client::result::CreateUnhandledErro;
     use aws_smithy_http::body::SdkBody;
     use aws_smithy_types::DateTime;
     use http::Response;
 
-    use crate::Config;
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
     use crate::storage::StoragePair;
     use crate::types::token::create_pipeline_cancellation_token;
+    use crate::Config;
 
     use super::*;
 
@@ -1258,11 +1256,13 @@ mod tests {
             Tag::builder()
                 .key("key1".to_string())
                 .value("value1".to_string())
-                .build(),
+                .build()
+                .unwrap(),
             Tag::builder()
                 .key("key2".to_string())
                 .value("value2".to_string())
-                .build(),
+                .build()
+                .unwrap(),
         ];
 
         let tagging = build_tagging(&tags);
@@ -1277,11 +1277,13 @@ mod tests {
             Tag::builder()
                 .key("key1".to_string())
                 .value("value1".to_string())
-                .build(),
+                .build()
+                .unwrap(),
             Tag::builder()
                 .key("key2".to_string())
                 .value("value2".to_string())
-                .build(),
+                .build()
+                .unwrap(),
         ];
 
         let tag_map = tag_set_to_map(&tags);
@@ -1306,15 +1308,18 @@ mod tests {
                     Tag::builder()
                         .key("somekey1".to_string())
                         .value("somevalue1".to_string())
-                        .build(),
+                        .build()
+                        .unwrap(),
                 )
                 .tag_set(
                     Tag::builder()
                         .key("test!_key".to_string())
                         .value("あいうえお".to_string())
-                        .build(),
+                        .build()
+                        .unwrap(),
                 )
-                .build(),
+                .build()
+                .unwrap(),
         );
         let expected_value =
             "somekey1=somevalue1&test%21_key=%E3%81%82%E3%81%84%E3%81%86%E3%81%88%E3%81%8A";
