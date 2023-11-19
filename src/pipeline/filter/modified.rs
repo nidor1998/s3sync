@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use aws_smithy_types::DateTime;
+use aws_sdk_s3::primitives::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
@@ -68,12 +68,16 @@ fn filter_last_modified(
     let modified =
         is_source_last_modified_date_newer(source_last_modified_date, target_last_modified_date);
     if !modified {
-        let source_last_modified = DateTime::to_chrono_utc(source_last_modified_date)
-            .unwrap()
-            .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(target_last_modified_date)
-            .unwrap()
-            .to_rfc3339();
+        let source_last_modified =
+            aws_smithy_types::DateTime::from_millis(source_last_modified_date.to_millis().unwrap())
+                .to_chrono_utc()
+                .unwrap()
+                .to_rfc3339();
+        let target_last_modified =
+            aws_smithy_types::DateTime::from_millis(target_last_modified_date.to_millis().unwrap())
+                .to_chrono_utc()
+                .unwrap()
+                .to_rfc3339();
 
         debug!(
             name = FILTER_NAME,
@@ -139,8 +143,8 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
+    use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use aws_smithy_types::DateTime;
 
     use crate::config::FilterConfig;
     use crate::types::{ObjectEntry, S3syncObject};

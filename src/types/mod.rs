@@ -97,8 +97,8 @@ impl S3syncObject {
 
     pub fn size(&self) -> i64 {
         match &self {
-            Self::Versioning(object) => object.size(),
-            Self::NotVersioning(object) => object.size(),
+            Self::Versioning(object) => object.size().unwrap(),
+            Self::NotVersioning(object) => object.size().unwrap(),
             _ => panic!("doesn't have size."),
         }
     }
@@ -113,16 +113,28 @@ impl S3syncObject {
 
     pub fn checksum_algorithm(&self) -> Option<&[ChecksumAlgorithm]> {
         match &self {
-            Self::Versioning(object) => object.checksum_algorithm(),
-            Self::NotVersioning(object) => object.checksum_algorithm(),
+            Self::Versioning(object) => {
+                if object.checksum_algorithm().is_empty() {
+                    None
+                } else {
+                    Some(object.checksum_algorithm())
+                }
+            }
+            Self::NotVersioning(object) => {
+                if object.checksum_algorithm().is_empty() {
+                    None
+                } else {
+                    Some(object.checksum_algorithm())
+                }
+            }
             _ => panic!("doesn't have checksum_algorithm."),
         }
     }
 
     pub fn is_latest(&self) -> bool {
         match &self {
-            Self::Versioning(object) => object.is_latest(),
-            Self::DeleteMarker(maker) => maker.is_latest(),
+            Self::Versioning(object) => object.is_latest().unwrap(),
+            Self::DeleteMarker(maker) => maker.is_latest().unwrap(),
             _ => panic!("doesn't have is_latest."),
         }
     }
@@ -149,7 +161,7 @@ impl S3syncObject {
             DeleteMarkerEntry::builder()
                 .key(key)
                 .version_id(delete_marker.version_id().unwrap().to_string())
-                .is_latest(delete_marker.is_latest())
+                .is_latest(delete_marker.is_latest().unwrap())
                 .set_last_modified(delete_marker.last_modified().cloned())
                 .set_owner(delete_marker.owner().cloned())
                 .build(),
@@ -165,34 +177,44 @@ pub fn sha1_digest_from_key(key: &str) -> Sha1Digest {
 pub fn clone_object_with_key(object: &Object, key: &str) -> Object {
     Object::builder()
         .key(key)
-        .size(object.size())
+        .size(object.size().unwrap())
         .set_last_modified(object.last_modified().cloned())
         .set_e_tag(object.e_tag().map(|e_tag| e_tag.to_string()))
         .set_owner(object.owner().cloned())
         .set_storage_class(object.storage_class().cloned())
-        .set_checksum_algorithm(
+        .set_checksum_algorithm(Some(
             object
                 .checksum_algorithm()
-                .map(|checksum_algorithm| checksum_algorithm.to_owned()),
-        )
+                .iter()
+                .map(|checksum_algorithm| checksum_algorithm.to_owned())
+                .collect(),
+        ))
         .build()
 }
 
 pub fn clone_object_version_with_key(object: &ObjectVersion, key: &str) -> ObjectVersion {
+    let checksum_algorithm = if object.checksum_algorithm().is_empty() {
+        None
+    } else {
+        Some(
+            object
+                .checksum_algorithm()
+                .iter()
+                .map(|checksum_algorithm| checksum_algorithm.to_owned())
+                .collect(),
+        )
+    };
+
     ObjectVersion::builder()
         .key(key)
         .version_id(object.version_id().unwrap().to_string())
-        .is_latest(object.is_latest())
-        .size(object.size())
+        .is_latest(object.is_latest().unwrap())
+        .size(object.size().unwrap())
         .set_last_modified(object.last_modified().cloned())
         .set_e_tag(object.e_tag().map(|e_tag| e_tag.to_string()))
         .set_owner(object.owner().cloned())
         .set_storage_class(object.storage_class().cloned())
-        .set_checksum_algorithm(
-            object
-                .checksum_algorithm()
-                .map(|checksum_algorithm| checksum_algorithm.to_owned()),
-        )
+        .set_checksum_algorithm(checksum_algorithm)
         .build()
 }
 

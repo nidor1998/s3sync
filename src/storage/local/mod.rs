@@ -16,6 +16,7 @@ use aws_sdk_s3::operation::head_object::builders::HeadObjectOutputBuilder;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
+use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, Tagging,
 };
@@ -23,7 +24,6 @@ use aws_sdk_s3::Client;
 use aws_smithy_http::body::SdkBody;
 use aws_smithy_http::byte_stream::ByteStream;
 use aws_smithy_http::result::SdkError;
-use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use http::Response;
 use leaky_bucket::RateLimiter;
@@ -443,7 +443,7 @@ impl StorageTrait for LocalStorage {
     ) -> Result<PutObjectOutput> {
         let source_sse = get_object_output.server_side_encryption().cloned();
         let source_e_tag = get_object_output.e_tag().map(|e_tag| e_tag.to_string());
-        let source_content_length = get_object_output.content_length() as u64;
+        let source_content_length = get_object_output.content_length().unwrap() as u64;
         let source_final_checksum = if let Some(object_checksum) = object_checksum.as_ref() {
             object_checksum.final_checksum.clone()
         } else {
@@ -455,12 +455,16 @@ impl StorageTrait for LocalStorage {
             None
         };
 
-        let source_last_modified = get_object_output
-            .last_modified()
-            .unwrap()
-            .to_chrono_utc()
-            .unwrap()
-            .to_rfc3339();
+        let source_last_modified = aws_smithy_types::DateTime::from_millis(
+            get_object_output
+                .last_modified
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        )
+        .to_chrono_utc()
+        .unwrap()
+        .to_rfc3339();
 
         if fs_util::check_directory_traversal(key) {
             return Err(anyhow!(S3syncError::DirectoryTraversalError));
@@ -568,7 +572,7 @@ impl StorageTrait for LocalStorage {
                 Some(
                     generate_e_tag_hash_from_path_with_auto_chunksize(
                         &real_path,
-                        parts.iter().map(|part| part.size()).collect(),
+                        parts.iter().map(|part| part.size().unwrap()).collect(),
                     )
                     .await?,
                 )
@@ -673,7 +677,10 @@ impl StorageTrait for LocalStorage {
             );
 
             let parts = if let Some(parts) = object_parts.as_ref() {
-                parts.iter().map(|part| part.size()).collect::<Vec<i64>>()
+                parts
+                    .iter()
+                    .map(|part| part.size().unwrap())
+                    .collect::<Vec<i64>>()
             } else {
                 vec![source_content_length as i64]
             };
@@ -924,9 +931,9 @@ mod tests {
         let object = build_object_from_dir_entry(&entry, "test_data/5byte.dat", None);
 
         assert_eq!(object.key().unwrap(), "test_data/5byte.dat");
-        assert_eq!(object.size(), TEST_DATA_SIZE as i64);
+        assert_eq!(object.size().unwrap(), TEST_DATA_SIZE as i64);
         assert!(object.last_modified().is_some());
-        assert!(object.checksum_algorithm().is_none());
+        assert!(object.checksum_algorithm().is_empty());
     }
 
     #[test]
@@ -941,13 +948,10 @@ mod tests {
             Some(ChecksumAlgorithm::Sha256),
         );
         assert_eq!(object.key().unwrap(), "test_data/5byte.dat");
-        assert_eq!(object.size(), TEST_DATA_SIZE as i64);
+        assert_eq!(object.size().unwrap(), TEST_DATA_SIZE as i64);
         assert!(object.last_modified().is_some());
-        assert_eq!(object.checksum_algorithm().as_ref().unwrap().len(), 1);
-        assert_eq!(
-            object.checksum_algorithm().unwrap()[0],
-            ChecksumAlgorithm::Sha256
-        );
+        assert_eq!(object.checksum_algorithm().as_ref().len(), 1);
+        assert_eq!(object.checksum_algorithm()[0], ChecksumAlgorithm::Sha256);
     }
 
     #[tokio::test]
@@ -1494,7 +1498,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(head_object_output.content_length(), 6);
+        assert_eq!(head_object_output.content_length().unwrap(), 6);
         assert!(head_object_output.last_modified().is_some());
     }
 

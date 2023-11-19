@@ -484,6 +484,7 @@ dependencies = [
  "fastrand",
  "http 0.2.11",
  "http-body",
+ "hyper",
  "once_cell",
  "pin-project-lite",
  "pin-utils",

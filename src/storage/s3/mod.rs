@@ -6,6 +6,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use async_channel::Sender;
 use async_trait::async_trait;
+use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
@@ -19,7 +20,6 @@ use aws_sdk_s3::types::{
     ObjectVersion, Tagging,
 };
 use aws_sdk_s3::Client;
-use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
 use tracing::{debug, info, trace};
@@ -118,7 +118,7 @@ impl S3Storage {
         s3sync_object_map: &mut HashMap<String, Vec<S3syncObject>>,
     ) {
         for delete_marker in delete_marker_entries {
-            if !delete_marker.is_latest() {
+            if !delete_marker.is_latest().unwrap() {
                 continue;
             }
 
@@ -322,7 +322,7 @@ impl StorageTrait for S3Storage {
                 .await
                 .context("aws_sdk_s3::client::list_objects_v2() failed.")?;
 
-            for object in list_objects_output.contents().unwrap_or_default() {
+            for object in list_objects_output.contents() {
                 let key_without_prefix = remove_s3_prefix(object.key().unwrap(), &self.prefix);
                 if key_without_prefix.is_empty() {
                     self.send_stats(SyncSkip {
@@ -348,7 +348,7 @@ impl StorageTrait for S3Storage {
                 }
             }
 
-            if !list_objects_output.is_truncated() {
+            if !list_objects_output.is_truncated().unwrap() {
                 break;
             }
 
@@ -399,21 +399,19 @@ impl StorageTrait for S3Storage {
                 .context("aws_sdk_s3::client::list_object_versions() failed.")?;
 
             self.aggregate_delete_markers(
-                list_object_versions_output
-                    .delete_markers()
-                    .unwrap_or_default(),
+                list_object_versions_output.delete_markers(),
                 &mut s3sync_versioning_map,
             )
             .await;
 
             self.aggregate_object_versions_and_send(
                 sender,
-                list_object_versions_output.versions().unwrap_or_default(),
+                list_object_versions_output.versions(),
                 &mut s3sync_versioning_map,
             )
             .await?;
 
-            if !list_object_versions_output.is_truncated() {
+            if !list_object_versions_output.is_truncated().unwrap() {
                 break;
             }
 
@@ -508,7 +506,6 @@ impl StorageTrait for S3Storage {
             object_versions.append(
                 &mut list_object_versions_output
                     .versions()
-                    .unwrap_or_default()
                     .iter()
                     .cloned()
                     .filter(|object| object.key().unwrap() == key)
@@ -516,7 +513,7 @@ impl StorageTrait for S3Storage {
                     .collect(),
             );
 
-            if !list_object_versions_output.is_truncated() {
+            if !list_object_versions_output.is_truncated().unwrap() {
                 break;
             }
 
@@ -605,14 +602,14 @@ impl StorageTrait for S3Storage {
 
         let mut object_parts = vec![];
 
-        let parts_count = object.parts_count();
+        let parts_count = object.parts_count().unwrap();
         if parts_count == 0 {
             return Ok(vec![]);
         }
 
         object_parts.push(
             ObjectPartBuilder::default()
-                .size(object.content_length())
+                .size(object.content_length().unwrap())
                 .build(),
         );
 
@@ -635,7 +632,7 @@ impl StorageTrait for S3Storage {
 
             object_parts.push(
                 ObjectPartBuilder::default()
-                    .size(object.content_length())
+                    .size(object.content_length().unwrap())
                     .build(),
             );
         }
@@ -677,11 +674,11 @@ impl StorageTrait for S3Storage {
                 return Ok(vec![]);
             }
 
-            for part in object.object_parts().unwrap().parts().unwrap() {
+            for part in object.object_parts().unwrap().parts() {
                 object_parts.push(part.clone());
             }
 
-            if !object.object_parts().unwrap().is_truncated() {
+            if !object.object_parts().unwrap().is_truncated().unwrap() {
                 break;
             }
 
@@ -707,12 +704,16 @@ impl StorageTrait for S3Storage {
             version_id = source_version_id.to_string();
         }
         let target_key = generate_full_key(&self.prefix, key);
-        let source_last_modified = get_object_output
-            .last_modified()
-            .unwrap()
-            .to_chrono_utc()
-            .unwrap()
-            .to_rfc3339();
+        let source_last_modified = aws_smithy_types::DateTime::from_millis(
+            get_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        )
+        .to_chrono_utc()
+        .unwrap()
+        .to_rfc3339();
 
         if self.config.dry_run {
             // In a dry run, content-range is set.
