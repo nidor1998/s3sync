@@ -14,14 +14,12 @@ use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
+use aws_sdk_s3::primitives::ByteStream;
+use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
     BucketLocationConstraint, BucketVersioningStatus, CreateBucketConfiguration, Object,
     ObjectVersion, Tag, Tagging, VersioningConfiguration,
 };
-use aws_smithy_http::byte_stream::ByteStream;
-use aws_smithy_types::date_time::Format;
-use aws_smithy_types::error::metadata::ProvideErrorMetadata;
-use aws_smithy_types::DateTime;
 use aws_types::SdkConfig;
 use filetime::{set_file_mtime, FileTime};
 use once_cell::sync::Lazy;
@@ -106,8 +104,9 @@ impl TestHelper {
     }
 
     async fn load_sdk_config() -> SdkConfig {
-        let config_loader = Self::load_config_credential(aws_config::defaults(BehaviorVersion::latest()))
-            .region(Self::build_provider_region());
+        let config_loader =
+            Self::load_config_credential(aws_config::defaults(BehaviorVersion::latest()))
+                .region(Self::build_provider_region());
 
         config_loader.load().await
     }
@@ -166,7 +165,7 @@ impl TestHelper {
 
         if let Err(e) = get_bucket_versioning_result {
             let service_error = e.into_service_error();
-            if let Some(code) = service_error.code() {
+            if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
                 panic!("S3 API error has occurred.")
@@ -211,7 +210,7 @@ impl TestHelper {
 
         if let Err(e) = result {
             let service_error = e.into_service_error();
-            if let Some(code) = service_error.code() {
+            if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
                 panic!("S3 API error has occurred.")
@@ -231,7 +230,7 @@ impl TestHelper {
             .await
             .unwrap();
 
-        list_objects_output.contents().unwrap_or_default().to_vec()
+        list_objects_output.contents().to_vec()
     }
 
     pub async fn list_object_versions(&self, bucket: &str, prefix: &str) -> Vec<ObjectVersion> {
@@ -244,10 +243,7 @@ impl TestHelper {
             .await
             .unwrap();
 
-        list_object_versions_output
-            .versions()
-            .unwrap_or_default()
-            .to_vec()
+        list_object_versions_output.versions().to_vec()
     }
 
     pub async fn head_object(
@@ -346,7 +342,7 @@ impl TestHelper {
             .content_language(TEST_CONTENT_LANGUAGE)
             .content_type(TEST_CONTENT_TYPE)
             .set_metadata(Some(TEST_METADATA.clone()))
-            .expires(DateTime::from_str(TEST_EXPIRES, Format::DateTime).unwrap())
+            .expires(DateTime::from_str(TEST_EXPIRES, DateTimeFormat::DateTime).unwrap())
             .tagging(TEST_TAGGING)
             .body(stream)
             .send()
@@ -431,7 +427,7 @@ impl TestHelper {
 
         if let Err(e) = list_object_versions_output_result {
             let service_error = e.into_service_error();
-            if let Some(code) = service_error.code() {
+            if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
                 println!("{:?}", service_error);
@@ -445,7 +441,6 @@ impl TestHelper {
             .as_ref()
             .unwrap()
             .versions()
-            .unwrap_or_default()
         {
             self.delete_object(
                 bucket,
@@ -459,7 +454,6 @@ impl TestHelper {
             .as_ref()
             .unwrap()
             .delete_markers()
-            .unwrap_or_default()
         {
             self.delete_object(
                 bucket,
@@ -478,11 +472,7 @@ impl TestHelper {
             return;
         }
 
-        for object in list_objects_output_result
-            .unwrap()
-            .contents()
-            .unwrap_or_default()
-        {
+        for object in list_objects_output_result.unwrap().contents() {
             self.delete_object(bucket, object.key().unwrap(), None)
                 .await;
         }
@@ -530,14 +520,14 @@ impl TestHelper {
         );
         assert_eq!(
             head_object_output.expires().unwrap(),
-            &DateTime::from_str(TEST_EXPIRES, Format::DateTime).unwrap()
+            &DateTime::from_str(TEST_EXPIRES, DateTimeFormat::DateTime).unwrap()
         );
 
         let get_object_tagging_output = self
             .get_object_tagging(bucket, key, version_id.clone())
             .await;
 
-        let tag_set = get_object_tagging_output.tag_set().unwrap();
+        let tag_set = get_object_tagging_output.tag_set();
         let tag_map = TestHelper::tag_set_to_map(tag_set);
         let expected_tag_map = HashMap::from([
             ("tag1".to_string(), "tag_value1".to_string()),
@@ -997,10 +987,7 @@ impl TestHelper {
     pub fn tag_set_to_map(tag_set: &[Tag]) -> HashMap<String, String> {
         let mut map = HashMap::<_, _>::new();
         for tag in tag_set {
-            map.insert(
-                tag.key().as_ref().unwrap().to_string(),
-                tag.value().as_ref().unwrap().to_string(),
-            );
+            map.insert(tag.key().to_string(), tag.value().to_string());
         }
 
         map
