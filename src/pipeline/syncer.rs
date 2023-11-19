@@ -12,8 +12,8 @@ use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
-use aws_smithy_http::body::SdkBody;
-use aws_smithy_http::result::SdkError;
+use aws_smithy_runtime_api::client::result::SdkError;
+use aws_smithy_types::body::SdkBody;
 use http::{Response, StatusCode};
 use tracing::{error, info, trace, warn};
 
@@ -784,7 +784,6 @@ mod tests {
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use aws_smithy_http::body::SdkBody;
     use http::Response;
 
     use crate::config::args::parse_from_args;
