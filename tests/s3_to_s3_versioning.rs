@@ -5,15 +5,17 @@ mod common;
 #[cfg(test)]
 #[cfg(feature = "e2e_test")]
 mod tests {
+    use std::collections::HashMap;
+
     use aws_sdk_s3::types::{ServerSideEncryption, Tag, Tagging};
+
+    use common::*;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
     use s3sync::Config;
-    use std::collections::HashMap;
 
     use super::*;
-    use common::*;
 
     #[tokio::test]
     async fn s3_to_s3_both_bucket_versioning_error() {

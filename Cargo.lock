@@ -140,7 +140,7 @@ dependencies = [
  "aws-smithy-async 0.101.0",
  "aws-smithy-http 0.59.0",
  "aws-smithy-json",
- "aws-smithy-runtime 0.101.0",
+ "aws-smithy-runtime",
  "aws-smithy-runtime-api 0.101.0",
  "aws-smithy-types 0.101.0",
  "aws-types",
@@ -221,7 +221,7 @@ dependencies = [
  "aws-smithy-eventstream",
  "aws-smithy-http 0.59.0",
  "aws-smithy-json",
- "aws-smithy-runtime 0.101.0",
+ "aws-smithy-runtime",
  "aws-smithy-runtime-api 0.101.0",
  "aws-smithy-types 0.101.0",
  "aws-smithy-xml",
@@ -248,7 +248,7 @@ dependencies = [
  "aws-smithy-async 0.101.0",
  "aws-smithy-http 0.59.0",
  "aws-smithy-json",
- "aws-smithy-runtime 0.101.0",
+ "aws-smithy-runtime",
  "aws-smithy-runtime-api 0.101.0",
  "aws-smithy-types 0.101.0",
  "aws-types",
@@ -270,7 +270,7 @@ dependencies = [
  "aws-smithy-async 0.101.0",
  "aws-smithy-http 0.59.0",
  "aws-smithy-json",
- "aws-smithy-runtime 0.101.0",
+ "aws-smithy-runtime",
  "aws-smithy-runtime-api 0.101.0",
  "aws-smithy-types 0.101.0",
  "aws-types",
@@ -293,7 +293,7 @@ dependencies = [
  "aws-smithy-http 0.59.0",
  "aws-smithy-json",
  "aws-smithy-query",
- "aws-smithy-runtime 0.101.0",
+ "aws-smithy-runtime",
  "aws-smithy-runtime-api 0.101.0",
  "aws-smithy-types 0.101.0",
  "aws-smithy-xml",
@@ -466,28 +466,6 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "rustls 0.21.8",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "aws-smithy-runtime"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dac9354849acb0ce5f64f97321d1ca7703336542630b2e91bd3fcddbf1719a3"
-dependencies = [
- "aws-smithy-async 1.0.0",
- "aws-smithy-http 0.60.0",
- "aws-smithy-runtime-api 1.0.0",
- "aws-smithy-types 1.0.0",
- "bytes",
- "fastrand",
- "http 0.2.11",
- "http-body",
- "hyper",
- "once_cell",
- "pin-project-lite",
- "pin-utils",
  "tokio",
  "tracing",
 ]
@@ -2128,7 +2106,7 @@ checksum = "1ad4cc8da4ef723ed60bced201181d83791ad433213d8c24efffda1eec85d741"
 
 [[package]]
 name = "s3sync"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -2136,8 +2114,8 @@ dependencies = [
  "aws-config",
  "aws-sdk-s3",
  "aws-smithy-http 0.60.0",
- "aws-smithy-runtime 1.0.0",
- "aws-smithy-runtime-api 1.0.0",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api 0.101.0",
  "aws-smithy-types 1.0.0",
  "aws-smithy-types-convert",
  "aws-types",
@@ -2372,9 +2350,9 @@ dependencies = [
 
 [[package]]
 name = "simple_moving_average"
-version = "0.1.2"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdd19d3808aad2604c824399fd270260d634678b010328c9d96851bb0fb63121"
+checksum = "bc4c91cb17cb534f2e89f22954c6d3085e58710c8268be31f588c95674d72067"
 dependencies = [
  "num-traits",
 ]

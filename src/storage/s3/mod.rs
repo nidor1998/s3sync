@@ -247,8 +247,8 @@ impl S3Storage {
             .send()
             .await;
 
-        if result.is_ok() {
-            return Ok(result.unwrap());
+        if let Ok(get_object_output) = result {
+            return Ok(get_object_output);
         }
 
         let service_error = result.err().unwrap().into_service_error();
@@ -507,8 +507,8 @@ impl StorageTrait for S3Storage {
                 &mut list_object_versions_output
                     .versions()
                     .iter()
+                    .filter(|&object| object.key().unwrap() == key)
                     .cloned()
-                    .filter(|object| object.key().unwrap() == key)
                     .map(|object| clone_object_version_with_key(&object, &key_without_prefix))
                     .collect(),
             );
@@ -736,6 +736,7 @@ impl StorageTrait for S3Storage {
             return Ok(PutObjectOutput::builder().build());
         }
 
+        #[allow(clippy::unnecessary_unwrap)]
         let checksum = if object_checksum.is_some()
             && object_checksum
                 .as_ref()

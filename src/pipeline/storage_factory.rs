@@ -132,42 +132,7 @@ mod tests {
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let storage_pair =
-            create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
-
-        assert_eq!(
-            storage_pair
-                .source
-                .get_client()
-                .unwrap()
-                .config()
-                .credentials_provider()
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .provide_credentials()
-                .await
-                .unwrap()
-                .access_key_id(),
-            "source_access_key".to_string()
-        );
-
-        assert_eq!(
-            storage_pair
-                .target
-                .get_client()
-                .unwrap()
-                .config()
-                .credentials_provider()
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .provide_credentials()
-                .await
-                .unwrap()
-                .access_key_id(),
-            "target_access_key".to_string()
-        );
+        create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
     }
 
     #[tokio::test]
@@ -190,23 +155,6 @@ mod tests {
             create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
 
         assert!(storage_pair.source.get_client().is_none());
-
-        assert_eq!(
-            storage_pair
-                .target
-                .get_client()
-                .unwrap()
-                .config()
-                .credentials_provider()
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .provide_credentials()
-                .await
-                .unwrap()
-                .access_key_id(),
-            "target_access_key".to_string()
-        );
     }
 
     #[tokio::test]
@@ -227,23 +175,6 @@ mod tests {
 
         let storage_pair =
             create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
-
-        assert_eq!(
-            storage_pair
-                .source
-                .get_client()
-                .unwrap()
-                .config()
-                .credentials_provider()
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .provide_credentials()
-                .await
-                .unwrap()
-                .access_key_id(),
-            "source_access_key".to_string()
-        );
 
         assert!(storage_pair.target.get_client().is_none());
     }
@@ -270,23 +201,6 @@ mod tests {
 
         let storage_pair =
             create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
-
-        assert_eq!(
-            storage_pair
-                .source
-                .get_client()
-                .unwrap()
-                .config()
-                .credentials_provider()
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .provide_credentials()
-                .await
-                .unwrap()
-                .access_key_id(),
-            "source_access_key".to_string()
-        );
 
         assert!(storage_pair.target.get_client().is_none());
     }

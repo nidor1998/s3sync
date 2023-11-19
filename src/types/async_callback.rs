@@ -73,17 +73,14 @@ impl<R: AsyncRead> AsyncRead for AsyncReadWithCallback<R> {
 
         let sync_bytes = after - before;
 
-        let bandwidth_limiter = this.bandwidth_limiter.clone();
-        if 0 < sync_bytes && bandwidth_limiter.is_some() {
-            task::block_in_place(move || {
-                Handle::current().block_on(async move {
-                    bandwidth_limiter
-                        .as_ref()
-                        .unwrap()
-                        .acquire(sync_bytes)
-                        .await;
+        if let Some(bandwidth_limiter) = this.bandwidth_limiter.clone() {
+            if 0 < sync_bytes {
+                task::block_in_place(move || {
+                    Handle::current().block_on(async move {
+                        bandwidth_limiter.acquire(sync_bytes).await;
+                    });
                 });
-            });
+            }
         }
 
         if 0 < sync_bytes {

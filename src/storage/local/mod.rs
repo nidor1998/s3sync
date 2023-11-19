@@ -16,6 +16,7 @@ use aws_sdk_s3::operation::head_object::builders::HeadObjectOutputBuilder;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, Tagging,
@@ -23,7 +24,6 @@ use aws_sdk_s3::types::{
 use aws_sdk_s3::Client;
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_types::body::SdkBody;
-use aws_smithy_types::byte_stream::ByteStream;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use http::Response;
 use leaky_bucket::RateLimiter;
@@ -552,8 +552,8 @@ impl StorageTrait for LocalStorage {
 
         fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos).unwrap();
 
-        let object_parts = if object_checksum.is_some() {
-            object_checksum.as_ref().unwrap().object_parts.clone()
+        let object_parts = if let Some(object_checksum) = &object_checksum {
+            object_checksum.object_parts.clone()
         } else {
             None
         };
@@ -1691,6 +1691,7 @@ mod tests {
             .put_object(
                 "target/",
                 GetObjectOutputBuilder::default()
+                    .set_content_length(Some(0))
                     .last_modified(DateTime::from_secs(1))
                     .build(),
                 None,
@@ -1731,6 +1732,7 @@ mod tests {
             .put_object(
                 "target/../../etc/passwd",
                 GetObjectOutputBuilder::default()
+                    .set_content_length(Some(1))
                     .last_modified(DateTime::from_secs(1))
                     .build(),
                 None,
