@@ -21,9 +21,9 @@ use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, Tagging,
 };
 use aws_sdk_s3::Client;
-use aws_smithy_http::body::SdkBody;
-use aws_smithy_http::byte_stream::ByteStream;
-use aws_smithy_http::result::SdkError;
+use aws_smithy_runtime_api::client::result::SdkError;
+use aws_smithy_types::body::SdkBody;
+use aws_smithy_types::byte_stream::ByteStream;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use http::Response;
 use leaky_bucket::RateLimiter;

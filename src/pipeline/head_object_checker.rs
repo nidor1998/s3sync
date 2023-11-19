@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
-use aws_smithy_http::body::SdkBody;
-use aws_smithy_http::result::SdkError;
+use aws_smithy_runtime_api::client::result::SdkError;
+use aws_smithy_types::body::SdkBody;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use http::Response;
@@ -193,7 +193,6 @@ mod tests {
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use aws_smithy_http::body::SdkBody;
     use http::Response;
 
     use crate::config::args::parse_from_args;

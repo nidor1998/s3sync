@@ -11,7 +11,7 @@ use aws_sdk_s3::types::{
     ChecksumAlgorithm, CompletedMultipartUpload, CompletedPart, ObjectPart, ServerSideEncryption,
 };
 use aws_sdk_s3::Client;
-use aws_smithy_http::byte_stream::ByteStream;
+use aws_smithy_types::byte_stream::ByteStream;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::SecondsFormat;
