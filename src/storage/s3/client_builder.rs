@@ -3,7 +3,7 @@ use std::sync::Arc;
 use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
 use aws_config::profile::profile_file::{ProfileFileKind, ProfileFiles};
 use aws_config::retry::RetryConfig;
-use aws_config::ConfigLoader;
+use aws_config::{BehaviorVersion, ConfigLoader};
 use aws_sdk_s3::config::{Builder, SharedHttpClient};
 use aws_sdk_s3::Client;
 use aws_types::region::Region;
@@ -73,7 +73,7 @@ impl ClientConfig {
 
     async fn load_sdk_config(&self) -> SdkConfig {
         let mut config_loader = self
-            .load_config_credential(aws_config::from_env())
+            .load_config_credential(aws_config::defaults(BehaviorVersion::v2023_11_09()))
             .region(self.build_region_provider())
             .retry_config(self.build_retry_config());
 

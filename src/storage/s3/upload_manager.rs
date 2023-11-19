@@ -6,12 +6,12 @@ use async_channel::Sender;
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
+use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, CompletedMultipartUpload, CompletedPart, ObjectPart, ServerSideEncryption,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_http::byte_stream::ByteStream;
-use aws_smithy_types::date_time::Format;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::SecondsFormat;
@@ -80,7 +80,7 @@ impl UploadManager {
         let put_object_output = if self
             .config
             .transfer_config
-            .is_multipart_upload_required(get_object_output.content_length() as u64)
+            .is_multipart_upload_required(get_object_output.content_length().unwrap() as u64)
         {
             self.multipart_upload(bucket, key, get_object_output)
                 .await?
@@ -115,12 +115,16 @@ impl UploadManager {
             .metadata()
             .unwrap_or(&HashMap::new())
             .clone();
-        let last_modified = get_object_output
-            .last_modified()
-            .unwrap()
-            .to_chrono_utc()
-            .unwrap()
-            .to_rfc3339_opts(SecondsFormat::Secs, false);
+        let last_modified = aws_smithy_types::DateTime::from_millis(
+            get_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        )
+        .to_chrono_utc()
+        .unwrap()
+        .to_rfc3339_opts(SecondsFormat::Secs, false);
 
         metadata.insert(
             S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY.to_string(),
@@ -144,12 +148,16 @@ impl UploadManager {
             .unwrap_or(&HashMap::new())
             .clone();
 
-        let last_modified = get_object_output
-            .last_modified()
-            .unwrap()
-            .to_chrono_utc()
-            .unwrap()
-            .to_rfc3339_opts(SecondsFormat::Secs, false);
+        let last_modified = aws_smithy_types::DateTime::from_millis(
+            get_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        )
+        .to_chrono_utc()
+        .unwrap()
+        .to_rfc3339_opts(SecondsFormat::Secs, false);
 
         metadata.insert(
             S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY.to_string(),
@@ -243,9 +251,9 @@ impl UploadManager {
                 get_object_output.expires().cloned()
             } else {
                 Some(
-                    aws_smithy_types::DateTime::from_str(
+                    DateTime::from_str(
                         &self.config.expires.unwrap().to_rfc3339(),
-                        Format::DateTimeWithOffset,
+                        DateTimeFormat::DateTimeWithOffset,
                     )
                     .unwrap(),
                 )
@@ -290,7 +298,7 @@ impl UploadManager {
     ) -> Result<PutObjectOutput> {
         let source_sse = get_object_output.server_side_encryption().cloned();
         let source_remote_storage = get_object_output.e_tag().is_some();
-        let source_content_length = get_object_output.content_length();
+        let source_content_length = get_object_output.content_length().unwrap();
         let source_e_tag = get_object_output.e_tag().map(|e_tag| e_tag.to_string());
         let source_local_storage = source_e_tag.is_none();
         let source_checksum = get_additional_checksum_from_get_object_result(
@@ -458,7 +466,7 @@ impl UploadManager {
         let mut upload_parts: Vec<CompletedPart> = Vec::new();
 
         let mut part_number = 1;
-        let mut remaining_bytes = get_object_output.content_length() as u64;
+        let mut remaining_bytes = get_object_output.content_length().unwrap() as u64;
 
         let mut body = get_object_output.body.into_async_read();
         while 0 < remaining_bytes {
@@ -562,7 +570,8 @@ impl UploadManager {
                 .unwrap()
                 .get(part_number - 1)
                 .unwrap()
-                .size();
+                .size()
+                .unwrap();
 
             let mut buffer = Vec::<u8>::with_capacity(chunksize as usize);
             buffer.resize_with(chunksize as usize, Default::default);
@@ -650,9 +659,10 @@ impl UploadManager {
 
         // When created from an SdkBody, care must be taken to ensure retriability.
         // An SdkBody is retryable when constructed from in-memory data or when using SdkBody::retryable.
-        let mut buffer = Vec::<u8>::with_capacity(get_object_output.content_length() as usize);
+        let mut buffer =
+            Vec::<u8>::with_capacity(get_object_output.content_length().unwrap() as usize);
         buffer.resize_with(
-            get_object_output.content_length() as usize,
+            get_object_output.content_length().unwrap() as usize,
             Default::default,
         );
         body.read_exact(buffer.as_mut_slice())
@@ -678,7 +688,7 @@ impl UploadManager {
             .set_storage_class(storage_class)
             .bucket(bucket)
             .key(key)
-            .content_length(get_object_output.content_length())
+            .content_length(get_object_output.content_length().unwrap())
             .body(buffer_stream)
             .set_metadata(get_object_output.metadata().cloned())
             .set_tagging(self.tagging.clone())
@@ -722,9 +732,9 @@ impl UploadManager {
                 get_object_output.expires().cloned()
             } else {
                 Some(
-                    aws_smithy_types::DateTime::from_str(
+                    DateTime::from_str(
                         &self.config.expires.unwrap().to_rfc3339(),
-                        Format::DateTimeWithOffset,
+                        DateTimeFormat::DateTimeWithOffset,
                     )
                     .unwrap(),
                 )
@@ -976,7 +986,7 @@ pub fn get_additional_checksum_from_multipart_upload_result(
 
 #[cfg(test)]
 mod tests {
-    use aws_smithy_types::DateTime;
+    use aws_sdk_s3::primitives::DateTime;
 
     use super::*;
 

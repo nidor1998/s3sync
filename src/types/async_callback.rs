@@ -208,8 +208,9 @@ fn validate_checksum(
             )));
         }
 
-        let current_part_size =
-            object_checksum.object_parts.as_ref().unwrap()[cursor.part_number].size as usize;
+        let current_part_size = object_checksum.object_parts.as_ref().unwrap()[cursor.part_number]
+            .size
+            .unwrap() as usize;
         let remaining = current_part_size - cursor.part_offset;
 
         if cursor.part_offset + sync_bytes <= current_part_size {

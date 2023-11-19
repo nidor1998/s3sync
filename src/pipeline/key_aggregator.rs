@@ -80,8 +80,8 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
+    use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use aws_smithy_types::DateTime;
 
     use crate::config::args::parse_from_args;
     use crate::pipeline::key_aggregator::{build_object_key_entry, insert_key, KeyAggregator};

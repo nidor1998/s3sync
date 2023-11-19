@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use aws_smithy_types::DateTime;
+use aws_sdk_s3::primitives::DateTime;
 use filetime::{set_file_mtime, FileTime};
 use regex::Regex;
 use tempfile::NamedTempFile;

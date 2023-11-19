@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use aws_sdk_s3::primitives::DateTime;
+use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
@@ -35,7 +35,9 @@ impl ObjectFilter for MtimeAfterFilter<'_> {
 }
 
 fn is_after_or_equal(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> bool {
-    let last_modified = DateTime::to_chrono_utc(object.last_modified()).unwrap();
+    let last_modified = DateTime::from_millis(object.last_modified().to_millis().unwrap())
+        .to_chrono_utc()
+        .unwrap();
 
     if last_modified < config.after_time.unwrap() {
         let key = object.key();
@@ -69,6 +71,7 @@ mod tests {
     use aws_sdk_s3::types::Object;
 
     use crate::types::{ObjectEntry, ObjectKey};
+    use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 
     use super::*;
 
@@ -79,11 +82,8 @@ mod tests {
         let object = S3syncObject::NotVersioning(
             Object::builder()
                 .last_modified(
-                    DateTime::from_str(
-                        "2023-01-20T00:00:00.002Z",
-                        aws_smithy_types::date_time::Format::DateTime,
-                    )
-                    .unwrap(),
+                    DateTime::from_str("2023-01-20T00:00:00.002Z", DateTimeFormat::DateTime)
+                        .unwrap(),
                 )
                 .build(),
         );
@@ -114,11 +114,8 @@ mod tests {
             Object::builder()
                 .key("test")
                 .last_modified(
-                    DateTime::from_str(
-                        "2023-01-20T00:00:00.000Z",
-                        aws_smithy_types::date_time::Format::DateTime,
-                    )
-                    .unwrap(),
+                    DateTime::from_str("2023-01-20T00:00:00.000Z", DateTimeFormat::DateTime)
+                        .unwrap(),
                 )
                 .build(),
         );
@@ -148,11 +145,8 @@ mod tests {
         let object = S3syncObject::NotVersioning(
             Object::builder()
                 .last_modified(
-                    DateTime::from_str(
-                        "2023-01-20T00:00:00.001Z",
-                        aws_smithy_types::date_time::Format::DateTime,
-                    )
-                    .unwrap(),
+                    DateTime::from_str("2023-01-20T00:00:00.001Z", DateTimeFormat::DateTime)
+                        .unwrap(),
                 )
                 .build(),
         );

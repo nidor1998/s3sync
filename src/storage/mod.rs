@@ -159,7 +159,7 @@ where
 }
 
 pub fn get_size_string_from_content_range(get_object_output: &GetObjectOutput) -> String {
-    let content_length_str = get_object_output.content_length().to_string();
+    let content_length_str = get_object_output.content_length().unwrap().to_string();
     let size = if get_object_output.content_range().is_some() {
         // example: bytes 200-1000/67589　67589 will be returned
         get_object_output

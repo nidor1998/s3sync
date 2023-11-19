@@ -140,12 +140,12 @@ mod tests {
                 .source
                 .get_client()
                 .unwrap()
-                .conf()
-                .credentials_cache()
+                .config()
+                .credentials_provider()
                 .as_ref()
                 .unwrap()
                 .as_ref()
-                .provide_cached_credentials()
+                .provide_credentials()
                 .await
                 .unwrap()
                 .access_key_id(),
@@ -157,12 +157,12 @@ mod tests {
                 .target
                 .get_client()
                 .unwrap()
-                .conf()
-                .credentials_cache()
+                .config()
+                .credentials_provider()
                 .as_ref()
                 .unwrap()
                 .as_ref()
-                .provide_cached_credentials()
+                .provide_credentials()
                 .await
                 .unwrap()
                 .access_key_id(),
@@ -196,12 +196,12 @@ mod tests {
                 .target
                 .get_client()
                 .unwrap()
-                .conf()
-                .credentials_cache()
+                .config()
+                .credentials_provider()
                 .as_ref()
                 .unwrap()
                 .as_ref()
-                .provide_cached_credentials()
+                .provide_credentials()
                 .await
                 .unwrap()
                 .access_key_id(),
@@ -233,12 +233,12 @@ mod tests {
                 .source
                 .get_client()
                 .unwrap()
-                .conf()
-                .credentials_cache()
+                .config()
+                .credentials_provider()
                 .as_ref()
                 .unwrap()
                 .as_ref()
-                .provide_cached_credentials()
+                .provide_credentials()
                 .await
                 .unwrap()
                 .access_key_id(),
@@ -276,12 +276,12 @@ mod tests {
                 .source
                 .get_client()
                 .unwrap()
-                .conf()
-                .credentials_cache()
+                .config()
+                .credentials_provider()
                 .as_ref()
                 .unwrap()
                 .as_ref()
-                .provide_cached_credentials()
+                .provide_credentials()
                 .await
                 .unwrap()
                 .access_key_id(),

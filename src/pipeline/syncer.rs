@@ -14,7 +14,6 @@ use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
 use aws_smithy_http::body::SdkBody;
 use aws_smithy_http::result::SdkError;
-use aws_smithy_types::error::metadata::ProvideErrorMetadata;
 use http::{Response, StatusCode};
 use tracing::{error, info, trace, warn};
 
@@ -498,7 +497,7 @@ impl ObjectSyncer {
         key: &str,
         get_object_output: &GetObjectOutput,
     ) -> Result<Option<GetObjectTaggingOutput>> {
-        if get_object_output.tag_count() == 0 {
+        if get_object_output.tag_count().unwrap() == 0 {
             return Ok(None);
         }
 
@@ -783,10 +782,9 @@ fn is_object_with_directory_name_suffix_and_none_zero_size(object: &S3syncObject
 #[cfg(test)]
 mod tests {
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
+    use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use aws_smithy_runtime_api::client::result::CreateUnhandledErro;
     use aws_smithy_http::body::SdkBody;
-    use aws_smithy_types::DateTime;
     use http::Response;
 
     use crate::config::args::parse_from_args;

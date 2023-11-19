@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
-use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::ObjectVersion;
+use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
@@ -56,7 +56,8 @@ impl VersioningInfoCollector {
                 } else {
                     let source_version_id = marker.version_id().unwrap();
                     let source_last_modified =
-                        DateTime::to_chrono_utc(source_object.last_modified())
+                        DateTime::from_millis(source_object.last_modified().to_millis().unwrap())
+                            .to_chrono_utc()
                             .unwrap()
                             .to_rfc3339();
                     debug!(
@@ -74,9 +75,11 @@ impl VersioningInfoCollector {
             if does_not_contain_version_id(&target_head_object_output_map, source_version_id) {
                 object_versions_to_sync.push(source_object);
             } else {
-                let source_last_modified = DateTime::to_chrono_utc(source_object.last_modified())
-                    .unwrap()
-                    .to_rfc3339();
+                let source_last_modified =
+                    DateTime::from_millis(source_object.last_modified().to_millis().unwrap())
+                        .to_chrono_utc()
+                        .unwrap()
+                        .to_rfc3339();
 
                 debug!(
                     worker_index = self.worker_index,
@@ -133,7 +136,7 @@ impl VersioningInfoCollector {
 
 fn is_latest_version_deleted(object_versions: &Vec<ObjectVersion>) -> bool {
     for object in object_versions {
-        if object.is_latest() {
+        if object.is_latest().unwrap() {
             return false;
         }
     }
@@ -149,7 +152,7 @@ fn does_not_contain_version_id(
 
 #[cfg(test)]
 mod tests {
-    use aws_smithy_types::DateTime;
+    use aws_sdk_s3::primitives::DateTime;
 
     use super::*;
 

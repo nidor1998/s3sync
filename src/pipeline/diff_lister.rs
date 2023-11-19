@@ -76,7 +76,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
-    use aws_smithy_types::DateTime;
+    use aws_sdk_s3::primitives::DateTime;
 
     use crate::types::{sha1_digest_from_key, ObjectEntry};
 

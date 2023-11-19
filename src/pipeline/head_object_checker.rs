@@ -61,7 +61,8 @@ impl HeadObjectChecker {
 
         if let Ok(target_object) = head_object_result {
             return if self.config.filter_config.check_size {
-                let different_size = source_object.size() != target_object.content_length();
+                let different_size =
+                    source_object.size() != target_object.content_length().unwrap();
                 if !different_size {
                     let content_length = source_object.size();
                     let key = source_object.key();
@@ -132,7 +133,7 @@ fn is_head_object_check_required(
 }
 
 fn is_object_modified(source_object: &S3syncObject, target_object: &HeadObjectOutput) -> bool {
-    if source_object.size() == 0 && target_object.content_length() == 0 {
+    if source_object.size() == 0 && target_object.content_length().unwrap() == 0 {
         return false;
     }
 
@@ -141,12 +142,16 @@ fn is_object_modified(source_object: &S3syncObject, target_object: &HeadObjectOu
         return true;
     }
 
-    let source_last_modified = DateTime::to_chrono_utc(source_object.last_modified())
-        .unwrap()
-        .to_rfc3339();
-    let target_last_modified = DateTime::to_chrono_utc(target_object.last_modified().unwrap())
-        .unwrap()
-        .to_rfc3339();
+    let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        source_object.last_modified().to_millis().unwrap(),
+    ))
+    .unwrap()
+    .to_rfc3339();
+    let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        target_object.last_modified().unwrap().to_millis().unwrap(),
+    ))
+    .unwrap()
+    .to_rfc3339();
     let key = source_object.key();
     debug!(
         name = FILTER_NAME,
@@ -186,9 +191,9 @@ fn is_head_object_not_found_error(result: &anyhow::Error) -> bool {
 #[cfg(test)]
 mod tests {
     use aws_sdk_s3::operation::head_object;
+    use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
     use aws_smithy_http::body::SdkBody;
-    use aws_smithy_types::DateTime;
     use http::Response;
 
     use crate::config::args::parse_from_args;
