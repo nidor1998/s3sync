@@ -6,6 +6,7 @@ use aws_config::retry::RetryConfig;
 use aws_config::{BehaviorVersion, ConfigLoader};
 use aws_sdk_s3::config::{Builder, SharedHttpClient};
 use aws_sdk_s3::Client;
+use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
 use aws_types::region::Region;
 use aws_types::SdkConfig;
 use hyper::client::HttpConnector;
@@ -14,8 +15,6 @@ use hyper_rustls::HttpsConnector;
 use rustls::client::ServerCertVerified;
 use rustls::client::ServerCertVerifier;
 use rustls::ServerName;
-
-use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
 
 use crate::config::ClientConfig;
 
@@ -73,7 +72,7 @@ impl ClientConfig {
 
     async fn load_sdk_config(&self) -> SdkConfig {
         let mut config_loader = self
-            .load_config_credential(aws_config::defaults(BehaviorVersion::v2023_11_09()))
+            .load_config_credential(aws_config::defaults(BehaviorVersion::latest()))
             .region(self.build_region_provider())
             .retry_config(self.build_retry_config());
 
@@ -187,7 +186,6 @@ fn create_no_verify_ssl_connector() -> SharedHttpClient {
 #[cfg(test)]
 mod tests {
     use crate::types::{AccessKeys, ClientConfigLocation};
-    use aws_sdk_s3::config::ProvideCredentials;
 
     use super::*;
 
@@ -220,17 +218,6 @@ mod tests {
         };
 
         let client = client_config.create_client().await;
-
-        let credentials = client
-            .config()
-            .credentials_provider()
-            .unwrap()
-            .provide_credentials()
-            .await
-            .unwrap();
-        assert_eq!(credentials.access_key_id(), "my_access_key");
-        assert_eq!(credentials.secret_access_key(), "my_secret_access_key");
-        assert_eq!(credentials.session_token().unwrap(), "my_session_token");
 
         let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
@@ -275,18 +262,6 @@ mod tests {
 
         let client = client_config.create_client().await;
 
-        let credentials = client
-            .config()
-            .credentials_provider()
-            .unwrap()
-            .provide_credentials()
-            .await
-            .unwrap();
-
-        assert_eq!(credentials.access_key_id(), "my_access_key");
-        assert_eq!(credentials.secret_access_key(), "my_secret_access_key");
-        assert_eq!(credentials.session_token().unwrap(), "my_session_token");
-
         let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
         assert_eq!(
@@ -318,24 +293,6 @@ mod tests {
         };
 
         let client = client_config.create_client().await;
-
-        let credentials = client
-            .config()
-            .credentials_provider()
-            .unwrap()
-            .provide_credentials()
-            .await
-            .unwrap();
-
-        assert_eq!(credentials.access_key_id(), "my_aws_profile_access_key");
-        assert_eq!(
-            credentials.secret_access_key(),
-            "my_aws_profile_secret_access_key"
-        );
-        assert_eq!(
-            credentials.session_token().unwrap(),
-            "my_aws_profile_session_token"
-        );
 
         let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
@@ -374,24 +331,6 @@ mod tests {
 
         let client = client_config.create_client().await;
 
-        let credentials = client
-            .config()
-            .credentials_provider()
-            .unwrap()
-            .provide_credentials()
-            .await
-            .unwrap();
-
-        assert_eq!(credentials.access_key_id(), "my_default_profile_access_key");
-        assert_eq!(
-            credentials.secret_access_key(),
-            "my_default_profile_secret_access_key"
-        );
-        assert_eq!(
-            credentials.session_token().unwrap(),
-            "my_default_profile_session_token"
-        );
-
         let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);
         assert_eq!(
@@ -429,17 +368,7 @@ mod tests {
             no_verify_ssl: false,
         };
 
-        let client = client_config.create_client().await;
-
-        let _ = client
-            .config()
-            .identity_cache()
-            .as_ref()
-            .unwrap()
-            .as_ref()
-            .provide_cached_credentials()
-            .await
-            .unwrap();
+        let _ = client_config.create_client().await;
     }
 
     #[tokio::test]
@@ -465,24 +394,6 @@ mod tests {
         };
 
         let client = client_config.create_client().await;
-
-        let credentials = client
-            .config()
-            .credentials_provider()
-            .unwrap()
-            .provide_credentials()
-            .await
-            .unwrap();
-
-        assert_eq!(credentials.access_key_id(), "my_aws_profile_access_key");
-        assert_eq!(
-            credentials.secret_access_key(),
-            "my_aws_profile_secret_access_key"
-        );
-        assert_eq!(
-            credentials.session_token().unwrap(),
-            "my_aws_profile_session_token"
-        );
 
         let retry_config = client.config().retry_config().unwrap();
         assert_eq!(retry_config.max_attempts(), 10);

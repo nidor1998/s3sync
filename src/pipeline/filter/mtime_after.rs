@@ -68,10 +68,10 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Mutex;
 
+    use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
     use aws_sdk_s3::types::Object;
 
     use crate::types::{ObjectEntry, ObjectKey};
-    use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 
     use super::*;
 

@@ -97,6 +97,7 @@ mod tests {
         let object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("test-key")
+                .size(1)
                 .last_modified(DateTime::from_secs(1))
                 .build(),
         );
@@ -112,6 +113,7 @@ mod tests {
         let object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("test-key1")
+                .size(1)
                 .last_modified(DateTime::from_secs(1))
                 .build(),
         );
@@ -133,6 +135,7 @@ mod tests {
         let object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("test-key1")
+                .size(1)
                 .last_modified(DateTime::from_secs(1))
                 .build(),
         );
@@ -178,6 +181,7 @@ mod tests {
         let object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("test-key1")
+                .size(1)
                 .last_modified(DateTime::from_secs(1))
                 .build(),
         );
@@ -269,6 +273,7 @@ mod tests {
         let object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("test-key1")
+                .size(1)
                 .last_modified(DateTime::from_secs(1))
                 .build(),
         );

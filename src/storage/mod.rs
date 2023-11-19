@@ -10,10 +10,9 @@ use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::{ChecksumMode, ObjectPart, ObjectVersion, Tagging};
 use aws_sdk_s3::Client;
-use aws_smithy_types::body::SdkBody;
-use aws_smithy_types::byte_stream::ByteStream;
 use dyn_clone::DynClone;
 use hyper::Body;
 use leaky_bucket::RateLimiter;
@@ -147,15 +146,17 @@ pub fn convert_to_buf_byte_stream_with_callback<R>(
 where
     R: AsyncRead + Send + 'static,
 {
-    ByteStream::new(SdkBody::from(Body::wrap_stream(ReaderStream::new(
-        BufReader::new(AsyncReadWithCallback::new(
-            byte_stream,
-            stats_sender,
-            rate_limit_bandwidth,
-            additional_checksum,
-            object_checksum,
-        )),
-    ))))
+    ByteStream::new(aws_sdk_s3::primitives::SdkBody::from_body_0_4(
+        Body::wrap_stream(ReaderStream::new(BufReader::new(
+            AsyncReadWithCallback::new(
+                byte_stream,
+                stats_sender,
+                rate_limit_bandwidth,
+                additional_checksum,
+                object_checksum,
+            ),
+        ))),
+    ))
 }
 
 pub fn get_size_string_from_content_range(get_object_output: &GetObjectOutput) -> String {
@@ -183,6 +184,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
             .content_range("bytes 200-1000/67589")
             .build();
         assert_eq!(
@@ -191,6 +193,7 @@ mod tests {
         );
 
         let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
             .content_range("bytes 200-1000/*")
             .build();
         assert_eq!(

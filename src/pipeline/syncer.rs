@@ -374,7 +374,7 @@ impl ObjectSyncer {
                 worker_index = self.worker_index,
                 key = key,
                 "new tagging = {:?}.",
-                source_tagging.tag_set().as_ref()
+                source_tagging.tag_set()
             );
 
             if source_tagging.tag_set().as_ref().is_empty() {
@@ -497,6 +497,9 @@ impl ObjectSyncer {
         key: &str,
         get_object_output: &GetObjectOutput,
     ) -> Result<Option<GetObjectTaggingOutput>> {
+        if get_object_output.tag_count().is_none() {
+            return Ok(None);
+        }
         if get_object_output.tag_count().unwrap() == 0 {
             return Ok(None);
         }
@@ -702,7 +705,7 @@ fn is_access_denied_error(result: &Error) -> bool {
     if let Some(SdkError::ServiceError(e)) =
         result.downcast_ref::<SdkError<GetObjectError, Response<SdkBody>>>()
     {
-        if let Some(code) = e.err().code() {
+        if let Some(code) = e.err().meta().code() {
             return code == "AccessDenied";
         }
     }
@@ -710,7 +713,7 @@ fn is_access_denied_error(result: &Error) -> bool {
     if let Some(SdkError::ServiceError(e)) =
         result.downcast_ref::<SdkError<GetObjectTaggingError, Response<SdkBody>>>()
     {
-        if let Some(code) = e.err().code() {
+        if let Some(code) = e.err().meta().code() {
             return code == "AccessDenied";
         }
     }
@@ -1387,8 +1390,7 @@ mod tests {
 
     fn build_get_object_tagging_not_found_error(
     ) -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
-        let unhandled_error =
-            GetObjectTaggingError::create_unhandled_error(anyhow!("Not found").into(), None);
+        let unhandled_error = GetObjectTaggingError::unhandled("Not Found");
 
         let response = http::Response::builder()
             .status(404)
@@ -1419,13 +1421,10 @@ mod tests {
     }
 
     fn build_get_object_access_denied_error() -> SdkError<GetObjectError, Response<SdkBody>> {
-        let unhandled_error = GetObjectError::create_unhandled_error(
-            anyhow!("Access Denied").into(),
-            Some(
-                aws_smithy_types::error::ErrorMetadata::builder()
-                    .code("AccessDenied")
-                    .build(),
-            ),
+        let unhandled_error = GetObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("AccessDenied")
+                .build(),
         );
 
         let response = http::Response::builder()
@@ -1438,13 +1437,10 @@ mod tests {
 
     fn build_get_object_tagging_access_denied_error(
     ) -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
-        let unhandled_error = GetObjectTaggingError::create_unhandled_error(
-            anyhow!("Access Denied").into(),
-            Some(
-                aws_smithy_types::error::ErrorMetadata::builder()
-                    .code("AccessDenied")
-                    .build(),
-            ),
+        let unhandled_error = GetObjectTaggingError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("AccessDenied")
+                .build(),
         );
 
         let response = http::Response::builder()

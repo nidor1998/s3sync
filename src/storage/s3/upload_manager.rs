@@ -6,12 +6,12 @@ use async_channel::Sender;
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, CompletedMultipartUpload, CompletedPart, ObjectPart, ServerSideEncryption,
 };
 use aws_sdk_s3::Client;
-use aws_smithy_types::byte_stream::ByteStream;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::SecondsFormat;

@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -7,7 +8,7 @@ use std::time::SystemTime;
 
 use async_channel::Receiver;
 use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
-use aws_config::ConfigLoader;
+use aws_config::{BehaviorVersion, ConfigLoader};
 use aws_sdk_s3::client::Client;
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
@@ -24,15 +25,16 @@ use aws_smithy_types::DateTime;
 use aws_types::SdkConfig;
 use filetime::{set_file_mtime, FileTime};
 use once_cell::sync::Lazy;
+use tokio::sync::Semaphore;
+use uuid::Uuid;
+use walkdir::DirEntry;
+use walkdir::WalkDir;
+
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
 use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::SyncStatistics;
 use s3sync::Config;
-use tokio::sync::Semaphore;
-use uuid::Uuid;
-use walkdir::DirEntry;
-use walkdir::WalkDir;
 
 pub const REGION: &str = "ap-northeast-1";
 
@@ -104,7 +106,7 @@ impl TestHelper {
     }
 
     async fn load_sdk_config() -> SdkConfig {
-        let config_loader = Self::load_config_credential(aws_config::from_env())
+        let config_loader = Self::load_config_credential(aws_config::defaults(BehaviorVersion::latest()))
             .region(Self::build_provider_region());
 
         config_loader.load().await
