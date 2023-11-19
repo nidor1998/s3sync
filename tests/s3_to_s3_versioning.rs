@@ -826,15 +826,18 @@ mod tests {
                             Tag::builder()
                                 .key("updated_key1")
                                 .value("updated_value1")
-                                .build(),
+                                .build()
+                                .unwrap(),
                         )
                         .tag_set(
                             Tag::builder()
                                 .key("updated_key2")
                                 .value("updated_value2")
-                                .build(),
+                                .build()
+                                .unwrap(),
                         )
-                        .build(),
+                        .build()
+                        .unwrap(),
                 )
                 .await;
         }
@@ -862,7 +865,7 @@ mod tests {
                 .get_object_tagging(&BUCKET2.to_string(), "data1", None)
                 .await;
 
-            let tag_set = get_object_tagging_output.tag_set().unwrap();
+            let tag_set = get_object_tagging_output.tag_set();
 
             let tag_map = TestHelper::tag_set_to_map(tag_set);
 
@@ -932,7 +935,7 @@ mod tests {
             assert!(!pipeline.has_error());
 
             let get_object_output = helper.get_object(&BUCKET2.to_string(), "data1", None).await;
-            assert_eq!(get_object_output.content_length(), 5);
+            assert_eq!(get_object_output.content_length().unwrap(), 5);
         }
 
         {
@@ -1027,7 +1030,7 @@ mod tests {
             assert!(!pipeline.has_error());
 
             let get_object_output = helper.get_object(&BUCKET2.to_string(), "data1", None).await;
-            assert_eq!(get_object_output.content_length(), 5);
+            assert_eq!(get_object_output.content_length().unwrap(), 5);
         }
 
         {

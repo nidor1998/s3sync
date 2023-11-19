@@ -670,7 +670,7 @@ mod tests {
                 .get_object_tagging(&BUCKET2.to_string(), "data1", None)
                 .await;
 
-            let tag_set = get_object_tagging_output.tag_set().unwrap();
+            let tag_set = get_object_tagging_output.tag_set();
             assert!(tag_set.is_empty());
         }
 
@@ -801,15 +801,18 @@ mod tests {
                             Tag::builder()
                                 .key("updated_key1")
                                 .value("updated_value1")
-                                .build(),
+                                .build()
+                                .unwrap(),
                         )
                         .tag_set(
                             Tag::builder()
                                 .key("updated_key2")
                                 .value("updated_value2")
-                                .build(),
+                                .build()
+                                .unwrap(),
                         )
-                        .build(),
+                        .build()
+                        .unwrap(),
                 )
                 .await;
 
@@ -835,7 +838,7 @@ mod tests {
                 .get_object_tagging(&BUCKET2.to_string(), "data1", None)
                 .await;
 
-            let tag_set = get_object_tagging_output.tag_set().unwrap();
+            let tag_set = get_object_tagging_output.tag_set();
 
             let tag_map = TestHelper::tag_set_to_map(tag_set);
 
@@ -870,7 +873,7 @@ mod tests {
                 .get_object_tagging(&BUCKET2.to_string(), "data1", None)
                 .await;
 
-            let tag_set = get_object_tagging_output.tag_set().unwrap();
+            let tag_set = get_object_tagging_output.tag_set();
 
             let tag_map = TestHelper::tag_set_to_map(tag_set);
 
@@ -909,7 +912,6 @@ mod tests {
                 .get_object_tagging(&BUCKET2.to_string(), "data1", None)
                 .await
                 .tag_set()
-                .unwrap()
                 .is_empty());
         }
 
@@ -981,15 +983,18 @@ mod tests {
                             Tag::builder()
                                 .key("updated_key1")
                                 .value("updated_value1")
-                                .build(),
+                                .build()
+                                .unwrap(),
                         )
                         .tag_set(
                             Tag::builder()
                                 .key("updated_key2")
                                 .value("updated_value2")
-                                .build(),
+                                .build()
+                                .unwrap(),
                         )
-                        .build(),
+                        .build()
+                        .unwrap(),
                 )
                 .await;
 
@@ -1016,7 +1021,7 @@ mod tests {
                 .get_object_tagging(&BUCKET2.to_string(), "data1", None)
                 .await;
 
-            let tag_set = get_object_tagging_output.tag_set().unwrap();
+            let tag_set = get_object_tagging_output.tag_set();
 
             let tag_map = TestHelper::tag_set_to_map(tag_set);
 
@@ -1058,7 +1063,7 @@ mod tests {
                 .get_object_tagging(&BUCKET2.to_string(), "data1", None)
                 .await;
 
-            let tag_set = get_object_tagging_output.tag_set().unwrap();
+            let tag_set = get_object_tagging_output.tag_set();
 
             let tag_map = TestHelper::tag_set_to_map(tag_set);
 
@@ -1288,7 +1293,8 @@ mod tests {
                 helper
                     .head_object(&BUCKET2.to_string(), "dir1/dir2/", None)
                     .await
-                    .content_length(),
+                    .content_length()
+                    .unwrap(),
                 0
             );
         }
