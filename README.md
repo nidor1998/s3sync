@@ -440,7 +440,7 @@ Instead of `-v`, you can use `RUST_LOG` environment variable.
 For troubleshooting, s3sync can output the AWS SDK for Rust's tracing information.  
 Instead of `--aws-sdk-tracing`, you can use `RUST_LOG` environment variable.
 
-#### `--filter-include-regexp`, `--filter-exclude-regexp`  
+#### `--filter-include-regex`, `--filter-exclude-regex`  
 You can specify the regular expression to filter the source objects.  
 The regular expression syntax is the same as [regex](https://docs.rs/regex/latest/regex/#syntax).
 
