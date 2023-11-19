@@ -209,7 +209,7 @@ impl ObjectSyncer {
                 worker_index = self.worker_index,
                 key = key,
                 size = object.size(),
-                "skip directory name suffix and non zero size object for local storage "
+                "skip directory name suffix and non zero size object that is incompatible for local storage "
             );
 
             return Ok(());
