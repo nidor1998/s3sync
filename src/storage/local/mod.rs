@@ -19,7 +19,8 @@ use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, Tagging,
+    ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, ServerSideEncryption,
+    Tagging,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_runtime_api::client::result::SdkError;
@@ -169,6 +170,188 @@ impl LocalStorage {
                 .acquire(1)
                 .await;
         }
+    }
+
+    // I can't find a way to simplify this function.
+    #[allow(clippy::too_many_arguments)]
+    async fn verify_local_file(
+        &self,
+        key: &str,
+        object_checksum: Option<ObjectChecksum>,
+        source_sse: &Option<ServerSideEncryption>,
+        source_e_tag: &Option<String>,
+        source_content_length: u64,
+        source_final_checksum: Option<String>,
+        source_checksum_algorithm: Option<ChecksumAlgorithm>,
+        real_path: &PathBuf,
+        target_object_parts: Option<Vec<ObjectPart>>,
+        target_content_length: u64,
+    ) -> Result<()> {
+        if !self.config.disable_etag_verify {
+            trace!(
+                key = key,
+                size = source_content_length,
+                "download completed. start to etag verify. depends on the size, this may take a while.",
+            );
+
+            let target_sse = None;
+            let target_e_tag = if let Some(parts) = target_object_parts.as_ref() {
+                Some(
+                    generate_e_tag_hash_from_path_with_auto_chunksize(
+                        real_path,
+                        parts.iter().map(|part| part.size().unwrap()).collect(),
+                    )
+                    .await?,
+                )
+            } else {
+                Some(
+                    generate_e_tag_hash_from_path(
+                        real_path,
+                        self.config.transfer_config.multipart_chunksize as usize,
+                        self.config.transfer_config.multipart_threshold as usize,
+                    )
+                    .await?,
+                )
+            };
+
+            let verify_result = verify_e_tag(
+                !self.config.disable_multipart_verify,
+                &self.config.source_sse_c,
+                &self.config.target_sse_c,
+                source_sse,
+                source_e_tag,
+                &target_sse,
+                &target_e_tag,
+            );
+
+            if let Some(e_tag_match) = verify_result {
+                if !e_tag_match {
+                    if (source_content_length == target_content_length)
+                        && (is_multipart_upload_e_tag(source_e_tag)
+                            && self.config.disable_multipart_verify)
+                    {
+                        trace!(
+                            key = &key,
+                            source_e_tag = source_e_tag,
+                            target_e_tag = target_e_tag,
+                            "skip e_tag verification."
+                        );
+                    } else {
+                        self.send_stats(SyncWarning {
+                            key: key.to_string(),
+                        })
+                        .await;
+
+                        let message = if source_content_length
+                            == fs_util::get_file_size(real_path).await
+                            && is_multipart_upload_e_tag(source_e_tag)
+                            && object_checksum
+                                .clone()
+                                .unwrap_or_default()
+                                .object_parts
+                                .is_none()
+                        {
+                            format!("{} {}", "e_tag", MISMATCH_WARNING_WITH_HELP)
+                        } else {
+                            "e_tag mismatch. file in the local storage may be corrupted."
+                                .to_string()
+                        };
+
+                        let source_e_tag = source_e_tag.clone().unwrap();
+                        let target_e_tag = target_e_tag.clone().unwrap();
+                        warn!(
+                            key = key,
+                            source_e_tag = source_e_tag,
+                            target_e_tag = target_e_tag,
+                            message
+                        );
+                    }
+                } else {
+                    self.send_stats(EtagVerified {
+                        key: key.to_string(),
+                    })
+                    .await;
+
+                    let source_e_tag = source_e_tag.clone().unwrap();
+                    let target_e_tag = target_e_tag.clone().unwrap();
+                    trace!(
+                        key = key,
+                        source_e_tag = source_e_tag,
+                        target_e_tag = target_e_tag,
+                        "e_tag verified."
+                    );
+                }
+            }
+        } else if source_content_length != target_content_length {
+            self.send_stats(SyncWarning {
+                key: key.to_string(),
+            })
+            .await;
+
+            warn!(
+                key = key,
+                source_content_length = source_content_length,
+                target_content_length = target_content_length,
+                "content length mismatch. file in the local storage may be corrupted."
+            );
+        }
+
+        if let Some(source_final_checksum) = source_final_checksum {
+            trace!(
+                key = key,
+                size = source_content_length,
+                "start to additional checksum verify. depends on the size, this may take a while.",
+            );
+
+            let parts = if let Some(parts) = target_object_parts.as_ref() {
+                parts
+                    .iter()
+                    .map(|part| part.size().unwrap())
+                    .collect::<Vec<i64>>()
+            } else {
+                vec![source_content_length as i64]
+            };
+
+            let target_final_checksum = generate_checksum_from_path(
+                real_path,
+                source_checksum_algorithm.as_ref().unwrap().clone(),
+                parts,
+                self.config.transfer_config.multipart_threshold as usize,
+            )
+            .await?;
+
+            let additional_checksum_algorithm =
+                source_checksum_algorithm.as_ref().unwrap().as_str();
+
+            if source_final_checksum != target_final_checksum {
+                self.send_stats(SyncWarning {
+                    key: key.to_string(),
+                })
+                .await;
+
+                warn!(
+                    key = key,
+                    additional_checksum_algorithm = additional_checksum_algorithm,
+                    source_final_checksum = source_final_checksum,
+                    target_final_checksum = target_final_checksum,
+                    "additional checksum mismatch. file in the local storage may be corrupted."
+                );
+            } else {
+                self.send_stats(ChecksumVerified {
+                    key: key.to_string(),
+                })
+                .await;
+
+                trace!(
+                    key = key,
+                    additional_checksum_algorithm = additional_checksum_algorithm,
+                    source_final_checksum = source_final_checksum,
+                    target_final_checksum = target_final_checksum,
+                    "additional checksum verified."
+                );
+            }
+        }
+        Ok(())
     }
 }
 
@@ -552,7 +735,7 @@ impl StorageTrait for LocalStorage {
 
         fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos).unwrap();
 
-        let object_parts = if let Some(object_checksum) = &object_checksum {
+        let target_object_parts = if let Some(object_checksum) = &object_checksum {
             object_checksum.object_parts.clone()
         } else {
             None
@@ -560,170 +743,19 @@ impl StorageTrait for LocalStorage {
 
         let target_content_length = fs_util::get_file_size(&real_path).await;
 
-        if !self.config.disable_etag_verify {
-            trace!(
-                key = key,
-                size = source_content_length,
-                "download completed. start to etag verify. depends on the size, this may take a while.",
-            );
-
-            let target_sse = None;
-            let target_e_tag = if let Some(parts) = object_parts.as_ref() {
-                Some(
-                    generate_e_tag_hash_from_path_with_auto_chunksize(
-                        &real_path,
-                        parts.iter().map(|part| part.size().unwrap()).collect(),
-                    )
-                    .await?,
-                )
-            } else {
-                Some(
-                    generate_e_tag_hash_from_path(
-                        &real_path,
-                        self.config.transfer_config.multipart_chunksize as usize,
-                        self.config.transfer_config.multipart_threshold as usize,
-                    )
-                    .await?,
-                )
-            };
-
-            let verify_result = verify_e_tag(
-                !self.config.disable_multipart_verify,
-                &self.config.source_sse_c,
-                &self.config.target_sse_c,
-                &source_sse,
-                &source_e_tag,
-                &target_sse,
-                &target_e_tag,
-            );
-
-            if let Some(e_tag_match) = verify_result {
-                if !e_tag_match {
-                    if (source_content_length == target_content_length)
-                        && (is_multipart_upload_e_tag(&source_e_tag)
-                            && self.config.disable_multipart_verify)
-                    {
-                        trace!(
-                            key = &key,
-                            source_e_tag = source_e_tag,
-                            target_e_tag = target_e_tag,
-                            "skip e_tag verification."
-                        );
-                    } else {
-                        self.send_stats(SyncWarning {
-                            key: key.to_string(),
-                        })
-                        .await;
-
-                        let message = if source_content_length
-                            == fs_util::get_file_size(&real_path).await
-                            && is_multipart_upload_e_tag(&source_e_tag)
-                            && object_checksum
-                                .clone()
-                                .unwrap_or_default()
-                                .object_parts
-                                .is_none()
-                        {
-                            format!("{} {}", "e_tag", MISMATCH_WARNING_WITH_HELP)
-                        } else {
-                            "e_tag mismatch. file in the local storage may be corrupted."
-                                .to_string()
-                        };
-
-                        let source_e_tag = source_e_tag.clone().unwrap();
-                        let target_e_tag = target_e_tag.clone().unwrap();
-                        warn!(
-                            key = key,
-                            source_e_tag = source_e_tag,
-                            target_e_tag = target_e_tag,
-                            message
-                        );
-                    }
-                } else {
-                    self.send_stats(EtagVerified {
-                        key: key.to_string(),
-                    })
-                    .await;
-
-                    let source_e_tag = source_e_tag.clone().unwrap();
-                    let target_e_tag = target_e_tag.clone().unwrap();
-                    trace!(
-                        key = key,
-                        source_e_tag = source_e_tag,
-                        target_e_tag = target_e_tag,
-                        "e_tag verified."
-                    );
-                }
-            }
-        } else if source_content_length != target_content_length {
-            self.send_stats(SyncWarning {
-                key: key.to_string(),
-            })
-            .await;
-
-            warn!(
-                key = key,
-                source_content_length = source_content_length,
-                target_content_length = target_content_length,
-                "content length mismatch. file in the local storage may be corrupted."
-            );
-        }
-
-        if let Some(source_final_checksum) = source_final_checksum {
-            trace!(
-                key = key,
-                size = source_content_length,
-                "start to additional checksum verify. depends on the size, this may take a while.",
-            );
-
-            let parts = if let Some(parts) = object_parts.as_ref() {
-                parts
-                    .iter()
-                    .map(|part| part.size().unwrap())
-                    .collect::<Vec<i64>>()
-            } else {
-                vec![source_content_length as i64]
-            };
-
-            let target_final_checksum = generate_checksum_from_path(
-                &real_path,
-                source_checksum_algorithm.as_ref().unwrap().clone(),
-                parts,
-                self.config.transfer_config.multipart_threshold as usize,
-            )
-            .await?;
-
-            let additional_checksum_algorithm =
-                source_checksum_algorithm.as_ref().unwrap().as_str();
-
-            if source_final_checksum != target_final_checksum {
-                self.send_stats(SyncWarning {
-                    key: key.to_string(),
-                })
-                .await;
-
-                warn!(
-                    key = key,
-                    additional_checksum_algorithm = additional_checksum_algorithm,
-                    source_final_checksum = source_final_checksum,
-                    target_final_checksum = target_final_checksum,
-                    "additional checksum mismatch. file in the local storage may be corrupted."
-                );
-            } else {
-                self.send_stats(ChecksumVerified {
-                    key: key.to_string(),
-                })
-                .await;
-
-                trace!(
-                    key = key,
-                    additional_checksum_algorithm = additional_checksum_algorithm,
-                    source_final_checksum = source_final_checksum,
-                    target_final_checksum = target_final_checksum,
-                    "additional checksum verified."
-                );
-            }
-        }
+        self.verify_local_file(
+            key,
+            object_checksum,
+            &source_sse,
+            &source_e_tag,
+            source_content_length,
+            source_final_checksum,
+            source_checksum_algorithm,
+            &real_path,
+            target_object_parts,
+            target_content_length,
+        )
+        .await?;
 
         let lossy_path = real_path.to_string_lossy().to_string();
         info!(
