@@ -18,11 +18,11 @@ anyhow = { version = "1.0.75" }
 async-trait = "0.1.74"
 async-channel = "2.1.0"
 aws-config = { version = "1.0.0", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "0.39.0"
-aws-smithy-runtime = { version = "1.0.0", features = ["client", "connector-hyper-0-14-x"]}
-aws-smithy-runtime-api = "1"
+aws-sdk-s3 = "0.39.1"
+aws-smithy-runtime = { version = "1.0.1", features = ["client", "connector-hyper-0-14-x"]}
+aws-smithy-runtime-api = "1.0.1"
 aws-smithy-http = "0.60.0"
-aws-smithy-types = "1.0.0"
+aws-smithy-types = "1.0.1"
 aws-smithy-types-convert = { version = "0.60.0", features = ["convert-chrono"] }
 aws-types = "1.0.0"
 base64 = "0.21.5"
