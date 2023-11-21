@@ -175,6 +175,18 @@ pub fn sha1_digest_from_key(key: &str) -> Sha1Digest {
 }
 
 pub fn clone_object_with_key(object: &Object, key: &str) -> Object {
+    let checksum_algorithm = if object.checksum_algorithm().is_empty() {
+        None
+    } else {
+        Some(
+            object
+                .checksum_algorithm()
+                .iter()
+                .map(|checksum_algorithm| checksum_algorithm.to_owned())
+                .collect(),
+        )
+    };
+
     Object::builder()
         .key(key)
         .size(object.size().unwrap())
@@ -182,13 +194,7 @@ pub fn clone_object_with_key(object: &Object, key: &str) -> Object {
         .set_e_tag(object.e_tag().map(|e_tag| e_tag.to_string()))
         .set_owner(object.owner().cloned())
         .set_storage_class(object.storage_class().cloned())
-        .set_checksum_algorithm(Some(
-            object
-                .checksum_algorithm()
-                .iter()
-                .map(|checksum_algorithm| checksum_algorithm.to_owned())
-                .collect(),
-        ))
+        .set_checksum_algorithm(checksum_algorithm)
         .build()
 }
 
