@@ -124,6 +124,83 @@ mod tests {
         }
     }
 
+    #[test]
+    fn validate_storage_config_both_endpoint_url() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-endpoint-url",
+            "https://localhost:9000",
+            "--target-endpoint-url",
+            "https://localhost:9000",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        if let Ok(config_args) = parse_from_args(args) {
+            assert!(config_args.validate_storage_config().is_ok());
+        } else {
+            panic!("error occurred.");
+        }
+    }
+
+    #[test]
+    fn validate_storage_config_source_local_endpoint_url() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-endpoint-url",
+            "https://localhost:9000",
+            "--target-endpoint-url",
+            "https://localhost:9000",
+            "./test_data/source",
+            "s3://target-bucket",
+        ];
+
+        if let Ok(config_args) = parse_from_args(args) {
+            let result = config_args.validate_storage_config();
+            assert!(result.is_err());
+            if let Err(e) = result {
+                assert_eq!(
+                    e,
+                    SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string()
+                );
+            }
+        } else {
+            panic!("error occurred.");
+        }
+    }
+
+    #[test]
+    fn validate_storage_config_target_local_endpoint_url() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-endpoint-url",
+            "https://localhost:9000",
+            "--target-endpoint-url",
+            "https://localhost:9000",
+            "s3://source-bucket",
+            "./test_data/target",
+        ];
+
+        if let Ok(config_args) = parse_from_args(args) {
+            let result = config_args.validate_storage_config();
+            assert!(result.is_err());
+            if let Err(e) = result {
+                assert_eq!(
+                    e,
+                    TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string()
+                );
+            }
+        } else {
+            panic!("error occurred.");
+        }
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

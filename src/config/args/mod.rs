@@ -78,6 +78,10 @@ const SOURCE_REMOTE_STORAGE_SPECIFIED_WITH_NO_GUESS_MIME_TYPE: &str =
     "with --no-guess-mime-type, source storage must be local storage\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_METADATA_OPTION: &str =
     "with metadata related option, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL: &str =
+    "with --source-endpoint-url, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL: &str =
+    "with --target-endpoint-url, target storage must be s3://\n";
 const CHECK_SIZE_CONFLICT: &str =
     "--head-each-target is required for --check-size, or remove --remove-modified-filter\n";
 const SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND: &str = "directory must be specified as a source\n";
@@ -452,6 +456,7 @@ impl CLIArgs {
         self.check_check_size_conflict()?;
         self.check_ignore_symlinks_conflict()?;
         self.check_no_guess_mime_type_conflict()?;
+        self.check_endpoint_url_conflict()?;
 
         Ok(())
     }
@@ -694,6 +699,20 @@ impl CLIArgs {
         let source = storage_path::parse_storage_path(&self.source);
         if matches!(source, StoragePath::S3 { .. }) {
             return Err(SOURCE_REMOTE_STORAGE_SPECIFIED_WITH_NO_GUESS_MIME_TYPE.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_endpoint_url_conflict(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.source_endpoint_url.is_some() {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) && self.target_endpoint_url.is_some() {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string());
         }
 
         Ok(())
