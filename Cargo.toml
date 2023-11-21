@@ -17,14 +17,14 @@ categories = ["command-line-utilities", "filesystem"]
 anyhow = { version = "1.0.75" }
 async-trait = "0.1.74"
 async-channel = "2.1.0"
-aws-config = { version = "0.101.0", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "0.38.0"
-aws-smithy-runtime = { version = "0.101.0", features = ["client", "connector-hyper-0-14-x"]}
-aws-smithy-runtime-api = "0.101.0"
+aws-config = { version = "1.0.0", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "0.39.0"
+aws-smithy-runtime = { version = "1.0.0", features = ["client", "connector-hyper-0-14-x"]}
+aws-smithy-runtime-api = "1"
 aws-smithy-http = "0.60.0"
 aws-smithy-types = "1.0.0"
 aws-smithy-types-convert = { version = "0.60.0", features = ["convert-chrono"] }
-aws-types = "0.101.0"
+aws-types = "1.0.0"
 base64 = "0.21.5"
 byte-unit = "4.0.19"
 bytes = "1.5.0"
