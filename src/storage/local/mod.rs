@@ -24,9 +24,9 @@ use aws_sdk_s3::types::{
 };
 use aws_sdk_s3::Client;
 use aws_smithy_runtime_api::client::result::SdkError;
+use aws_smithy_runtime_api::http::{Response, StatusCode};
 use aws_smithy_types::body::SdkBody;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use http::Response;
 use leaky_bucket::RateLimiter;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
@@ -638,7 +638,7 @@ impl StorageTrait for LocalStorage {
             None
         };
 
-        let source_last_modified = aws_smithy_types::DateTime::from_millis(
+        let source_last_modified = DateTime::from_millis(
             get_object_output
                 .last_modified
                 .unwrap()
@@ -864,10 +864,7 @@ fn build_object_from_dir_entry(
 fn build_not_found_response() -> (HeadObjectError, Response<SdkBody>) {
     let head_object_error =
         HeadObjectError::NotFound(aws_sdk_s3::types::error::NotFound::builder().build());
-    let response = http::Response::builder()
-        .status(404)
-        .body(SdkBody::from(r#""#))
-        .unwrap();
+    let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
     (head_object_error, response)
 }
 

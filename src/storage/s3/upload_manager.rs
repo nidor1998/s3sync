@@ -115,7 +115,7 @@ impl UploadManager {
             .metadata()
             .unwrap_or(&HashMap::new())
             .clone();
-        let last_modified = aws_smithy_types::DateTime::from_millis(
+        let last_modified = DateTime::from_millis(
             get_object_output
                 .last_modified()
                 .unwrap()
@@ -148,7 +148,7 @@ impl UploadManager {
             .unwrap_or(&HashMap::new())
             .clone();
 
-        let last_modified = aws_smithy_types::DateTime::from_millis(
+        let last_modified = DateTime::from_millis(
             get_object_output
                 .last_modified()
                 .unwrap()

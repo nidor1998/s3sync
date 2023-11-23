@@ -224,6 +224,31 @@ pub fn clone_object_version_with_key(object: &ObjectVersion, key: &str) -> Objec
         .build()
 }
 
+pub fn get_additional_checksum(
+    get_object_output: &GetObjectOutput,
+    checksum_algorithm: Option<ChecksumAlgorithm>,
+) -> Option<String> {
+    checksum_algorithm.as_ref()?;
+
+    match checksum_algorithm.unwrap() {
+        ChecksumAlgorithm::Sha256 => get_object_output
+            .checksum_sha256()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha1 => get_object_output
+            .checksum_sha1()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc32 => get_object_output
+            .checksum_crc32()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc32C => get_object_output
+            .checksum_crc32_c()
+            .map(|checksum| checksum.to_string()),
+        _ => {
+            panic!("unknown algorithm")
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum SyncStatistics {
     SyncBytes(u64),
@@ -523,30 +548,5 @@ mod tests {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")
             .try_init();
-    }
-}
-
-pub fn get_additional_checksum(
-    get_object_output: &GetObjectOutput,
-    checksum_algorithm: Option<ChecksumAlgorithm>,
-) -> Option<String> {
-    checksum_algorithm.as_ref()?;
-
-    match checksum_algorithm.unwrap() {
-        ChecksumAlgorithm::Sha256 => get_object_output
-            .checksum_sha256()
-            .map(|checksum| checksum.to_string()),
-        ChecksumAlgorithm::Sha1 => get_object_output
-            .checksum_sha1()
-            .map(|checksum| checksum.to_string()),
-        ChecksumAlgorithm::Crc32 => get_object_output
-            .checksum_crc32()
-            .map(|checksum| checksum.to_string()),
-        ChecksumAlgorithm::Crc32C => get_object_output
-            .checksum_crc32_c()
-            .map(|checksum| checksum.to_string()),
-        _ => {
-            panic!("unknown algorithm")
-        }
     }
 }

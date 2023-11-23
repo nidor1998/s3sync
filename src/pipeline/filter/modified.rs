@@ -69,12 +69,12 @@ fn filter_last_modified(
         is_source_last_modified_date_newer(source_last_modified_date, target_last_modified_date);
     if !modified {
         let source_last_modified =
-            aws_smithy_types::DateTime::from_millis(source_last_modified_date.to_millis().unwrap())
+            DateTime::from_millis(source_last_modified_date.to_millis().unwrap())
                 .to_chrono_utc()
                 .unwrap()
                 .to_rfc3339();
         let target_last_modified =
-            aws_smithy_types::DateTime::from_millis(target_last_modified_date.to_millis().unwrap())
+            DateTime::from_millis(target_last_modified_date.to_millis().unwrap())
                 .to_chrono_utc()
                 .unwrap()
                 .to_rfc3339();
