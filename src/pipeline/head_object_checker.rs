@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_smithy_runtime_api::client::result::SdkError;
+use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use http::Response;
 use tracing::{debug, warn};
 
 use crate::storage::Storage;
@@ -193,7 +193,7 @@ mod tests {
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use http::Response;
+    use aws_smithy_runtime_api::http::{Response, StatusCode};
 
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
@@ -374,10 +374,7 @@ mod tests {
     fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         let not_found = aws_sdk_s3::types::error::NotFound::builder().build();
         let head_object_error = HeadObjectError::NotFound(not_found);
-        let response = http::Response::builder()
-            .status(404)
-            .body(SdkBody::from(r#""#))
-            .unwrap();
+        let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(head_object_error, response)
     }

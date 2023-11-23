@@ -13,8 +13,8 @@ use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
 use aws_smithy_runtime_api::client::result::SdkError;
+use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
-use http::{Response, StatusCode};
 use tracing::{error, info, trace, warn};
 
 use crate::pipeline::head_object_checker::HeadObjectChecker;
@@ -693,7 +693,7 @@ fn is_not_found_error(result: &Error) -> bool {
     if let Some(SdkError::ServiceError(e)) =
         result.downcast_ref::<SdkError<GetObjectTaggingError, Response<SdkBody>>>()
     {
-        if e.raw().status() == StatusCode::NOT_FOUND {
+        if e.raw().status().as_u16() == 404 {
             return true;
         }
     }
@@ -712,6 +712,22 @@ fn is_access_denied_error(result: &Error) -> bool {
 
     if let Some(SdkError::ServiceError(e)) =
         result.downcast_ref::<SdkError<GetObjectTaggingError, Response<SdkBody>>>()
+    {
+        if let Some(code) = e.err().meta().code() {
+            return code == "AccessDenied";
+        }
+    }
+
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<PutObjectError, Response<SdkBody>>>()
+    {
+        if let Some(code) = e.err().meta().code() {
+            return code == "AccessDenied";
+        }
+    }
+
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<PutObjectTaggingError, Response<SdkBody>>>()
     {
         if let Some(code) = e.err().meta().code() {
             return code == "AccessDenied";
@@ -787,7 +803,7 @@ mod tests {
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use http::Response;
+    use aws_smithy_runtime_api::http::{Response, StatusCode};
 
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
@@ -1238,6 +1254,14 @@ mod tests {
             build_get_object_tagging_access_denied_error()
         )));
 
+        assert!(is_access_denied_error(&anyhow!(
+            build_put_object_access_denied_error()
+        )));
+
+        assert!(is_access_denied_error(&anyhow!(
+            build_put_object_tagging_access_denied_error()
+        )));
+
         assert!(!is_access_denied_error(&anyhow!(
             build_get_object_no_such_key_error()
         )));
@@ -1380,10 +1404,7 @@ mod tests {
     fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         let head_object_error =
             HeadObjectError::NotFound(aws_sdk_s3::types::error::NotFound::builder().build());
-        let response = http::Response::builder()
-            .status(404)
-            .body(SdkBody::from(r#""#))
-            .unwrap();
+        let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(head_object_error, response)
     }
@@ -1392,10 +1413,7 @@ mod tests {
     ) -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
         let unhandled_error = GetObjectTaggingError::unhandled("Not Found");
 
-        let response = http::Response::builder()
-            .status(404)
-            .body(SdkBody::from(r#""#))
-            .unwrap();
+        let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(unhandled_error, response)
     }
@@ -1412,10 +1430,7 @@ mod tests {
         let get_object_error = GetObjectError::NoSuchKey(
             aws_sdk_s3::types::error::builders::NoSuchKeyBuilder::default().build(),
         );
-        let response = http::Response::builder()
-            .status(404)
-            .body(SdkBody::from(r#""#))
-            .unwrap();
+        let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(get_object_error, response)
     }
@@ -1427,10 +1442,7 @@ mod tests {
                 .build(),
         );
 
-        let response = http::Response::builder()
-            .status(403)
-            .body(SdkBody::from(r#""#))
-            .unwrap();
+        let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(unhandled_error, response)
     }
@@ -1443,10 +1455,32 @@ mod tests {
                 .build(),
         );
 
-        let response = http::Response::builder()
-            .status(403)
-            .body(SdkBody::from(r#""#))
-            .unwrap();
+        let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_put_object_access_denied_error() -> SdkError<PutObjectError, Response<SdkBody>> {
+        let unhandled_error = PutObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("AccessDenied")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_put_object_tagging_access_denied_error(
+    ) -> SdkError<PutObjectTaggingError, Response<SdkBody>> {
+        let unhandled_error = PutObjectTaggingError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("AccessDenied")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(unhandled_error, response)
     }
