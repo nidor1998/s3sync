@@ -40,16 +40,15 @@ leaky-bucket = "1.0.1"
 md5 = "0.7.0"
 mime_guess = "2.0.4"
 hex = "0.4.3"
-http = "1.0.0"
 hyper = {version = "0.14.27", features = ["stream"]}
 hyper-rustls = {version = "0.24.2", features = ["http2"]}
 hyper-proxy = {version = "0.9.1", default-features = false, features = ["rustls"]}
 indicatif = "0.17.7"
 log = "0.4.20"
 pin-project = "1.1.3"
-percent-encoding = "2.3.0"
+percent-encoding = "2.3.1"
 regex = "1.10.2"
-rustls = { version = "0.21.8", features = ["dangerous_configuration"] }
+rustls = { version = "0.21.9", features = ["dangerous_configuration"] }
 rusty-fork = "0.3.0"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
@@ -62,10 +61,10 @@ tokio-stream = "0.1.14"
 tokio-util = "0.7.10"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json", "local-time"] }
-url = "2.4.1"
+url = "2.5.0"
 urlencoding = "2.1.3"
 walkdir = "2.4.0"
-webpki-roots = "0.25.2"
+webpki-roots = "0.25.3"
 zeroize = "1.7.0"
 zeroize_derive = "1.4.2"
 
