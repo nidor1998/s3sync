@@ -399,7 +399,7 @@ s3sync forcibly retries the operation that AWS SDK for Rust cannot retry.
 For example, in the case of `connection reset by peer`, s3sync will retry the operation.
 
 #### `--remove-modified-filter`
-If you want to overwrite the existing object, specify the option.
+If you want to overwrite the existing objects, specify the option.
 
 #### `--put-last-modified-metadata`
 This option adds user-defined metadata that contains the last-modified time of the source object.
