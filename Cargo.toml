@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "0.1.14"
+version = "1.0.0"
 edition = "2021"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "very fast, and powerful synchronization command line tool for S3."
@@ -10,15 +10,15 @@ repository = "https://github.com/nidor1998/s3sync"
 homepage = "https://github.com/nidor1998/s3sync"
 documentation = "https://docs.rs/s3sync"
 readme = "README.md"
-keywords = ["s3", "sync"]
+keywords = ["aws", "s3", "sync"]
 categories = ["command-line-utilities", "filesystem"]
 
 [dependencies]
 anyhow = { version = "1.0.75" }
 async-trait = "0.1.74"
-async-channel = "2.1.0"
-aws-config = { version = "1.0.0", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "0.39.1"
+async-channel = "2.1.1"
+aws-config = { version = "1.0.1", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1.1.0"
 aws-smithy-runtime = { version = "1.0.1", features = ["client", "connector-hyper-0-14-x"]}
 aws-smithy-runtime-api = "1.0.1"
 aws-smithy-http = "0.60.0"
