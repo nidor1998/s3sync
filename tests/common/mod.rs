@@ -75,6 +75,19 @@ pub const TEST_SSE_C_KEY_2_MD5: &str = "GoDL8oWeAZVZNl1r5Hh5Tg==";
 
 const PROFILE_NAME: &str = "s3sync-e2e-test";
 
+const GET_OBJECT_DENY_BUCKET_POLICY: &str = r#"{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DenyGetOperation",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::{{ bucket }}/*"
+        }
+    ]
+}"#;
+
 #[cfg(feature = "e2e_test")]
 pub struct TestHelper {
     client: Client,
@@ -1024,6 +1037,18 @@ impl TestHelper {
         }
 
         stats
+    }
+
+    pub async fn put_bucket_policy_deny_get_object(&self, bucket: &str) {
+        let policy = GET_OBJECT_DENY_BUCKET_POLICY.replace("{{ bucket }}", bucket);
+
+        self.client
+            .put_bucket_policy()
+            .bucket(bucket)
+            .policy(policy)
+            .send()
+            .await
+            .unwrap();
     }
 
     pub fn init_dummy_tracing_subscriber() {
