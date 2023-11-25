@@ -8,8 +8,6 @@ s3sync is a reliable, very fast, and powerful synchronization tool for S3.
 It can be used to synchronize local directories with S3 bucket, and also to synchronize S3 to s3 bucket.
 Supports multipart upload, versioning, metadata.
 
-**[AWS SDK for rust](https://github.com/awslabs/aws-sdk-rust) is not production ready yet and is not recommended for production use, so s3sync is also not recommended for production use. But any feedback is welcome. I will continue to improve s3sync.**
-
 
 ## As a library
 s3sync can be used as a library.
@@ -157,9 +155,8 @@ s3sync requires Rust 1.70 or later.
 
 ### Build
 ```bash
-cargo build --release
+cargo install --git https://github.com/nidor1998/s3sync
 ```
-Output binary is in `target/release/s3sync`
 
 ## Usage
 AWS credentials are required to use s3sync. IAM Roles, AWC CLI Profile, environment variables, etc supported.  
