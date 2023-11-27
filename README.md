@@ -155,7 +155,7 @@ s3sync requires Rust 1.70 or later.
 
 ### Build
 ```bash
-cargo install --git https://github.com/nidor1998/s3sync
+cargo install s3sync
 ```
 
 ## Usage
