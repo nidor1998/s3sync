@@ -1,4 +1,5 @@
 use byte_unit::Byte;
+use std::str::FromStr;
 
 const UNDER_MIN_VALUE: &str = "must be greater than or equal to 5MiB";
 const OVER_MAX_VALUE: &str = "must be smaller than or equal to 5GiB";
@@ -15,10 +16,10 @@ const MAX_BANDWIDTH: u128 = 100 * 1024 * 1024 * 1024;
 pub fn check_human_bytes(value: &str) -> Result<String, String> {
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
 
-    if result.get_bytes() < MIN_VALUE {
+    if result.as_u128() < MIN_VALUE {
         return Err(UNDER_MIN_VALUE.to_string());
     }
-    if result.get_bytes() > MAX_VALUE {
+    if result.as_u128() > MAX_VALUE {
         return Err(OVER_MAX_VALUE.to_string());
     }
 
@@ -29,13 +30,13 @@ pub fn parse_human_bytes(value: &str) -> Result<u64, String> {
     check_human_bytes(value)?;
 
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
-    Ok(result.get_bytes().try_into().unwrap())
+    Ok(result.as_u128().try_into().unwrap())
 }
 
 pub fn check_human_bytes_without_limit(value: &str) -> Result<String, String> {
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
 
-    let try_result = TryInto::<u64>::try_into(result.get_bytes());
+    let try_result = TryInto::<u64>::try_into(result.as_u128());
     if try_result.is_err() {
         return Err(format!("'{}' is not a valid number.", value));
     }
@@ -47,16 +48,16 @@ pub fn parse_human_bytes_without_limit(value: &str) -> Result<u64, String> {
     check_human_bytes_without_limit(value)?;
 
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
-    Ok(result.get_bytes().try_into().unwrap())
+    Ok(result.as_u128().try_into().unwrap())
 }
 
 pub fn check_human_bandwidth(value: &str) -> Result<String, String> {
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
 
-    if result.get_bytes() < MIN_BANDWIDTH {
+    if result.as_u128() < MIN_BANDWIDTH {
         return Err(UNDER_MIN_BANDWIDTH.to_string());
     }
-    if result.get_bytes() > MAX_BANDWIDTH {
+    if result.as_u128() > MAX_BANDWIDTH {
         return Err(OVER_MAX_BANDWIDTH.to_string());
     }
 
@@ -67,7 +68,7 @@ pub fn parse_human_bandwidth(value: &str) -> Result<u64, String> {
     check_human_bandwidth(value)?;
 
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
-    Ok(result.get_bytes().try_into().unwrap())
+    Ok(result.as_u128().try_into().unwrap())
 }
 
 #[cfg(test)]
@@ -178,7 +179,7 @@ mod tests {
             panic!("No error occurred.")
         }
 
-        let result = check_human_bytes("5Zib");
+        let result = check_human_bytes("5Eib");
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_VALUE);
         } else {
@@ -210,7 +211,7 @@ mod tests {
             panic!("No error occurred.")
         }
 
-        let result = check_human_bandwidth("5Zib");
+        let result = check_human_bandwidth("5Eib");
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_BANDWIDTH);
         } else {
