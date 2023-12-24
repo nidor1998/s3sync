@@ -14,7 +14,7 @@ Example usage
 ```Toml
 [dependencies]
 s3sync = "1.1.0"
-tokio = { version = "1.34.0", features = ["full"] }
+tokio = { version = "1.35.1", features = ["full"] }
 ```
 
 ```no_run
