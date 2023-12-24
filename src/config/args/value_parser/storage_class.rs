@@ -1,6 +1,6 @@
 use aws_sdk_s3::types::StorageClass;
 
-const INVALID_STORAGE_CLASS: &str = "invalid storage class. valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | GLACIER_IR .";
+const INVALID_STORAGE_CLASS: &str = "invalid storage class. valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | OUTPOSTS |GLACIER_IR | SNOW | EXPRESS_ONEZONE.";
 
 pub fn parse_storage_class(class: &str) -> Result<String, String> {
     #[allow(deprecated)]
