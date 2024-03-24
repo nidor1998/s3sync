@@ -10,6 +10,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, CompletedMultipartUpload, CompletedPart, ObjectPart, ServerSideEncryption,
+    StorageClass,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
@@ -41,6 +42,7 @@ pub struct UploadManager {
     tagging: Option<String>,
     object_parts: Option<Vec<ObjectPart>>,
     concatnated_md5_hash: Vec<u8>,
+    express_onezone_storage: bool,
 }
 
 impl UploadManager {
@@ -51,6 +53,7 @@ impl UploadManager {
         stats_sender: Sender<SyncStatistics>,
         tagging: Option<String>,
         object_parts: Option<Vec<ObjectPart>>,
+        express_onezone_storage: bool,
     ) -> Self {
         UploadManager {
             client,
@@ -60,6 +63,7 @@ impl UploadManager {
             tagging,
             object_parts,
             concatnated_md5_hash: vec![],
+            express_onezone_storage,
         }
     }
 
@@ -305,6 +309,7 @@ impl UploadManager {
             &get_object_output,
             self.config.additional_checksum_algorithm.as_ref().cloned(),
         );
+        let source_storage_class = get_object_output.storage_class().cloned();
 
         let upload_parts = if self.is_auto_chunksize_enabled() {
             self.upload_parts_with_auto_chunksize(bucket, key, upload_id, get_object_output)
@@ -346,7 +351,10 @@ impl UploadManager {
             source_e_tag
         };
 
-        if !self.config.disable_etag_verify {
+        if !self.config.disable_etag_verify
+            && !self.express_onezone_storage
+            && source_storage_class != Some(StorageClass::ExpressOnezone)
+        {
             let target_sse = complete_multipart_upload_output
                 .server_side_encryption()
                 .cloned();
@@ -487,11 +495,15 @@ impl UploadManager {
                 .await
                 .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
 
-            let md5_digest = md5::compute(&buffer);
-            self.concatnated_md5_hash
-                .append(&mut md5_digest.as_slice().to_vec());
+            let md5_digest_base64 = if !self.express_onezone_storage {
+                let md5_digest = md5::compute(&buffer);
+                self.concatnated_md5_hash
+                    .append(&mut md5_digest.as_slice().to_vec());
 
-            let md5_digest_base64 = general_purpose::STANDARD.encode(md5_digest.as_slice());
+                Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+            } else {
+                None
+            };
 
             let upload_part_output = self
                 .client
@@ -500,7 +512,7 @@ impl UploadManager {
                 .key(key)
                 .upload_id(upload_id)
                 .part_number(part_number)
-                .content_md5(md5_digest_base64)
+                .set_content_md5(md5_digest_base64)
                 .content_length(chunksize as i64)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.clone())
                 .set_sse_customer_algorithm(self.config.target_sse_c.clone())
@@ -579,11 +591,15 @@ impl UploadManager {
                 .await
                 .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
 
-            let md5_digest = md5::compute(&buffer);
-            self.concatnated_md5_hash
-                .append(&mut md5_digest.as_slice().to_vec());
+            let md5_digest_base64 = if !self.express_onezone_storage {
+                let md5_digest = md5::compute(&buffer);
+                self.concatnated_md5_hash
+                    .append(&mut md5_digest.as_slice().to_vec());
 
-            let md5_digest_base64 = general_purpose::STANDARD.encode(md5_digest.as_slice());
+                Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+            } else {
+                None
+            };
 
             let upload_part_output = self
                 .client
@@ -592,7 +608,7 @@ impl UploadManager {
                 .key(key)
                 .upload_id(upload_id)
                 .part_number(part_number as i32)
-                .content_md5(md5_digest_base64)
+                .set_content_md5(md5_digest_base64)
                 .content_length(chunksize)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.clone())
                 .set_sse_customer_algorithm(self.config.target_sse_c.clone())
@@ -653,6 +669,7 @@ impl UploadManager {
             &get_object_output,
             self.config.additional_checksum_algorithm.as_ref().cloned(),
         );
+        let source_storage_class = get_object_output.storage_class().cloned();
 
         let mut body = get_object_output.body.into_async_read();
         get_object_output.body = ByteStream::from_static(b"");
@@ -669,11 +686,16 @@ impl UploadManager {
             .await
             .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
 
-        let md5_digest = md5::compute(&buffer);
-        self.concatnated_md5_hash
-            .append(&mut md5_digest.as_slice().to_vec());
+        let md5_digest_base64 = if !self.express_onezone_storage {
+            let md5_digest = md5::compute(&buffer);
+            self.concatnated_md5_hash
+                .append(&mut md5_digest.as_slice().to_vec());
 
-        let md5_digest_base64 = general_purpose::STANDARD.encode(md5_digest.as_slice());
+            Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+        } else {
+            None
+        };
+
         let buffer_stream = ByteStream::from(buffer);
 
         let storage_class = if self.config.storage_class.is_none() {
@@ -692,7 +714,7 @@ impl UploadManager {
             .body(buffer_stream)
             .set_metadata(get_object_output.metadata().cloned())
             .set_tagging(self.tagging.clone())
-            .content_md5(md5_digest_base64)
+            .set_content_md5(md5_digest_base64)
             .set_content_type(if self.config.content_type.is_none() {
                 get_object_output
                     .content_type()
@@ -756,7 +778,10 @@ impl UploadManager {
             source_e_tag
         };
 
-        if !self.config.disable_etag_verify {
+        if !self.config.disable_etag_verify
+            && !self.express_onezone_storage
+            && source_storage_class != Some(StorageClass::ExpressOnezone)
+        {
             let target_sse = put_object_output.server_side_encryption().cloned();
             let target_e_tag = put_object_output.e_tag().map(|e| e.to_string());
 
