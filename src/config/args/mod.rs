@@ -326,7 +326,7 @@ pub struct CLIArgs {
     sync_latest_tagging: bool,
 
     /// type of storage to use for the target object.
-    /// valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | GLACIER_IR
+    /// valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE
     #[arg(long, env, value_parser = storage_class::parse_storage_class)]
     storage_class: Option<String>,
 

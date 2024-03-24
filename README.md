@@ -151,7 +151,7 @@ The binary runs on the above platforms without any dependencies.
 You can also build from source following the instructions below.
 ### Install Rust
 See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)  
-s3sync requires Rust 1.70 or later.
+s3sync requires Rust 1.74.1 or later.
 
 ### Build
 ```bash
