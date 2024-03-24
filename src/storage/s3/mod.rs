@@ -39,6 +39,8 @@ use crate::types::{
 };
 use crate::Config;
 
+const EXPRESS_ONEZONE_STORAGE_SUFFIX: &str = "--x-s3";
+
 mod client_builder;
 mod upload_manager;
 
@@ -290,6 +292,10 @@ impl S3Storage {
 impl StorageTrait for S3Storage {
     fn is_local_storage(&self) -> bool {
         false
+    }
+
+    fn is_express_onezone_storage(&self) -> bool {
+        is_express_onezone_storage(&self.bucket)
     }
 
     async fn list_objects(
@@ -774,6 +780,7 @@ impl StorageTrait for S3Storage {
             self.get_stats_sender(),
             tagging,
             object_checksum.unwrap_or_default().object_parts,
+            self.is_express_onezone_storage(),
         );
 
         self.exec_rate_limit_objects_per_sec().await;
@@ -964,6 +971,10 @@ pub fn generate_full_key(prefix: &str, key: &str) -> String {
     format!("{}{}", prefix, key)
 }
 
+fn is_express_onezone_storage(bucket: &str) -> bool {
+    bucket.ends_with(EXPRESS_ONEZONE_STORAGE_SUFFIX)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::config::args::parse_from_args;
@@ -981,6 +992,17 @@ mod tests {
         assert_eq!(remove_s3_prefix("dir1/data1", "dir1/"), "data1");
         assert_eq!(remove_s3_prefix("/dir1/data1", "/dir1"), "/data1");
         assert_eq!(remove_s3_prefix("/dir1/data1", "/dir1/"), "data1");
+    }
+
+    #[test]
+    fn is_express_onezone_storage_test() {
+        init_dummy_tracing_subscriber();
+
+        assert!(is_express_onezone_storage("bucket--x-s3"));
+
+        assert!(!is_express_onezone_storage("bucket-x-s3"));
+        assert!(!is_express_onezone_storage("bucket--x-s3s"));
+        assert!(!is_express_onezone_storage("bucket"));
     }
 
     #[tokio::test]
