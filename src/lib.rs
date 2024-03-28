@@ -51,6 +51,8 @@ For more examples,
 =============
 see [s3sync binary source code](https://github.com/nidor1998/s3sync/tree/main/src/bin/s3sync).
 
+see [s3sync integration tests](https://github.com/nidor1998/s3sync/tree/main/tests).
+
 For more information about s3sync binary,
 =============
 see [s3sync homepage](https://github.com/nidor1998/s3sync).

@@ -15,10 +15,10 @@ categories = ["command-line-utilities", "filesystem"]
 
 [dependencies]
 anyhow = { version = "1.0.81" }
-async-trait = "0.1.78"
+async-trait = "0.1.79"
 async-channel = "2.2.0"
-aws-config = { version = "1.1.8", features = ["behavior-version-latest"] }
-aws-sdk-s3 = "1.20.0"
+aws-config = { version = "1.1.9", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1.21.0"
 aws-smithy-runtime = { version = "1.1.8", features = ["client", "connector-hyper-0-14-x"]}
 aws-smithy-runtime-api = "1.2.0"
 aws-smithy-http = "0.60.7"
@@ -28,10 +28,10 @@ aws-types = "1.1.8"
 base64 = "0.22.0"
 byte-unit = "5.1.4"
 bytes = "1.6.0"
-clap = { version = "4.5.3", features = ["derive", "env", "cargo", "string"] }
+clap = { version = "4.5.4", features = ["derive", "env", "cargo", "string"] }
 clap_complete = "4.5.1"
 clap-verbosity-flag = "2.2.0"
-chrono = "0.4.35"
+chrono = "0.4.37"
 crc32c = "0.6.5"
 crc32fast = "1.4.0"
 dyn-clone = "1.0.17"
@@ -43,11 +43,11 @@ hex = "0.4.3"
 hyper = {version = "0.14.28", features = ["stream"]}
 hyper-rustls = {version = "0.24.2", features = ["http2"]}
 hyper-proxy = {version = "0.9.1", default-features = false, features = ["rustls"]}
-indicatif = "0.17.7"
-log = "0.4.20"
-pin-project = "1.1.3"
+indicatif = "0.17.8"
+log = "0.4.21"
+pin-project = "1.1.5"
 percent-encoding = "2.3.1"
-regex = "1.10.2"
+regex = "1.10.4"
 rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
 rusty-fork = "0.3.0"
 sha1 = "0.10.6"
@@ -69,12 +69,12 @@ zeroize = "1.7.0"
 zeroize_derive = "1.4.2"
 
 [dev-dependencies]
-nix = { version = "0.27.1", features = ["user", "process", "signal"] }
+nix = { version = "0.28.0", features = ["user", "process", "signal"] }
 once_cell = "1.19.0"
-uuid = { version = "1.6.1", features = ["v4"] }
+uuid = { version = "1.8.0", features = ["v4"] }
 
 [build-dependencies]
-shadow-rs = "0.25.0"
+shadow-rs = "0.27.1"
 
 [features]
 e2e_test = []
