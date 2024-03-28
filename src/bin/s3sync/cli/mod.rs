@@ -44,6 +44,7 @@ pub async fn run(config: Config) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use s3sync::config::args::parse_from_args;
+    use std::time::Duration;
 
     use super::*;
 
@@ -65,6 +66,9 @@ mod tests {
     #[tokio::test]
     async fn run_pipeline_error() {
         init_dummy_tracing_subscriber();
+
+        // wait for signal test to finish
+        tokio::time::sleep(Duration::from_millis(5000)).await;
 
         let args = vec![
             "s3sync",
