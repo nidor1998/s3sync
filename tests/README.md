@@ -16,6 +16,8 @@ To run all the tests, use the following command:
 ```bash
 cargo test --all-features
 ```
+### S3 permissions
+I tested with `AmazonS3FullAccess` policy, but you can use a more restrictive policy.
 
 ### Notes
 This test create and delete same S3 buckets, sometimes the tests will fail due to eventual consistency in AWS.(nevertheless, the tests will pass in the next run)
