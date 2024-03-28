@@ -47,7 +47,8 @@ async fn main() {
 s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
 An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.    
 Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)  
-Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C) for each object.
+Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C) for each object.  
+Note: Amazon S3 Express One Zone storage class does not support ETag as verification. But you can use additional checksum algorithm.
 - Very fast  
 s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
 In my environment(`c6a.large`, with 256 workers), Local to S3, about 4,000 objects/sec (small objects 1-20 kb).  
@@ -150,12 +151,12 @@ The binary runs on the above platforms without any dependencies.
 
 You can also build from source following the instructions below.
 ### Install Rust
-See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)  
-s3sync requires Rust 1.70 or later.
+See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 ### Build
+s3sync requires Rust 1.74.1 or later.
 ```bash
-cargo install s3sync
+cargo install s3sync --path .
 ```
 
 ## Usage
@@ -240,7 +241,8 @@ If the object is uploaded with SSE-KMS/SSE-C, ETag is not MD5. In this case, s3s
 
 s3sync always uses the following elements to verify the integrity of the object.
 - `Content-MD5` header(End-to-end API level integrity check)
-Amazon S3 recommends using `Content-MD5` header for end-to-end integrity check.
+Amazon S3 recommends using `Content-MD5` header for end-to-end integrity check.  
+Note: Amazon S3 Express One Zone storage class does not support `Content-MD5` header.
 - `x-amz-content-sha256` Authentication header  
 This header is SHA256 digest of the request payload.    
 Note: Some S3-compatible storage ignores this header.
@@ -259,7 +261,9 @@ For more information, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/
 In the case of Local to S3 or S3 to Local, s3sync compares ETags and additional checksums of Local that s3sync calculates with those of S3.  
 In the case of S3 to S3, s3sync just compares ETags and additional checksums that calculated by S3.
 
-If an object is not verified, s3sync show a warning message in the terminal.
+If an object is not verified, s3sync show a warning message in the terminal.  
+
+Amazon S3 Express One Zone storage class does not support ETag as verification. But you can use additional checksum algorithm.
 
 #### ETag(MD5 digest or equivalent): plain-text/SSE-S3
 |                  | Local to S3   | S3 to Local                                                                                        | S3 to S3                                                                                           |
@@ -362,6 +366,7 @@ s3sync requires the following permissions.
     "s3:GetObjectVersionTagging",
     "s3:ListBucket",
     "s3:ListBucketVersions",
+    "s3express:CreateSession",
 ]
 ```
 
@@ -378,7 +383,8 @@ s3sync requires the following permissions.
     "s3:ListBucket",
     "s3:ListBucketVersions",
     "s3:PutObject",
-    "s3:PutObjectTagging"
+    "s3:PutObjectTagging",
+    "s3express:CreateSession"
 ]
 ```
 

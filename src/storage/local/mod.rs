@@ -20,7 +20,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, ServerSideEncryption,
-    Tagging,
+    StorageClass, Tagging,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_runtime_api::client::result::SdkError;
@@ -186,8 +186,9 @@ impl LocalStorage {
         real_path: &PathBuf,
         target_object_parts: Option<Vec<ObjectPart>>,
         target_content_length: u64,
+        source_express_onezone_storage: bool,
     ) -> Result<()> {
-        if !self.config.disable_etag_verify {
+        if !self.config.disable_etag_verify && !source_express_onezone_storage {
             trace!(
                 key = key,
                 size = source_content_length,
@@ -359,6 +360,10 @@ impl LocalStorage {
 impl StorageTrait for LocalStorage {
     fn is_local_storage(&self) -> bool {
         true
+    }
+
+    fn is_express_onezone_storage(&self) -> bool {
+        false
     }
 
     async fn list_objects(
@@ -637,6 +642,7 @@ impl StorageTrait for LocalStorage {
         } else {
             None
         };
+        let source_storage_class = get_object_output.storage_class().cloned();
 
         let source_last_modified = DateTime::from_millis(
             get_object_output
@@ -754,6 +760,7 @@ impl StorageTrait for LocalStorage {
             &real_path,
             target_object_parts,
             target_content_length,
+            source_storage_class == Some(StorageClass::ExpressOnezone),
         )
         .await?;
 

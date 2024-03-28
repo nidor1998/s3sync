@@ -13,8 +13,8 @@ Example usage
 
 ```Toml
 [dependencies]
-s3sync = "1.1.0"
-tokio = { version = "1.35.1", features = ["full"] }
+s3sync = "1.2.0"
+tokio = { version = "1.36.0", features = ["full"] }
 ```
 
 ```no_run
@@ -50,6 +50,8 @@ async fn main() {
 For more examples,
 =============
 see [s3sync binary source code](https://github.com/nidor1998/s3sync/tree/main/src/bin/s3sync).
+
+see [s3sync integration tests](https://github.com/nidor1998/s3sync/tree/main/tests).
 
 For more information about s3sync binary,
 =============

@@ -56,6 +56,7 @@ pub trait StorageFactory {
 #[async_trait]
 pub trait StorageTrait: DynClone {
     fn is_local_storage(&self) -> bool;
+    fn is_express_onezone_storage(&self) -> bool;
     async fn list_objects(
         &self,
         sender: &Sender<S3syncObject>,
