@@ -48,7 +48,7 @@ log = "0.4.21"
 pin-project = "1.1.5"
 percent-encoding = "2.3.1"
 regex = "1.10.4"
-rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
+rustls = { version = "0.21.11", features = ["dangerous_configuration"] }
 rusty-fork = "0.3.0"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
