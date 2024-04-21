@@ -15,7 +15,7 @@ jobs:
     container: quay.io/pypa/manylinux2014_x86_64
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: build and packaging final binary
         shell: bash
         run: |
@@ -62,7 +62,7 @@ jobs:
       - name: install rust toolchain
         run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: cargo build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Packaging final binary
