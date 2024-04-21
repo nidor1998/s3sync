@@ -2340,6 +2340,7 @@ dependencies = [
  "async-channel",
  "async-trait",
  "aws-config",
+ "aws-runtime",
  "aws-sdk-s3",
  "aws-smithy-http",
  "aws-smithy-runtime",
