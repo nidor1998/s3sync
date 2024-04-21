@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
-use aws_config::profile::profile_file::{ProfileFileKind, ProfileFiles};
 use aws_config::retry::RetryConfig;
 use aws_config::{BehaviorVersion, ConfigLoader};
+use aws_runtime::env_config::file::{EnvConfigFileKind, EnvConfigFiles};
 use aws_sdk_s3::config::{Builder, SharedHttpClient};
 use aws_sdk_s3::Client;
 use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
@@ -103,8 +103,8 @@ impl ClientConfig {
                     .aws_shared_credentials_file
                     .as_ref()
                 {
-                    let profile_files = ProfileFiles::builder()
-                        .with_file(ProfileFileKind::Credentials, aws_shared_credentials_file)
+                    let profile_files = EnvConfigFiles::builder()
+                        .with_file(EnvConfigFileKind::Credentials, aws_shared_credentials_file)
                         .build();
                     builder = builder.profile_files(profile_files)
                 }
@@ -122,8 +122,8 @@ impl ClientConfig {
 
         if let crate::types::S3Credentials::Profile(profile_name) = &self.credential {
             if let Some(aws_config_file) = self.client_config_location.aws_config_file.as_ref() {
-                let profile_files = ProfileFiles::builder()
-                    .with_file(ProfileFileKind::Config, aws_config_file)
+                let profile_files = EnvConfigFiles::builder()
+                    .with_file(EnvConfigFileKind::Config, aws_config_file)
                     .build();
                 builder = builder.profile_files(profile_files);
             }
