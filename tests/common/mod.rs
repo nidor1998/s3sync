@@ -17,8 +17,9 @@ use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
-    BucketLocationConstraint, BucketVersioningStatus, CreateBucketConfiguration, Object,
-    ObjectVersion, Tag, Tagging, VersioningConfiguration,
+    BucketInfo, BucketLocationConstraint, BucketType, BucketVersioningStatus,
+    CreateBucketConfiguration, DataRedundancy, LocationInfo, LocationType, Object, ObjectVersion,
+    Tag, Tagging, VersioningConfiguration,
 };
 use aws_types::SdkConfig;
 use filetime::{set_file_mtime, FileTime};
@@ -35,6 +36,7 @@ use s3sync::types::SyncStatistics;
 use s3sync::Config;
 
 pub const REGION: &str = "ap-northeast-1";
+pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
 
 pub const TEMP_DOWNLOAD_DIR: &str = "./playground/download/";
 
@@ -154,6 +156,29 @@ impl TestHelper {
             .unwrap();
     }
 
+    pub async fn create_directory_bucket(&self, bucket_name: &str, availability_zone: &str) {
+        let location_info = LocationInfo::builder()
+            .r#type(LocationType::AvailabilityZone)
+            .name(availability_zone)
+            .build();
+        let bucket_info = BucketInfo::builder()
+            .data_redundancy(DataRedundancy::SingleAvailabilityZone)
+            .r#type(BucketType::Directory)
+            .build();
+        let configuration = CreateBucketConfiguration::builder()
+            .location(location_info)
+            .bucket(bucket_info)
+            .build();
+
+        self.client
+            .create_bucket()
+            .create_bucket_configuration(configuration)
+            .bucket(bucket_name)
+            .send()
+            .await
+            .unwrap();
+    }
+
     pub async fn enable_bucket_versioning(&self, bucket: &str) {
         self.client
             .put_bucket_versioning()
@@ -218,6 +243,27 @@ impl TestHelper {
         } else {
             self.delete_all_objects(bucket).await;
         }
+
+        let result = self.client.delete_bucket().bucket(bucket).send().await;
+
+        if let Err(e) = result {
+            let service_error = e.into_service_error();
+            if let Some(code) = service_error.meta().code() {
+                assert_eq!(code, "NoSuchBucket");
+            } else {
+                panic!("S3 API error has occurred.")
+            }
+        }
+
+        tokio::time::sleep(time::Duration::from_secs(SLEEP_SECS_AFTER_DELETE_BUCKET)).await;
+    }
+
+    pub async fn delete_directory_bucket_with_cascade(&self, bucket: &str) {
+        if !self.is_bucket_exist(bucket).await {
+            return;
+        }
+
+        self.delete_all_objects(bucket).await;
 
         let result = self.client.delete_bucket().bucket(bucket).send().await;
 
@@ -480,8 +526,7 @@ impl TestHelper {
     pub async fn delete_all_objects(&self, bucket: &str) {
         let list_objects_output_result = self.client.list_objects_v2().bucket(bucket).send().await;
 
-        if let Err(e) = list_objects_output_result {
-            assert!(e.into_service_error().is_no_such_bucket());
+        if list_objects_output_result.is_err() {
             return;
         }
 
@@ -659,6 +704,22 @@ impl TestHelper {
 
         let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
         assert_eq!(object_list.len(), 5);
+    }
+
+    pub async fn sync_directory_bucket_test_data(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
     }
 
     pub async fn sync_test_data_with_all_metadata_option(&self, target_bucket_url: &str) {
