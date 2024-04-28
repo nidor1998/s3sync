@@ -18,7 +18,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn local_to_s3() {
+    async fn local_to_s3_with_disable_stalled_protection() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
@@ -37,6 +37,7 @@ mod tests {
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
+                "--disable-stalled-stream-protection",
                 "./test_data/e2e_test/case1/",
                 &target_bucket_url,
             ];

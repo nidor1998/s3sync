@@ -80,6 +80,7 @@ pub struct ClientConfig {
     pub https_proxy: Option<String>,
     pub http_proxy: Option<String>,
     pub no_verify_ssl: bool,
+    pub disable_stalled_stream_protection: bool,
 }
 
 #[derive(Debug, Clone)]

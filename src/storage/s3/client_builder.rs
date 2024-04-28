@@ -7,6 +7,7 @@ use aws_runtime::env_config::file::{EnvConfigFileKind, EnvConfigFiles};
 use aws_sdk_s3::config::{Builder, SharedHttpClient};
 use aws_sdk_s3::Client;
 use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
+use aws_smithy_runtime_api::client::stalled_stream_protection::StalledStreamProtectionConfig;
 use aws_types::region::Region;
 use aws_types::SdkConfig;
 use hyper::client::HttpConnector;
@@ -71,8 +72,14 @@ impl ClientConfig {
     }
 
     async fn load_sdk_config(&self) -> SdkConfig {
+        let config_loader = if self.disable_stalled_stream_protection {
+            aws_config::defaults(BehaviorVersion::latest())
+        } else {
+            aws_config::defaults(BehaviorVersion::latest())
+                .stalled_stream_protection(StalledStreamProtectionConfig::enabled().build())
+        };
         let mut config_loader = self
-            .load_config_credential(aws_config::defaults(BehaviorVersion::latest()))
+            .load_config_credential(config_loader)
             .region(self.build_region_provider())
             .retry_config(self.build_retry_config());
 
@@ -215,6 +222,7 @@ mod tests {
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
         };
 
         let client = client_config.create_client().await;
@@ -258,6 +266,7 @@ mod tests {
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
         };
 
         let client = client_config.create_client().await;
@@ -290,6 +299,7 @@ mod tests {
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
         };
 
         let client = client_config.create_client().await;
@@ -327,6 +337,7 @@ mod tests {
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
         };
 
         let client = client_config.create_client().await;
@@ -366,6 +377,7 @@ mod tests {
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
         };
 
         let _ = client_config.create_client().await;
@@ -391,6 +403,7 @@ mod tests {
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
         };
 
         let client = client_config.create_client().await;
@@ -428,6 +441,7 @@ mod tests {
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: true,
+            disable_stalled_stream_protection: false,
         };
 
         client_config.create_client().await;
@@ -453,6 +467,7 @@ mod tests {
             https_proxy: Some("https://localhost:8080".to_string()),
             http_proxy: Some("http://localhost:8080".to_string()),
             no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
         };
 
         client_config.create_client().await;
