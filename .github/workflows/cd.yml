@@ -34,7 +34,7 @@ jobs:
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
           sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
       - name: releasing assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.17-x86_64.tar.gz
@@ -80,7 +80,7 @@ jobs:
             shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
           fi
       - name: releasing assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             target/${{ matrix.target }}/release/${{ env.APP_NAME }}-${{ matrix.artifact_suffix }}.tar.gz
