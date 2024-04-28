@@ -57,6 +57,7 @@ const DEFAULT_DRY_RUN: bool = false;
 const DEFAULT_NO_VERIFY_SSL: bool = false;
 const DEFAULT_MAX_KEYS: i32 = 1000;
 const DEFAULT_PUT_LAST_MODIFIED_METADATA: bool = false;
+const DEFAULT_DISABLE_STALLED_STREAM_PROTECTION: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -418,6 +419,10 @@ pub struct CLIArgs {
     /// generate a auto completions script. Valid values: bash, fish, zsh, powershell, elvish.
     #[arg(long, env, value_name = "SHELL", value_parser = clap_complete::shells::Shell::from_str)]
     auto_complete_shell: Option<clap_complete::shells::Shell>,
+
+    /// disable stalled stream protection
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_STALLED_STREAM_PROTECTION)]
+    disable_stalled_stream_protection: bool,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -775,6 +780,7 @@ impl CLIArgs {
             https_proxy: self.https_proxy.clone(),
             http_proxy: self.http_proxy.clone(),
             no_verify_ssl: self.no_verify_ssl,
+            disable_stalled_stream_protection: self.disable_stalled_stream_protection,
         });
 
         let target_client_config = target_credential.map(|target_credential| ClientConfig {
@@ -793,6 +799,7 @@ impl CLIArgs {
             https_proxy: self.https_proxy.clone(),
             http_proxy: self.http_proxy.clone(),
             no_verify_ssl: self.no_verify_ssl,
+            disable_stalled_stream_protection: self.disable_stalled_stream_protection,
         });
 
         (source_client_config, target_client_config)
