@@ -2358,6 +2358,7 @@ dependencies = [
  "crc32fast",
  "dyn-clone",
  "filetime",
+ "headers",
  "hex",
  "hyper",
  "hyper-proxy",
