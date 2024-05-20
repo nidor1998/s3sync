@@ -57,14 +57,32 @@ impl ClientConfig {
         let connector = HttpConnector::new();
         let mut proxy_connector = ProxyConnector::new(connector).unwrap();
 
+        let make_proxy = |intercept: Intercept, uri: hyper::Uri| {
+            let mut proxy = Proxy::new(intercept, uri.clone());
+            let authority = uri.authority();
+            if let Some((username, password)) = authority
+                .and_then(|x| x.as_str().split_once('@'))
+                .map(|x| x.0.split_once(':').unwrap())
+            {
+                proxy.set_authorization(headers::Authorization::basic(username, password))
+            }
+            proxy
+        };
+
         if self.https_proxy.is_some() {
-            if let Ok(uri) = self.https_proxy.as_ref().unwrap().to_string().parse() {
-                proxy_connector.add_proxy(Proxy::new(Intercept::Https, uri));
+            if let Ok(uri) = self
+                .https_proxy
+                .as_ref()
+                .unwrap()
+                .to_string()
+                .parse::<hyper::Uri>()
+            {
+                proxy_connector.add_proxy(make_proxy(Intercept::Https, uri));
             }
         }
         if self.http_proxy.is_some() {
             if let Ok(uri) = self.http_proxy.as_ref().unwrap().to_string().parse() {
-                proxy_connector.add_proxy(Proxy::new(Intercept::Http, uri));
+                proxy_connector.add_proxy(make_proxy(Intercept::Http, uri));
             }
         }
 
