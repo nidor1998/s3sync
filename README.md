@@ -418,7 +418,9 @@ If you want to use additional checksums for download, specify the option.
 Warning: Even if the object was uploaded with additional checksum, without this option, s3sync does not verify additional checksum.
 
 #### `--https-proxy`
-You can specify the proxy server for https.
+You can specify the proxy server for https. 
+
+Proxy authentication is supported. Like `http(s)://user:password@proxy:port`.
 
 #### `--disable-multipart-verify`
 When object is uploaded with multipart upload, its ETag may not match that of the target object.  
