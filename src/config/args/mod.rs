@@ -225,7 +225,7 @@ pub struct CLIArgs {
     https_proxy: Option<String>,
 
     /// proxy server to use for HTTP
-    #[arg(long, env, value_parser = url::check_scheme)]
+    #[arg(long, env, value_parser = url::check_scheme_and_no_authority_exist)]
     http_proxy: Option<String>,
 
     /// number of workers for synchronization
