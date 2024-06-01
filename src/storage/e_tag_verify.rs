@@ -126,21 +126,19 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
 
     Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count))
 }
+pub fn normalize_e_tag(e_tag: &Option<String>) -> Option<String> {
+    if e_tag.is_none() {
+        return e_tag.clone();
+    }
 
+    Some(e_tag.as_ref().unwrap().replace('\"', ""))
+}
 fn is_verification_supported_sse(sse: &Option<ServerSideEncryption>) -> bool {
     if sse.is_none() {
         return true;
     }
 
     ServerSideEncryption::Aes256 == *sse.as_ref().unwrap()
-}
-
-fn normalize_e_tag(e_tag: &Option<String>) -> Option<String> {
-    if e_tag.is_none() {
-        return e_tag.clone();
-    }
-
-    Some(e_tag.as_ref().unwrap().replace('\"', ""))
 }
 
 #[cfg(test)]

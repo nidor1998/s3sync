@@ -7,6 +7,7 @@ use tracing::debug;
 use crate::config::FilterConfig;
 use crate::pipeline::filter::{ObjectFilter, ObjectFilterBase};
 use crate::pipeline::stage::Stage;
+use crate::storage::e_tag_verify::normalize_e_tag;
 use crate::types::{sha1_digest_from_key, ObjectKey, ObjectKeyMap, S3syncObject};
 
 pub struct TargetModifiedFilter<'a> {
@@ -32,6 +33,8 @@ impl ObjectFilter for TargetModifiedFilter<'_> {
     async fn filter(&self) -> Result<()> {
         if self.base.base.config.filter_config.check_size {
             self.base.filter(is_modified_from_size).await
+        } else if self.base.base.config.filter_config.check_etag {
+            self.base.filter(is_modified_from_etag).await
         } else {
             self.base.filter(is_modified_from_timestamp).await
         }
@@ -138,6 +141,41 @@ fn is_modified_from_size(
     true
 }
 
+fn is_modified_from_etag(
+    object: &S3syncObject,
+    _: &FilterConfig,
+    target_key_map: &ObjectKeyMap,
+) -> bool {
+    let locked_target_key_map = target_key_map.lock().unwrap();
+    let key = object.key();
+
+    let mut result =
+        locked_target_key_map.get(&ObjectKey::KeySHA1Digest(sha1_digest_from_key(key)));
+    if result.is_none() {
+        result = locked_target_key_map.get(&ObjectKey::KeyString(key.to_string()));
+    }
+
+    if let Some(entry) = result {
+        let source_etag = normalize_e_tag(&Some(object.e_tag().unwrap().to_string()));
+        let target_etag = normalize_e_tag(&Some(entry.etag.clone().unwrap()));
+
+        if source_etag == target_etag {
+            debug!(
+                name = FILTER_NAME,
+                source_etag = source_etag,
+                target_etag = target_etag,
+                key = key,
+                "object filtered."
+            );
+            return false;
+        }
+
+        return true;
+    }
+
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -167,6 +205,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: false,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -196,6 +235,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: false,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -208,6 +248,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
 
@@ -234,6 +275,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: false,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -263,6 +305,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: false,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -275,6 +318,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
 
@@ -323,6 +367,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: true,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -347,6 +392,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: true,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -359,6 +405,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
+                etag: None,
             },
         );
 
@@ -380,6 +427,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: true,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -392,6 +440,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 2,
+                etag: None,
             },
         );
 
@@ -413,6 +462,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: true,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -425,6 +475,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
+                etag: None,
             },
         );
 
@@ -446,6 +497,7 @@ mod tests {
             after_time: None,
             remove_modified_filter: false,
             check_size: true,
+            check_etag: false,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -458,6 +510,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 2,
+                etag: None,
             },
         );
 

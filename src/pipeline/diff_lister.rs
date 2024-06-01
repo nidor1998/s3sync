@@ -92,6 +92,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
         source_key_map.insert(
@@ -99,6 +100,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
         source_key_map.insert(
@@ -106,6 +108,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
 
@@ -115,6 +118,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
         target_key_map.insert(
@@ -122,6 +126,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
 
@@ -145,6 +150,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
 
@@ -154,6 +160,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
+                etag: None,
             },
         );
 

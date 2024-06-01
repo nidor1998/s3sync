@@ -46,6 +46,7 @@ const DEFAULT_HEAD_EACH_TARGET: bool = false;
 const DEFAULT_ENABLE_VERSIONING: bool = false;
 const DEFAULT_REMOVE_MODIFIED_FILTER: bool = false;
 const DEFAULT_CHECK_SIZE: bool = false;
+const DEFAULT_CHECK_ETAG: bool = false;
 const DEFAULT_SYNC_WITH_DELETE: bool = false;
 const DEFAULT_DISABLE_TAGGING: bool = false;
 const DEFAULT_SYNC_LATEST_TAGGING: bool = false;
@@ -85,6 +86,10 @@ const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL: &str =
     "with --target-endpoint-url, target storage must be s3://\n";
 const CHECK_SIZE_CONFLICT: &str =
     "--head-each-target is required for --check-size, or remove --remove-modified-filter\n";
+
+const CHECK_ETAG_CONFLICT: &str =
+    "--head-each-target is required for --check-etag, or remove --remove-modified-filter\n";
+
 const SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND: &str = "directory must be specified as a source\n";
 const TARGET_LOCAL_STORAGE_INVALID: &str = "invalid target path\n";
 const SSE_KMS_KEY_ID_ARGUMENTS_CONFLICT: &str =
@@ -310,8 +315,12 @@ pub struct CLIArgs {
     remove_modified_filter: bool,
 
     /// use object size for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_CHECK_SIZE)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag"], default_value_t = DEFAULT_CHECK_SIZE)]
     check_size: bool,
+
+    /// use etag for update checking
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size"], default_value_t = DEFAULT_CHECK_ETAG)]
+    check_etag: bool,
 
     /// delete objects that exist in the target but not in the source.
     /// [Warning] Since this can cause data loss, test first with the --dry-run option
@@ -459,6 +468,7 @@ impl CLIArgs {
         self.check_auto_chunksize_conflict()?;
         self.check_metadata_conflict()?;
         self.check_check_size_conflict()?;
+        self.check_check_etag_conflict()?;
         self.check_ignore_symlinks_conflict()?;
         self.check_no_guess_mime_type_conflict()?;
         self.check_endpoint_url_conflict()?;
@@ -678,6 +688,14 @@ impl CLIArgs {
     fn check_check_size_conflict(&self) -> Result<(), String> {
         if self.check_size && self.remove_modified_filter && !self.head_each_target {
             return Err(CHECK_SIZE_CONFLICT.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_check_etag_conflict(&self) -> Result<(), String> {
+        if self.check_etag && self.remove_modified_filter && !self.head_each_target {
+            return Err(CHECK_ETAG_CONFLICT.to_string());
         }
 
         Ok(())
@@ -961,6 +979,7 @@ impl TryFrom<CLIArgs> for Config {
                 after_time: value.filter_mtime_after,
                 remove_modified_filter: value.remove_modified_filter,
                 check_size: value.check_size,
+                check_etag: value.check_etag,
                 include_regex,
                 exclude_regex,
                 larger_size: filter_larger_size,

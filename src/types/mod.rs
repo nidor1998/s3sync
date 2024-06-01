@@ -29,6 +29,7 @@ pub enum ObjectKey {
 pub struct ObjectEntry {
     pub last_modified: DateTime,
     pub content_length: i64,
+    pub etag: Option<String>,
 }
 
 pub type ObjectKeyMap = Arc<Mutex<HashMap<ObjectKey, ObjectEntry>>>;
@@ -108,6 +109,14 @@ impl S3syncObject {
             Self::Versioning(object) => object.version_id(),
             Self::NotVersioning(_) => None,
             _ => panic!("unsupported."),
+        }
+    }
+
+    pub fn e_tag(&self) -> Option<&str> {
+        match &self {
+            Self::Versioning(object) => object.e_tag(),
+            Self::NotVersioning(object) => object.e_tag(),
+            _ => panic!("doesn't have etag."),
         }
     }
 
