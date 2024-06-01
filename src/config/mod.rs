@@ -123,6 +123,7 @@ pub struct FilterConfig {
     pub after_time: Option<DateTime<Utc>>,
     pub remove_modified_filter: bool,
     pub check_size: bool,
+    pub check_etag: bool,
     pub include_regex: Option<Regex>,
     pub exclude_regex: Option<Regex>,
     pub larger_size: Option<u64>,

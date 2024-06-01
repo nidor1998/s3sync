@@ -419,9 +419,27 @@ impl StorageTrait for LocalStorage {
             if cfg!(windows) {
                 path = convert_windows_directory_char_to_slash(&path);
             }
+
+            let etag = if self.config.filter_config.check_etag
+                && !self.config.transfer_config.auto_chunksize
+                && !self.config.head_each_target
+            {
+                Some(
+                    generate_e_tag_hash_from_path(
+                        &PathBuf::from(entry.as_ref().unwrap().path()),
+                        self.config.transfer_config.multipart_chunksize as usize,
+                        self.config.transfer_config.multipart_threshold as usize,
+                    )
+                    .await?,
+                )
+            } else {
+                None
+            };
+
             let object = S3syncObject::NotVersioning(build_object_from_dir_entry(
                 entry.as_ref().unwrap(),
                 &path,
+                etag,
                 self.config.additional_checksum_algorithm.clone(),
             ));
             if let Err(e) = sender
@@ -854,6 +872,7 @@ fn remove_local_path_prefix(path: &str, prefix: &str) -> String {
 fn build_object_from_dir_entry(
     entry: &DirEntry,
     key: &str,
+    etag: Option<String>,
     checksum_algorithm: Option<ChecksumAlgorithm>,
 ) -> Object {
     Object::builder()
@@ -864,6 +883,7 @@ fn build_object_from_dir_entry(
         .set_last_modified(Some(DateTime::from(
             entry.metadata().unwrap().modified().unwrap(),
         )))
+        .set_e_tag(etag)
         .set_checksum_algorithm(checksum_algorithm.map(|algorithm| vec![algorithm]))
         .build()
 }
@@ -964,7 +984,7 @@ mod tests {
 
         let mut entry_iter = WalkDir::new("./test_data/5byte.dat").into_iter();
         let entry = entry_iter.next().unwrap().unwrap();
-        let object = build_object_from_dir_entry(&entry, "test_data/5byte.dat", None);
+        let object = build_object_from_dir_entry(&entry, "test_data/5byte.dat", None, None);
 
         assert_eq!(object.key().unwrap(), "test_data/5byte.dat");
         assert_eq!(object.size().unwrap(), TEST_DATA_SIZE as i64);
@@ -981,6 +1001,7 @@ mod tests {
         let object = build_object_from_dir_entry(
             &entry,
             "test_data/5byte.dat",
+            None,
             Some(ChecksumAlgorithm::Sha256),
         );
         assert_eq!(object.key().unwrap(), "test_data/5byte.dat");

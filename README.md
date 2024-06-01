@@ -154,7 +154,7 @@ You can also build from source following the instructions below.
 See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 ### Build
-s3sync requires Rust 1.74.1 or later.
+s3sync requires Rust 1.76 or later.
 ```bash
 cargo install s3sync --path .
 ```
