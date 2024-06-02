@@ -129,6 +129,9 @@ impl HeadObjectChecker {
                 } else {
                     panic!("source and target are both local storage.")
                 }
+            } else if self.config.filter_config.check_etag {
+                // ETag has been checked by modified filter
+                Ok(true)
             } else {
                 Ok(is_object_modified(source_object, &target_object))
             };
