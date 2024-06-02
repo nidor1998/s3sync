@@ -1831,6 +1831,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(target_family = "unix")]
     async fn get_local_path() {
         init_dummy_tracing_subscriber();
 
