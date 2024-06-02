@@ -87,16 +87,16 @@ impl HeadObjectChecker {
                 && (self.config.head_each_target || self.config.transfer_config.auto_chunksize)
             {
                 if !self.source.is_local_storage() && !self.target.is_local_storage() {
-                    let source_etag =
+                    let source_e_tag =
                         normalize_e_tag(&Some(source_object.e_tag().unwrap().to_string()));
-                    let target_etag =
+                    let target_e_tag =
                         normalize_e_tag(&Some(target_object.e_tag.unwrap().to_string()));
 
-                    if source_etag == target_etag {
+                    if source_e_tag == target_e_tag {
                         debug!(
                             name = FILTER_NAME,
-                            source_etag = source_etag,
-                            target_etag = target_etag,
+                            source_e_tag = source_e_tag,
+                            target_e_tag = target_e_tag,
                             key = key,
                             "object filtered."
                         );
@@ -104,24 +104,24 @@ impl HeadObjectChecker {
                     } else {
                         trace!(
                             name = FILTER_NAME,
-                            source_etag = source_etag,
-                            target_etag = target_etag,
+                            source_e_tag = source_e_tag,
+                            target_e_tag = target_e_tag,
                             key = key,
-                            "etag is different."
+                            "ETag is different."
                         );
                     }
 
                     Ok(true)
                 } else if self.source.is_local_storage() && !self.target.is_local_storage() {
                     Ok(self
-                        .is_source_local_etag_different_from_target_s3(
+                        .is_source_local_e_tag_different_from_target_s3(
                             key,
                             target_object.e_tag().as_ref().unwrap(),
                         )
                         .await?)
                 } else if !self.source.is_local_storage() && self.target.is_local_storage() {
                     Ok(self
-                        .is_target_local_etag_different_from_source_s3(
+                        .is_target_local_e_tag_different_from_source_s3(
                             key,
                             source_object.e_tag().as_ref().unwrap(),
                         )
@@ -159,12 +159,12 @@ impl HeadObjectChecker {
         Err(anyhow!("head_object() failed. key={}.", key,))
     }
 
-    async fn is_source_local_etag_different_from_target_s3(
+    async fn is_source_local_e_tag_different_from_target_s3(
         &self,
         key: &str,
-        target_etag: &str,
+        target_e_tag: &str,
     ) -> Result<bool> {
-        let source_etag = if self.source.is_local_storage() {
+        let source_e_tag = if self.source.is_local_storage() {
             let mut local_path = self.source.get_local_path();
             local_path.push(key);
 
@@ -213,14 +213,14 @@ impl HeadObjectChecker {
             panic!("source is not local storage.")
         };
 
-        let source_etag = normalize_e_tag(&Some(source_etag));
-        let target_etag = normalize_e_tag(&Some(target_etag.to_string()));
+        let source_e_tag = normalize_e_tag(&Some(source_e_tag));
+        let target_e_tag = normalize_e_tag(&Some(target_e_tag.to_string()));
 
-        if source_etag == target_etag {
+        if source_e_tag == target_e_tag {
             debug!(
                 name = FILTER_NAME,
-                source_etag = source_etag,
-                target_etag = target_etag,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
                 key = key,
                 "object filtered."
             );
@@ -228,22 +228,22 @@ impl HeadObjectChecker {
         } else {
             trace!(
                 name = FILTER_NAME,
-                source_etag = source_etag,
-                target_etag = target_etag,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
                 key = key,
-                "etag is different."
+                "ETag is different."
             );
         }
 
         Ok(true)
     }
 
-    async fn is_target_local_etag_different_from_source_s3(
+    async fn is_target_local_e_tag_different_from_source_s3(
         &self,
         key: &str,
-        source_etag: &str,
+        source_e_tag: &str,
     ) -> Result<bool> {
-        let target_etag = if self.target.is_local_storage() {
+        let target_e_tag = if self.target.is_local_storage() {
             let local_path = fs_util::key_to_file_path(self.target.get_local_path(), key);
 
             if self.config.transfer_config.auto_chunksize {
@@ -291,14 +291,14 @@ impl HeadObjectChecker {
             panic!("target is not local storage.")
         };
 
-        let source_etag = normalize_e_tag(&Some(source_etag.to_string()));
-        let target_etag = normalize_e_tag(&Some(target_etag));
+        let source_e_tag = normalize_e_tag(&Some(source_e_tag.to_string()));
+        let target_e_tag = normalize_e_tag(&Some(target_e_tag));
 
-        if source_etag == target_etag {
+        if source_e_tag == target_e_tag {
             debug!(
                 name = FILTER_NAME,
-                source_etag = source_etag,
-                target_etag = target_etag,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
                 key = key,
                 "object filtered."
             );
@@ -306,10 +306,10 @@ impl HeadObjectChecker {
         } else {
             trace!(
                 name = FILTER_NAME,
-                source_etag = source_etag,
-                target_etag = target_etag,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
                 key = key,
-                "etag is different."
+                "ETag is different."
             );
         }
 

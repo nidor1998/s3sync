@@ -1337,7 +1337,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn local_to_s3_with_etag_check() {
+    async fn local_to_s3_with_e_tag_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
@@ -1440,7 +1440,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn local_to_s3_with_etag_check_auto_chunksize() {
+    async fn local_to_s3_with_e_tag_check_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();

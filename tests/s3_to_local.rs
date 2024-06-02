@@ -1245,7 +1245,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn s3_to_local_with_etag_warning() {
+    async fn s3_to_local_with_e_tag_warning() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
@@ -1456,7 +1456,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 0);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 1);
         }
@@ -1510,7 +1510,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 0);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_skip, 1);
         }
@@ -1570,7 +1570,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 0);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 1);
         }

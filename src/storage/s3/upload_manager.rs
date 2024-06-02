@@ -24,7 +24,7 @@ use crate::storage;
 use crate::storage::e_tag_verify::{generate_e_tag_hash, is_multipart_upload_e_tag};
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
-use crate::types::SyncStatistics::{ChecksumVerified, EtagVerified, SyncWarning};
+use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
 use crate::types::{
     SyncStatistics, S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY,
 };
@@ -449,7 +449,7 @@ impl UploadManager {
                     );
                 }
             } else {
-                self.send_stats(EtagVerified {
+                self.send_stats(ETagVerified {
                     key: key.to_string(),
                 })
                 .await;

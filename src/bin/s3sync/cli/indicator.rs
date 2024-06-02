@@ -34,7 +34,7 @@ pub fn show_indicator(
         let mut total_skip_count: u64 = 0;
         let mut total_delete_count: u64 = 0;
         let mut total_warning_count: u64 = 0;
-        let mut total_etag_verified_count: u64 = 0;
+        let mut total_e_tag_verified_count: u64 = 0;
         let mut total_checksum_verified_count: u64 = 0;
 
         loop {
@@ -65,8 +65,8 @@ pub fn show_indicator(
                         SyncStatistics::SyncWarning { .. } => {
                             total_warning_count += 1;
                         }
-                        SyncStatistics::EtagVerified { .. } => {
-                            total_etag_verified_count += 1;
+                        SyncStatistics::ETagVerified { .. } => {
+                            total_e_tag_verified_count += 1;
                         }
                         SyncStatistics::ChecksumVerified { .. } => {
                             total_checksum_verified_count += 1;
@@ -105,7 +105,7 @@ pub fn show_indicator(
                             HumanBytes(sync_bytes_per_sec),
                             total_sync_count,
                             HumanCount(objects_per_sec),
-                            total_etag_verified_count,
+                            total_e_tag_verified_count,
                             total_checksum_verified_count,
                             total_delete_count,
                             total_skip_count,
@@ -135,7 +135,7 @@ pub fn show_indicator(
                     HumanBytes(ma_synced_bytes.get_average()).to_string(),
                     total_sync_count,
                     HumanCount(ma_synced_count.get_average()).to_string(),
-                    total_etag_verified_count,
+                    total_e_tag_verified_count,
                     total_checksum_verified_count,
                     total_delete_count,
                     total_skip_count,
@@ -191,7 +191,7 @@ mod tests {
             .await
             .unwrap();
         stats_sender
-            .send(SyncStatistics::EtagVerified {
+            .send(SyncStatistics::ETagVerified {
                 key: "test".to_string(),
             })
             .await
@@ -248,7 +248,7 @@ mod tests {
             .await
             .unwrap();
         stats_sender
-            .send(SyncStatistics::EtagVerified {
+            .send(SyncStatistics::ETagVerified {
                 key: "test".to_string(),
             })
             .await
@@ -305,7 +305,7 @@ mod tests {
             .await
             .unwrap();
         stats_sender
-            .send(SyncStatistics::EtagVerified {
+            .send(SyncStatistics::ETagVerified {
                 key: "test".to_string(),
             })
             .await

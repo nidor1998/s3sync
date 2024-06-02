@@ -36,7 +36,7 @@ impl ObjectFilter for TargetModifiedFilter<'_> {
         } else if self.base.base.config.filter_config.check_etag
             && !self.base.base.config.transfer_config.auto_chunksize
         {
-            self.base.filter(is_modified_from_etag).await
+            self.base.filter(is_modified_from_e_tag).await
         } else if self.base.base.config.filter_config.check_etag
             && self.base.base.config.transfer_config.auto_chunksize
         {
@@ -148,7 +148,7 @@ fn is_modified_from_size(
     true
 }
 
-fn is_modified_from_etag(
+fn is_modified_from_e_tag(
     object: &S3syncObject,
     _: &FilterConfig,
     target_key_map: &ObjectKeyMap,
@@ -163,14 +163,14 @@ fn is_modified_from_etag(
     }
 
     if let Some(entry) = result {
-        let source_etag = normalize_e_tag(&Some(object.e_tag().unwrap().to_string()));
-        let target_etag = normalize_e_tag(&Some(entry.etag.clone().unwrap()));
+        let source_e_tag = normalize_e_tag(&Some(object.e_tag().unwrap().to_string()));
+        let target_e_tag = normalize_e_tag(&Some(entry.e_tag.clone().unwrap()));
 
-        if source_etag == target_etag {
+        if source_e_tag == target_e_tag {
             debug!(
                 name = FILTER_NAME,
-                source_etag = source_etag,
-                target_etag = target_etag,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
                 key = key,
                 "object filtered."
             );
@@ -178,10 +178,10 @@ fn is_modified_from_etag(
         } else {
             trace!(
                 name = FILTER_NAME,
-                source_etag = source_etag,
-                target_etag = target_etag,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
                 key = key,
-                "etag is different."
+                "ETag is different."
             );
         }
 
@@ -267,7 +267,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
-                etag: None,
+                e_tag: None,
             },
         );
 
@@ -337,7 +337,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(1),
                 content_length: 1,
-                etag: None,
+                e_tag: None,
             },
         );
 
@@ -424,7 +424,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
-                etag: None,
+                e_tag: None,
             },
         );
 
@@ -459,7 +459,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 2,
-                etag: None,
+                e_tag: None,
             },
         );
 
@@ -494,7 +494,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
-                etag: None,
+                e_tag: None,
             },
         );
 
@@ -529,7 +529,7 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 2,
-                etag: None,
+                e_tag: None,
             },
         );
 
@@ -547,7 +547,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn size_not_modified_etag() {
+    async fn size_not_modified_e_tag() {
         init_dummy_tracing_subscriber();
 
         let object = S3syncObject::NotVersioning(
@@ -576,11 +576,11 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
-                etag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
+                e_tag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
             },
         );
 
-        assert!(!is_modified_from_etag(
+        assert!(!is_modified_from_e_tag(
             &object,
             &config,
             &ObjectKeyMap::new(Mutex::new(key_map))
@@ -588,7 +588,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn size_not_modified_etag_normalize_source() {
+    async fn size_not_modified_e_tag_normalize_source() {
         init_dummy_tracing_subscriber();
 
         let object = S3syncObject::NotVersioning(
@@ -617,11 +617,11 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
-                etag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
+                e_tag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
             },
         );
 
-        assert!(!is_modified_from_etag(
+        assert!(!is_modified_from_e_tag(
             &object,
             &config,
             &ObjectKeyMap::new(Mutex::new(key_map))
@@ -629,7 +629,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn size_not_modified_etag_normalize_target() {
+    async fn size_not_modified_e_tag_normalize_target() {
         init_dummy_tracing_subscriber();
 
         let object = S3syncObject::NotVersioning(
@@ -658,11 +658,11 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
-                etag: Some("\"0dd7cd23c492b5a3a62672b4049bb1ed\"".to_string()),
+                e_tag: Some("\"0dd7cd23c492b5a3a62672b4049bb1ed\"".to_string()),
             },
         );
 
-        assert!(!is_modified_from_etag(
+        assert!(!is_modified_from_e_tag(
             &object,
             &config,
             &ObjectKeyMap::new(Mutex::new(key_map))
@@ -670,7 +670,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn size_modified_etag() {
+    async fn size_modified_e_tag() {
         init_dummy_tracing_subscriber();
 
         let object = S3syncObject::NotVersioning(
@@ -699,11 +699,11 @@ mod tests {
             ObjectEntry {
                 last_modified: DateTime::from_secs(99),
                 content_length: 1,
-                etag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
+                e_tag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
             },
         );
 
-        assert!(is_modified_from_etag(
+        assert!(is_modified_from_e_tag(
             &object,
             &config,
             &ObjectKeyMap::new(Mutex::new(key_map))
