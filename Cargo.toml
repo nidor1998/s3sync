@@ -16,10 +16,10 @@ categories = ["command-line-utilities", "filesystem"]
 [dependencies]
 anyhow = { version = "1.0.86" }
 async-trait = "0.1.80"
-async-channel = "2.2.1"
+async-channel = "2.3.1"
 aws-config = { version = "1.5.0", features = ["behavior-version-latest"] }
 aws-runtime = "1.2.2"
-aws-sdk-s3 = "1.31.0"
+aws-sdk-s3 = "1.32.0"
 aws-smithy-runtime = { version = "1.5.4", features = ["client", "connector-hyper-0-14-x"]}
 aws-smithy-runtime-api = "1.6.1"
 aws-smithy-http = "0.60.8"
