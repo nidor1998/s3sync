@@ -713,17 +713,13 @@ impl CLIArgs {
             return Err(CHECK_ETAG_CONFLICT_SSE_KMS.to_string());
         }
 
-        if let StoragePath::S3 { bucket, prefix: _ } =
-            storage_path::parse_storage_path(&self.source)
-        {
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
             if is_express_onezone_storage(&bucket) {
                 return Err(CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
             }
         }
 
-        if let StoragePath::S3 { bucket, prefix: _ } =
-            storage_path::parse_storage_path(&self.target)
-        {
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
             if is_express_onezone_storage(&bucket) {
                 return Err(CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
             }
