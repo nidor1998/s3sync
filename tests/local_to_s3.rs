@@ -1434,6 +1434,27 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "./test_data/e2e_test/case1/",
+                "--check-etag",
+                "--auto-chunksize",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
         helper
             .delete_bucket_with_cascade(&BUCKET1.to_string())
             .await;
