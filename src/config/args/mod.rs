@@ -27,6 +27,8 @@ use crate::Config;
 mod tests;
 mod value_parser;
 
+const EXPRESS_ONEZONE_STORAGE_SUFFIX: &str = "--x-s3";
+
 const DEFAULT_WORKER_SIZE: u16 = 16;
 const DEFAULT_AWS_MAX_ATTEMPTS: u32 = 10;
 const DEFAULT_FORCE_RETRY_COUNT: u32 = 5;
@@ -89,6 +91,9 @@ const CHECK_SIZE_CONFLICT: &str =
 
 const CHECK_ETAG_CONFLICT: &str =
     "--head-each-target is required for --check-etag, or remove --remove-modified-filter\n";
+const CHECK_ETAG_CONFLICT_SSE_KMS: &str = "--check-etag is not supported with --sse aws:kms\n";
+const CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
+    "--check-etag is not supported with express onezone storage class\n";
 
 const SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND: &str = "directory must be specified as a source\n";
 const TARGET_LOCAL_STORAGE_INVALID: &str = "invalid target path\n";
@@ -221,7 +226,7 @@ pub struct CLIArgs {
     #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_CHUNKSIZE, value_parser = human_bytes::check_human_bytes)]
     multipart_chunksize: String,
 
-    /// automatically adjusts a chunk size to match the source. It takes extra HEAD requests(1 API call per part).
+    /// automatically adjusts a chunk size to match the source or target. It takes extra HEAD requests(1 API call per part).
     #[arg(long, env, conflicts_with_all = ["multipart_threshold", "multipart_chunksize"], default_value_t = DEFAULT_AUTO_CHUNKSIZE)]
     auto_chunksize: bool,
 
@@ -319,7 +324,7 @@ pub struct CLIArgs {
     check_size: bool,
 
     /// use etag for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size"], default_value_t = DEFAULT_CHECK_ETAG)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG)]
     check_etag: bool,
 
     /// delete objects that exist in the target but not in the source.
@@ -657,7 +662,7 @@ impl CLIArgs {
 
         let source = storage_path::parse_storage_path(&self.source);
 
-        if matches!(source, StoragePath::Local(_)) {
+        if !self.check_etag && matches!(source, StoragePath::Local(_)) {
             return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_AUTO_CHUNKSIZE.to_string());
         }
 
@@ -694,8 +699,34 @@ impl CLIArgs {
     }
 
     fn check_check_etag_conflict(&self) -> Result<(), String> {
-        if self.check_etag && self.remove_modified_filter && !self.head_each_target {
+        if !self.check_etag {
+            return Ok(());
+        }
+        if self.remove_modified_filter && !self.head_each_target {
             return Err(CHECK_ETAG_CONFLICT.to_string());
+        }
+
+        if self.sse.is_some()
+            && ServerSideEncryption::from_str(self.sse.as_ref().unwrap()).unwrap()
+                == ServerSideEncryption::AwsKms
+        {
+            return Err(CHECK_ETAG_CONFLICT_SSE_KMS.to_string());
+        }
+
+        if let StoragePath::S3 { bucket, prefix: _ } =
+            storage_path::parse_storage_path(&self.source)
+        {
+            if is_express_onezone_storage(&bucket) {
+                return Err(CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
+        }
+
+        if let StoragePath::S3 { bucket, prefix: _ } =
+            storage_path::parse_storage_path(&self.target)
+        {
+            if is_express_onezone_storage(&bucket) {
+                return Err(CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
         }
 
         Ok(())
@@ -990,4 +1021,8 @@ impl TryFrom<CLIArgs> for Config {
             auto_complete_shell: value.auto_complete_shell,
         })
     }
+}
+
+fn is_express_onezone_storage(bucket: &str) -> bool {
+    bucket.ends_with(EXPRESS_ONEZONE_STORAGE_SUFFIX)
 }

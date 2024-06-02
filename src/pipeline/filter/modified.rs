@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::config::FilterConfig;
 use crate::pipeline::filter::{ObjectFilter, ObjectFilterBase};
@@ -33,8 +33,15 @@ impl ObjectFilter for TargetModifiedFilter<'_> {
     async fn filter(&self) -> Result<()> {
         if self.base.base.config.filter_config.check_size {
             self.base.filter(is_modified_from_size).await
-        } else if self.base.base.config.filter_config.check_etag {
+        } else if self.base.base.config.filter_config.check_etag
+            && !self.base.base.config.transfer_config.auto_chunksize
+        {
             self.base.filter(is_modified_from_etag).await
+        } else if self.base.base.config.filter_config.check_etag
+            && self.base.base.config.transfer_config.auto_chunksize
+        {
+            // check etag will be done within the head object checker
+            self.base.filter(always_modified).await
         } else {
             self.base.filter(is_modified_from_timestamp).await
         }
@@ -168,11 +175,23 @@ fn is_modified_from_etag(
                 "object filtered."
             );
             return false;
+        } else {
+            trace!(
+                name = FILTER_NAME,
+                source_etag = source_etag,
+                target_etag = target_etag,
+                key = key,
+                "etag is different."
+            );
         }
 
         return true;
     }
 
+    true
+}
+
+fn always_modified(_: &S3syncObject, _: &FilterConfig, _: &ObjectKeyMap) -> bool {
     true
 }
 

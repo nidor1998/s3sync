@@ -5,8 +5,13 @@ use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 
+use crate::storage::e_tag_verify::{
+    generate_e_tag_hash_from_path, generate_e_tag_hash_from_path_with_auto_chunksize,
+    normalize_e_tag,
+};
+use crate::storage::local::fs_util;
 use crate::storage::Storage;
 use crate::types::S3syncObject;
 use crate::types::SyncStatistics::SyncWarning;
@@ -17,13 +22,15 @@ const FILTER_NAME: &str = "HeadObjectChecker";
 pub struct HeadObjectChecker {
     worker_index: u16,
     config: Config,
+    source: Storage,
     target: Storage,
 }
 
 impl HeadObjectChecker {
-    pub fn new(config: Config, target: Storage, worker_index: u16) -> Self {
+    pub fn new(config: Config, source: Storage, target: Storage, worker_index: u16) -> Self {
         Self {
             config,
+            source,
             target,
             worker_index,
         }
@@ -76,6 +83,52 @@ impl HeadObjectChecker {
                 }
 
                 Ok(different_size)
+            } else if self.config.filter_config.check_etag
+                && (self.config.head_each_target || self.config.transfer_config.auto_chunksize)
+            {
+                if !self.source.is_local_storage() && !self.target.is_local_storage() {
+                    let source_etag =
+                        normalize_e_tag(&Some(source_object.e_tag().unwrap().to_string()));
+                    let target_etag =
+                        normalize_e_tag(&Some(target_object.e_tag.unwrap().to_string()));
+
+                    if source_etag == target_etag {
+                        debug!(
+                            name = FILTER_NAME,
+                            source_etag = source_etag,
+                            target_etag = target_etag,
+                            key = key,
+                            "object filtered."
+                        );
+                        return Ok(false);
+                    } else {
+                        trace!(
+                            name = FILTER_NAME,
+                            source_etag = source_etag,
+                            target_etag = target_etag,
+                            key = key,
+                            "etag is different."
+                        );
+                    }
+
+                    Ok(true)
+                } else if self.source.is_local_storage() && !self.target.is_local_storage() {
+                    Ok(self
+                        .is_source_local_etag_different_from_target_s3(
+                            key,
+                            target_object.e_tag().as_ref().unwrap(),
+                        )
+                        .await?)
+                } else if !self.source.is_local_storage() && self.target.is_local_storage() {
+                    Ok(self
+                        .is_target_local_etag_different_from_source_s3(
+                            key,
+                            source_object.e_tag().as_ref().unwrap(),
+                        )
+                        .await?)
+                } else {
+                    panic!("source and target are both local storage.")
+                }
             } else {
                 Ok(is_object_modified(source_object, &target_object))
             };
@@ -103,7 +156,168 @@ impl HeadObjectChecker {
         Err(anyhow!("head_object() failed. key={}.", key,))
     }
 
+    async fn is_source_local_etag_different_from_target_s3(
+        &self,
+        key: &str,
+        target_etag: &str,
+    ) -> Result<bool> {
+        let source_etag = if self.source.is_local_storage() {
+            let mut local_path = self.source.get_local_path();
+            local_path.push(key);
+
+            if self.config.transfer_config.auto_chunksize {
+                if let Ok(object_parts) = self
+                    .target
+                    .get_object_parts(
+                        key,
+                        None,
+                        self.config.target_sse_c.clone(),
+                        self.config.target_sse_c_key.clone(),
+                        self.config.target_sse_c_key_md5.clone(),
+                    )
+                    .await
+                {
+                    if object_parts.is_empty() {
+                        generate_e_tag_hash_from_path(
+                            &local_path,
+                            self.config.transfer_config.multipart_chunksize as usize,
+                            self.config.transfer_config.multipart_threshold as usize,
+                        )
+                        .await?
+                    } else {
+                        generate_e_tag_hash_from_path_with_auto_chunksize(
+                            &local_path,
+                            object_parts
+                                .iter()
+                                .map(|part| part.size().unwrap())
+                                .collect(),
+                        )
+                        .await
+                        .unwrap()
+                    }
+                } else {
+                    return Err(anyhow!("get_object_parts() failed. key={}.", key,));
+                }
+            } else {
+                generate_e_tag_hash_from_path(
+                    &local_path,
+                    self.config.transfer_config.multipart_chunksize as usize,
+                    self.config.transfer_config.multipart_threshold as usize,
+                )
+                .await?
+            }
+        } else {
+            panic!("source is not local storage.")
+        };
+
+        let source_etag = normalize_e_tag(&Some(source_etag));
+        let target_etag = normalize_e_tag(&Some(target_etag.to_string()));
+
+        if source_etag == target_etag {
+            debug!(
+                name = FILTER_NAME,
+                source_etag = source_etag,
+                target_etag = target_etag,
+                key = key,
+                "object filtered."
+            );
+            return Ok(false);
+        } else {
+            trace!(
+                name = FILTER_NAME,
+                source_etag = source_etag,
+                target_etag = target_etag,
+                key = key,
+                "etag is different."
+            );
+        }
+
+        Ok(true)
+    }
+
+    async fn is_target_local_etag_different_from_source_s3(
+        &self,
+        key: &str,
+        source_etag: &str,
+    ) -> Result<bool> {
+        let target_etag = if self.target.is_local_storage() {
+            let local_path = fs_util::key_to_file_path(self.target.get_local_path(), key);
+
+            if self.config.transfer_config.auto_chunksize {
+                if let Ok(object_parts) = self
+                    .source
+                    .get_object_parts(
+                        key,
+                        None,
+                        self.config.target_sse_c.clone(),
+                        self.config.target_sse_c_key.clone(),
+                        self.config.target_sse_c_key_md5.clone(),
+                    )
+                    .await
+                {
+                    if object_parts.is_empty() {
+                        generate_e_tag_hash_from_path(
+                            &local_path,
+                            self.config.transfer_config.multipart_chunksize as usize,
+                            self.config.transfer_config.multipart_threshold as usize,
+                        )
+                        .await?
+                    } else {
+                        generate_e_tag_hash_from_path_with_auto_chunksize(
+                            &local_path,
+                            object_parts
+                                .iter()
+                                .map(|part| part.size().unwrap())
+                                .collect(),
+                        )
+                        .await
+                        .unwrap()
+                    }
+                } else {
+                    return Err(anyhow!("get_object_parts() failed. key={}.", key,));
+                }
+            } else {
+                generate_e_tag_hash_from_path(
+                    &local_path,
+                    self.config.transfer_config.multipart_chunksize as usize,
+                    self.config.transfer_config.multipart_threshold as usize,
+                )
+                .await?
+            }
+        } else {
+            panic!("target is not local storage.")
+        };
+
+        let source_etag = normalize_e_tag(&Some(source_etag.to_string()));
+        let target_etag = normalize_e_tag(&Some(target_etag));
+
+        if source_etag == target_etag {
+            debug!(
+                name = FILTER_NAME,
+                source_etag = source_etag,
+                target_etag = target_etag,
+                key = key,
+                "object filtered."
+            );
+            return Ok(false);
+        } else {
+            trace!(
+                name = FILTER_NAME,
+                source_etag = source_etag,
+                target_etag = target_etag,
+                key = key,
+                "etag is different."
+            );
+        }
+
+        Ok(true)
+    }
+
     fn is_head_object_check_required(&self) -> bool {
+        if self.config.transfer_config.auto_chunksize && self.config.filter_config.check_etag {
+            return true;
+        }
+
         is_head_object_check_required(
             self.target.is_local_storage(),
             self.config.head_each_target,
@@ -350,11 +564,15 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { target, .. } =
+        let StoragePair { target, source } =
             create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
 
-        let head_object_checker =
-            HeadObjectChecker::new(config.clone(), dyn_clone::clone_box(&*(target)), 1);
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+        );
 
         let source_object =
             S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(6).build());
