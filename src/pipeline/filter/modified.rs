@@ -545,4 +545,168 @@ mod tests {
             .with_env_filter("dummy=trace")
             .try_init();
     }
+
+    #[tokio::test]
+    async fn size_not_modified_etag() {
+        init_dummy_tracing_subscriber();
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .size(1)
+                .e_tag("0dd7cd23c492b5a3a62672b4049bb1ed")
+                .build(),
+        );
+
+        let config = FilterConfig {
+            before_time: None,
+            after_time: None,
+            remove_modified_filter: false,
+            check_size: false,
+            check_etag: true,
+            include_regex: None,
+            exclude_regex: None,
+            larger_size: None,
+            smaller_size: None,
+        };
+
+        let mut key_map = HashMap::new();
+        key_map.insert(
+            ObjectKey::KeySHA1Digest(sha1_digest_from_key("test")),
+            ObjectEntry {
+                last_modified: DateTime::from_secs(99),
+                content_length: 1,
+                etag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
+            },
+        );
+
+        assert!(!is_modified_from_etag(
+            &object,
+            &config,
+            &ObjectKeyMap::new(Mutex::new(key_map))
+        ));
+    }
+
+    #[tokio::test]
+    async fn size_not_modified_etag_normalize_source() {
+        init_dummy_tracing_subscriber();
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .size(1)
+                .e_tag("\"0dd7cd23c492b5a3a62672b4049bb1ed\"")
+                .build(),
+        );
+
+        let config = FilterConfig {
+            before_time: None,
+            after_time: None,
+            remove_modified_filter: false,
+            check_size: false,
+            check_etag: true,
+            include_regex: None,
+            exclude_regex: None,
+            larger_size: None,
+            smaller_size: None,
+        };
+
+        let mut key_map = HashMap::new();
+        key_map.insert(
+            ObjectKey::KeySHA1Digest(sha1_digest_from_key("test")),
+            ObjectEntry {
+                last_modified: DateTime::from_secs(99),
+                content_length: 1,
+                etag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
+            },
+        );
+
+        assert!(!is_modified_from_etag(
+            &object,
+            &config,
+            &ObjectKeyMap::new(Mutex::new(key_map))
+        ));
+    }
+
+    #[tokio::test]
+    async fn size_not_modified_etag_normalize_target() {
+        init_dummy_tracing_subscriber();
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .size(1)
+                .e_tag("0dd7cd23c492b5a3a62672b4049bb1ed")
+                .build(),
+        );
+
+        let config = FilterConfig {
+            before_time: None,
+            after_time: None,
+            remove_modified_filter: false,
+            check_size: false,
+            check_etag: true,
+            include_regex: None,
+            exclude_regex: None,
+            larger_size: None,
+            smaller_size: None,
+        };
+
+        let mut key_map = HashMap::new();
+        key_map.insert(
+            ObjectKey::KeySHA1Digest(sha1_digest_from_key("test")),
+            ObjectEntry {
+                last_modified: DateTime::from_secs(99),
+                content_length: 1,
+                etag: Some("\"0dd7cd23c492b5a3a62672b4049bb1ed\"".to_string()),
+            },
+        );
+
+        assert!(!is_modified_from_etag(
+            &object,
+            &config,
+            &ObjectKeyMap::new(Mutex::new(key_map))
+        ));
+    }
+
+    #[tokio::test]
+    async fn size_modified_etag() {
+        init_dummy_tracing_subscriber();
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .size(1)
+                .e_tag("add7cd23c492b5a3a62672b4049bb1ed")
+                .build(),
+        );
+
+        let config = FilterConfig {
+            before_time: None,
+            after_time: None,
+            remove_modified_filter: false,
+            check_size: false,
+            check_etag: true,
+            include_regex: None,
+            exclude_regex: None,
+            larger_size: None,
+            smaller_size: None,
+        };
+
+        let mut key_map = HashMap::new();
+        key_map.insert(
+            ObjectKey::KeySHA1Digest(sha1_digest_from_key("test")),
+            ObjectEntry {
+                last_modified: DateTime::from_secs(99),
+                content_length: 1,
+                etag: Some("0dd7cd23c492b5a3a62672b4049bb1ed".to_string()),
+            },
+        );
+
+        assert!(is_modified_from_etag(
+            &object,
+            &config,
+            &ObjectKeyMap::new(Mutex::new(key_map))
+        ));
+    }
 }

@@ -41,7 +41,10 @@ pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
 pub const TEMP_DOWNLOAD_DIR: &str = "./playground/download/";
 
 pub const LARGE_FILE_PATH: &str = "./playground/large_data_e2e_test/large_file";
+pub const LARGE_FILE_PATH_CASE2: &str = "./playground/large_data_e2e_test_case2/large_file";
 pub const LARGE_FILE_DIR: &str = "./playground/large_data_e2e_test/";
+pub const LARGE_FILE_DIR_CASE2: &str = "./playground/large_data_e2e_test_case2/";
+
 pub const LARGE_FILE_SIZE: usize = 30 * 1024 * 1024;
 pub const LARGE_FILE_KEY: &str = "large_file";
 pub const LARGE_FILE_S3_ETAG: &str = "\"9be3303e9a8d67a0f1e609fb7a29030a-4\"";
@@ -810,6 +813,7 @@ impl TestHelper {
             LARGE_FILE_DIR,
             "--multipart-chunksize",
             chunksize,
+            "--remove-modified-filter",
             target_bucket_url,
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1041,6 +1045,17 @@ impl TestHelper {
 
         let data = vec![0_u8; LARGE_FILE_SIZE];
         std::fs::write(LARGE_FILE_PATH, data.as_slice()).unwrap();
+    }
+
+    pub fn create_large_file_case2() {
+        if Self::is_file_exist(LARGE_FILE_PATH_CASE2) {
+            return;
+        }
+
+        std::fs::create_dir_all(LARGE_FILE_DIR_CASE2).unwrap();
+
+        let data = vec![1_u8; LARGE_FILE_SIZE];
+        std::fs::write(LARGE_FILE_PATH_CASE2, data.as_slice()).unwrap();
     }
 
     pub fn touch_file(path: &str, add_sec: i64) {
