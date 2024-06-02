@@ -29,7 +29,7 @@ pub enum ObjectKey {
 pub struct ObjectEntry {
     pub last_modified: DateTime,
     pub content_length: i64,
-    pub etag: Option<String>,
+    pub e_tag: Option<String>,
 }
 
 pub type ObjectKeyMap = Arc<Mutex<HashMap<ObjectKey, ObjectEntry>>>;
@@ -116,7 +116,7 @@ impl S3syncObject {
         match &self {
             Self::Versioning(object) => object.e_tag(),
             Self::NotVersioning(object) => object.e_tag(),
-            _ => panic!("doesn't have etag."),
+            _ => panic!("doesn't have ETag."),
         }
     }
 
@@ -266,7 +266,7 @@ pub enum SyncStatistics {
     SyncDelete { key: String },
     SyncError { key: String },
     SyncWarning { key: String },
-    EtagVerified { key: String },
+    ETagVerified { key: String },
     ChecksumVerified { key: String },
 }
 

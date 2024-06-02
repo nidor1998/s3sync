@@ -33,23 +33,23 @@ mod tests {
         helper.create_bucket(&BUCKET2.to_string(), REGION).await;
 
         {
-            local_to_s3_single_no_verify_etag().await;
-            local_to_s3_multipart_no_verify_etag().await;
-            s3_to_local_single_no_verify_etag().await;
-            s3_to_local_multipart_no_verify_etag().await;
-            s3_to_s3_single_no_verify_etag().await;
-            s3_to_s3_multipart_no_verify_etag().await;
+            local_to_s3_single_no_verify_e_tag().await;
+            local_to_s3_multipart_no_verify_e_tag().await;
+            s3_to_local_single_no_verify_e_tag().await;
+            s3_to_local_multipart_no_verify_e_tag().await;
+            s3_to_s3_single_no_verify_e_tag().await;
+            s3_to_s3_multipart_no_verify_e_tag().await;
 
-            local_to_s3_single_etag().await;
-            s3_to_local_single_etag().await;
-            s3_to_s3_single_etag().await;
-            local_to_s3_multipart_etag().await;
-            s3_to_local_multipart_etag().await;
-            s3_to_s3_multipart_etag().await;
-            s3_to_local_multipart_etag_ng().await;
-            s3_to_local_multipart_etag_auto().await;
-            s3_to_s3_multipart_etag_ng().await;
-            s3_to_s3_multipart_etag_auto().await;
+            local_to_s3_single_e_tag().await;
+            s3_to_local_single_e_tag().await;
+            s3_to_s3_single_e_tag().await;
+            local_to_s3_multipart_e_tag().await;
+            s3_to_local_multipart_e_tag().await;
+            s3_to_s3_multipart_e_tag().await;
+            s3_to_local_multipart_e_tag_ng().await;
+            s3_to_local_multipart_e_tag_auto().await;
+            s3_to_s3_multipart_e_tag_ng().await;
+            s3_to_s3_multipart_e_tag_auto().await;
             local_to_s3_single_checksum().await;
             s3_to_local_single_checksum().await;
             s3_to_s3_single_checksum().await;
@@ -83,7 +83,7 @@ mod tests {
             .await;
     }
 
-    async fn local_to_s3_single_etag() {
+    async fn local_to_s3_single_e_tag() {
         let helper = TestHelper::new().await;
 
         let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
@@ -103,14 +103,14 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 5);
-        assert_eq!(stats.etag_verified, 5);
+        assert_eq!(stats.e_tag_verified, 5);
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn local_to_s3_single_no_verify_etag() {
+    async fn local_to_s3_single_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
         let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
@@ -131,14 +131,14 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 5);
-        assert_eq!(stats.etag_verified, 0);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_local_single_etag() {
+    async fn s3_to_local_single_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -167,7 +167,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 5);
+            assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -175,7 +175,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_local_single_no_verify_etag() {
+    async fn s3_to_local_single_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -205,7 +205,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -213,7 +213,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_s3_single_etag() {
+    async fn s3_to_s3_single_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -243,7 +243,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 5);
+            assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -252,7 +252,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
-    async fn s3_to_s3_single_no_verify_etag() {
+    async fn s3_to_s3_single_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -283,7 +283,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -292,7 +292,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
-    async fn local_to_s3_multipart_etag() {
+    async fn local_to_s3_multipart_e_tag() {
         let helper = TestHelper::new().await;
 
         let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
@@ -315,14 +315,14 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 1);
-        assert_eq!(stats.etag_verified, 1);
+        assert_eq!(stats.e_tag_verified, 1);
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn local_to_s3_multipart_no_verify_etag() {
+    async fn local_to_s3_multipart_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
         let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
@@ -346,14 +346,14 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 1);
-        assert_eq!(stats.etag_verified, 0);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_local_multipart_etag() {
+    async fn s3_to_local_multipart_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -382,7 +382,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -390,7 +390,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_local_multipart_no_verify_etag() {
+    async fn s3_to_local_multipart_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -420,7 +420,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -428,7 +428,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_s3_multipart_etag() {
+    async fn s3_to_s3_multipart_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -458,7 +458,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -467,7 +467,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
-    async fn s3_to_s3_multipart_no_verify_etag() {
+    async fn s3_to_s3_multipart_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
         {
@@ -498,7 +498,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -507,7 +507,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
-    async fn s3_to_local_multipart_etag_ng() {
+    async fn s3_to_local_multipart_e_tag_ng() {
         let helper = TestHelper::new().await;
 
         {
@@ -538,7 +538,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 1);
         }
@@ -546,7 +546,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_local_multipart_etag_auto() {
+    async fn s3_to_local_multipart_e_tag_auto() {
         let helper = TestHelper::new().await;
 
         {
@@ -578,7 +578,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -586,7 +586,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
-    async fn s3_to_s3_multipart_etag_ng() {
+    async fn s3_to_s3_multipart_e_tag_ng() {
         let helper = TestHelper::new().await;
 
         {
@@ -618,7 +618,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 1);
         }
@@ -627,7 +627,7 @@ mod tests {
         helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
-    async fn s3_to_s3_multipart_etag_auto() {
+    async fn s3_to_s3_multipart_e_tag_auto() {
         let helper = TestHelper::new().await;
 
         {
@@ -660,7 +660,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.sync_warning, 0);
             assert_eq!(stats.checksum_verified, 0);
         }
@@ -691,7 +691,7 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 5);
-        assert_eq!(stats.etag_verified, 5);
+        assert_eq!(stats.e_tag_verified, 5);
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
@@ -728,7 +728,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 5);
+            assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 5);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -769,7 +769,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 5);
+            assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 5);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -803,7 +803,7 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 1);
-        assert_eq!(stats.etag_verified, 1);
+        assert_eq!(stats.e_tag_verified, 1);
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
@@ -845,7 +845,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -886,7 +886,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -930,7 +930,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -974,7 +974,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 2);
         }
@@ -1018,7 +1018,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 1);
+            assert_eq!(stats.e_tag_verified, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 1);
         }
@@ -1051,7 +1051,7 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 5);
-        assert_eq!(stats.etag_verified, 0);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
@@ -1105,7 +1105,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 5);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -1165,7 +1165,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 5);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -1202,7 +1202,7 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 5);
-        assert_eq!(stats.etag_verified, 0);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
@@ -1266,7 +1266,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 5);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -1340,7 +1340,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 5);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -1375,7 +1375,7 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 1);
-        assert_eq!(stats.etag_verified, 0);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
@@ -1431,7 +1431,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -1493,7 +1493,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -1533,7 +1533,7 @@ mod tests {
 
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 1);
-        assert_eq!(stats.etag_verified, 0);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
@@ -1599,7 +1599,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
@@ -1675,7 +1675,7 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.etag_verified, 0);
+            assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }

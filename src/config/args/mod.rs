@@ -473,7 +473,7 @@ impl CLIArgs {
         self.check_auto_chunksize_conflict()?;
         self.check_metadata_conflict()?;
         self.check_check_size_conflict()?;
-        self.check_check_etag_conflict()?;
+        self.check_check_e_tag_conflict()?;
         self.check_ignore_symlinks_conflict()?;
         self.check_no_guess_mime_type_conflict()?;
         self.check_endpoint_url_conflict()?;
@@ -698,7 +698,7 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_check_etag_conflict(&self) -> Result<(), String> {
+    fn check_check_e_tag_conflict(&self) -> Result<(), String> {
         if !self.check_etag {
             return Ok(());
         }

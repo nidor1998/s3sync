@@ -105,7 +105,7 @@ pub struct StatsCount {
     pub sync_delete: u64,
     pub sync_error: u64,
     pub sync_warning: u64,
-    pub etag_verified: u64,
+    pub e_tag_verified: u64,
     pub checksum_verified: u64,
 }
 
@@ -1102,8 +1102,8 @@ impl TestHelper {
                 SyncStatistics::SyncWarning { .. } => {
                     stats.sync_warning += 1;
                 }
-                SyncStatistics::EtagVerified { .. } => {
-                    stats.etag_verified += 1;
+                SyncStatistics::ETagVerified { .. } => {
+                    stats.e_tag_verified += 1;
                 }
                 SyncStatistics::ChecksumVerified { .. } => {
                     stats.checksum_verified += 1;

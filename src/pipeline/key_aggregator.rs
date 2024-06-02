@@ -72,7 +72,7 @@ fn build_object_key_entry(object: &S3syncObject) -> ObjectEntry {
     ObjectEntry {
         last_modified: *object.last_modified(),
         content_length: object.size(),
-        etag: object.e_tag().map(|etag| etag.to_string()),
+        e_tag: object.e_tag().map(|e_tag| e_tag.to_string()),
     }
 }
 

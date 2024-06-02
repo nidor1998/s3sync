@@ -47,7 +47,7 @@ use crate::storage::{
 };
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
-use crate::types::SyncStatistics::{ChecksumVerified, EtagVerified, SyncBytes, SyncWarning};
+use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncBytes, SyncWarning};
 use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics};
 use crate::Config;
 
@@ -268,7 +268,7 @@ impl LocalStorage {
                         );
                     }
                 } else {
-                    self.send_stats(EtagVerified {
+                    self.send_stats(ETagVerified {
                         key: key.to_string(),
                     })
                     .await;
@@ -420,7 +420,7 @@ impl StorageTrait for LocalStorage {
                 path = convert_windows_directory_char_to_slash(&path);
             }
 
-            let etag = if self.config.filter_config.check_etag
+            let e_tag = if self.config.filter_config.check_etag
                 && !self.config.transfer_config.auto_chunksize
                 && !self.config.filter_config.remove_modified_filter
             {
@@ -439,7 +439,7 @@ impl StorageTrait for LocalStorage {
             let object = S3syncObject::NotVersioning(build_object_from_dir_entry(
                 entry.as_ref().unwrap(),
                 &path,
-                etag,
+                e_tag,
                 self.config.additional_checksum_algorithm.clone(),
             ));
             if let Err(e) = sender
@@ -875,7 +875,7 @@ fn remove_local_path_prefix(path: &str, prefix: &str) -> String {
 fn build_object_from_dir_entry(
     entry: &DirEntry,
     key: &str,
-    etag: Option<String>,
+    e_tag: Option<String>,
     checksum_algorithm: Option<ChecksumAlgorithm>,
 ) -> Object {
     Object::builder()
@@ -886,7 +886,7 @@ fn build_object_from_dir_entry(
         .set_last_modified(Some(DateTime::from(
             entry.metadata().unwrap().modified().unwrap(),
         )))
-        .set_e_tag(etag)
+        .set_e_tag(e_tag)
         .set_checksum_algorithm(checksum_algorithm.map(|algorithm| vec![algorithm]))
         .build()
 }
