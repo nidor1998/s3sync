@@ -51,7 +51,7 @@ use crate::types::SyncStatistics::{ChecksumVerified, EtagVerified, SyncBytes, Sy
 use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics};
 use crate::Config;
 
-mod fs_util;
+pub mod fs_util;
 
 const MISMATCH_WARNING_WITH_HELP: &str = "mismatch. object in the local storage may be corrupted. \
  or the current multipart_threshold or multipart_chunksize may be different when uploading to the source. \
@@ -422,7 +422,7 @@ impl StorageTrait for LocalStorage {
 
             let etag = if self.config.filter_config.check_etag
                 && !self.config.transfer_config.auto_chunksize
-                && !self.config.head_each_target
+                && !self.config.filter_config.remove_modified_filter
             {
                 Some(
                     generate_e_tag_hash_from_path(
@@ -852,6 +852,9 @@ impl StorageTrait for LocalStorage {
 
     async fn send_stats(&self, stats: SyncStatistics) {
         let _ = self.stats_sender.send(stats).await;
+    }
+    fn get_local_path(&self) -> PathBuf {
+        self.path.clone()
     }
 }
 
@@ -1827,6 +1830,35 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn get_local_path() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            "./test_data/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.target_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        assert_eq!(storage.get_local_path().to_str().unwrap(), "./test_data/");
+    }
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

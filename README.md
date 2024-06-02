@@ -404,6 +404,16 @@ For example, in the case of `connection reset by peer`, s3sync will retry the op
 #### `--remove-modified-filter`
 If you want to overwrite the existing objects, specify the option.
 
+#### `--check-etag`
+For incremental transfer, s3sync compares the ETag of the source object with the ETag of the target object. If the ETag is different, s3sync transfers the object.
+
+with `--auto-chunksize`, s3sync can calculate and compare ETag for each part and the entire object. It is useful if you don't know the correct chunk size. But it will need more API calls and time.
+
+If both sides are S3, s3sync only compare the ETag of the source object with the ETag of the target object. If either side is not S3, s3sync calculates ETag of the local object.
+
+You will need to know about Amazon S3 ETag.  
+See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html
+
 #### `--put-last-modified-metadata`
 This option adds user-defined metadata that contains the last-modified time of the source object.
 

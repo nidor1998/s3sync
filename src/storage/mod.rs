@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -136,6 +137,7 @@ pub trait StorageTrait: DynClone {
     fn get_client(&self) -> Option<Arc<Client>>;
     fn get_stats_sender(&self) -> Sender<SyncStatistics>;
     async fn send_stats(&self, stats: SyncStatistics);
+    fn get_local_path(&self) -> PathBuf;
 }
 
 pub fn convert_to_buf_byte_stream_with_callback<R>(

@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -608,7 +609,7 @@ impl StorageTrait for S3Storage {
 
         let mut object_parts = vec![];
 
-        let parts_count = object.parts_count().unwrap();
+        let parts_count = object.parts_count().unwrap_or_default();
         if parts_count == 0 {
             return Ok(vec![]);
         }
@@ -960,6 +961,10 @@ impl StorageTrait for S3Storage {
 
     async fn send_stats(&self, stats: SyncStatistics) {
         let _ = self.stats_sender.send(stats).await;
+    }
+
+    fn get_local_path(&self) -> PathBuf {
+        panic!("not implemented");
     }
 }
 

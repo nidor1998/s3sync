@@ -217,6 +217,7 @@ impl ObjectSyncer {
 
         let head_object_checker = HeadObjectChecker::new(
             self.base.config.clone(),
+            dyn_clone::clone_box(&*(*self.base.source.as_ref().unwrap())),
             dyn_clone::clone_box(&*(*self.base.target.as_ref().unwrap())),
             self.worker_index,
         );
@@ -555,7 +556,9 @@ impl ObjectSyncer {
             }
         }
 
-        if self.base.config.transfer_config.auto_chunksize {
+        if self.base.config.transfer_config.auto_chunksize
+            && !self.base.source.as_ref().unwrap().is_local_storage()
+        {
             let object_parts = self
                 .base
                 .source
