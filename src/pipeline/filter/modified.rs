@@ -173,13 +173,27 @@ fn is_modified_from_e_tag(
         let source_e_tag = normalize_e_tag(&Some(object.e_tag().unwrap().to_string()));
         let target_e_tag = normalize_e_tag(&Some(entry.e_tag.clone().unwrap()));
 
+        let source_last_modified =
+            DateTime::from_millis(object.last_modified().to_millis().unwrap())
+                .to_chrono_utc()
+                .unwrap()
+                .to_rfc3339();
+        let target_last_modified = DateTime::from_millis(entry.last_modified.to_millis().unwrap())
+            .to_chrono_utc()
+            .unwrap()
+            .to_rfc3339();
+
         if source_e_tag == target_e_tag {
             debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = object.size(),
+                target_size = entry.content_length,
                 key = key,
-                "object filtered."
+                "object filtered. ETags are the same."
             );
             return false;
         } else {
@@ -187,8 +201,11 @@ fn is_modified_from_e_tag(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
-                key = key,
-                "ETag is different."
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = object.size(),
+                target_size = entry.content_length,
+                "ETag are different."
             );
         }
 

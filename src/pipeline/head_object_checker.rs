@@ -7,7 +7,7 @@ use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 
 use crate::storage::additional_checksum_verify::generate_checksum_from_path_for_check;
 use crate::storage::e_tag_verify::{
@@ -97,44 +97,14 @@ impl HeadObjectChecker {
                 && (self.config.head_each_target || self.config.transfer_config.auto_chunksize)
             {
                 if !self.source.is_local_storage() && !self.target.is_local_storage() {
-                    let source_e_tag =
-                        normalize_e_tag(&Some(source_object.e_tag().unwrap().to_string()));
-                    let target_e_tag =
-                        normalize_e_tag(&Some(target_object.e_tag.unwrap().to_string()));
-
-                    if source_e_tag == target_e_tag {
-                        debug!(
-                            name = FILTER_NAME,
-                            source_e_tag = source_e_tag,
-                            target_e_tag = target_e_tag,
-                            key = key,
-                            "object filtered."
-                        );
-                        return Ok(false);
-                    } else {
-                        trace!(
-                            name = FILTER_NAME,
-                            source_e_tag = source_e_tag,
-                            target_e_tag = target_e_tag,
-                            key = key,
-                            "ETag is different."
-                        );
-                    }
-
-                    Ok(true)
+                    return self.is_same_etag(key, source_object, &target_object);
                 } else if self.source.is_local_storage() && !self.target.is_local_storage() {
                     Ok(self
-                        .is_source_local_e_tag_different_from_target_s3(
-                            key,
-                            target_object.e_tag().as_ref().unwrap(),
-                        )
+                        .is_source_local_e_tag_different_from_target_s3(key, &target_object)
                         .await?)
                 } else if !self.source.is_local_storage() && self.target.is_local_storage() {
                     Ok(self
-                        .is_target_local_e_tag_different_from_source_s3(
-                            key,
-                            source_object.e_tag().as_ref().unwrap(),
-                        )
+                        .is_target_local_e_tag_different_from_source_s3(key, source_object)
                         .await?)
                 } else {
                     panic!("source and target are both local storage.")
@@ -187,10 +157,66 @@ impl HeadObjectChecker {
         Err(anyhow!("head_object() failed. key={}.", key,))
     }
 
+    fn is_same_etag(
+        &self,
+        key: &str,
+        source_object: &S3syncObject,
+        head_target_object_output: &HeadObjectOutput,
+    ) -> Result<bool> {
+        let source_e_tag = normalize_e_tag(&Some(source_object.e_tag().unwrap().to_string()));
+        let target_e_tag = normalize_e_tag(&Some(
+            head_target_object_output.e_tag.clone().unwrap().to_string(),
+        ));
+
+        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            source_object.last_modified().to_millis().unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_target_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+
+        if source_e_tag == target_e_tag {
+            debug!(
+                name = FILTER_NAME,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = source_object.size(),
+                target_size = head_target_object_output.content_length().unwrap(),
+                key = key,
+                "object filtered. ETags are same."
+            );
+            return Ok(false);
+        } else {
+            debug!(
+                name = FILTER_NAME,
+                source_e_tag = source_e_tag,
+                target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = source_object.size(),
+                target_size = head_target_object_output.content_length().unwrap(),
+                key = key,
+                "ETags are different."
+            );
+        }
+
+        Ok(true)
+    }
+
     async fn is_source_local_e_tag_different_from_target_s3(
         &self,
         key: &str,
-        target_e_tag: &str,
+        head_target_object_output: &HeadObjectOutput,
     ) -> Result<bool> {
         let source_e_tag = if self.source.is_local_storage() {
             let mut local_path = self.source.get_local_path();
@@ -242,24 +268,68 @@ impl HeadObjectChecker {
         };
 
         let source_e_tag = normalize_e_tag(&Some(source_e_tag));
-        let target_e_tag = normalize_e_tag(&Some(target_e_tag.to_string()));
+        let target_e_tag = normalize_e_tag(&Some(
+            head_target_object_output.e_tag().unwrap().to_string(),
+        ));
+
+        let mut local_path = self.source.get_local_path();
+        local_path.push(key);
+
+        let head_source_object_output = self
+            .source
+            .head_object(
+                key,
+                None,
+                Some(ChecksumMode::Enabled),
+                self.config.source_sse_c.clone(),
+                self.config.source_sse_c_key.clone(),
+                self.config.source_sse_c_key_md5.clone(),
+            )
+            .await?;
+
+        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_source_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_target_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
 
         if source_e_tag == target_e_tag {
             debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered."
+                "object filtered. ETags are same."
             );
             return Ok(false);
         } else {
-            trace!(
+            debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "ETag is different."
+                "ETags are different."
             );
         }
 
@@ -269,8 +339,9 @@ impl HeadObjectChecker {
     async fn is_target_local_e_tag_different_from_source_s3(
         &self,
         key: &str,
-        source_e_tag: &str,
+        source_object: &S3syncObject,
     ) -> Result<bool> {
+        let source_e_tag = source_object.e_tag();
         let target_e_tag = if self.target.is_local_storage() {
             let local_path = fs_util::key_to_file_path(self.target.get_local_path(), key);
 
@@ -319,25 +390,60 @@ impl HeadObjectChecker {
             panic!("target is not local storage.")
         };
 
-        let source_e_tag = normalize_e_tag(&Some(source_e_tag.to_string()));
+        let source_e_tag = normalize_e_tag(&Some(source_e_tag.unwrap().to_string()));
         let target_e_tag = normalize_e_tag(&Some(target_e_tag));
+
+        let head_target_object_output = self
+            .target
+            .head_object(
+                key,
+                None,
+                Some(ChecksumMode::Enabled),
+                self.config.target_sse_c.clone(),
+                self.config.target_sse_c_key.clone(),
+                self.config.target_sse_c_key_md5.clone(),
+            )
+            .await?;
+
+        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            source_object.last_modified().to_millis().unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_target_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
 
         if source_e_tag == target_e_tag {
             debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = source_object.size(),
+                target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered."
+                "object filtered. ETags are same."
             );
             return Ok(false);
         } else {
-            trace!(
+            debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = source_object.size(),
+                target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "ETag is different."
+                "ETags are different."
             );
         }
 
@@ -409,11 +515,11 @@ impl HeadObjectChecker {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered."
+                "object filtered. Checksums are same."
             );
             return Ok(false);
         } else {
-            trace!(
+            debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = self
                     .config
@@ -429,7 +535,7 @@ impl HeadObjectChecker {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "checksum is different or not found."
+                "Checksums are different or not found."
             );
         }
 
@@ -533,11 +639,11 @@ impl HeadObjectChecker {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered."
+                "object filtered. Checksums are same."
             );
             return Ok(false);
         } else {
-            trace!(
+            debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = self
                     .config
@@ -553,7 +659,7 @@ impl HeadObjectChecker {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "checksum is different or not found."
+                "Checksums are different or not found."
             );
         }
 
@@ -658,11 +764,11 @@ impl HeadObjectChecker {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_source_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered."
+                "object filtered. Checksums are same."
             );
             return Ok(false);
         } else {
-            trace!(
+            debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = self
                     .config
@@ -678,7 +784,7 @@ impl HeadObjectChecker {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_source_object_output.content_length().unwrap(),
                 key = key,
-                "checksum is different or not found."
+                "Checksums are different or not found."
             );
         }
 
