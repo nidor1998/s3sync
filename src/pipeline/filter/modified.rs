@@ -588,6 +588,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("0dd7cd23c492b5a3a62672b4049bb1ed")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
@@ -630,6 +631,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("\"0dd7cd23c492b5a3a62672b4049bb1ed\"")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
@@ -672,6 +674,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("0dd7cd23c492b5a3a62672b4049bb1ed")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
@@ -714,6 +717,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("add7cd23c492b5a3a62672b4049bb1ed")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
