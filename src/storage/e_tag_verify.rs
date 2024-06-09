@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use aws_sdk_s3::types::ServerSideEncryption;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -117,7 +117,15 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
     for chunksize in object_parts {
         let mut buffer = Vec::<u8>::with_capacity(chunksize as usize);
         buffer.resize_with(chunksize as usize, Default::default);
-        file.read_exact(buffer.as_mut_slice()).await?;
+        let read_result = file.read_exact(buffer.as_mut_slice()).await;
+        if read_result.is_err()
+            && read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
+        {
+            return Err(anyhow!(
+                "Failed to read file: {:?}",
+                read_result.unwrap_err()
+            ));
+        }
 
         let mut md5_digest = md5::compute(&buffer).as_slice().to_vec();
         concatnated_md5_hash.append(&mut md5_digest);
