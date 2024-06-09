@@ -7,6 +7,8 @@ use tokio::io::AsyncReadExt;
 
 use crate::storage::checksum::AdditionalChecksum;
 
+const UNKNOWN_CHECKSUM_VALUE: &str = "UNKNOWN";
+
 pub async fn generate_checksum_from_path(
     path: &Path,
     checksum_algorithm: ChecksumAlgorithm,
@@ -50,24 +52,34 @@ pub async fn generate_checksum_from_path_for_check(
     }
 
     let mut file = File::open(path).await?;
-    let mut checksum = AdditionalChecksum::new(checksum_algorithm);
+    let file_size = file.metadata().await?.len();
 
+    let mut checksum = AdditionalChecksum::new(checksum_algorithm);
+    let mut read_bytes: usize = 0;
     let mut last_hash = "".to_string();
     for chunksize in object_parts {
         let mut buffer = Vec::<u8>::with_capacity(chunksize as usize);
         buffer.resize_with(chunksize as usize, Default::default);
         let read_result = file.read_exact(buffer.as_mut_slice()).await;
-        if read_result.is_err()
-            && read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
-        {
-            return Err(anyhow!(
-                "Failed to read file: {:?}",
-                read_result.unwrap_err()
-            ));
+        if read_result.is_err() {
+            return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
+            {
+                Err(anyhow!(
+                    "Failed to read file: {:?}",
+                    read_result.unwrap_err()
+                ))
+            } else {
+                Ok(UNKNOWN_CHECKSUM_VALUE.to_string())
+            };
         }
+        read_bytes += read_result.unwrap();
 
         checksum.update(buffer.as_slice());
         last_hash = checksum.finalize()
+    }
+
+    if read_bytes != file_size as usize {
+        return Ok(UNKNOWN_CHECKSUM_VALUE.to_string());
     }
 
     if !multipart {

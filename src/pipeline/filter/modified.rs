@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::config::FilterConfig;
 use crate::pipeline::filter::{ObjectFilter, ObjectFilterBase};
@@ -197,7 +197,7 @@ fn is_modified_from_e_tag(
             );
             return false;
         } else {
-            trace!(
+            debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
@@ -205,6 +205,7 @@ fn is_modified_from_e_tag(
                 target_last_modified = target_last_modified,
                 source_size = object.size(),
                 target_size = entry.content_length,
+                key = key,
                 "ETag are different."
             );
         }
