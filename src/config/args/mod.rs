@@ -327,6 +327,10 @@ pub struct CLIArgs {
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG)]
     check_etag: bool,
 
+    /// use additional checksum for update checking
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag"], value_parser = checksum_algorithm::parse_checksum_algorithm)]
+    check_additional_checksum: Option<String>,
+
     /// delete objects that exist in the target but not in the source.
     /// [Warning] Since this can cause data loss, test first with the --dry-run option
     #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_SYNC_WITH_DELETE)]
@@ -915,6 +919,10 @@ impl TryFrom<CLIArgs> for Config {
             .additional_checksum_algorithm
             .map(|algorithm| ChecksumAlgorithm::from(algorithm.as_str()));
 
+        let check_additional_checksum_algorithm = value
+            .check_additional_checksum
+            .map(|algorithm| ChecksumAlgorithm::from(algorithm.as_str()));
+
         let checksum_mode = if value.enable_additional_checksum {
             Some(ChecksumMode::Enabled)
         } else {
@@ -1007,6 +1015,7 @@ impl TryFrom<CLIArgs> for Config {
                 remove_modified_filter: value.remove_modified_filter,
                 check_size: value.check_size,
                 check_etag: value.check_etag,
+                check_checksum_algorithm: check_additional_checksum_algorithm,
                 include_regex,
                 exclude_regex,
                 larger_size: filter_larger_size,

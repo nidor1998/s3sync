@@ -37,8 +37,15 @@ impl ObjectFilter for TargetModifiedFilter<'_> {
             && !self.base.base.config.transfer_config.auto_chunksize
         {
             self.base.filter(is_modified_from_e_tag).await
-        } else if self.base.base.config.filter_config.check_etag
-            && self.base.base.config.transfer_config.auto_chunksize
+        } else if self
+            .base
+            .base
+            .config
+            .filter_config
+            .check_checksum_algorithm
+            .is_some()
+            || (self.base.base.config.filter_config.check_etag
+                && self.base.base.config.transfer_config.auto_chunksize)
         {
             // check etag will be done within the head object checker
             self.base.filter(always_modified).await

@@ -39,6 +39,35 @@ pub async fn generate_checksum_from_path(
     Ok(checksum.finalize_all())
 }
 
+pub async fn generate_checksum_from_path_for_check(
+    path: &Path,
+    checksum_algorithm: ChecksumAlgorithm,
+    multipart: bool,
+    object_parts: Vec<i64>,
+) -> Result<String> {
+    if object_parts.is_empty() {
+        panic!("parts_size is empty");
+    }
+
+    let mut file = File::open(path).await?;
+    let mut checksum = AdditionalChecksum::new(checksum_algorithm);
+
+    let mut last_hash = "".to_string();
+    for chunksize in object_parts {
+        let mut buffer = Vec::<u8>::with_capacity(chunksize as usize);
+        buffer.resize_with(chunksize as usize, Default::default);
+        file.read_exact(buffer.as_mut_slice()).await?;
+        checksum.update(buffer.as_slice());
+        last_hash = checksum.finalize()
+    }
+
+    if !multipart {
+        return Ok(last_hash);
+    }
+
+    Ok(checksum.finalize_all())
+}
+
 pub async fn generate_checksum_from_path_with_chunksize(
     path: &Path,
     checksum_algorithm: ChecksumAlgorithm,

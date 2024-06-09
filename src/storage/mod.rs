@@ -89,6 +89,7 @@ pub trait StorageTrait: DynClone {
         &self,
         key: &str,
         version_id: Option<String>,
+        checksum_mode: Option<ChecksumMode>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,

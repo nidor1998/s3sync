@@ -423,6 +423,7 @@ impl StorageTrait for LocalStorage {
             let e_tag = if self.config.filter_config.check_etag
                 && !self.config.transfer_config.auto_chunksize
                 && !self.config.filter_config.remove_modified_filter
+                && self.config.filter_config.check_checksum_algorithm.is_none()
             {
                 Some(
                     generate_e_tag_hash_from_path(
@@ -574,6 +575,7 @@ impl StorageTrait for LocalStorage {
         &self,
         key: &str,
         _version_id: Option<String>,
+        _checksum_mode: Option<ChecksumMode>,
         _sse_c: Option<String>,
         _sse_c_key: SseCustomerKey,
         _sse_c_key_md5: Option<String>,

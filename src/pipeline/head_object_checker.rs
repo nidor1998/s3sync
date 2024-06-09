@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
+use aws_sdk_s3::types::builders::ObjectPartBuilder;
+use aws_sdk_s3::types::ChecksumMode;
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
@@ -7,6 +9,7 @@ use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::{debug, trace, warn};
 
+use crate::storage::additional_checksum_verify::generate_checksum_from_path_for_check;
 use crate::storage::e_tag_verify::{
     generate_e_tag_hash_from_path, generate_e_tag_hash_from_path_with_auto_chunksize,
     normalize_e_tag,
@@ -15,7 +18,7 @@ use crate::storage::local::fs_util;
 use crate::storage::Storage;
 use crate::types::S3syncObject;
 use crate::types::SyncStatistics::SyncWarning;
-use crate::Config;
+use crate::{types, Config};
 
 const FILTER_NAME: &str = "HeadObjectChecker";
 
@@ -54,19 +57,26 @@ impl HeadObjectChecker {
     }
 
     async fn is_old_object(&self, source_object: &S3syncObject) -> Result<bool> {
+        let checksum_mode = if self.config.filter_config.check_checksum_algorithm.is_some() {
+            Some(ChecksumMode::Enabled)
+        } else {
+            None
+        };
+
         let key = source_object.key();
-        let head_object_result = self
+        let head_target_object_output = self
             .target
             .head_object(
                 key,
                 None,
+                checksum_mode,
                 self.config.target_sse_c.clone(),
                 self.config.target_sse_c_key.clone(),
                 self.config.target_sse_c_key_md5.clone(),
             )
             .await;
 
-        if let Ok(target_object) = head_object_result {
+        if let Ok(target_object) = head_target_object_output {
             return if self.config.filter_config.check_size {
                 let different_size =
                     source_object.size() != target_object.content_length().unwrap();
@@ -132,12 +142,26 @@ impl HeadObjectChecker {
             } else if self.config.filter_config.check_etag {
                 // ETag has been checked by modified filter
                 Ok(true)
+            } else if self.config.filter_config.check_checksum_algorithm.is_some() {
+                if !self.source.is_local_storage() && !self.target.is_local_storage() {
+                    return self.is_same_checksum(key, &target_object).await;
+                } else if self.source.is_local_storage() && !self.target.is_local_storage() {
+                    return self
+                        .is_source_local_checksum_different_from_target_s3(key, &target_object)
+                        .await;
+                } else if !self.source.is_local_storage() && self.target.is_local_storage() {
+                    return self
+                        .is_target_local_checksum_different_from_source_s3(key, &target_object)
+                        .await;
+                } else {
+                    panic!("source and target are both local storage.")
+                }
             } else {
                 Ok(is_object_modified(source_object, &target_object))
             };
         }
 
-        if is_head_object_not_found_error(head_object_result.as_ref().err().unwrap()) {
+        if is_head_object_not_found_error(head_target_object_output.as_ref().err().unwrap()) {
             return Ok(true);
         }
 
@@ -147,8 +171,12 @@ impl HeadObjectChecker {
             })
             .await;
 
-        let error = head_object_result.as_ref().err().unwrap().to_string();
-        let source = head_object_result.as_ref().err().unwrap().source();
+        let error = head_target_object_output
+            .as_ref()
+            .err()
+            .unwrap()
+            .to_string();
+        let source = head_target_object_output.as_ref().err().unwrap().source();
         warn!(
             worker_index = self.worker_index,
             error = error,
@@ -316,8 +344,353 @@ impl HeadObjectChecker {
         Ok(true)
     }
 
+    async fn is_same_checksum(
+        &self,
+        key: &str,
+        head_target_object_output: &HeadObjectOutput,
+    ) -> Result<bool> {
+        let head_source_object_output = self
+            .source
+            .head_object(
+                key,
+                None,
+                Some(ChecksumMode::Enabled),
+                self.config.source_sse_c.clone(),
+                self.config.source_sse_c_key.clone(),
+                self.config.source_sse_c_key_md5.clone(),
+            )
+            .await?;
+
+        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_source_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_target_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+
+        let source_checksum = types::get_additional_checksum_with_head_object(
+            &head_source_object_output,
+            self.config.filter_config.check_checksum_algorithm.clone(),
+        );
+        let target_checksum = types::get_additional_checksum_with_head_object(
+            head_target_object_output,
+            self.config.filter_config.check_checksum_algorithm.clone(),
+        );
+
+        if source_checksum == target_checksum
+            && source_checksum.is_some()
+            && target_checksum.is_some()
+        {
+            debug!(
+                name = FILTER_NAME,
+                checksum_algorithm = self
+                    .config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                source_checksum = source_checksum.unwrap_or_default(),
+                target_checksum = target_checksum.unwrap_or_default(),
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_target_object_output.content_length().unwrap(),
+                key = key,
+                "object filtered."
+            );
+            return Ok(false);
+        } else {
+            trace!(
+                name = FILTER_NAME,
+                checksum_algorithm = self
+                    .config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                source_checksum = source_checksum.unwrap_or_default(),
+                target_checksum = target_checksum.unwrap_or_default(),
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_target_object_output.content_length().unwrap(),
+                key = key,
+                "checksum is different or not found."
+            );
+        }
+
+        Ok(true)
+    }
+
+    async fn is_source_local_checksum_different_from_target_s3(
+        &self,
+        key: &str,
+        head_target_object_output: &HeadObjectOutput,
+    ) -> Result<bool> {
+        let mut local_path = self.source.get_local_path();
+        local_path.push(key);
+
+        let head_source_object_output = self
+            .source
+            .head_object(
+                key,
+                None,
+                Some(ChecksumMode::Enabled),
+                self.config.source_sse_c.clone(),
+                self.config.source_sse_c_key.clone(),
+                self.config.source_sse_c_key_md5.clone(),
+            )
+            .await?;
+        let mut target_object_parts = self
+            .target
+            .get_object_parts_attributes(
+                key,
+                None,
+                self.config.max_keys,
+                self.config.target_sse_c.clone(),
+                self.config.target_sse_c_key.clone(),
+                self.config.target_sse_c_key_md5.clone(),
+            )
+            .await?;
+
+        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_source_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_target_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+
+        let multipart = !target_object_parts.is_empty();
+        if !multipart {
+            target_object_parts.push(
+                ObjectPartBuilder::default()
+                    .size(head_target_object_output.content_length().unwrap())
+                    .build(),
+            );
+        }
+
+        let source_checksum = generate_checksum_from_path_for_check(
+            &local_path,
+            self.config
+                .filter_config
+                .check_checksum_algorithm
+                .clone()
+                .unwrap(),
+            multipart,
+            target_object_parts
+                .iter()
+                .map(|part| part.size().unwrap())
+                .collect(),
+        )
+        .await?;
+        let target_checksum = types::get_additional_checksum_with_head_object(
+            head_target_object_output,
+            self.config.filter_config.check_checksum_algorithm.clone(),
+        );
+
+        if target_checksum.is_some()
+            && source_checksum == target_checksum.as_ref().unwrap().as_str()
+        {
+            debug!(
+                name = FILTER_NAME,
+                checksum_algorithm = self
+                    .config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                source_checksum = source_checksum,
+                target_checksum = target_checksum.unwrap_or_default(),
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_target_object_output.content_length().unwrap(),
+                key = key,
+                "object filtered."
+            );
+            return Ok(false);
+        } else {
+            trace!(
+                name = FILTER_NAME,
+                checksum_algorithm = self
+                    .config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                source_checksum = source_checksum,
+                target_checksum = target_checksum.unwrap_or_default(),
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_target_object_output.content_length().unwrap(),
+                key = key,
+                "checksum is different or not found."
+            );
+        }
+
+        Ok(true)
+    }
+
+    async fn is_target_local_checksum_different_from_source_s3(
+        &self,
+        key: &str,
+        head_target_object_output: &HeadObjectOutput,
+    ) -> Result<bool> {
+        let local_path = fs_util::key_to_file_path(self.target.get_local_path(), key);
+
+        let head_source_object_output = self
+            .source
+            .head_object(
+                key,
+                None,
+                Some(ChecksumMode::Enabled),
+                self.config.source_sse_c.clone(),
+                self.config.source_sse_c_key.clone(),
+                self.config.source_sse_c_key_md5.clone(),
+            )
+            .await?;
+
+        let mut source_object_parts = self
+            .source
+            .get_object_parts_attributes(
+                key,
+                None,
+                self.config.max_keys,
+                self.config.source_sse_c.clone(),
+                self.config.source_sse_c_key.clone(),
+                self.config.source_sse_c_key_md5.clone(),
+            )
+            .await?;
+
+        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_source_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+            head_target_object_output
+                .last_modified()
+                .unwrap()
+                .to_millis()
+                .unwrap(),
+        ))
+        .unwrap()
+        .to_rfc3339();
+
+        let multipart = !source_object_parts.is_empty();
+        if !multipart {
+            source_object_parts.push(
+                ObjectPartBuilder::default()
+                    .size(head_source_object_output.content_length().unwrap())
+                    .build(),
+            );
+        }
+
+        let source_checksum = types::get_additional_checksum_with_head_object(
+            &head_source_object_output,
+            self.config.filter_config.check_checksum_algorithm.clone(),
+        );
+
+        let target_checksum = generate_checksum_from_path_for_check(
+            &local_path,
+            self.config
+                .filter_config
+                .check_checksum_algorithm
+                .clone()
+                .unwrap(),
+            multipart,
+            source_object_parts
+                .iter()
+                .map(|part| part.size().unwrap())
+                .collect(),
+        )
+        .await?;
+
+        if source_checksum.is_some()
+            && source_checksum.as_ref().unwrap().as_str() == target_checksum
+        {
+            debug!(
+                name = FILTER_NAME,
+                checksum_algorithm = self
+                    .config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                source_checksum = source_checksum.unwrap_or_default(),
+                target_checksum = target_checksum,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_source_object_output.content_length().unwrap(),
+                key = key,
+                "object filtered."
+            );
+            return Ok(false);
+        } else {
+            trace!(
+                name = FILTER_NAME,
+                checksum_algorithm = self
+                    .config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .as_ref()
+                    .unwrap()
+                    .to_string(),
+                source_checksum = source_checksum.unwrap_or_default(),
+                target_checksum = target_checksum,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = head_source_object_output.content_length().unwrap(),
+                target_size = head_source_object_output.content_length().unwrap(),
+                key = key,
+                "checksum is different or not found."
+            );
+        }
+
+        Ok(true)
+    }
+
     fn is_head_object_check_required(&self) -> bool {
         if self.config.transfer_config.auto_chunksize && self.config.filter_config.check_etag {
+            return true;
+        }
+
+        if self.config.filter_config.check_checksum_algorithm.is_some() {
             return true;
         }
 

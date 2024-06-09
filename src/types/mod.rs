@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{ChecksumAlgorithm, DeleteMarkerEntry, Object, ObjectPart, ObjectVersion};
 use sha1::{Digest, Sha1};
@@ -255,6 +256,29 @@ pub fn get_additional_checksum(
         _ => {
             panic!("unknown algorithm")
         }
+    }
+}
+
+pub fn get_additional_checksum_with_head_object(
+    head_object_output: &HeadObjectOutput,
+    checksum_algorithm: Option<ChecksumAlgorithm>,
+) -> Option<String> {
+    checksum_algorithm.as_ref()?;
+
+    match checksum_algorithm.unwrap() {
+        ChecksumAlgorithm::Sha256 => head_object_output
+            .checksum_sha256()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha1 => head_object_output
+            .checksum_sha1()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc32 => head_object_output
+            .checksum_crc32()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc32C => head_object_output
+            .checksum_crc32_c()
+            .map(|checksum| checksum.to_string()),
+        _ => None,
     }
 }
 
