@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use aws_sdk_s3::types::ChecksumAlgorithm;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -56,7 +56,16 @@ pub async fn generate_checksum_from_path_for_check(
     for chunksize in object_parts {
         let mut buffer = Vec::<u8>::with_capacity(chunksize as usize);
         buffer.resize_with(chunksize as usize, Default::default);
-        file.read_exact(buffer.as_mut_slice()).await?;
+        let read_result = file.read_exact(buffer.as_mut_slice()).await;
+        if read_result.is_err()
+            && read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
+        {
+            return Err(anyhow!(
+                "Failed to read file: {:?}",
+                read_result.unwrap_err()
+            ));
+        }
+
         checksum.update(buffer.as_slice());
         last_hash = checksum.finalize()
     }
