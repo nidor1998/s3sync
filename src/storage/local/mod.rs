@@ -1555,6 +1555,7 @@ mod tests {
                 "source/dir1/6byte.dat",
                 None,
                 None,
+                None,
                 SseCustomerKey { key: None },
                 None,
             )
@@ -1594,6 +1595,7 @@ mod tests {
         let head_object_output = storage
             .head_object(
                 "source/dir1/no_data",
+                None,
                 None,
                 None,
                 SseCustomerKey { key: None },
@@ -1658,6 +1660,7 @@ mod tests {
         let head_object_output = storage
             .head_object(
                 "denied_dir/data",
+                None,
                 None,
                 None,
                 SseCustomerKey { key: None },
