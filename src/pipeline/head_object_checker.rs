@@ -661,7 +661,30 @@ impl HeadObjectChecker {
             if head_source_object_output.content_length().unwrap()
                 != head_target_object_output.content_length().unwrap()
             {
-                panic!("Checksums are same but sizes are different.");
+                self.target
+                    .send_stats(SyncWarning {
+                        key: key.to_string(),
+                    })
+                    .await;
+
+                warn!(
+                    name = FILTER_NAME,
+                    checksum_algorithm = self
+                        .config
+                        .filter_config
+                        .check_checksum_algorithm
+                        .as_ref()
+                        .unwrap()
+                        .to_string(),
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = target_checksum,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                    key = key,
+                    "Checksums are same but sizes are different."
+                );
             }
 
             debug!(
@@ -820,7 +843,30 @@ impl HeadObjectChecker {
             if head_source_object_output.content_length().unwrap()
                 != head_target_object_output.content_length().unwrap()
             {
-                panic!("Checksums are same but sizes are different.");
+                self.target
+                    .send_stats(SyncWarning {
+                        key: key.to_string(),
+                    })
+                    .await;
+
+                warn!(
+                    name = FILTER_NAME,
+                    checksum_algorithm = self
+                        .config
+                        .filter_config
+                        .check_checksum_algorithm
+                        .as_ref()
+                        .unwrap()
+                        .to_string(),
+                    source_checksum = source_checksum,
+                    target_checksum = target_checksum.clone().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                    key = key,
+                    "Checksums are same but sizes are different."
+                );
             }
 
             debug!(
@@ -978,7 +1024,30 @@ impl HeadObjectChecker {
             if head_source_object_output.content_length().unwrap()
                 != head_target_object_output.content_length().unwrap()
             {
-                panic!("Checksums are same but sizes are different.");
+                self.target
+                    .send_stats(SyncWarning {
+                        key: key.to_string(),
+                    })
+                    .await;
+
+                warn!(
+                    name = FILTER_NAME,
+                    checksum_algorithm = self
+                        .config
+                        .filter_config
+                        .check_checksum_algorithm
+                        .as_ref()
+                        .unwrap()
+                        .to_string(),
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = target_checksum,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                    key = key,
+                    "Checksums are same but sizes are different."
+                );
             }
 
             debug!(
