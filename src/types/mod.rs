@@ -278,7 +278,9 @@ pub fn get_additional_checksum_with_head_object(
         ChecksumAlgorithm::Crc32C => head_object_output
             .checksum_crc32_c()
             .map(|checksum| checksum.to_string()),
-        _ => None,
+        _ => {
+            panic!("unknown algorithm")
+        }
     }
 }
 

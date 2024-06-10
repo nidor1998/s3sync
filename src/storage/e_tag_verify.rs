@@ -620,6 +620,56 @@ mod tests {
             .unwrap(),
             LARGE_FILE_S3_AUTO_CHUNKSIZE_ETAG
         );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 17179870, 889191],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 17179870, 889189],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 889189],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 17179870, 889190, 32],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
     }
 
     async fn create_large_file() {

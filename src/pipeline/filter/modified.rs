@@ -206,7 +206,7 @@ fn is_modified_from_e_tag(
                 source_size = object.size(),
                 target_size = entry.content_length,
                 key = key,
-                "ETag are different."
+                "ETags are different."
             );
         }
 

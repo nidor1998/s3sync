@@ -339,9 +339,6 @@ impl HeadObjectChecker {
             head_target_object_output.e_tag().unwrap().to_string(),
         ));
 
-        let mut local_path = self.source.get_local_path();
-        local_path.push(key);
-
         let head_source_object_output = self
             .source
             .head_object(
@@ -632,7 +629,7 @@ impl HeadObjectChecker {
             self.config.filter_config.check_checksum_algorithm.clone(),
         );
 
-        if source_checksum.is_none() {
+        if source_checksum.is_none() || target_checksum.is_none() {
             self.target
                 .send_stats(SyncWarning {
                     key: key.to_string(),
@@ -655,15 +652,12 @@ impl HeadObjectChecker {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered. Source checksum not found."
+                "object filtered. Checksum not found."
             );
             return Ok(false);
         }
 
-        if source_checksum == target_checksum
-            && source_checksum.is_some()
-            && target_checksum.is_some()
-        {
+        if source_checksum == target_checksum {
             if head_source_object_output.content_length().unwrap()
                 != head_target_object_output.content_length().unwrap()
             {
@@ -980,9 +974,7 @@ impl HeadObjectChecker {
         )
         .await?;
 
-        if source_checksum.is_some()
-            && source_checksum.as_ref().unwrap().as_str() == target_checksum
-        {
+        if source_checksum.as_ref().unwrap().as_str() == target_checksum {
             if head_source_object_output.content_length().unwrap()
                 != head_target_object_output.content_length().unwrap()
             {

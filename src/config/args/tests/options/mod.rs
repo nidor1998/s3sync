@@ -1,6 +1,7 @@
 mod acl;
 mod additional_checksum;
 mod cache_control;
+mod check_additional_checksum;
 mod check_etag;
 mod check_size;
 mod content_disposition;
