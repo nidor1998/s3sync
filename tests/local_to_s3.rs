@@ -1641,6 +1641,7 @@ mod tests {
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
+                "--head-each-target",
                 "--check-etag",
                 "./test_data/e2e_test/case1/",
                 &target_bucket_url,
