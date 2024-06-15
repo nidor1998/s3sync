@@ -1,9 +1,11 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use aws_sdk_s3::types::ServerSideEncryption;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
+
+const UNKNOWN_E_TAG_VALUE: &str = "UNKNOWN";
 
 pub fn verify_e_tag(
     verify_multipart_upload: bool,
@@ -111,17 +113,35 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
     }
 
     let mut file = File::open(path).await?;
+    let file_size = file.metadata().await?.len();
 
     let mut parts_count = 0;
+    let mut read_bytes: usize = 0;
     let mut concatnated_md5_hash = Vec::new();
     for chunksize in object_parts {
         let mut buffer = Vec::<u8>::with_capacity(chunksize as usize);
         buffer.resize_with(chunksize as usize, Default::default);
-        file.read_exact(buffer.as_mut_slice()).await?;
+        let read_result = file.read_exact(buffer.as_mut_slice()).await;
+        if read_result.is_err() {
+            return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
+            {
+                Err(anyhow!(
+                    "Failed to read file: {:?}",
+                    read_result.unwrap_err()
+                ))
+            } else {
+                Ok(UNKNOWN_E_TAG_VALUE.to_string())
+            };
+        }
+        read_bytes += read_result.unwrap();
 
         let mut md5_digest = md5::compute(&buffer).as_slice().to_vec();
         concatnated_md5_hash.append(&mut md5_digest);
         parts_count += 1;
+    }
+
+    if read_bytes != file_size as usize {
+        return Ok(UNKNOWN_E_TAG_VALUE.to_string());
     }
 
     Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count))
@@ -599,6 +619,56 @@ mod tests {
             .await
             .unwrap(),
             LARGE_FILE_S3_AUTO_CHUNKSIZE_ETAG
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 17179870, 889191],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 17179870, 889189],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 889189],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 17179870, 889190, 32],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870],
+            )
+            .await
+            .unwrap(),
+            UNKNOWN_E_TAG_VALUE
         );
     }
 

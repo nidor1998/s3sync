@@ -781,6 +781,69 @@ impl TestHelper {
         assert_eq!(object_list.len(), 5);
     }
 
+    pub async fn sync_test_data_with_sha1(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "SHA1",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
+    pub async fn sync_test_data_with_crc32(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "CRC32",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
+    pub async fn sync_test_data_with_crc32c(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "CRC32C",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
     pub async fn sync_large_test_data(&self, target_bucket_url: &str) {
         Self::create_large_file();
 
@@ -964,7 +1027,7 @@ impl TestHelper {
         assert!(!pipeline.has_error());
     }
 
-    pub async fn sync_large_test_data_with_crc32_c(&self, target_bucket_url: &str) {
+    pub async fn sync_large_test_data_with_crc32c(&self, target_bucket_url: &str) {
         Self::create_large_file();
 
         let args = vec![

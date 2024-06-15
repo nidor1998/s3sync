@@ -113,10 +113,39 @@ s3sync can handle any object size. From 0 byte to 5TiB.
 Memory usage is low and does not depend on the object size or number of objects.
 It mainly depends on the number of workers and multipart chunk size.  
 The default setting uses only about 500MB of maximum memory for any object size or number of objects.  
-- Incremental transfer  
+- Incremental transfer(Normal transfer)  
 Transfer only modified objects. If the object is not modified, it is skipped. 
 Incremental transfer can be resumed from the last checkpoint.
 Checking of modified objects is very fast.  
+
+- ETag(MD5 or equivalent) based incremental transfer  
+If you want to ETag based incremental transfer, you can use `--check-etag` option.  
+It compares the ETag of the source object with the ETag of the target object and transfers only modified objects.  
+ETag is not always MD5. If the object is uploaded with multipart upload, ETag is not MD5 digest but the MD5 digest of these concatenated values.
+The default setting use `multipart-threshold`(default:8MiB) and `multipart-chunksize`(default:8MiB) and calculate ETag for each part based on these values.  
+with `--auto-chunksize`, s3sync can calculate and compare ETag for each part and the entire object based on the correct chunk size. It is useful if you don't know the correct chunk size. But it will need more API calls and time. see `--auto-chunksize` option.  
+with `--dry-run`, you can check the synchronization status without transferring the objects.  
+with `--json-tracing`, you can output the tracing information in JSON format.
+```bash
+s3sync -vv --dry-run --check-etag --auto-chunksize testdata/ s3://XXXX/testdata/
+2024-06-15T01:23:50.632072Z DEBUG object filtered. ETags are same. name="HeadObjectChecker" source_e_tag="da6a0d097e307ac52ed9b4ad551801fc" target_e_tag="da6a0d097e307ac52ed9b4ad551801fc" source_last_modified="2024-06-15T01:01:48.687+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=6291456 target_size=6291456 key="dir1/data2.dat"
+2024-06-15T01:23:50.675831Z DEBUG object filtered. ETags are same. name="HeadObjectChecker" source_e_tag="d126ef08817d0490e207e456cb0ae080-2" target_e_tag="d126ef08817d0490e207e456cb0ae080-2" source_last_modified="2024-06-15T01:01:48.685+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=9437184 target_size=9437184 key="dir1/data1.dat"
+2024-06-15T01:23:50.683417Z DEBUG object filtered. ETags are same. name="HeadObjectChecker" source_e_tag="ebe97f2a4738800fe71edbe389c000a6-2" target_e_tag="ebe97f2a4738800fe71edbe389c000a6-2" source_last_modified="2024-06-15T01:01:48.690+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=12582912 target_size=12582912 key="dir1/data3.dat"
+0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
+```
+- Additional checksum(SHA256/SHA1/CRC32/CRC32C) based incremental transfer  
+If you use Amazon S3 with additional checksum, you can use `-check-additional-checksum` option.  
+This option compares the checksum of the both source and target objects and transfer only modified objects.It costs extra API calls per object.  
+with `--dry-run`, you can check the synchronization status without transferring the objects.  
+with `--json-tracing`, you can output the tracing information in JSON format.
+```bash
+s3sync -vv --dry-run --check-additional-checksum SHA256 --additional-checksum-algorithm SHA256 testdata/ s3://XXXX/testdata/
+2024-06-15T01:06:30.035362Z DEBUG object filtered. Checksums are same. name="HeadObjectChecker" checksum_algorithm="SHA256" source_checksum="tp2uVqFNGoMU7UBmTEAz6gpVDuomc+BN9CpmrGufryw=" target_checksum="tp2uVqFNGoMU7UBmTEAz6gpVDuomc+BN9CpmrGufryw=" source_last_modified="2024-06-15T01:01:48.687+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=6291456 target_size=6291456 key="dir1/data2.dat"
+2024-06-15T01:06:30.041354Z DEBUG object filtered. Checksums are same. name="HeadObjectChecker" checksum_algorithm="SHA256" source_checksum="zWifJvli3SaQ9LZtHxzpOjkUE9x4ovgJZ+34As/NMwc=-2" target_checksum="zWifJvli3SaQ9LZtHxzpOjkUE9x4ovgJZ+34As/NMwc=-2" source_last_modified="2024-06-15T01:01:48.685+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=9437184 target_size=9437184 key="dir1/data1.dat"
+2024-06-15T01:06:30.086455Z DEBUG object filtered. Checksums are same. name="HeadObjectChecker" checksum_algorithm="SHA256" source_checksum="MyTyVYvNthXQp4fOwy/IzuKgFGIzIHpP1DiTfjZoV0Q=-2" target_checksum="MyTyVYvNthXQp4fOwy/IzuKgFGIzIHpP1DiTfjZoV0Q=-2" source_last_modified="2024-06-15T01:01:48.690+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=12582912 target_size=12582912 key="dir1/data3.dat"
+0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
+```
+
 - Versioning support  
 All versions of the object can be synchronized.(Except intermediate delete markers)  
 - Tagging support  

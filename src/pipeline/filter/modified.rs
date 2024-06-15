@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::config::FilterConfig;
 use crate::pipeline::filter::{ObjectFilter, ObjectFilterBase};
@@ -37,8 +37,15 @@ impl ObjectFilter for TargetModifiedFilter<'_> {
             && !self.base.base.config.transfer_config.auto_chunksize
         {
             self.base.filter(is_modified_from_e_tag).await
-        } else if self.base.base.config.filter_config.check_etag
-            && self.base.base.config.transfer_config.auto_chunksize
+        } else if self
+            .base
+            .base
+            .config
+            .filter_config
+            .check_checksum_algorithm
+            .is_some()
+            || (self.base.base.config.filter_config.check_etag
+                && self.base.base.config.transfer_config.auto_chunksize)
         {
             // check etag will be done within the head object checker
             self.base.filter(always_modified).await
@@ -166,22 +173,40 @@ fn is_modified_from_e_tag(
         let source_e_tag = normalize_e_tag(&Some(object.e_tag().unwrap().to_string()));
         let target_e_tag = normalize_e_tag(&Some(entry.e_tag.clone().unwrap()));
 
+        let source_last_modified =
+            DateTime::from_millis(object.last_modified().to_millis().unwrap())
+                .to_chrono_utc()
+                .unwrap()
+                .to_rfc3339();
+        let target_last_modified = DateTime::from_millis(entry.last_modified.to_millis().unwrap())
+            .to_chrono_utc()
+            .unwrap()
+            .to_rfc3339();
+
         if source_e_tag == target_e_tag {
             debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = object.size(),
+                target_size = entry.content_length,
                 key = key,
-                "object filtered."
+                "object filtered. ETags are the same."
             );
             return false;
         } else {
-            trace!(
+            debug!(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
+                source_size = object.size(),
+                target_size = entry.content_length,
                 key = key,
-                "ETag is different."
+                "ETags are different."
             );
         }
 
@@ -225,6 +250,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -255,6 +281,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -295,6 +322,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -325,6 +353,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -387,6 +416,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: true,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -412,6 +442,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: true,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -447,6 +478,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: true,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -482,6 +514,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: true,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -517,6 +550,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: true,
             check_etag: false,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -555,6 +589,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("0dd7cd23c492b5a3a62672b4049bb1ed")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
@@ -564,6 +599,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: true,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -596,6 +632,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("\"0dd7cd23c492b5a3a62672b4049bb1ed\"")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
@@ -605,6 +642,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: true,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -637,6 +675,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("0dd7cd23c492b5a3a62672b4049bb1ed")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
@@ -646,6 +685,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: true,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
@@ -678,6 +718,7 @@ mod tests {
                 .key("test")
                 .size(1)
                 .e_tag("add7cd23c492b5a3a62672b4049bb1ed")
+                .last_modified(DateTime::from_secs(99))
                 .build(),
         );
 
@@ -687,6 +728,7 @@ mod tests {
             remove_modified_filter: false,
             check_size: false,
             check_etag: true,
+            check_checksum_algorithm: None,
             include_regex: None,
             exclude_regex: None,
             larger_size: None,
