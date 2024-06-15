@@ -344,7 +344,7 @@ impl HeadObjectChecker {
             .head_object(
                 key,
                 None,
-                Some(ChecksumMode::Enabled),
+                None,
                 self.config.source_sse_c.clone(),
                 self.config.source_sse_c_key.clone(),
                 self.config.source_sse_c_key_md5.clone(),
@@ -492,7 +492,7 @@ impl HeadObjectChecker {
             .head_object(
                 key,
                 None,
-                Some(ChecksumMode::Enabled),
+                None,
                 self.config.target_sse_c.clone(),
                 self.config.target_sse_c_key.clone(),
                 self.config.target_sse_c_key_md5.clone(),
