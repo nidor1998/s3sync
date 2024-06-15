@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+use anyhow::{anyhow, Error};
 use async_channel::{Receiver, Sender};
 use tokio::task::JoinHandle;
 use tracing::{error, trace};
@@ -44,6 +45,7 @@ pub struct Pipeline {
     cancellation_token: PipelineCancellationToken,
     stats_receiver: Receiver<SyncStatistics>,
     has_error: Arc<AtomicBool>,
+    errors: Arc<Mutex<VecDeque<Error>>>,
     ready: bool,
 }
 
@@ -83,6 +85,7 @@ impl Pipeline {
             cancellation_token,
             stats_receiver,
             has_error: Arc::new(AtomicBool::new(false)),
+            errors: Arc::new(Mutex::new(VecDeque::<Error>::new())),
             ready: true,
         }
     }
@@ -122,6 +125,10 @@ impl Pipeline {
             error!("Versioning must be enabled on both buckets.");
 
             self.has_error.store(true, Ordering::SeqCst);
+
+            let error_list = self.errors.clone();
+            let mut error_list = error_list.lock().unwrap();
+            error_list.push_back(anyhow!("Versioning must be enabled on both buckets."));
 
             return false;
         }
@@ -217,6 +224,7 @@ impl Pipeline {
         let (stage, next_stage_receiver) = self.create_spsc_stage(None);
         let object_lister = ObjectLister::new(stage);
         let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
         let max_keys = self.config.max_keys;
 
         tokio::spawn(async move {
@@ -234,6 +242,9 @@ impl Pipeline {
                         source = source,
                         "list source objects failed."
                     );
+
+                    let mut error_list = error_list.lock().unwrap();
+                    error_list.push_back(e);
                 }
             }
         });
@@ -245,6 +256,7 @@ impl Pipeline {
         let (stage, next_stage_receiver) = self.create_spsc_stage(None);
         let object_lister = ObjectLister::new(stage);
         let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
         let max_keys = self.config.max_keys;
 
         tokio::spawn(async move {
@@ -262,6 +274,9 @@ impl Pipeline {
                         source = source,
                         "list target objects failed."
                     );
+
+                    let mut error_list = error_list.lock().unwrap();
+                    error_list.push_back(e);
                 }
             }
         });
@@ -282,6 +297,7 @@ impl Pipeline {
         let key_aggregator = KeyAggregator::new(stage);
 
         let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
         tokio::spawn(async move {
             let result = key_aggregator.aggregate(&key_map.unwrap()).await;
             match result {
@@ -297,6 +313,9 @@ impl Pipeline {
                         source = source,
                         "object keys aggregation failed."
                     );
+
+                    let mut error_list = error_list.lock().unwrap();
+                    error_list.push_back(e);
                 }
             }
         });
@@ -377,6 +396,8 @@ impl Pipeline {
 
     fn spawn_filter(&self, filter: Box<dyn ObjectFilter + Send + Sync>) {
         let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
+
         tokio::spawn(async move {
             let result = filter.filter().await;
             match result {
@@ -388,6 +409,9 @@ impl Pipeline {
                     let source = e.source();
 
                     error!(error = error, source = source, "filter objects failed.",);
+
+                    let mut error_list = error_list.lock().unwrap();
+                    error_list.push_back(e);
                 }
             }
         });
@@ -401,13 +425,17 @@ impl Pipeline {
             let stage = self.create_mpmc_stage(sender.clone(), target_objects.clone());
             let object_syncer = ObjectSyncer::new(stage, worker_index);
             let has_error = self.has_error.clone();
+            let error_list = self.errors.clone();
 
             tokio::spawn(async move {
                 let result = object_syncer.sync().await;
                 match result {
                     Ok(_) => {}
-                    Err(_) => {
+                    Err(e) => {
                         has_error.store(true, Ordering::SeqCst);
+
+                        let mut error_list = error_list.lock().unwrap();
+                        error_list.push_back(e);
                     }
                 }
             });
@@ -424,6 +452,7 @@ impl Pipeline {
         let packer = ObjectVersionsPacker::new(stage);
 
         let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
         tokio::spawn(async move {
             let result = packer.pack().await;
             match result {
@@ -435,6 +464,9 @@ impl Pipeline {
                     let source = e.source();
 
                     error!(error = error, source = source, "pack objects failed.");
+
+                    let mut error_list = error_list.lock().unwrap();
+                    error_list.push_back(e);
                 }
             }
         });
@@ -460,6 +492,7 @@ impl Pipeline {
         let (stage, next_stage_receiver) = self.create_spsc_stage(None);
         let diff_lister = DiffLister::new(stage);
         let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
 
         let source_key_map = self.source_key_map.clone().unwrap();
         let target_key_map = self.target_key_map.clone().unwrap();
@@ -478,6 +511,9 @@ impl Pipeline {
                         source = source,
                         "difference detection failed."
                     );
+
+                    let mut error_list = error_list.lock().unwrap();
+                    error_list.push_back(e);
                 }
             }
         });
@@ -496,6 +532,7 @@ impl Pipeline {
             let stage = self.create_mpmc_stage(sender.clone(), target_objects.clone());
             let object_deleter = ObjectDeleter::new(stage, worker_index);
             let has_error = self.has_error.clone();
+            let error_list = self.errors.clone();
 
             tokio::spawn(async move {
                 let result = object_deleter.delete_target().await;
@@ -512,6 +549,9 @@ impl Pipeline {
                             source = source,
                             "delete target objects failed."
                         );
+
+                        let mut error_list = error_list.lock().unwrap();
+                        error_list.push_back(e);
                     }
                 }
             });
@@ -559,6 +599,22 @@ impl Pipeline {
 
     pub fn has_error(&self) -> bool {
         self.has_error.load(Ordering::SeqCst)
+    }
+
+    pub fn get_errors_and_consume(&self) -> Option<Vec<Error>> {
+        if !self.has_error() {
+            return None;
+        }
+
+        let error_list = self.errors.clone();
+        let mut error_list = error_list.lock().unwrap();
+
+        let mut errors_to_return = Vec::<Error>::new();
+        for _ in 0..error_list.len() {
+            errors_to_return.push(error_list.pop_front().unwrap());
+        }
+
+        Some(errors_to_return)
     }
 
     pub fn close_stats_sender(&self) {
@@ -994,6 +1050,65 @@ mod tests {
 
         assert_eq!(receiver.len(), 0);
         assert!(pipeline.has_error());
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn get_errors_and_consume_some() {
+        init_dummy_tracing_subscriber();
+
+        if nix::unistd::geteuid().is_root() {
+            panic!("run tests from root");
+        }
+
+        let args = vec![
+            "s3sync",
+            "--source-endpoint-url",
+            "https://invalid-s3-endpoint-url.6329313.local:65535",
+            "--target-endpoint-url",
+            "https://invalid-s3-endpoint-url.6329313.local:65535",
+            "--aws-max-attempts",
+            "1",
+            "--force-retry-count",
+            "1",
+            "--force-retry-interval-milliseconds",
+            "1",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let pipeline = Pipeline::new(config, create_pipeline_cancellation_token()).await;
+        pipeline.list_target();
+        tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
+
+        assert!(pipeline.has_error());
+        assert_eq!(pipeline.get_errors_and_consume().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn get_errors_and_consume_none() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source",
+            "./test_data/source",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let pipeline = Pipeline::new(config, create_pipeline_cancellation_token()).await;
+        pipeline.list_target();
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            WAITING_TIME_MILLIS_FOR_ASYNC_TASK_START,
+        ))
+        .await;
+
+        assert!(!pipeline.has_error());
+        assert!(pipeline.get_errors_and_consume().is_none());
     }
 
     #[tokio::test]
