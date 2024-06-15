@@ -114,7 +114,7 @@ Memory usage is low and does not depend on the object size or number of objects.
 It mainly depends on the number of workers and multipart chunk size.  
 The default setting uses only about 500MB of maximum memory for any object size or number of objects.  
 - Incremental transfer(Normal transfer)  
-Transfer only modified objects. If the object is not modified, it is skipped. 
+Transfer only modified objects. If the object modification time is newer than the target object, the object is transferred.
 Incremental transfer can be resumed from the last checkpoint.
 Checking of modified objects is very fast.  
 
