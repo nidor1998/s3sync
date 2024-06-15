@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2024-06-15
+
+### Added
+
+- Added Additional checksum(SHA256/SHA1/CRC32/CRC32C) based incremental transfer `--check-additional-checksum` option.
+- Added `get_errors_and_consume()` to `Pipeline` to get errors.
+
+### Changed
+
+- aws-sdk-s3 = "1.36.0"
+
 ## [1.4.0] - 2024-06-02
 
 ### Added

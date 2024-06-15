@@ -119,7 +119,7 @@ Incremental transfer can be resumed from the last checkpoint.
 Checking of modified objects is very fast.  
 
 - ETag(MD5 or equivalent) based incremental transfer  
-If you want to transfer ETag based incremental transfer, you can use `--check-etag` option.  
+If you want to ETag based incremental transfer, you can use `--check-etag` option.  
 It compares the ETag of the source object with the ETag of the target object and transfers only modified objects.  
 ETag is not always MD5. If the object is uploaded with multipart upload, ETag is not MD5 digest but the MD5 digest of these concatenated values.
 The default setting use `multipart-threshold`(default:8MiB) and `multipart-chunksize`(default:8MiB) and calculate ETag for each part based on these values.  
