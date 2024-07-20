@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
 
     trace!("config = {:?}", config);
 
-    cli::run(config).await?;
+    let _result = cli::run(config).await;
 
     Ok(())
 }

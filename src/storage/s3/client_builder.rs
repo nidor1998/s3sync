@@ -92,6 +92,7 @@ impl ClientConfig {
     async fn load_sdk_config(&self) -> SdkConfig {
         let config_loader = if self.disable_stalled_stream_protection {
             aws_config::defaults(BehaviorVersion::latest())
+                .stalled_stream_protection(StalledStreamProtectionConfig::disabled())
         } else {
             aws_config::defaults(BehaviorVersion::latest())
                 .stalled_stream_protection(StalledStreamProtectionConfig::enabled().build())
