@@ -1,5 +1,5 @@
-use anyhow::Result;
-use tracing::{info, trace};
+use anyhow::{anyhow, Result};
+use tracing::{error, info, trace};
 
 use crate::types::SyncStatistics::SyncDelete;
 
@@ -29,7 +29,11 @@ impl ObjectDeleter {
                 recv_result = self.base.receiver.as_ref().unwrap().recv() => {
                     match recv_result {
                         Ok(object) => {
-                            self.delete(object.key(), None).await?;
+                            if self.delete(object.key(), None).await.is_err() {
+                                self.base.cancellation_token.cancel();
+                                error!(worker_index = self.worker_index, "delete worker has been cancelled with error.");
+                                return Err(anyhow!("delete worker has been cancelled with error."));
+                            }
                         },
                         Err(_) => {
                             // normal shutdown
