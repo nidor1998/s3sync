@@ -252,10 +252,9 @@ impl UploadManager {
                 self.config.content_language.clone()
             })
             .set_expires(if self.config.expires.is_none() {
-                get_object_output.expires_string().map(|expires_string| DateTime::from_str(
-                    expires_string,
-                    DateTimeFormat::HttpDate,
-                ).unwrap())
+                get_object_output.expires_string().map(|expires_string| {
+                    DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
+                })
             } else {
                 Some(
                     DateTime::from_str(
@@ -754,10 +753,9 @@ impl UploadManager {
                 self.config.content_language.clone()
             })
             .set_expires(if self.config.expires.is_none() {
-                get_object_output.expires_string().map(|expires_string| DateTime::from_str(
-                    expires_string,
-                    DateTimeFormat::HttpDate,
-                ).unwrap())
+                get_object_output.expires_string().map(|expires_string| {
+                    DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
+                })
             } else {
                 Some(
                     DateTime::from_str(
