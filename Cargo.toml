@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.5.0"
+version = "1.6.0"
 edition = "2021"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "very fast, and powerful synchronization command line tool for S3."
@@ -15,13 +15,13 @@ categories = ["command-line-utilities", "filesystem"]
 
 [dependencies]
 anyhow = { version = "1.0.86" }
-async-trait = "0.1.80"
+async-trait = "0.1.81"
 async-channel = "2.3.1"
-aws-config = { version = "1.5.1", features = ["behavior-version-latest"] }
+aws-config = { version = "1.5.3", features = ["behavior-version-latest"] }
 aws-runtime = "1.2.3"
-aws-sdk-s3 = "1.36.0"
-aws-smithy-runtime = { version = "1.6.0", features = ["client", "connector-hyper-0-14-x"]}
-aws-smithy-runtime-api = "1.7.0"
+aws-sdk-s3 = "1.41.0"
+aws-smithy-runtime = { version = "1.6.2", features = ["client", "connector-hyper-0-14-x"]}
+aws-smithy-runtime-api = "1.7.1"
 aws-smithy-http = "0.60.8"
 aws-smithy-types = "1.2.0"
 aws-smithy-types-convert = { version = "0.60.8", features = ["convert-chrono"] }
@@ -29,8 +29,8 @@ aws-types = "1.3.1"
 base64 = "0.22.1"
 byte-unit = "5.1.4"
 bytes = "1.6.0"
-clap = { version = "4.5.7", features = ["derive", "env", "cargo", "string"] }
-clap_complete = "4.5.5"
+clap = { version = "4.5.9", features = ["derive", "env", "cargo", "string"] }
+clap_complete = "4.5.8"
 clap-verbosity-flag = "2.2.0"
 chrono = "0.4.38"
 crc32c = "0.6.5"
@@ -40,13 +40,13 @@ filetime = "0.2.23"
 headers = "0.3.0"
 leaky-bucket = "1.1.2"
 md5 = "0.7.0"
-mime_guess = "2.0.4"
+mime_guess = "2.0.5"
 hex = "0.4.3"
 hyper = {version = "0.14.28", features = ["stream"]}
 hyper-rustls = {version = "0.24.2", features = ["http2"]}
 hyper-proxy = {version = "0.9.1", default-features = false, features = ["rustls"]}
 indicatif = "0.17.8"
-log = "0.4.21"
+log = "0.4.22"
 pin-project = "1.1.5"
 percent-encoding = "2.3.1"
 regex = "1.10.4"
@@ -54,16 +54,16 @@ rustls = { version = "0.21.11", features = ["dangerous_configuration"] }
 rusty-fork = "0.3.0"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
-shadow-rs = "0.28.0"
+shadow-rs = "0.29.0"
 simple_moving_average = "1.0.2"
 tempfile = "3.10.1"
 thiserror = "1.0.61"
-tokio = { version = "1.38.0", features = ["full"] }
+tokio = { version = "1.38.1", features = ["full"] }
 tokio-stream = "0.1.15"
 tokio-util = "0.7.11"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json", "local-time"] }
-url = "2.5.0"
+url = "2.5.2"
 urlencoding = "2.1.3"
 walkdir = "2.5.0"
 webpki-roots = "0.25.4"
@@ -73,10 +73,10 @@ zeroize_derive = "1.4.2"
 [dev-dependencies]
 nix = { version = "0.29.0", features = ["user", "process", "signal"] }
 once_cell = "1.19.0"
-uuid = { version = "1.8.0", features = ["v4"] }
+uuid = { version = "1.10.0", features = ["v4"] }
 
 [build-dependencies]
-shadow-rs = "0.28.0"
+shadow-rs = "0.29.0"
 
 [features]
 e2e_test = []
