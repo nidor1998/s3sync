@@ -6,15 +6,17 @@ Supports multipart upload, versioning, metadata.
 
 AWS SDK for rust is not production ready yet and is not recommended for production use, so s3sync is also not recommended for production use. But any feedback is welcome. I will continue to improve s3sync.
 
-This crate is a library for s3sync binary. But you can use it to build your own s3sync-like tool.
+This crate is a library for s3sync binary.
+
+s3sync CLI is a very thin wrapper of the s3sync library. You can refer to the source code bin/cli to implement your own synchronization tool.
 
 Example usage
 =============
 
 ```Toml
 [dependencies]
-s3sync = "1.5.0"
-tokio = { version = "1.38.0", features = ["full"] }
+s3sync = "1.6.0"
+tokio = { version = "1.38.1", features = ["full"] }
 ```
 
 ```no_run
