@@ -580,8 +580,12 @@ impl TestHelper {
             &TEST_METADATA.clone()
         );
         assert_eq!(
-            head_object_output.expires().unwrap(),
-            &DateTime::from_str(TEST_EXPIRES, DateTimeFormat::DateTime).unwrap()
+            head_object_output.expires_string.unwrap(),
+            DateTime::from_str(TEST_EXPIRES, DateTimeFormat::DateTime)
+                .unwrap()
+                .fmt(DateTimeFormat::HttpDate)
+                .unwrap()
+                .to_string()
         );
 
         let get_object_tagging_output = self

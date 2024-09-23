@@ -12,33 +12,67 @@ Supports multipart upload, versioning, metadata.
 ## As a library
 s3sync can be used as a library.
 
+s3sync CLI is a very thin wrapper of the s3sync library. You can use every feature of s3sync CLI in the library.
+
+s3sync library has many features that are not documented. You can refer to the s3sync CLI help(`s3sync -h`) for the features and pass the arguments to the library.
+
+You can refer to the source code bin/cli to implement your own synchronization tool.
+
+```Toml
+[dependencies]
+s3sync = "1.6.1"
+tokio = { version = "1.40.0", features = ["full"] }
+```
+
 ```rust
 use s3sync::config::args::parse_from_args;
 use s3sync::config::Config;
 use s3sync::pipeline::Pipeline;
 use s3sync::types::token::create_pipeline_cancellation_token;
+use s3sync::types::SyncStatistics;
 
 #[tokio::main]
 async fn main() {
-    // You can use all the arguments for s3sync binary here.
-    let args = vec!["program_name", "./src", "s3://test-bucket/src/"];
+  // You can use all the arguments for s3sync CLI.
+  let args = vec![
+    "program_name",
+    "--aws-max-attempts",
+    "7",
+    "./src",
+    "s3://test-bucket/src/",
+  ];
 
-    // s3sync library converts the arguments to Config.
-    let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+  // s3sync library converts the arguments to Config.
+  let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
-    // Create a cancellation token for the pipeline.
-    // You can use this token to cancel the pipeline.
-    let cancellation_token = create_pipeline_cancellation_token();
-    let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+  // Create a cancellation token for the pipeline.
+  // You can use this token to cancel the pipeline.
+  let cancellation_token = create_pipeline_cancellation_token();
+  let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+  let stats_receiver = pipeline.get_stats_receiver();
 
-    // You can close statistics sender to stop statistics collection, if needed.
-    // Statistics collection consumes some Memory, so it is recommended to close it if you don't need it.
-    pipeline.close_stats_sender();
+  // You can close statistics sender to stop statistics collection, if needed.
+  // Statistics collection consumes some Memory, so it is recommended to close it if you don't need it.
+  // pipeline.close_stats_sender();
 
-    // Run the pipeline. In this simple example, we run the pipeline synchronously.
-    pipeline.run().await;
+  pipeline.run().await;
 
-    assert!(!pipeline.has_error());
+  // You can use the statistics receiver to get the statistics of the pipeline.
+  // Or, you can get the live statistics, If you run async the pipeline.
+  let mut total_sync_count = 0;
+  while let Ok(sync_stats) = stats_receiver.try_recv() {
+    if matches!(sync_stats, SyncStatistics::SyncComplete { .. }) {
+      total_sync_count += 1;
+    }
+  }
+
+  println!("Total sync count: {}", total_sync_count);
+
+  // If there is an error in the pipeline, you can get the errors.
+  if pipeline.has_error() {
+    println!("An error has occurred.\n\n");
+    println!("{:?}", pipeline.get_errors_and_consume().unwrap()[0]);
+  }
 }
 ```
 
@@ -183,7 +217,7 @@ You can also build from source following the instructions below.
 See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 ### Build
-s3sync requires Rust 1.76 or later.
+s3sync requires Rust 1.78 or later.
 ```bash
 cargo install s3sync --path .
 ```

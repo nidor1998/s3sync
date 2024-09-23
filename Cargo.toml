@@ -1,11 +1,11 @@
 [package]
 name = "s3sync"
-version = "1.6.0"
+version = "1.6.1"
 edition = "2021"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "very fast, and powerful synchronization command line tool for S3."
 license = "Apache-2.0"
-rust-version = "1.76.0"
+rust-version = "1.78.0"
 repository = "https://github.com/nidor1998/s3sync"
 homepage = "https://github.com/nidor1998/s3sync"
 documentation = "https://docs.rs/s3sync"
@@ -14,29 +14,29 @@ keywords = ["aws", "s3", "sync"]
 categories = ["command-line-utilities", "filesystem"]
 
 [dependencies]
-anyhow = { version = "1.0.86" }
-async-trait = "0.1.81"
+anyhow = { version = "1.0.89" }
+async-trait = "0.1.82"
 async-channel = "2.3.1"
-aws-config = { version = "1.5.3", features = ["behavior-version-latest"] }
-aws-runtime = "1.2.3"
-aws-sdk-s3 = "1.41.0"
-aws-smithy-runtime = { version = "1.6.2", features = ["client", "connector-hyper-0-14-x"]}
-aws-smithy-runtime-api = "1.7.1"
-aws-smithy-http = "0.60.8"
-aws-smithy-types = "1.2.0"
+aws-config = { version = "1.5.6", features = ["behavior-version-latest"] }
+aws-runtime = "1.4.3"
+aws-sdk-s3 = "1.51.0"
+aws-smithy-runtime = { version = "1.7.1", features = ["client", "connector-hyper-0-14-x"]}
+aws-smithy-runtime-api = "1.7.2"
+aws-smithy-http = "0.60.11"
+aws-smithy-types = "1.2.6"
 aws-smithy-types-convert = { version = "0.60.8", features = ["convert-chrono"] }
-aws-types = "1.3.1"
+aws-types = "1.3.3"
 base64 = "0.22.1"
 byte-unit = "5.1.4"
 bytes = "1.6.0"
-clap = { version = "4.5.9", features = ["derive", "env", "cargo", "string"] }
-clap_complete = "4.5.8"
+clap = { version = "4.5.18", features = ["derive", "env", "cargo", "string"] }
+clap_complete = "4.5.29"
 clap-verbosity-flag = "2.2.0"
 chrono = "0.4.38"
-crc32c = "0.6.5"
+crc32c = "0.6.8"
 crc32fast = "1.4.2"
 dyn-clone = "1.0.17"
-filetime = "0.2.23"
+filetime = "0.2.25"
 headers = "0.3.0"
 leaky-bucket = "1.1.2"
 md5 = "0.7.0"
@@ -49,18 +49,18 @@ indicatif = "0.17.8"
 log = "0.4.22"
 pin-project = "1.1.5"
 percent-encoding = "2.3.1"
-regex = "1.10.4"
+regex = "1.10.6"
 rustls = { version = "0.21.11", features = ["dangerous_configuration"] }
 rusty-fork = "0.3.0"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
-shadow-rs = "0.29.0"
+shadow-rs = "0.35.0"
 simple_moving_average = "1.0.2"
 tempfile = "3.10.1"
 thiserror = "1.0.61"
-tokio = { version = "1.38.1", features = ["full"] }
-tokio-stream = "0.1.15"
-tokio-util = "0.7.11"
+tokio = { version = "1.40.0", features = ["full"] }
+tokio-stream = "0.1.16"
+tokio-util = "0.7.12"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json", "local-time"] }
 url = "2.5.2"
@@ -76,7 +76,10 @@ once_cell = "1.19.0"
 uuid = { version = "1.10.0", features = ["v4"] }
 
 [build-dependencies]
-shadow-rs = "0.29.0"
+shadow-rs = "0.35.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [features]
 e2e_test = []
