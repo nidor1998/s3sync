@@ -10,6 +10,7 @@ use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
 use clap::Parser;
 use clap_verbosity_flag::{Verbosity, WarnLevel};
 use regex::Regex;
+#[cfg(feature = "version")]
 use shadow_rs::shadow;
 
 use crate::config::args::value_parser::{
@@ -105,10 +106,11 @@ const LOCAL_STORAGE_SPECIFIED_WITH_SSE_C: &str =
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
 
+#[cfg(feature = "version")]
 shadow!(build);
 
 #[derive(Parser, Clone, Debug)]
-#[command(version=format!("{} ({} {}), {}", build::PKG_VERSION, build::SHORT_COMMIT, build::BUILD_TARGET, build::RUST_VERSION))]
+#[cfg_attr(feature = "version", command(version=format!("{} ({} {}), {}", build::PKG_VERSION, build::SHORT_COMMIT, build::BUILD_TARGET, build::RUST_VERSION)))]
 pub struct CLIArgs {
     #[arg(env, help = "s3://<BUCKET_NAME>[/prefix] or local path", value_parser = storage_path::check_storage_path, default_value_if("auto_complete_shell", ArgPredicate::IsPresent, "s3://ignored"), required = false)]
     source: String,
