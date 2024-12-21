@@ -1066,6 +1066,12 @@ mod tests {
         .sync()
         .await;
 
+        permissions = fs::metadata("./test_data/denied_dir")
+            .unwrap()
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+
         assert!(result.is_err());
     }
 

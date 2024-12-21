@@ -507,7 +507,7 @@ impl UploadManager {
                 None
             };
 
-            let upload_part_output = self
+            let builder = self
                 .client
                 .upload_part()
                 .bucket(bucket)
@@ -520,10 +520,21 @@ impl UploadManager {
                 .set_sse_customer_algorithm(self.config.target_sse_c.clone())
                 .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
                 .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
-                .body(ByteStream::from(buffer))
-                .send()
-                .await
-                .context("aws_sdk_s3::client::Client upload_part() failed.")?;
+                .body(ByteStream::from(buffer));
+
+            let upload_part_output = if self.config.disable_payload_signing {
+                builder
+                    .customize()
+                    .disable_payload_signing()
+                    .send()
+                    .await
+                    .context("aws_sdk_s3::client::Client upload_part() failed.")?
+            } else {
+                builder
+                    .send()
+                    .await
+                    .context("aws_sdk_s3::client::Client upload_part() failed.")?
+            };
 
             trace!(key = key, "{upload_part_output:?}");
 
@@ -603,7 +614,7 @@ impl UploadManager {
                 None
             };
 
-            let upload_part_output = self
+            let builder = self
                 .client
                 .upload_part()
                 .bucket(bucket)
@@ -616,10 +627,21 @@ impl UploadManager {
                 .set_sse_customer_algorithm(self.config.target_sse_c.clone())
                 .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
                 .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
-                .body(ByteStream::from(buffer))
-                .send()
-                .await
-                .context("aws_sdk_s3::client::Client upload_part() failed.")?;
+                .body(ByteStream::from(buffer));
+
+            let upload_part_output = if self.config.disable_payload_signing {
+                builder
+                    .customize()
+                    .disable_payload_signing()
+                    .send()
+                    .await
+                    .context("aws_sdk_s3::client::Client upload_part() failed.")?
+            } else {
+                builder
+                    .send()
+                    .await
+                    .context("aws_sdk_s3::client::Client upload_part() failed.")?
+            };
 
             trace!(key = key, "{upload_part_output:?}");
 
@@ -706,7 +728,7 @@ impl UploadManager {
             Some(self.config.storage_class.as_ref().unwrap().clone())
         };
 
-        let put_object_output = self
+        let builder = self
             .client
             .put_object()
             .set_storage_class(storage_class)
@@ -771,10 +793,21 @@ impl UploadManager {
             .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
             .set_acl(self.config.canned_acl.clone())
-            .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
-            .send()
-            .await
-            .context("aws_sdk_s3::client::Client put_object() failed.")?;
+            .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned());
+
+        let put_object_output = if self.config.disable_payload_signing {
+            builder
+                .customize()
+                .disable_payload_signing()
+                .send()
+                .await
+                .context("aws_sdk_s3::client::Client put_object() failed.")?
+        } else {
+            builder
+                .send()
+                .await
+                .context("aws_sdk_s3::client::Client put_object() failed.")?
+        };
 
         let source_e_tag = if source_local_storage {
             Some(self.generate_e_tag_hash(0))
