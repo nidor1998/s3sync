@@ -20,8 +20,8 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.6.2"
-tokio = { version = "1.41.1", features = ["full"] }
+s3sync = "1.7.0"
+tokio = { version = "1.42.0", features = ["full"] }
 ```
 
 ```rust
@@ -217,7 +217,7 @@ You can also build from source following the instructions below.
 See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 ### Build
-s3sync requires Rust 1.78 or later.
+s3sync requires Rust 1.81 or later.
 ```bash
 cargo install s3sync --path .
 ```
@@ -306,7 +306,7 @@ s3sync always uses the following elements to verify the integrity of the object.
 - `Content-MD5` header(End-to-end API level integrity check)
 Amazon S3 recommends using `Content-MD5` header for end-to-end integrity check.  
 Note: Amazon S3 Express One Zone storage class does not support `Content-MD5` header.
-- `x-amz-content-sha256` Authentication header  
+- `x-amz-content-sha256` Authentication header(without `--disable-payload-signing` option)  
 This header is SHA256 digest of the request payload.    
 Note: Some S3-compatible storage ignores this header.
 - Additional checksum algorithm(Optional)  

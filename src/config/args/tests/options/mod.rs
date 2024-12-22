@@ -11,6 +11,7 @@ mod content_type;
 mod delete;
 mod disable_etag_verify;
 mod disable_multipart_verify;
+mod disable_payload_signing;
 mod disable_stalled_stream_protection;
 mod disable_tagging;
 mod dry_run;

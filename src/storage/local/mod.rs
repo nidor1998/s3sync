@@ -1394,6 +1394,12 @@ mod tests {
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
 
         assert!(storage.list_objects(&sender, 1000, true).await.is_err());
+
+        permissions = fs::metadata("./test_data/denied_dir")
+            .unwrap()
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
     }
 
     #[tokio::test]
@@ -1434,6 +1440,12 @@ mod tests {
         .await;
 
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
+
+        permissions = fs::metadata("./test_data/denied_dir")
+            .unwrap()
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
 
         assert!(storage.list_objects(&sender, 1000, false).await.is_ok());
     }
@@ -1667,6 +1679,13 @@ mod tests {
                 None,
             )
             .await;
+
+        permissions = fs::metadata("./test_data/denied_dir")
+            .unwrap()
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+
         assert!(head_object_output.is_err());
 
         if matches!(

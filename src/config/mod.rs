@@ -57,6 +57,7 @@ pub struct Config {
     pub put_last_modified_metadata: bool,
     pub max_keys: i32,
     pub auto_complete_shell: Option<clap_complete::shells::Shell>,
+    pub disable_payload_signing: bool,
 }
 
 impl Config {

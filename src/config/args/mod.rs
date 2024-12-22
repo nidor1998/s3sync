@@ -62,7 +62,7 @@ const DEFAULT_NO_VERIFY_SSL: bool = false;
 const DEFAULT_MAX_KEYS: i32 = 1000;
 const DEFAULT_PUT_LAST_MODIFIED_METADATA: bool = false;
 const DEFAULT_DISABLE_STALLED_STREAM_PROTECTION: bool = false;
-
+const DEFAULT_DISABLE_PAYLOAD_SIGNING: bool = false;
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
     "with --enable-versioning/--sync-latest-tagging, both storage must be s3://\n";
@@ -443,6 +443,10 @@ pub struct CLIArgs {
     /// disable stalled stream protection
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_STALLED_STREAM_PROTECTION)]
     disable_stalled_stream_protection: bool,
+
+    /// disable payload signing for object uploads
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_PAYLOAD_SIGNING)]
+    disable_payload_signing: bool,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -1026,6 +1030,7 @@ impl TryFrom<CLIArgs> for Config {
             max_keys: value.max_keys,
             put_last_modified_metadata: value.put_last_modified_metadata,
             auto_complete_shell: value.auto_complete_shell,
+            disable_payload_signing: value.disable_payload_signing,
         })
     }
 }

@@ -986,6 +986,12 @@ mod tests {
         ))
         .await;
 
+        permissions = fs::metadata("./test_data/denied_dir")
+            .unwrap()
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+
         assert_eq!(receiver.len(), 0);
         assert!(pipeline.has_error());
     }
@@ -1047,6 +1053,12 @@ mod tests {
             WAITING_TIME_MILLIS_FOR_ASYNC_TASK_START,
         ))
         .await;
+
+        permissions = fs::metadata("./test_data/denied_dir")
+            .unwrap()
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
 
         assert_eq!(receiver.len(), 0);
         assert!(pipeline.has_error());
