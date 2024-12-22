@@ -1023,13 +1023,13 @@ mod tests {
             "--allow-both-local-storage",
             "--head-each-target",
             "./test_data/source/dir1/",
-            "./test_data/denied_dir/",
+            "./test_data/denied_dir1/",
         ];
-        let mut permissions = fs::metadata("./test_data/denied_dir")
+        let mut permissions = fs::metadata("./test_data/denied_dir1")
             .unwrap()
             .permissions();
         permissions.set_mode(0o000);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir1", permissions).unwrap();
 
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let cancellation_token = create_pipeline_cancellation_token();
@@ -1066,13 +1066,13 @@ mod tests {
         .sync()
         .await;
 
-        permissions = fs::metadata("./test_data/denied_dir")
+        assert!(result.is_err());
+
+        permissions = fs::metadata("./test_data/denied_dir1")
             .unwrap()
             .permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
-
-        assert!(result.is_err());
+        fs::set_permissions("./test_data/denied_dir1", permissions).unwrap();
     }
 
     #[tokio::test]

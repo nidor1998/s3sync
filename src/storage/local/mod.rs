@@ -1362,11 +1362,11 @@ mod tests {
             panic!("run tests from root");
         }
 
-        let mut permissions = fs::metadata("./test_data/denied_dir")
+        let mut permissions = fs::metadata("./test_data/denied_dir6")
             .unwrap()
             .permissions();
         permissions.set_mode(0o000);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir6", permissions).unwrap();
 
         let args = vec![
             "s3sync",
@@ -1375,7 +1375,7 @@ mod tests {
             "--source-secret-access-key",
             "dummy_secret_access_key",
             "s3://dummy-bucket",
-            "./test_data/denied_dir",
+            "./test_data/denied_dir6",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
@@ -1395,11 +1395,11 @@ mod tests {
 
         assert!(storage.list_objects(&sender, 1000, true).await.is_err());
 
-        permissions = fs::metadata("./test_data/denied_dir")
+        permissions = fs::metadata("./test_data/denied_dir6")
             .unwrap()
             .permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir6", permissions).unwrap();
     }
 
     #[tokio::test]
@@ -1410,11 +1410,11 @@ mod tests {
         use std::fs;
         use std::os::unix::fs::PermissionsExt;
 
-        let mut permissions = fs::metadata("./test_data/denied_dir")
+        let mut permissions = fs::metadata("./test_data/denied_dir4")
             .unwrap()
             .permissions();
         permissions.set_mode(0o000);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir4", permissions).unwrap();
 
         let args = vec![
             "s3sync",
@@ -1423,7 +1423,7 @@ mod tests {
             "--source-secret-access-key",
             "dummy_secret_access_key",
             "s3://dummy-bucket",
-            "./test_data/denied_dir",
+            "./test_data/denied_dir4",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
@@ -1441,11 +1441,11 @@ mod tests {
 
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
 
-        permissions = fs::metadata("./test_data/denied_dir")
+        permissions = fs::metadata("./test_data/denied_dir4")
             .unwrap()
             .permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir4", permissions).unwrap();
 
         assert!(storage.list_objects(&sender, 1000, false).await.is_ok());
     }
@@ -1640,11 +1640,11 @@ mod tests {
             panic!("run tests from root");
         }
 
-        let mut permissions = fs::metadata("./test_data/denied_dir")
+        let mut permissions = fs::metadata("./test_data/denied_dir5")
             .unwrap()
             .permissions();
         permissions.set_mode(0o000);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir5", permissions).unwrap();
 
         let args = vec![
             "s3sync",
@@ -1671,7 +1671,7 @@ mod tests {
 
         let head_object_output = storage
             .head_object(
-                "denied_dir/data",
+                "denied_dir5/data",
                 None,
                 None,
                 None,
@@ -1680,11 +1680,11 @@ mod tests {
             )
             .await;
 
-        permissions = fs::metadata("./test_data/denied_dir")
+        permissions = fs::metadata("./test_data/denied_dir5")
             .unwrap()
             .permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir5", permissions).unwrap();
 
         assert!(head_object_output.is_err());
 

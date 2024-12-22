@@ -102,6 +102,8 @@ const SSE_KMS_KEY_ID_ARGUMENTS_CONFLICT: &str =
     "--sse-kms-key-id must be used with --sse aws:kms\n";
 const LOCAL_STORAGE_SPECIFIED_WITH_SSE_C: &str =
     "with --source-sse-c/--target-sse-c, remote storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_DISABLE_PAYLOAD_SIGNING: &str =
+    "with --disable-payload-signing, target storage must be s3://\n";
 
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
@@ -487,6 +489,7 @@ impl CLIArgs {
         self.check_ignore_symlinks_conflict()?;
         self.check_no_guess_mime_type_conflict()?;
         self.check_endpoint_url_conflict()?;
+        self.check_disable_payload_signing_conflict()?;
 
         Ok(())
     }
@@ -773,6 +776,19 @@ impl CLIArgs {
         let target = storage_path::parse_storage_path(&self.target);
         if matches!(target, StoragePath::Local(_)) && self.target_endpoint_url.is_some() {
             return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_disable_payload_signing_conflict(&self) -> Result<(), String> {
+        if !self.disable_payload_signing {
+            return Ok(());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_DISABLE_PAYLOAD_SIGNING.to_string());
         }
 
         Ok(())
