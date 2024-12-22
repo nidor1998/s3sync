@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - aws-sdk-s3 = "1.66.0"
-
+- Supported Rust Versions (MSRV) = 1.81.0
 
 ## [1.6.2] - 2024-11-23
 
