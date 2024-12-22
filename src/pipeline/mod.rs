@@ -967,14 +967,14 @@ mod tests {
             "--target-secret-access-key",
             "target_secret_access_key",
             "--warn-as-error",
-            "./test_data/denied_dir",
+            "./test_data/denied_dir2",
             "s3://target-bucket",
         ];
-        let mut permissions = fs::metadata("./test_data/denied_dir")
+        let mut permissions = fs::metadata("./test_data/denied_dir2")
             .unwrap()
             .permissions();
         permissions.set_mode(0o000);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir2", permissions).unwrap();
 
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
@@ -986,11 +986,11 @@ mod tests {
         ))
         .await;
 
-        permissions = fs::metadata("./test_data/denied_dir")
+        permissions = fs::metadata("./test_data/denied_dir2")
             .unwrap()
             .permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir2", permissions).unwrap();
 
         assert_eq!(receiver.len(), 0);
         assert!(pipeline.has_error());
@@ -1036,13 +1036,13 @@ mod tests {
             "--allow-both-local-storage",
             "--warn-as-error",
             "./test_data/source",
-            "./test_data/denied_dir",
+            "./test_data/denied_dir3",
         ];
-        let mut permissions = fs::metadata("./test_data/denied_dir")
+        let mut permissions = fs::metadata("./test_data/denied_dir3")
             .unwrap()
             .permissions();
         permissions.set_mode(0o000);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir3", permissions).unwrap();
 
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
@@ -1054,11 +1054,11 @@ mod tests {
         ))
         .await;
 
-        permissions = fs::metadata("./test_data/denied_dir")
+        permissions = fs::metadata("./test_data/denied_dir3")
             .unwrap()
             .permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions("./test_data/denied_dir", permissions).unwrap();
+        fs::set_permissions("./test_data/denied_dir3", permissions).unwrap();
 
         assert_eq!(receiver.len(), 0);
         assert!(pipeline.has_error());
