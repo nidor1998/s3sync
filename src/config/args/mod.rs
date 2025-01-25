@@ -5,6 +5,7 @@ use std::str::FromStr;
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, ServerSideEncryption, StorageClass,
 };
+use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 use chrono::{DateTime, Utc};
 use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
 use clap::Parser;
@@ -852,7 +853,14 @@ impl CLIArgs {
             http_proxy: self.http_proxy.clone(),
             no_verify_ssl: self.no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         });
+
+        let request_checksum_calculation = if self.additional_checksum_algorithm.is_some() {
+            RequestChecksumCalculation::WhenSupported
+        } else {
+            RequestChecksumCalculation::WhenRequired
+        };
 
         let target_client_config = target_credential.map(|target_credential| ClientConfig {
             client_config_location: ClientConfigLocation {
@@ -871,6 +879,7 @@ impl CLIArgs {
             http_proxy: self.http_proxy.clone(),
             no_verify_ssl: self.no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
+            request_checksum_calculation,
         });
 
         (source_client_config, target_client_config)

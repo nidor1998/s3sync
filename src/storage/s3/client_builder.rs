@@ -37,8 +37,9 @@ impl ServerCertVerifier for NoCertificateVerification {
 
 impl ClientConfig {
     pub async fn create_client(&self) -> Client {
-        let config_builder =
-            Builder::from(&self.load_sdk_config().await).force_path_style(self.force_path_style);
+        let config_builder = Builder::from(&self.load_sdk_config().await)
+            .force_path_style(self.force_path_style)
+            .request_checksum_calculation(self.request_checksum_calculation);
 
         if self.https_proxy.is_some() || self.http_proxy.is_some() {
             return Client::from_conf(config_builder.http_client(self.create_proxy()).build());
@@ -212,6 +213,7 @@ fn create_no_verify_ssl_connector() -> SharedHttpClient {
 #[cfg(test)]
 mod tests {
     use crate::types::{AccessKeys, ClientConfigLocation};
+    use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 
     use super::*;
 
@@ -242,6 +244,7 @@ mod tests {
             http_proxy: None,
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         let client = client_config.create_client().await;
@@ -286,6 +289,7 @@ mod tests {
             http_proxy: None,
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         let client = client_config.create_client().await;
@@ -319,6 +323,7 @@ mod tests {
             http_proxy: None,
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         let client = client_config.create_client().await;
@@ -357,6 +362,7 @@ mod tests {
             http_proxy: None,
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         let client = client_config.create_client().await;
@@ -397,6 +403,7 @@ mod tests {
             http_proxy: None,
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         let _ = client_config.create_client().await;
@@ -423,6 +430,7 @@ mod tests {
             http_proxy: None,
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         let client = client_config.create_client().await;
@@ -461,6 +469,7 @@ mod tests {
             http_proxy: None,
             no_verify_ssl: true,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         client_config.create_client().await;
@@ -487,6 +496,7 @@ mod tests {
             http_proxy: Some("http://localhost:8080".to_string()),
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         };
 
         client_config.create_client().await;
