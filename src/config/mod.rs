@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, ServerSideEncryption, StorageClass,
 };
+use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 use chrono::{DateTime, Utc};
 use regex::Regex;
 
@@ -82,6 +83,7 @@ pub struct ClientConfig {
     pub http_proxy: Option<String>,
     pub no_verify_ssl: bool,
     pub disable_stalled_stream_protection: bool,
+    pub request_checksum_calculation: RequestChecksumCalculation,
 }
 
 #[derive(Debug, Clone)]

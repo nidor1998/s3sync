@@ -4,13 +4,13 @@ s3sync is a reliable, very fast, and powerful synchronization tool for S3.
 It can be used to synchronize local directories with S3 bucket, and also to synchronize S3 to s3 bucket.
 Supports multipart upload, versioning, metadata.
 
-AWS SDK for rust is not production ready yet and is not recommended for production use, so s3sync is also not recommended for production use. But any feedback is welcome. I will continue to improve s3sync.
 
-This crate is a library for s3sync binary.
+## As a library
+s3sync can be used as a library.
 
 s3sync CLI is a very thin wrapper of the s3sync library. You can use every feature of s3sync CLI in the library.
 
-s3sync library has many features that are not documented. You can refer to the s3sync CLI help(`s3sync -h`) for the features and pass the option strings to the library.
+s3sync library has many features that are not documented. You can refer to the s3sync CLI help(`s3sync -h`) for the features and pass the arguments to the library.
 
 You can refer to the source code bin/cli to implement your own synchronization tool.
 
@@ -19,8 +19,8 @@ Example usage
 
 ```Toml
 [dependencies]
-s3sync = "1.7.1"
-tokio = { version = "1.42.0", features = ["full"] }
+s3sync = "1.7.2"
+tokio = { version = "1.43.0", features = ["full"] }
 ```
 
 ```no_run
