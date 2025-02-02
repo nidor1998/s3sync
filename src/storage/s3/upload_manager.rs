@@ -561,6 +561,11 @@ impl UploadManager {
                             .checksum_crc32_c()
                             .map(|digest| digest.to_string()),
                     )
+                    .set_checksum_crc64_nvme(
+                        upload_part_output
+                            .checksum_crc64_nvme()
+                            .map(|digest| digest.to_string()),
+                    )
                     .part_number(part_number)
                     .build(),
             );
@@ -666,6 +671,11 @@ impl UploadManager {
                     .set_checksum_crc32_c(
                         upload_part_output
                             .checksum_crc32_c()
+                            .map(|digest| digest.to_string()),
+                    )
+                    .set_checksum_crc64_nvme(
+                        upload_part_output
+                            .checksum_crc64_nvme()
                             .map(|digest| digest.to_string()),
                     )
                     .part_number(part_number as i32)
@@ -990,6 +1000,9 @@ pub fn get_additional_checksum_from_put_object_result(
         ChecksumAlgorithm::Crc32C => put_object_output
             .checksum_crc32_c()
             .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc64Nvme => put_object_output
+            .checksum_crc64_nvme()
+            .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
         }
@@ -1015,6 +1028,9 @@ pub fn get_additional_checksum_from_get_object_result(
         ChecksumAlgorithm::Crc32C => get_object_output
             .checksum_crc32_c()
             .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc64Nvme => get_object_output
+            .checksum_crc64_nvme()
+            .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
         }
@@ -1039,6 +1055,9 @@ pub fn get_additional_checksum_from_multipart_upload_result(
             .map(|checksum| checksum.to_string()),
         ChecksumAlgorithm::Crc32C => complete_multipart_upload_result
             .checksum_crc32_c()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc64Nvme => complete_multipart_upload_result
+            .checksum_crc64_nvme()
             .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")

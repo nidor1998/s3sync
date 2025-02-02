@@ -679,7 +679,9 @@ impl StorageTrait for S3Storage {
                 .await
                 .context("aws_sdk_s3::client::get_object_attributes() failed.")?;
 
-            if object.object_parts().is_none() {
+            // A full object checksum has empty object parts.
+            if object.object_parts().is_none() || object.object_parts().unwrap().parts().is_empty()
+            {
                 return Ok(vec![]);
             }
 
@@ -745,6 +747,8 @@ impl StorageTrait for S3Storage {
             return Ok(PutObjectOutput::builder().build());
         }
 
+        // On the case of full object checksum, we don't need to calculate checksum for each part and
+        // don't need to pass it to upload manager.
         #[allow(clippy::unnecessary_unwrap)]
         let checksum = if object_checksum.is_some()
             && object_checksum
@@ -752,6 +756,10 @@ impl StorageTrait for S3Storage {
                 .unwrap()
                 .checksum_algorithm
                 .is_some()
+            && !object_checksum
+                .as_ref()
+                .unwrap()
+                .is_checksum_type_full_object()
         {
             Some(Arc::new(AdditionalChecksum::new(
                 object_checksum

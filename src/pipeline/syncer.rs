@@ -11,7 +11,7 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
-use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
+use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ChecksumType, ObjectPart, Tag, Tagging};
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
@@ -528,7 +528,9 @@ impl ObjectSyncer {
         version_id: Option<&str>,
         e_tag: Option<&str>,
         checksum_algorithm: Option<&[ChecksumAlgorithm]>,
+        _checksum_type: Option<&ChecksumType>,
     ) -> Result<Option<Vec<ObjectPart>>> {
+        // a local object does not have ETag.
         if !e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string()))
             || self.base.config.dry_run
         {
@@ -536,7 +538,9 @@ impl ObjectSyncer {
         }
 
         if let Some(algorithm) = checksum_algorithm {
-            if !algorithm.is_empty() {
+            // Currently, only CRC64NVME is supported for full object checksum.
+            // And full object checksum has no object parts.
+            if !algorithm.is_empty() && algorithm[0] != ChecksumAlgorithm::Crc64Nvme {
                 return Ok(Some(
                     self.base
                         .source
@@ -609,6 +613,7 @@ impl ObjectSyncer {
                 get_object_output.version_id(),
                 get_object_output.e_tag(),
                 checksum_algorithm,
+                get_object_output.checksum_type(),
             )
             .await?;
 
@@ -626,12 +631,15 @@ impl ObjectSyncer {
             None
         };
 
+        // As of February 2, 2025, Amazon S3 GetObject does not return ChecksumType::Composite.
+        // So, we can't get the checksum type from GetObjectOutput correctly.
         Ok(Some(ObjectChecksum {
             key: key.to_string(),
             version_id: get_object_output
                 .version_id()
                 .map(|version_id| version_id.to_string()),
             checksum_algorithm: algorithm.clone(),
+            checksum_type: get_object_output.checksum_type().cloned(),
             object_parts,
             final_checksum: types::get_additional_checksum(get_object_output, algorithm),
         }))

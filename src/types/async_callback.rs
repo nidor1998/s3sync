@@ -89,6 +89,9 @@ impl<R: AsyncRead> AsyncRead for AsyncReadWithCallback<R> {
                 .send_blocking(SyncStatistics::SyncBytes(sync_bytes as u64));
         }
 
+        // Only the case of from s3 to s3 multipart transfer, the checksum verification is done in this code.
+        // And full object checksum verification has not parts to verify.
+        // This is done by the creator of the object.
         if this.additional_checksum.is_some() && is_multipart(this.object_checksum) {
             let hasher = &mut this.additional_checksum.as_mut().unwrap();
             let hasher = Arc::get_mut(hasher).unwrap();
@@ -303,7 +306,7 @@ fn get_checksum(part: &ObjectPart, checksum_algorithm: ChecksumAlgorithm) -> Opt
         ChecksumAlgorithm::Sha1 => part.checksum_sha1().map(|checksum| checksum.to_string()),
         ChecksumAlgorithm::Crc32 => part.checksum_crc32().map(|checksum| checksum.to_string()),
         ChecksumAlgorithm::Crc32C => part.checksum_crc32_c().map(|checksum| checksum.to_string()),
-        _ => panic!("unknown algorithm"),
+        _ => panic!("unsupported algorithm"),
     }
 }
 
@@ -372,6 +375,7 @@ mod tests {
             key: "test".to_string(),
             version_id: None,
             checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
             object_parts: Some(object_parts),
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
@@ -412,6 +416,7 @@ mod tests {
             key: "test".to_string(),
             version_id: None,
             checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
             object_parts: Some(object_parts),
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
@@ -457,6 +462,7 @@ mod tests {
             key: "test".to_string(),
             version_id: None,
             checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
             object_parts: Some(object_parts),
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
@@ -501,6 +507,7 @@ mod tests {
             key: "test".to_string(),
             version_id: None,
             checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
             object_parts: Some(object_parts),
             final_checksum: Some(SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
@@ -548,6 +555,7 @@ mod tests {
             key: "test".to_string(),
             version_id: None,
             checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
             object_parts: Some(object_parts),
             final_checksum: Some(LARGE_FILE_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
@@ -586,6 +594,7 @@ mod tests {
             key: "test".to_string(),
             version_id: None,
             checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
             object_parts: Some(object_parts),
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });

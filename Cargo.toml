@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.7.2"
+version = "1.8.0"
 edition = "2021"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "very fast, and powerful synchronization command line tool for S3."
@@ -15,11 +15,11 @@ categories = ["command-line-utilities", "filesystem"]
 
 [dependencies]
 anyhow = { version = "1.0.95" }
-async-trait = "0.1.85"
+async-trait = "0.1.86"
 async-channel = "2.3.1"
 aws-config = { version = "1.5.15", features = ["behavior-version-latest"] }
 aws-runtime = "1.5.4"
-aws-sdk-s3 = "1.71.0"
+aws-sdk-s3 = "1.72.0"
 aws-smithy-runtime = { version = "1.7.7", features = ["client", "connector-hyper-0-14-x"]}
 aws-smithy-runtime-api = "1.7.3"
 aws-smithy-http = "0.60.12"
@@ -30,12 +30,13 @@ base64 = "0.22.1"
 byte-unit = "5.1.6"
 bytes = "1.9.0"
 clap = { version = "4.5.27", features = ["derive", "env", "cargo", "string"] }
-clap_complete = "4.5.42"
+clap_complete = "4.5.44"
 clap-verbosity-flag = "3.0.2"
 chrono = "0.4.39"
 crc32c = "0.6.8"
 crc32fast = "1.4.2"
-dyn-clone = "1.0.17"
+crc64fast-nvme = "1.1.1"
+dyn-clone = "1.0.18"
 filetime = "0.2.25"
 headers = "0.3.9"
 leaky-bucket = "1.1.2"
@@ -45,7 +46,7 @@ hex = "0.4.3"
 hyper = {version = "0.14.30", features = ["stream"]}
 hyper-rustls = {version = "0.24.2", features = ["http2"]}
 hyper-proxy = {version = "0.9.1", default-features = false, features = ["rustls"]}
-indicatif = "0.17.9"
+indicatif = "0.17.11"
 log = "0.4.25"
 pin-project = "1.1.8"
 percent-encoding = "2.3.1"
@@ -56,7 +57,7 @@ sha1 = "0.10.6"
 sha2 = "0.10.8"
 shadow-rs = { version = "0.38.0", optional = true }
 simple_moving_average = "1.0.2"
-tempfile = "3.15.0"
+tempfile = "3.16.0"
 thiserror = "2.0.11"
 tokio = { version = "1.43.0", features = ["full"] }
 tokio-stream = "0.1.17"

@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
-use aws_sdk_s3::types::{ChecksumMode, ServerSideEncryption};
+use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ServerSideEncryption};
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
@@ -9,7 +9,9 @@ use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::{debug, warn};
 
-use crate::storage::additional_checksum_verify::generate_checksum_from_path_for_check;
+use crate::storage::additional_checksum_verify::{
+    generate_checksum_from_path_for_check, generate_checksum_from_path_with_chunksize,
+};
 use crate::storage::e_tag_verify::{
     generate_e_tag_hash_from_path, generate_e_tag_hash_from_path_with_auto_chunksize,
     normalize_e_tag,
@@ -803,41 +805,49 @@ impl HeadObjectChecker {
             return Ok(false);
         }
 
-        let mut target_object_parts = self
-            .target
-            .get_object_parts_attributes(
-                key,
-                None,
-                self.config.max_keys,
-                self.config.target_sse_c.clone(),
-                self.config.target_sse_c_key.clone(),
-                self.config.target_sse_c_key_md5.clone(),
+        // Currently, only CRC64NVME is supported for full object checksum.
+        // And full object checksum has no object parts.
+        let target_object_parts = if head_target_object_output.checksum_crc64_nvme.is_none() {
+            self.target
+                .get_object_parts_attributes(
+                    key,
+                    None,
+                    self.config.max_keys,
+                    self.config.target_sse_c.clone(),
+                    self.config.target_sse_c_key.clone(),
+                    self.config.target_sse_c_key_md5.clone(),
+                )
+                .await?
+        } else {
+            vec![]
+        };
+
+        let multipart_checksum = !target_object_parts.is_empty();
+        let source_checksum = if multipart_checksum {
+            generate_checksum_from_path_for_check(
+                &local_path,
+                self.config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .clone()
+                    .unwrap(),
+                multipart_checksum,
+                target_object_parts
+                    .iter()
+                    .map(|part| part.size().unwrap())
+                    .collect(),
             )
-            .await?;
-
-        let multipart = !target_object_parts.is_empty();
-        if !multipart {
-            target_object_parts.push(
-                ObjectPartBuilder::default()
-                    .size(head_target_object_output.content_length().unwrap())
-                    .build(),
-            );
-        }
-
-        let source_checksum = generate_checksum_from_path_for_check(
-            &local_path,
-            self.config
-                .filter_config
-                .check_checksum_algorithm
-                .clone()
-                .unwrap(),
-            multipart,
-            target_object_parts
-                .iter()
-                .map(|part| part.size().unwrap())
-                .collect(),
-        )
-        .await?;
+            .await?
+        } else {
+            // Use the config chunk size for calculating checksum.
+            generate_checksum_from_path_with_chunksize(
+                &local_path,
+                ChecksumAlgorithm::Crc64Nvme,
+                self.config.transfer_config.multipart_chunksize as usize,
+                self.config.transfer_config.multipart_threshold as usize,
+            )
+            .await?
+        };
 
         if source_checksum == target_checksum.as_ref().unwrap().as_str() {
             if head_source_object_output.content_length().unwrap()
@@ -984,17 +994,49 @@ impl HeadObjectChecker {
             return Ok(false);
         }
 
-        let mut source_object_parts = self
-            .source
-            .get_object_parts_attributes(
-                key,
-                None,
-                self.config.max_keys,
-                self.config.source_sse_c.clone(),
-                self.config.source_sse_c_key.clone(),
-                self.config.source_sse_c_key_md5.clone(),
+        // Currently, only CRC64NVME is supported for full object checksum.
+        // And full object checksum has no object parts.
+        let mut source_object_parts = if head_source_object_output.checksum_crc64_nvme.is_none() {
+            self.source
+                .get_object_parts_attributes(
+                    key,
+                    None,
+                    self.config.max_keys,
+                    self.config.target_sse_c.clone(),
+                    self.config.target_sse_c_key.clone(),
+                    self.config.target_sse_c_key_md5.clone(),
+                )
+                .await?
+        } else {
+            vec![]
+        };
+
+        let multipart_checksum = !source_object_parts.is_empty();
+        let target_checksum = if multipart_checksum {
+            generate_checksum_from_path_for_check(
+                &local_path,
+                self.config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .clone()
+                    .unwrap(),
+                multipart_checksum,
+                source_object_parts
+                    .iter()
+                    .map(|part| part.size().unwrap())
+                    .collect(),
             )
-            .await?;
+            .await?
+        } else {
+            // Use the config chunk size for calculating checksum.
+            generate_checksum_from_path_with_chunksize(
+                &local_path,
+                ChecksumAlgorithm::Crc64Nvme,
+                self.config.transfer_config.multipart_chunksize as usize,
+                self.config.transfer_config.multipart_threshold as usize,
+            )
+            .await?
+        };
 
         let multipart = !source_object_parts.is_empty();
         if !multipart {
@@ -1004,21 +1046,6 @@ impl HeadObjectChecker {
                     .build(),
             );
         }
-
-        let target_checksum = generate_checksum_from_path_for_check(
-            &local_path,
-            self.config
-                .filter_config
-                .check_checksum_algorithm
-                .clone()
-                .unwrap(),
-            multipart,
-            source_object_parts
-                .iter()
-                .map(|part| part.size().unwrap())
-                .collect(),
-        )
-        .await?;
 
         if source_checksum.as_ref().unwrap().as_str() == target_checksum {
             if head_source_object_output.content_length().unwrap()
