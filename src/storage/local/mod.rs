@@ -545,6 +545,16 @@ impl StorageTrait for LocalStorage {
             None
         };
 
+        let checksum_crc64_nvme = if self.config.additional_checksum_algorithm.is_some()
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Crc64Nvme
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
         Ok(GetObjectOutputBuilder::default()
             .set_content_length(Some(fs_util::get_file_size(&path).await as i64))
             .set_content_type(content_type)
@@ -554,6 +564,7 @@ impl StorageTrait for LocalStorage {
             .set_checksum_sha1(checksum_sha1)
             .set_checksum_crc32(checksum_crc32)
             .set_checksum_crc32_c(checksum_crc32_c)
+            .set_checksum_crc64_nvme(checksum_crc64_nvme)
             .build())
     }
 

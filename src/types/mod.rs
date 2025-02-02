@@ -7,7 +7,9 @@ use std::sync::{Arc, Mutex};
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::DateTime;
-use aws_sdk_s3::types::{ChecksumAlgorithm, DeleteMarkerEntry, Object, ObjectPart, ObjectVersion};
+use aws_sdk_s3::types::{
+    ChecksumAlgorithm, ChecksumType, DeleteMarkerEntry, Object, ObjectPart, ObjectVersion,
+};
 use sha1::{Digest, Sha1};
 use zeroize_derive::{Zeroize, ZeroizeOnDrop};
 
@@ -56,6 +58,7 @@ pub struct ObjectChecksum {
     pub key: String,
     pub version_id: Option<String>,
     pub checksum_algorithm: Option<ChecksumAlgorithm>,
+    pub checksum_type: Option<ChecksumType>,
     pub object_parts: Option<Vec<ObjectPart>>,
     pub final_checksum: Option<String>,
 }
@@ -73,6 +76,21 @@ pub fn unpack_object_versions(object: &S3syncObject) -> ObjectVersions {
         _ => {
             panic!("not PackedVersions")
         }
+    }
+}
+
+impl ObjectChecksum {
+    pub fn is_checksum_type_full_object(&self) -> bool {
+        if let Some(checksum_algorithm) = &self.checksum_algorithm {
+            return checksum_algorithm == &ChecksumAlgorithm::Crc64Nvme;
+        }
+
+        // Currently, s3sync support only CRC64NVMe checksum algorithm for full object checksum.
+        // if let Some(checksum_type) = &self.checksum_type {
+        //     return checksum_type == &ChecksumType::FullObject;
+        // }
+
+        false
     }
 }
 
@@ -253,6 +271,9 @@ pub fn get_additional_checksum(
         ChecksumAlgorithm::Crc32C => get_object_output
             .checksum_crc32_c()
             .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc64Nvme => get_object_output
+            .checksum_crc64_nvme()
+            .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
         }
@@ -277,6 +298,9 @@ pub fn get_additional_checksum_with_head_object(
             .map(|checksum| checksum.to_string()),
         ChecksumAlgorithm::Crc32C => head_object_output
             .checksum_crc32_c()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Crc64Nvme => head_object_output
+            .checksum_crc64_nvme()
             .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
@@ -371,6 +395,72 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn is_checksum_type_full_object_return_true() {
+        let crc64nvme_checksum = ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Crc64Nvme),
+            checksum_type: None,
+            object_parts: None,
+            final_checksum: None,
+        };
+        assert!(crc64nvme_checksum.is_checksum_type_full_object());
+    }
+    #[test]
+    fn is_checksum_type_full_object_return_false() {
+        let sha1_checksum = ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Sha1),
+            checksum_type: None,
+            object_parts: None,
+            final_checksum: None,
+        };
+        assert!(!sha1_checksum.is_checksum_type_full_object());
+
+        let sha256_checksum = ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
+            object_parts: None,
+            final_checksum: None,
+        };
+        assert!(!sha256_checksum.is_checksum_type_full_object());
+
+        let sha256_crc32 = ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Crc32),
+            checksum_type: None,
+            object_parts: None,
+            final_checksum: None,
+        };
+        assert!(!sha256_crc32.is_checksum_type_full_object());
+
+        let sha256_crc32c = ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Crc32C),
+            checksum_type: None,
+            object_parts: None,
+            final_checksum: None,
+        };
+        assert!(!sha256_crc32c.is_checksum_type_full_object());
+
+        // Currently, s3sync support only CRC64NVMe checksum algorithm for full object checksum.
+        let full_object_checksum = ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Crc32C),
+            checksum_type: Some(ChecksumType::FullObject),
+            object_parts: None,
+            final_checksum: None,
+        };
+        assert!(!full_object_checksum.is_checksum_type_full_object());
+    }
 
     #[test]
     fn clone_non_versioning_object_with_key_test() {

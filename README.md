@@ -1,5 +1,8 @@
 # s3sync
 
+[![Crates.io](https://img.shields.io/crates/v/s3sync.svg)](https://crates.io/crates/s3sync)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![MSRV](https://img.shields.io/badge/msrv-1.81.0-red)
 ![CI](https://github.com/nidor1998/s3sync/workflows/CI/badge.svg) [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 [![DeepSource](https://app.deepsource.com/gh/nidor1998/s3sync.svg/?label=active+issues&show_trend=true&token=Q3EjeUmx8Fu-ndXKEG133W-t)](https://app.deepsource.com/gh/nidor1998/s3sync/?ref=repository-badge)
 
@@ -20,7 +23,7 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.7.2"
+s3sync = "1.8.0"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 
@@ -81,7 +84,7 @@ async fn main() {
 s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
 An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.    
 Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)  
-Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C) for each object.  
+Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
 Note: Amazon S3 Express One Zone storage class does not support ETag as verification. But you can use additional checksum algorithm.
 - Very fast  
 s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
@@ -151,7 +154,13 @@ The default setting uses only about 500MB of maximum memory for any object size 
 Transfer only modified objects. If the object modification time is newer than the target object, the object is transferred.
 Incremental transfer can be resumed from the last checkpoint.
 Checking of modified objects is very fast.  
-
+- Amazon S3 Express One Zone support  
+  s3sync can be used with Amazon S3 Express.  
+ For more information, see [S3 Express One Zone Availability Zones and Regions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
+- CRC64NVME full object checksum verification support  
+  With `--additional-checksum-algorithm CRC64NVME`, s3sync can calculate and compare CRC64NVME checksum for each object.  
+  Other full object checksum algorithms will be supported in the future.  
+  For more information, see [Checking object integrity](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
 - ETag(MD5 or equivalent) based incremental transfer  
 If you want to ETag based incremental transfer, you can use `--check-etag` option.  
 It compares the ETag of the source object with the ETag of the target object and transfers only modified objects.  
@@ -167,7 +176,7 @@ s3sync -vv --dry-run --check-etag --auto-chunksize testdata/ s3://XXXX/testdata/
 2024-06-15T01:23:50.683417Z DEBUG object filtered. ETags are same. name="HeadObjectChecker" source_e_tag="ebe97f2a4738800fe71edbe389c000a6-2" target_e_tag="ebe97f2a4738800fe71edbe389c000a6-2" source_last_modified="2024-06-15T01:01:48.690+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=12582912 target_size=12582912 key="dir1/data3.dat"
 0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
 ```
-- Additional checksum(SHA256/SHA1/CRC32/CRC32C) based incremental transfer  
+- Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based incremental transfer  
 If you use Amazon S3 with additional checksum, you can use `-check-additional-checksum` option.  
 This option compares the checksum of the both source and target objects and transfer only modified objects.It costs extra API calls per object.  
 with `--dry-run`, you can check the synchronization status without transferring the objects.  
@@ -199,6 +208,7 @@ Originally, it was developed for S3-Compatible to S3-Compatible.
 
 - Multi-platform support  
 All features are supported on supported platforms.
+
 
 ## Requirements
 - 64-bit Linux (kernel 3.2 or later, glibc 2.17 or later)
