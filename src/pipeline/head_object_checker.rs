@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
-use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ServerSideEncryption};
+use aws_sdk_s3::types::{ChecksumMode, ServerSideEncryption};
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
@@ -842,7 +842,11 @@ impl HeadObjectChecker {
             // Use the config chunk size for calculating checksum.
             generate_checksum_from_path_with_chunksize(
                 &local_path,
-                ChecksumAlgorithm::Crc64Nvme,
+                self.config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .clone()
+                    .unwrap(),
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
             )
@@ -1031,7 +1035,11 @@ impl HeadObjectChecker {
             // Use the config chunk size for calculating checksum.
             generate_checksum_from_path_with_chunksize(
                 &local_path,
-                ChecksumAlgorithm::Crc64Nvme,
+                self.config
+                    .filter_config
+                    .check_checksum_algorithm
+                    .clone()
+                    .unwrap(),
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
             )
