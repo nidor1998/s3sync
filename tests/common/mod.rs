@@ -21,6 +21,7 @@ use aws_sdk_s3::types::{
     CreateBucketConfiguration, DataRedundancy, LocationInfo, LocationType, Object, ObjectVersion,
     Tag, Tagging, VersioningConfiguration,
 };
+use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
 use aws_types::SdkConfig;
 use filetime::{set_file_mtime, FileTime};
 use once_cell::sync::Lazy;
@@ -118,7 +119,11 @@ impl TestHelper {
     }
 
     pub async fn create_client() -> Client {
-        Client::from_conf(Builder::from(&Self::load_sdk_config().await).build())
+        Client::from_conf(
+            Builder::from(&Self::load_sdk_config().await)
+                .request_checksum_calculation(WhenRequired)
+                .build(),
+        )
     }
 
     async fn load_sdk_config() -> SdkConfig {
