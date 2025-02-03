@@ -973,6 +973,7 @@ impl StorageTrait for S3Storage {
         let _ = self.stats_sender.send(stats).await;
     }
 
+    #[cfg(not(tarpaulin_include))]
     fn get_local_path(&self) -> PathBuf {
         panic!("not implemented");
     }
