@@ -324,7 +324,11 @@ mod tests {
     const TEST_DATA_SIZE: usize = 5;
 
     const EMPTY_SHA256_BASE64_DIGEST: &str = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
+    const EMPTY_SHA1_BASE64_DIGEST: &str = "2jmj7l5rSw0yVb/vlWAYkK/YBwk=";
+    const EMPTY_CRC32_BASE64_DIGEST: &str = "AAAAAA==";
+    const EMPTY_CRC32C_BASE64_DIGEST: &str = "AAAAAA==";
     const EMPTY_SHA256_BASE64_FINAL_DIGEST: &str = "Xfbg4nYTWdMKgnUFjimfzAOBU0VF9Vz0PkGYP11MlFY=-1";
+    const DUMMY_FINAL_DIGEST: &str = "dummy-final-digest";
 
     const SHA256_BASE64_FIRST_PART_DIGEST: &str = "a4ayc/80/OGda4BO/1o/V0etpOqiLx1JwB5S3beHW0s=";
     //const SHA256_BASE64_SECOND_PART_DIGEST: &str = "OAg8fukSHhdAGINWahSKpcLi1V3FO8SpSgJlF9v/PGs=";
@@ -398,7 +402,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn callback_with_additional_checksum_error_test() {
+    async fn callback_with_additional_checksum_sha256_error_test() {
         init_dummy_tracing_subscriber();
 
         let file = File::open("test_data/5byte.dat").await.unwrap();
@@ -423,6 +427,121 @@ mod tests {
 
         let additional_checksum =
             Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha256)));
+
+        let mut file_with_callback = AsyncReadWithCallback::new(
+            file,
+            stats_sender,
+            None,
+            additional_checksum,
+            object_checksum,
+        );
+
+        let mut buffer = Vec::new();
+        assert!(file_with_callback.read_to_end(&mut buffer).await.is_err())
+    }
+
+    #[tokio::test]
+    async fn callback_with_additional_checksum_sha1_error_test() {
+        init_dummy_tracing_subscriber();
+
+        let file = File::open("test_data/5byte.dat").await.unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let mut object_parts = Vec::new();
+        object_parts.push(
+            ObjectPartBuilder::default()
+                .size(0)
+                .checksum_sha1(EMPTY_SHA1_BASE64_DIGEST)
+                .build(),
+        );
+
+        let object_checksum = Some(ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Sha1),
+            checksum_type: None,
+            object_parts: Some(object_parts),
+            final_checksum: Some(DUMMY_FINAL_DIGEST.to_string()),
+        });
+
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha1)));
+
+        let mut file_with_callback = AsyncReadWithCallback::new(
+            file,
+            stats_sender,
+            None,
+            additional_checksum,
+            object_checksum,
+        );
+
+        let mut buffer = Vec::new();
+        assert!(file_with_callback.read_to_end(&mut buffer).await.is_err())
+    }
+
+    #[tokio::test]
+    async fn callback_with_additional_checksum_crc32_error_test() {
+        init_dummy_tracing_subscriber();
+
+        let file = File::open("test_data/5byte.dat").await.unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let mut object_parts = Vec::new();
+        object_parts.push(
+            ObjectPartBuilder::default()
+                .size(0)
+                .checksum_crc32(EMPTY_CRC32_BASE64_DIGEST)
+                .build(),
+        );
+
+        let object_checksum = Some(ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Crc32),
+            checksum_type: None,
+            object_parts: Some(object_parts),
+            final_checksum: Some(DUMMY_FINAL_DIGEST.to_string()),
+        });
+
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Crc32)));
+
+        let mut file_with_callback = AsyncReadWithCallback::new(
+            file,
+            stats_sender,
+            None,
+            additional_checksum,
+            object_checksum,
+        );
+
+        let mut buffer = Vec::new();
+        assert!(file_with_callback.read_to_end(&mut buffer).await.is_err())
+    }
+
+    #[tokio::test]
+    async fn callback_with_additional_checksum_crc32c_error_test() {
+        init_dummy_tracing_subscriber();
+
+        let file = File::open("test_data/5byte.dat").await.unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let mut object_parts = Vec::new();
+        object_parts.push(
+            ObjectPartBuilder::default()
+                .size(0)
+                .checksum_crc32_c(EMPTY_CRC32C_BASE64_DIGEST)
+                .build(),
+        );
+
+        let object_checksum = Some(ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Crc32C),
+            checksum_type: None,
+            object_parts: Some(object_parts),
+            final_checksum: Some(DUMMY_FINAL_DIGEST.to_string()),
+        });
+
+        let additional_checksum =
+            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Crc32C)));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
