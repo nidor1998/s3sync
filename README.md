@@ -85,7 +85,7 @@ s3sync calculates ETag(MD5 or equivalent) for each object and compares them with
 An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.    
 Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)  
 Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
-Note: Amazon S3 Express One Zone storage class does not support ETag as verification. But you can use additional checksum algorithm.
+Note: Amazon S3 Express One Zone does not support ETag as verification. But you can use additional checksum algorithm.
 - Very fast  
 s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
 In my environment(`c6a.large`, with 256 workers), Local to S3, about 4,000 objects/sec (small objects 1-20 kb).  
@@ -160,7 +160,7 @@ Checking of modified objects is very fast.
 - CRC64NVME full object checksum verification support  
   With `--additional-checksum-algorithm CRC64NVME`, s3sync can calculate and compare CRC64NVME checksum for each object.  
   Other full object checksum algorithms will be supported in the future.  
-  For more information, see [Checking object integrity](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
+  For more information, see [Checking object integrity in Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
 - ETag(MD5 or equivalent) based incremental transfer  
 If you want to ETag based incremental transfer, you can use `--check-etag` option.  
 It compares the ETag of the source object with the ETag of the target object and transfers only modified objects.  
@@ -235,7 +235,7 @@ cargo install s3sync --path .
 ## Usage
 AWS credentials are required to use s3sync. IAM Roles, AWC CLI Profile, environment variables, etc supported.  
 By default s3sync access credentials from many locations(IAM Roles, environment variables, etc).  
-For more information, see [Specifying your credentials and default region](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credentials.html)  
+For more information, see [SDK authentication with AWS](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credentials.html)  
 
 You can also specify credentials in the command line options or environment variables.
 
@@ -328,7 +328,7 @@ The multipart ETag does not always match that of the source object. But with abo
 With `--auto-chunksize`, s3sync can calculate and compare ETag/checksum for each part and the entire object.   
 If you want strict integrity check, use `--auto-chunksize`, but it will need more API calls and time.
 
-For more information, see https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html
+For more information, see  [Checking object integrity in Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
 
 ### Matrix of s3sync end-to-end object integrity check
 In the case of Local to S3 or S3 to Local, s3sync compares ETags and additional checksums of Local that s3sync calculates with those of S3.  
