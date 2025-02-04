@@ -23,7 +23,7 @@ s3sync = "1.8.0"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 
-```rust
+```no_run
 use s3sync::config::args::parse_from_args;
 use s3sync::config::Config;
 use s3sync::pipeline::Pipeline;
