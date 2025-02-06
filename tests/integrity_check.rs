@@ -63,6 +63,10 @@ mod tests {
             local_to_s3_multipart_sse_kms().await;
             local_to_s3_multipart_sse_kms().await;
             local_to_s3_multipart_sse_c().await;
+            local_to_s3_single_without_content_md5().await;
+            local_to_s3_multipart_without_content_md5().await;
+            local_to_s3_single_checksum_without_content_md5().await;
+            local_to_s3_multipart_checksum_without_content_md5().await;
 
             s3_to_s3_multipart_checksum().await;
             s3_to_local_multipart_checksum().await;
@@ -82,6 +86,8 @@ mod tests {
             s3_to_s3_multipart_crc64nvme_checksum().await;
             s3_to_s3_multipart_crc64nvme_checksum_auto().await;
             s3_to_s3_multipart_crc64nvme_checksum_ok().await;
+            local_to_s3_single_crc64nvme_checksum_without_content_md5().await;
+            local_to_s3_multipart_crc64nvme_checksum_without_content_md5().await;
         }
 
         helper
@@ -128,6 +134,34 @@ mod tests {
             "--target-profile",
             "s3sync-e2e-test",
             "--disable-etag-verify",
+            "./test_data/e2e_test/case1",
+            &target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+        assert_eq!(stats.sync_complete, 5);
+        assert_eq!(stats.e_tag_verified, 0);
+        assert_eq!(stats.checksum_verified, 0);
+        assert_eq!(stats.sync_warning, 0);
+
+        helper.delete_all_objects(&BUCKET1.to_string()).await;
+    }
+
+    async fn local_to_s3_single_without_content_md5() {
+        let helper = TestHelper::new().await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--disable-content-md5-header",
             "./test_data/e2e_test/case1",
             &target_bucket_url,
         ];
@@ -343,6 +377,37 @@ mod tests {
             "--target-profile",
             "s3sync-e2e-test",
             "--disable-etag-verify",
+            LARGE_FILE_DIR,
+            &target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+        assert_eq!(stats.sync_complete, 1);
+        assert_eq!(stats.e_tag_verified, 0);
+        assert_eq!(stats.checksum_verified, 0);
+        assert_eq!(stats.sync_warning, 0);
+
+        helper.delete_all_objects(&BUCKET1.to_string()).await;
+    }
+
+    async fn local_to_s3_multipart_without_content_md5() {
+        let helper = TestHelper::new().await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+        TestHelper::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--disable-content-md5-header",
             LARGE_FILE_DIR,
             &target_bucket_url,
         ];
@@ -707,6 +772,36 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
+    async fn local_to_s3_single_checksum_without_content_md5() {
+        let helper = TestHelper::new().await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--disable-content-md5-header",
+            "--additional-checksum-algorithm",
+            "SHA256",
+            "./test_data/e2e_test/case1",
+            &target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+        assert_eq!(stats.sync_complete, 5);
+        assert_eq!(stats.e_tag_verified, 0);
+        assert_eq!(stats.checksum_verified, 5);
+        assert_eq!(stats.sync_warning, 0);
+
+        helper.delete_all_objects(&BUCKET1.to_string()).await;
+    }
+
     async fn local_to_s3_single_crc64nvme_checksum() {
         let helper = TestHelper::new().await;
 
@@ -730,6 +825,36 @@ mod tests {
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 5);
         assert_eq!(stats.e_tag_verified, 5);
+        assert_eq!(stats.checksum_verified, 5);
+        assert_eq!(stats.sync_warning, 0);
+
+        helper.delete_all_objects(&BUCKET1.to_string()).await;
+    }
+
+    async fn local_to_s3_single_crc64nvme_checksum_without_content_md5() {
+        let helper = TestHelper::new().await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--disable-content-md5-header",
+            "--additional-checksum-algorithm",
+            "CRC64NVME",
+            "./test_data/e2e_test/case1",
+            &target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+        assert_eq!(stats.sync_complete, 5);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
@@ -932,6 +1057,39 @@ mod tests {
         helper.delete_all_objects(&BUCKET1.to_string()).await;
     }
 
+    async fn local_to_s3_multipart_checksum_without_content_md5() {
+        let helper = TestHelper::new().await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+        TestHelper::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--disable-content-md5-header",
+            "--additional-checksum-algorithm",
+            "SHA256",
+            LARGE_FILE_DIR,
+            &target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+        assert_eq!(stats.sync_complete, 1);
+        assert_eq!(stats.e_tag_verified, 0);
+        assert_eq!(stats.checksum_verified, 1);
+        assert_eq!(stats.sync_warning, 0);
+
+        helper.delete_all_objects(&BUCKET1.to_string()).await;
+    }
+
     async fn local_to_s3_multipart_crc64nvme_checksum() {
         let helper = TestHelper::new().await;
 
@@ -958,6 +1116,39 @@ mod tests {
         let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
         assert_eq!(stats.sync_complete, 1);
         assert_eq!(stats.e_tag_verified, 1);
+        assert_eq!(stats.checksum_verified, 1);
+        assert_eq!(stats.sync_warning, 0);
+
+        helper.delete_all_objects(&BUCKET1.to_string()).await;
+    }
+
+    async fn local_to_s3_multipart_crc64nvme_checksum_without_content_md5() {
+        let helper = TestHelper::new().await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+        TestHelper::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--disable-content-md5-header",
+            "--additional-checksum-algorithm",
+            "CRC64NVME",
+            LARGE_FILE_DIR,
+            &target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+        assert_eq!(stats.sync_complete, 1);
+        assert_eq!(stats.e_tag_verified, 0);
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 

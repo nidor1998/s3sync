@@ -19,7 +19,7 @@ Example usage
 
 ```Toml
 [dependencies]
-s3sync = "1.8.0"
+s3sync = "1.9.0"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 

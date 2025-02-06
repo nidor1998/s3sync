@@ -355,6 +355,7 @@ impl UploadManager {
 
         if !self.config.disable_etag_verify
             && !self.express_onezone_storage
+            && !self.config.disable_content_md5_header
             && source_storage_class != Some(StorageClass::ExpressOnezone)
         {
             let target_sse = complete_multipart_upload_output
@@ -497,15 +498,16 @@ impl UploadManager {
                 .await
                 .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
 
-            let md5_digest_base64 = if !self.express_onezone_storage {
-                let md5_digest = md5::compute(&buffer);
-                self.concatnated_md5_hash
-                    .append(&mut md5_digest.as_slice().to_vec());
+            let md5_digest_base64 =
+                if !self.express_onezone_storage && !self.config.disable_content_md5_header {
+                    let md5_digest = md5::compute(&buffer);
+                    self.concatnated_md5_hash
+                        .append(&mut md5_digest.as_slice().to_vec());
 
-                Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
-            } else {
-                None
-            };
+                    Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+                } else {
+                    None
+                };
 
             let builder = self
                 .client
@@ -609,15 +611,16 @@ impl UploadManager {
                 .await
                 .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
 
-            let md5_digest_base64 = if !self.express_onezone_storage {
-                let md5_digest = md5::compute(&buffer);
-                self.concatnated_md5_hash
-                    .append(&mut md5_digest.as_slice().to_vec());
+            let md5_digest_base64 =
+                if !self.express_onezone_storage && !self.config.disable_content_md5_header {
+                    let md5_digest = md5::compute(&buffer);
+                    self.concatnated_md5_hash
+                        .append(&mut md5_digest.as_slice().to_vec());
 
-                Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
-            } else {
-                None
-            };
+                    Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+                } else {
+                    None
+                };
 
             let builder = self
                 .client
@@ -720,15 +723,16 @@ impl UploadManager {
             .await
             .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
 
-        let md5_digest_base64 = if !self.express_onezone_storage {
-            let md5_digest = md5::compute(&buffer);
-            self.concatnated_md5_hash
-                .append(&mut md5_digest.as_slice().to_vec());
+        let md5_digest_base64 =
+            if !self.express_onezone_storage && !self.config.disable_content_md5_header {
+                let md5_digest = md5::compute(&buffer);
+                self.concatnated_md5_hash
+                    .append(&mut md5_digest.as_slice().to_vec());
 
-            Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
-        } else {
-            None
-        };
+                Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+            } else {
+                None
+            };
 
         let buffer_stream = ByteStream::from(buffer);
 
@@ -827,6 +831,7 @@ impl UploadManager {
 
         if !self.config.disable_etag_verify
             && !self.express_onezone_storage
+            && !self.config.disable_content_md5_header
             && source_storage_class != Some(StorageClass::ExpressOnezone)
         {
             let target_sse = put_object_output.server_side_encryption().cloned();
