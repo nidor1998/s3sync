@@ -9,6 +9,8 @@ mod content_encoding;
 mod content_language;
 mod content_type;
 mod delete;
+
+mod disable_content_md5_header;
 mod disable_etag_verify;
 mod disable_multipart_verify;
 mod disable_payload_signing;

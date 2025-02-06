@@ -64,6 +64,7 @@ const DEFAULT_MAX_KEYS: i32 = 1000;
 const DEFAULT_PUT_LAST_MODIFIED_METADATA: bool = false;
 const DEFAULT_DISABLE_STALLED_STREAM_PROTECTION: bool = false;
 const DEFAULT_DISABLE_PAYLOAD_SIGNING: bool = false;
+const DEFAULT_DISABLE_CONTENT_MD5_HEADER: bool = false;
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
     "with --enable-versioning/--sync-latest-tagging, both storage must be s3://\n";
@@ -105,6 +106,8 @@ const LOCAL_STORAGE_SPECIFIED_WITH_SSE_C: &str =
     "with --source-sse-c/--target-sse-c, remote storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_DISABLE_PAYLOAD_SIGNING: &str =
     "with --disable-payload-signing, target storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_DISABLE_CONTENT_MD5_HEADER: &str =
+    "with --disable-content-md5-header, target storage must be s3://\n";
 
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
@@ -450,6 +453,10 @@ pub struct CLIArgs {
     /// disable payload signing for object uploads
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_PAYLOAD_SIGNING)]
     disable_payload_signing: bool,
+
+    /// disable Content-MD5 header for object uploads. It disables the ETag verification for the uploaded object.
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_CONTENT_MD5_HEADER)]
+    disable_content_md5_header: bool,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -491,6 +498,7 @@ impl CLIArgs {
         self.check_no_guess_mime_type_conflict()?;
         self.check_endpoint_url_conflict()?;
         self.check_disable_payload_signing_conflict()?;
+        self.check_disable_content_md5_header_conflict()?;
 
         Ok(())
     }
@@ -795,6 +803,19 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_disable_content_md5_header_conflict(&self) -> Result<(), String> {
+        if !self.disable_content_md5_header {
+            return Ok(());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_DISABLE_CONTENT_MD5_HEADER.to_string());
+        }
+
+        Ok(())
+    }
+
     fn build_client_configs(&self) -> (Option<ClientConfig>, Option<ClientConfig>) {
         let source_credential = if let Some(source_profile) = self.source_profile.clone() {
             Some(S3Credentials::Profile(source_profile))
@@ -1056,6 +1077,7 @@ impl TryFrom<CLIArgs> for Config {
             put_last_modified_metadata: value.put_last_modified_metadata,
             auto_complete_shell: value.auto_complete_shell,
             disable_payload_signing: value.disable_payload_signing,
+            disable_content_md5_header: value.disable_content_md5_header,
         })
     }
 }
