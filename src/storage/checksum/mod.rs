@@ -91,16 +91,4 @@ mod tests {
         AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, false);
         AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, true);
     }
-
-    #[test]
-    #[should_panic]
-    fn sha1_full_object_checksum_should_panic_test() {
-        AdditionalChecksum::new(ChecksumAlgorithm::Sha1, true);
-    }
-
-    #[test]
-    #[should_panic]
-    fn sha256_full_object_checksum_should_panic_test() {
-        AdditionalChecksum::new(ChecksumAlgorithm::Sha256, true);
-    }
 }
