@@ -11,7 +11,7 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
-use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ChecksumType, ObjectPart, Tag, Tagging};
+use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
@@ -23,7 +23,9 @@ use crate::storage::e_tag_verify;
 use crate::types;
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
-use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey};
+use crate::types::{
+    get_additional_checksum, is_full_object_checksum, ObjectChecksum, S3syncObject, SseCustomerKey,
+};
 
 use super::stage::Stage;
 
@@ -528,7 +530,7 @@ impl ObjectSyncer {
         version_id: Option<&str>,
         e_tag: Option<&str>,
         checksum_algorithm: Option<&[ChecksumAlgorithm]>,
-        _checksum_type: Option<&ChecksumType>,
+        full_object_checksum: bool,
     ) -> Result<Option<Vec<ObjectPart>>> {
         // a local object does not have ETag.
         if !e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string()))
@@ -538,9 +540,8 @@ impl ObjectSyncer {
         }
 
         if let Some(algorithm) = checksum_algorithm {
-            // Currently, only CRC64NVME is supported for full object checksum.
-            // And full object checksum has no object parts.
-            if !algorithm.is_empty() && algorithm[0] != ChecksumAlgorithm::Crc64Nvme {
+            // A full object checksum has no object parts.
+            if !algorithm.is_empty() && !full_object_checksum {
                 return Ok(Some(
                     self.base
                         .source
@@ -607,17 +608,7 @@ impl ObjectSyncer {
         get_object_output: &GetObjectOutput,
         checksum_algorithm: Option<&[ChecksumAlgorithm]>,
     ) -> Result<Option<ObjectChecksum>> {
-        let object_parts = self
-            .get_object_parts_if_necessary(
-                key,
-                get_object_output.version_id(),
-                get_object_output.e_tag(),
-                checksum_algorithm,
-                get_object_output.checksum_type(),
-            )
-            .await?;
-
-        let algorithm = if let Some(algorithm) = checksum_algorithm {
+        let additional_checksum_algorithm = if let Some(algorithm) = checksum_algorithm {
             if algorithm.is_empty()
                 || (self.base.config.additional_checksum_mode.is_none()
                     && !self.base.target.as_ref().unwrap().is_local_storage())
@@ -631,17 +622,30 @@ impl ObjectSyncer {
             None
         };
 
-        // As of February 2, 2025, Amazon S3 GetObject does not return ChecksumType::Composite.
-        // So, we can't get the checksum type from GetObjectOutput correctly.
+        let additional_checksum_value =
+            get_additional_checksum(get_object_output, additional_checksum_algorithm.clone());
+        let object_parts = self
+            .get_object_parts_if_necessary(
+                key,
+                get_object_output.version_id(),
+                get_object_output.e_tag(),
+                checksum_algorithm,
+                is_full_object_checksum(&additional_checksum_value),
+            )
+            .await?;
+
         Ok(Some(ObjectChecksum {
             key: key.to_string(),
             version_id: get_object_output
                 .version_id()
                 .map(|version_id| version_id.to_string()),
-            checksum_algorithm: algorithm.clone(),
+            checksum_algorithm: additional_checksum_algorithm.clone(),
             checksum_type: get_object_output.checksum_type().cloned(),
             object_parts,
-            final_checksum: types::get_additional_checksum(get_object_output, algorithm),
+            final_checksum: types::get_additional_checksum(
+                get_object_output,
+                additional_checksum_algorithm,
+            ),
         }))
     }
 }

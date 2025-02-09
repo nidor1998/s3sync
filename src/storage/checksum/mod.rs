@@ -13,6 +13,9 @@ pub mod sha1;
 pub mod sha256;
 
 pub trait Checksum {
+    fn new(full_object_checksum: bool) -> Self
+    where
+        Self: Sized;
     fn update(&mut self, data: &[u8]);
     fn finalize(&mut self) -> String;
     fn finalize_all(&mut self) -> String;
@@ -23,7 +26,7 @@ pub struct AdditionalChecksum {
 }
 
 impl AdditionalChecksum {
-    pub fn new(algorithm: ChecksumAlgorithm) -> Self {
+    pub fn new(algorithm: ChecksumAlgorithm, full_object_checksum: bool) -> Self {
         match algorithm {
             ChecksumAlgorithm::Sha1 => AdditionalChecksum {
                 checksum: Box::<ChecksumSha1>::default(),
@@ -32,10 +35,10 @@ impl AdditionalChecksum {
                 checksum: Box::<ChecksumSha256>::default(),
             },
             ChecksumAlgorithm::Crc32 => AdditionalChecksum {
-                checksum: Box::<ChecksumCRC32>::default(),
+                checksum: Box::new(ChecksumCRC32::new(full_object_checksum)),
             },
             ChecksumAlgorithm::Crc32C => AdditionalChecksum {
-                checksum: Box::<ChecksumCRC32c>::default(),
+                checksum: Box::new(ChecksumCRC32c::new(full_object_checksum)),
             },
             ChecksumAlgorithm::Crc64Nvme => AdditionalChecksum {
                 checksum: Box::<ChecksumCRC64NVMe>::default(),
@@ -54,5 +57,50 @@ impl AdditionalChecksum {
     }
     pub fn finalize_all(&mut self) -> String {
         self.checksum.finalize_all()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sha1_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Sha1, false);
+    }
+
+    #[test]
+    fn sha256_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Sha256, false);
+    }
+
+    #[test]
+    fn crc32_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Crc32, false);
+        AdditionalChecksum::new(ChecksumAlgorithm::Crc32, true);
+    }
+
+    #[test]
+    fn crc32c_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Crc32C, false);
+        AdditionalChecksum::new(ChecksumAlgorithm::Crc32C, true);
+    }
+
+    #[test]
+    fn crc64nvme_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, false);
+        AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn sha1_full_object_checksum_should_panic_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Sha1, true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn sha256_full_object_checksum_should_panic_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Sha256, true);
     }
 }

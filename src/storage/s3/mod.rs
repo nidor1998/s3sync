@@ -756,10 +756,7 @@ impl StorageTrait for S3Storage {
                 .unwrap()
                 .checksum_algorithm
                 .is_some()
-            && !object_checksum
-                .as_ref()
-                .unwrap()
-                .is_checksum_type_full_object()
+            && !self.config.full_object_checksum
         {
             Some(Arc::new(AdditionalChecksum::new(
                 object_checksum
@@ -769,6 +766,7 @@ impl StorageTrait for S3Storage {
                     .as_ref()
                     .unwrap()
                     .clone(),
+                self.config.full_object_checksum,
             )))
         } else {
             None

@@ -27,6 +27,7 @@ mod filter_mtime_after;
 mod filter_mtime_before;
 mod filter_smaller_size;
 mod force_retry;
+mod full_object_checksum;
 mod head_each_target;
 mod http_proxy;
 mod https_proxy;

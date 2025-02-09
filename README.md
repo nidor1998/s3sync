@@ -23,7 +23,7 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.9.0"
+s3sync = "1.10.0"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 
@@ -157,10 +157,8 @@ Checking of modified objects is very fast.
 - Amazon S3 Express One Zone support  
   s3sync can be used with Amazon S3 Express.  
  For more information, see [S3 Express One Zone Availability Zones and Regions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
-- CRC64NVME full object checksum verification support  
-  With `--additional-checksum-algorithm CRC64NVME`, s3sync can calculate and compare CRC64NVME checksum for each object.  
-  Other full object checksum algorithms will be supported in the future.  
-  For more information, see [Checking object integrity in Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
+- Full object checksum(CRC32/CRC32C/CRC64NVME) support  
+  with `--full-object-checksum`, s3sync can use full object checksum(CRC32/CRC32C/CRC64NVME) for each object.
 - ETag(MD5 or equivalent) based incremental transfer  
 If you want to ETag based incremental transfer, you can use `--check-etag` option.  
 It compares the ETag of the source object with the ETag of the target object and transfers only modified objects.  
