@@ -15,6 +15,11 @@ impl Default for ChecksumCRC64NVMe {
 }
 
 impl Checksum for ChecksumCRC64NVMe {
+    fn new(_full_object_checksum: bool) -> Self {
+        ChecksumCRC64NVMe {
+            digest: crc64fast_nvme::Digest::new(),
+        }
+    }
     fn update(&mut self, data: &[u8]) {
         self.digest.write(data);
     }

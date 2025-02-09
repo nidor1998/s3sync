@@ -4,6 +4,22 @@ s3sync is a reliable, very fast, and powerful synchronization tool for S3.
 It can be used to synchronize local directories with S3 bucket, and also to synchronize S3 to s3 bucket.
 Supports multipart upload, versioning, metadata.
 
+## Features
+
+- Reliable: In-depth end-to-end object integrity check
+    s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.
+    An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.
+    Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)
+    Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.
+    Note: Amazon S3 Express One Zone does not support ETag as verification. But you can use additional checksum algorithm.
+
+- Very fast
+    s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.
+    In my environment(`c6a.large`, with 256 workers), Local to S3, about 4,000 objects/sec (small objects 1-20 kb).
+    s3sync is optimized for synchronizing large amounts(over millions) of objects.
+    Not optimized for transferring small amounts of objects(less than worker-size: default 16) of large size.(Of course, it can be used for this purpose.)
+
+For more information, see [s3sync homepage](https://github.com/nidor1998/s3sync)
 
 ## As a library
 s3sync can be used as a library.
@@ -19,7 +35,7 @@ Example usage
 
 ```Toml
 [dependencies]
-s3sync = "1.9.0"
+s3sync = "1.10.0"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 

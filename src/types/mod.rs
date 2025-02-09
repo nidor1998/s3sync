@@ -79,21 +79,6 @@ pub fn unpack_object_versions(object: &S3syncObject) -> ObjectVersions {
     }
 }
 
-impl ObjectChecksum {
-    pub fn is_checksum_type_full_object(&self) -> bool {
-        if let Some(checksum_algorithm) = &self.checksum_algorithm {
-            return checksum_algorithm == &ChecksumAlgorithm::Crc64Nvme;
-        }
-
-        // Currently, s3sync support only CRC64NVMe checksum algorithm for full object checksum.
-        // if let Some(checksum_type) = &self.checksum_type {
-        //     return checksum_type == &ChecksumType::FullObject;
-        // }
-
-        false
-    }
-}
-
 impl S3syncObject {
     pub fn key(&self) -> &str {
         match &self {
@@ -308,6 +293,17 @@ pub fn get_additional_checksum_with_head_object(
     }
 }
 
+pub fn is_full_object_checksum(checksum: &Option<String>) -> bool {
+    if checksum.is_none() {
+        return false;
+    }
+
+    // As of February 2, 2025, Amazon S3 GetObject does not return ChecksumType::Composite.
+    // So, we can't get the checksum type from GetObjectOutput and decide where checksum has '-' or not.
+    let find_result = checksum.as_ref().unwrap().find('-');
+    find_result.is_none()
+}
+
 #[derive(Debug, PartialEq)]
 pub enum SyncStatistics {
     SyncBytes(u64),
@@ -395,72 +391,6 @@ mod tests {
     };
 
     use super::*;
-
-    #[test]
-    fn is_checksum_type_full_object_return_true() {
-        let crc64nvme_checksum = ObjectChecksum {
-            key: "test".to_string(),
-            version_id: None,
-            checksum_algorithm: Some(ChecksumAlgorithm::Crc64Nvme),
-            checksum_type: None,
-            object_parts: None,
-            final_checksum: None,
-        };
-        assert!(crc64nvme_checksum.is_checksum_type_full_object());
-    }
-    #[test]
-    fn is_checksum_type_full_object_return_false() {
-        let sha1_checksum = ObjectChecksum {
-            key: "test".to_string(),
-            version_id: None,
-            checksum_algorithm: Some(ChecksumAlgorithm::Sha1),
-            checksum_type: None,
-            object_parts: None,
-            final_checksum: None,
-        };
-        assert!(!sha1_checksum.is_checksum_type_full_object());
-
-        let sha256_checksum = ObjectChecksum {
-            key: "test".to_string(),
-            version_id: None,
-            checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
-            checksum_type: None,
-            object_parts: None,
-            final_checksum: None,
-        };
-        assert!(!sha256_checksum.is_checksum_type_full_object());
-
-        let sha256_crc32 = ObjectChecksum {
-            key: "test".to_string(),
-            version_id: None,
-            checksum_algorithm: Some(ChecksumAlgorithm::Crc32),
-            checksum_type: None,
-            object_parts: None,
-            final_checksum: None,
-        };
-        assert!(!sha256_crc32.is_checksum_type_full_object());
-
-        let sha256_crc32c = ObjectChecksum {
-            key: "test".to_string(),
-            version_id: None,
-            checksum_algorithm: Some(ChecksumAlgorithm::Crc32C),
-            checksum_type: None,
-            object_parts: None,
-            final_checksum: None,
-        };
-        assert!(!sha256_crc32c.is_checksum_type_full_object());
-
-        // Currently, s3sync support only CRC64NVMe checksum algorithm for full object checksum.
-        let full_object_checksum = ObjectChecksum {
-            key: "test".to_string(),
-            version_id: None,
-            checksum_algorithm: Some(ChecksumAlgorithm::Crc32C),
-            checksum_type: Some(ChecksumType::FullObject),
-            object_parts: None,
-            final_checksum: None,
-        };
-        assert!(!full_object_checksum.is_checksum_type_full_object());
-    }
 
     #[test]
     fn clone_non_versioning_object_with_key_test() {

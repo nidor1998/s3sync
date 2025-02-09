@@ -384,8 +384,10 @@ mod tests {
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum =
-            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha256)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Sha256,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -425,8 +427,10 @@ mod tests {
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum =
-            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha256)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Sha256,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -464,7 +468,10 @@ mod tests {
             final_checksum: Some(DUMMY_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha1)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Sha1,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -502,7 +509,10 @@ mod tests {
             final_checksum: Some(DUMMY_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Crc32)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Crc32,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -540,8 +550,10 @@ mod tests {
             final_checksum: Some(DUMMY_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum =
-            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Crc32C)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Crc32C,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -586,8 +598,10 @@ mod tests {
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum =
-            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha256)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Sha256,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -631,8 +645,10 @@ mod tests {
             final_checksum: Some(SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum =
-            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha256)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Sha256,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -679,8 +695,10 @@ mod tests {
             final_checksum: Some(LARGE_FILE_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum =
-            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha256)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Sha256,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,
@@ -718,8 +736,10 @@ mod tests {
             final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
         });
 
-        let additional_checksum =
-            Some(Arc::new(AdditionalChecksum::new(ChecksumAlgorithm::Sha256)));
+        let additional_checksum = Some(Arc::new(AdditionalChecksum::new(
+            ChecksumAlgorithm::Sha256,
+            false,
+        )));
 
         let mut file_with_callback = AsyncReadWithCallback::new(
             file,

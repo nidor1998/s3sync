@@ -14,13 +14,14 @@ pub async fn generate_checksum_from_path(
     checksum_algorithm: ChecksumAlgorithm,
     object_parts: Vec<i64>,
     multipart_threshold: usize,
+    full_object_checksum: bool,
 ) -> Result<String> {
     if object_parts.is_empty() {
         panic!("parts_size is empty");
     }
 
     let mut file = File::open(path).await?;
-    let mut checksum = AdditionalChecksum::new(checksum_algorithm);
+    let mut checksum = AdditionalChecksum::new(checksum_algorithm, full_object_checksum);
     let parts_count = object_parts.len();
     let file_size = file.metadata().await?.len();
 
@@ -65,6 +66,7 @@ pub async fn generate_checksum_from_path_for_check(
     checksum_algorithm: ChecksumAlgorithm,
     multipart: bool,
     object_parts: Vec<i64>,
+    full_object_checksum: bool,
 ) -> Result<String> {
     if object_parts.is_empty() {
         panic!("parts_size is empty");
@@ -76,7 +78,7 @@ pub async fn generate_checksum_from_path_for_check(
     let mut file = File::open(path).await?;
     let file_size = file.metadata().await?.len();
 
-    let mut checksum = AdditionalChecksum::new(checksum_algorithm);
+    let mut checksum = AdditionalChecksum::new(checksum_algorithm, full_object_checksum);
     let mut read_bytes: usize = 0;
     let mut last_hash = "".to_string();
     for chunksize in object_parts {
@@ -116,11 +118,12 @@ pub async fn generate_checksum_from_path_with_chunksize(
     checksum_algorithm: ChecksumAlgorithm,
     multipart_chunksize: usize,
     multipart_threshold: usize,
+    full_object_checksum: bool,
 ) -> Result<String> {
     let mut file = File::open(path).await?;
     let mut remaining_bytes = file.metadata().await.unwrap().len();
 
-    let mut checksum = AdditionalChecksum::new(checksum_algorithm);
+    let mut checksum = AdditionalChecksum::new(checksum_algorithm, full_object_checksum);
 
     if remaining_bytes < multipart_threshold as u64 {
         let mut buffer = Vec::<u8>::with_capacity(multipart_threshold);
@@ -172,6 +175,12 @@ mod tests {
     const THRESHOLD_SHA256_BASE64_FINAL_DIGEST: &str =
         "CPUzmvYGEjhKR5UARYyMgSkXZMUvVQ2BMxs1zpgY97g=-1";
 
+    const LARGE_FILE_CRC32_FULL_OBJECT_BASE64_DIGEST: &str = "YyFLrQ==";
+    const LARGE_FILE_CRC32C_FULL_OBJECT_BASE64_DIGEST: &str = "Gs/MBw==";
+    const LARGE_FILE_CRC64NVME_FULL_OBJECT_BASE64_DIGEST: &str = "1q6/IYHP8XY=";
+
+    const TEST_CRC32_BASE64_DIGEST: &str = "y/U6HA==";
+
     #[tokio::test]
     async fn generate_checksum_from_path_test() {
         init_dummy_tracing_subscriber();
@@ -181,6 +190,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             vec![5],
             8 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
@@ -199,6 +209,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             vec![8 * 1024 * 1024, 1048576],
             8 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
@@ -209,6 +220,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             vec![8 * 1024 * 1024, 1048575],
             8 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
@@ -219,6 +231,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             vec![8 * 1024 * 1024, 1048577],
             8 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
@@ -229,6 +242,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             vec![8 * 1024 * 1024, 1048576, 5],
             8 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
@@ -239,6 +253,39 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             vec![7 * 1024 * 1024],
             8 * 1024 * 1024,
+            false,
+        )
+        .await
+        .unwrap();
+        assert_eq!(checksum, UNKNOWN_CHECKSUM_VALUE.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_multipart_full_object_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+
+        let checksum = generate_checksum_from_path(
+            PathBuf::from(LARGE_FILE_PATH).as_path(),
+            ChecksumAlgorithm::Crc32C,
+            vec![8 * 1024 * 1024, 1048576],
+            8 * 1024 * 1024,
+            true,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            checksum,
+            LARGE_FILE_CRC32C_FULL_OBJECT_BASE64_DIGEST.to_string()
+        );
+
+        let checksum = generate_checksum_from_path(
+            PathBuf::from(LARGE_FILE_PATH).as_path(),
+            ChecksumAlgorithm::Crc32C,
+            vec![8 * 1024 * 1024, 1048575],
+            8 * 1024 * 1024,
+            true,
         )
         .await
         .unwrap();
@@ -256,6 +303,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             vec![9 * 1024 * 1024],
             9 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
@@ -272,11 +320,49 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             8 * 1024 * 1024,
             8 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
 
         assert_eq!(checksum, TEST_SHA256_BASE64_DIGEST.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_chunksize_full_object_test() {
+        init_dummy_tracing_subscriber();
+
+        let checksum = generate_checksum_from_path_with_chunksize(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Crc32,
+            8 * 1024 * 1024,
+            8 * 1024 * 1024,
+            true,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(checksum, TEST_CRC32_BASE64_DIGEST.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_chunksize_multipart_full_object_test() {
+        init_dummy_tracing_subscriber();
+
+        let checksum = generate_checksum_from_path_with_chunksize(
+            PathBuf::from(LARGE_FILE_PATH).as_path(),
+            ChecksumAlgorithm::Crc32,
+            8 * 1024 * 1024,
+            8 * 1024 * 1024,
+            true,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            checksum,
+            LARGE_FILE_CRC32_FULL_OBJECT_BASE64_DIGEST.to_string()
+        );
     }
 
     #[tokio::test]
@@ -290,6 +376,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             8 * 1024 * 1024,
             8 * 1024 * 1024,
+            false,
         )
         .await
         .unwrap();
@@ -306,6 +393,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             false,
             vec![5],
+            false,
         )
         .await
         .unwrap();
@@ -323,6 +411,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             true,
             vec![8 * 1024 * 1024, 1048576],
+            false,
         )
         .await
         .unwrap();
@@ -333,6 +422,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             true,
             vec![8 * 1024 * 1024, 1048575],
+            false,
         )
         .await
         .unwrap();
@@ -343,6 +433,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             true,
             vec![8 * 1024 * 1024, 1048577],
+            false,
         )
         .await
         .unwrap();
@@ -353,6 +444,7 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             true,
             vec![8 * 1024 * 1024, 1048576, 5],
+            false,
         )
         .await
         .unwrap();
@@ -363,10 +455,60 @@ mod tests {
             ChecksumAlgorithm::Sha256,
             true,
             vec![7 * 1024 * 1024],
+            false,
         )
         .await
         .unwrap();
         assert_eq!(checksum, UNKNOWN_CHECKSUM_VALUE.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_for_check_full_object_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+
+        let checksum = generate_checksum_from_path_for_check(
+            PathBuf::from(LARGE_FILE_PATH).as_path(),
+            ChecksumAlgorithm::Crc32,
+            true,
+            vec![8 * 1024 * 1024, 1048576],
+            true,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            checksum,
+            LARGE_FILE_CRC32_FULL_OBJECT_BASE64_DIGEST.to_string()
+        );
+
+        let checksum = generate_checksum_from_path_for_check(
+            PathBuf::from(LARGE_FILE_PATH).as_path(),
+            ChecksumAlgorithm::Crc32C,
+            true,
+            vec![8 * 1024 * 1024, 1048576],
+            true,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            checksum,
+            LARGE_FILE_CRC32C_FULL_OBJECT_BASE64_DIGEST.to_string()
+        );
+
+        let checksum = generate_checksum_from_path_for_check(
+            PathBuf::from(LARGE_FILE_PATH).as_path(),
+            ChecksumAlgorithm::Crc64Nvme,
+            true,
+            vec![8 * 1024 * 1024, 1048576],
+            true,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            checksum,
+            LARGE_FILE_CRC64NVME_FULL_OBJECT_BASE64_DIGEST.to_string()
+        );
     }
 
     async fn create_large_file() {

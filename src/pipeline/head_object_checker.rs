@@ -18,8 +18,8 @@ use crate::storage::e_tag_verify::{
 };
 use crate::storage::local::fs_util;
 use crate::storage::Storage;
-use crate::types::S3syncObject;
 use crate::types::SyncStatistics::SyncWarning;
+use crate::types::{is_full_object_checksum, S3syncObject};
 use crate::{types, Config};
 
 const FILTER_NAME: &str = "HeadObjectChecker";
@@ -805,9 +805,8 @@ impl HeadObjectChecker {
             return Ok(false);
         }
 
-        // Currently, only CRC64NVME is supported for full object checksum.
-        // And full object checksum has no object parts.
-        let target_object_parts = if head_target_object_output.checksum_crc64_nvme.is_none() {
+        let full_object_checksum = is_full_object_checksum(&target_checksum);
+        let target_object_parts = if !full_object_checksum {
             self.target
                 .get_object_parts_attributes(
                     key,
@@ -836,6 +835,7 @@ impl HeadObjectChecker {
                     .iter()
                     .map(|part| part.size().unwrap())
                     .collect(),
+                full_object_checksum,
             )
             .await?
         } else {
@@ -849,6 +849,7 @@ impl HeadObjectChecker {
                     .unwrap(),
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
+                full_object_checksum,
             )
             .await?
         };
@@ -998,9 +999,8 @@ impl HeadObjectChecker {
             return Ok(false);
         }
 
-        // Currently, only CRC64NVME is supported for full object checksum.
-        // And full object checksum has no object parts.
-        let mut source_object_parts = if head_source_object_output.checksum_crc64_nvme.is_none() {
+        let full_object_checksum = is_full_object_checksum(&source_checksum);
+        let mut source_object_parts = if !full_object_checksum {
             self.source
                 .get_object_parts_attributes(
                     key,
@@ -1029,6 +1029,7 @@ impl HeadObjectChecker {
                     .iter()
                     .map(|part| part.size().unwrap())
                     .collect(),
+                full_object_checksum,
             )
             .await?
         } else {
@@ -1042,6 +1043,7 @@ impl HeadObjectChecker {
                     .unwrap(),
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
+                full_object_checksum,
             )
             .await?
         };
@@ -1220,7 +1222,6 @@ fn is_head_object_not_found_error(result: &anyhow::Error) -> bool {
 
     false
 }
-
 #[cfg(test)]
 mod tests {
     use aws_sdk_s3::operation::head_object;

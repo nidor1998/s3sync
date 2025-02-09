@@ -465,6 +465,42 @@ mod tests {
     }
 
     #[test]
+    fn build_from_crc64nvme() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "target_profile",
+            "--additional-checksum-algorithm",
+            "CRC64NVME",
+            "./test_data/source/",
+            "s3://target-bucket",
+        ];
+
+        let config = build_config_from_args(args).unwrap();
+        assert!(config.full_object_checksum)
+    }
+
+    #[test]
+    fn build_from_crc32() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "target_profile",
+            "--additional-checksum-algorithm",
+            "CRC32",
+            "./test_data/source/",
+            "s3://target-bucket",
+        ];
+
+        let config = build_config_from_args(args).unwrap();
+        assert!(!config.full_object_checksum)
+    }
+
+    #[test]
     #[cfg(target_family = "windows")]
     fn build_from_local_end_with_back_slash() {
         init_dummy_tracing_subscriber();

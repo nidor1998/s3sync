@@ -48,7 +48,10 @@ use crate::storage::{
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncBytes, SyncWarning};
-use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics};
+use crate::types::{
+    is_full_object_checksum, ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath,
+    SyncStatistics,
+};
 use crate::Config;
 
 pub mod fs_util;
@@ -318,6 +321,7 @@ impl LocalStorage {
                 source_checksum_algorithm.as_ref().unwrap().clone(),
                 parts,
                 self.config.transfer_config.multipart_threshold as usize,
+                is_full_object_checksum(&Some(source_final_checksum.clone())),
             )
             .await?;
 
@@ -498,6 +502,7 @@ impl StorageTrait for LocalStorage {
                         .clone(),
                     self.config.transfer_config.multipart_chunksize as usize,
                     self.config.transfer_config.multipart_threshold as usize,
+                    self.config.full_object_checksum,
                 )
                 .await?,
             )

@@ -941,6 +941,105 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_local_with_multipart_upload_checksum_crc32_full_object() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+
+            helper
+                .sync_large_test_data_with_crc32_full_object_checksum(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--enable-additional-checksum",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_local_with_multipart_upload_checksum_crc32c_full_object() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+
+            helper
+                .sync_large_test_data_with_crc32c_full_object_checksum(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--enable-additional-checksum",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+    #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_crc32c() {
         TestHelper::init_dummy_tracing_subscriber();
 

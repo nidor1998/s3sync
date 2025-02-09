@@ -9,8 +9,8 @@ use aws_sdk_s3::operation::put_object::PutObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, CompletedMultipartUpload, CompletedPart, ObjectPart, ServerSideEncryption,
-    StorageClass,
+    ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart, ObjectPart,
+    ServerSideEncryption, StorageClass,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
@@ -208,6 +208,12 @@ impl UploadManager {
             Some(self.config.storage_class.as_ref().unwrap().clone())
         };
 
+        let checksum_type = if self.config.full_object_checksum {
+            Some(ChecksumType::FullObject)
+        } else {
+            None
+        };
+
         let create_multipart_upload_output = self
             .client
             .create_multipart_upload()
@@ -271,6 +277,7 @@ impl UploadManager {
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
             .set_acl(self.config.canned_acl.clone())
             .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
+            .set_checksum_type(checksum_type)
             .send()
             .await
             .context("aws_sdk_s3::client::Client create_multipart_upload() failed.")?;
@@ -323,6 +330,12 @@ impl UploadManager {
                 .context("upload_parts() failed.")?
         };
 
+        let checksum_type = if self.config.full_object_checksum {
+            Some(ChecksumType::FullObject)
+        } else {
+            None
+        };
+
         let completed_multipart_upload = CompletedMultipartUpload::builder()
             .set_parts(Some(upload_parts))
             .build();
@@ -337,6 +350,7 @@ impl UploadManager {
             .set_sse_customer_algorithm(self.config.target_sse_c.clone())
             .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
+            .set_checksum_type(checksum_type)
             .send()
             .await
             .context("aws_sdk_s3::client::Client complete_multipart_upload() failed.")?;

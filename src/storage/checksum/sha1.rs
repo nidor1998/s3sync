@@ -21,6 +21,9 @@ impl Default for ChecksumSha1 {
 }
 
 impl Checksum for ChecksumSha1 {
+    fn new(_full_object_checksum: bool) -> Self {
+        Self::default()
+    }
     fn update(&mut self, data: &[u8]) {
         self.hasher.update(data);
     }
