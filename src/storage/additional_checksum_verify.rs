@@ -349,6 +349,8 @@ mod tests {
     async fn generate_checksum_from_path_chunksize_multipart_full_object_test() {
         init_dummy_tracing_subscriber();
 
+        create_large_file().await;
+
         let checksum = generate_checksum_from_path_with_chunksize(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
             ChecksumAlgorithm::Crc32,
