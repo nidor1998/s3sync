@@ -21,7 +21,7 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.10.0"
+s3sync = "1.10.1"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 
@@ -148,15 +148,6 @@ async fn main() {
   Incremental transfer can be resumed from the last checkpoint.
   Checking of modified objects is very fast.
 
-- Amazon S3 Express One Zone support  
-  s3sync can be used with Amazon S3 Express.  
-  For more information, see [S3 Express One Zone Availability Zones and Regions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
-
-- Full object checksum(CRC32/CRC32C/CRC64NVME) support  
-  with `--full-object-checksum`, s3sync can use full object checksum(CRC32/CRC32C/CRC64NVME) for each object.  
-
-  For more information, see  [Checking object integrity in Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
-
 - ETag(MD5 or equivalent) based incremental transfer  
   If you want to ETag based incremental transfer, you can use `--check-etag` option.  
   It compares the ETag of the source object with the ETag of the target object and transfers only modified objects.  
@@ -174,7 +165,7 @@ async fn main() {
   ```
 
 - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based incremental transfer  
-  If you use Amazon S3 with additional checksum, you can use `-check-additional-checksum` option.  
+  If you use Amazon S3 with additional checksum, you can use `--check-additional-checksum` option.  
   This option compares the checksum of the both source and target objects and transfer only modified objects.It costs extra API calls per object.  
   with `--dry-run`, you can check the synchronization status without transferring the objects.  
   with `--json-tracing`, you can output the tracing information in JSON format.
@@ -185,6 +176,15 @@ async fn main() {
   2024-06-15T01:06:30.086455Z DEBUG object filtered. Checksums are same. name="HeadObjectChecker" checksum_algorithm="SHA256" source_checksum="MyTyVYvNthXQp4fOwy/IzuKgFGIzIHpP1DiTfjZoV0Q=-2" target_checksum="MyTyVYvNthXQp4fOwy/IzuKgFGIzIHpP1DiTfjZoV0Q=-2" source_last_modified="2024-06-15T01:01:48.690+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=12582912 target_size=12582912 key="dir1/data3.dat"
   0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
   ```
+
+- Amazon S3 Express One Zone support  
+  s3sync can be used with Amazon S3 Express.  
+  For more information, see [S3 Express One Zone Availability Zones and Regions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
+
+- Full object checksum(CRC32/CRC32C/CRC64NVME) support  
+  with `--full-object-checksum`, s3sync can use full object checksum(CRC32/CRC32C/CRC64NVME) for each object.
+
+  For more information, see  [Checking object integrity in Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
 
 - Versioning support  
   All versions of the object can be synchronized.(Except intermediate delete markers)
@@ -223,7 +223,7 @@ This project is licensed under the Apache-2.0 License.
 
 ## Installation
 Download the latest binary from [Releases](https://github.com/nidor1998/s3sync/releases)  
-The binary runs on the above platforms without any dependencies.
+This binary cannot be run on a glibc version less than or equal to 2.17. (i.e. CentOS 7, etc.)
 
 You can also build from source following the instructions below.
 ### Install Rust

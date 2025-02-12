@@ -15,6 +15,8 @@ mod tests {
 
     use super::*;
 
+    // This test cannot be run in the default stack size.
+    // Configure RUST_MIN_STACK to run this test. (8000000 is recommended)
     #[tokio::test]
     async fn integrity_check() {
         TestHelper::init_dummy_tracing_subscriber();
