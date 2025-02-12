@@ -46,9 +46,14 @@ pub const LARGE_FILE_PATH_CASE2: &str = "./playground/large_data_e2e_test_case2/
 pub const LARGE_FILE_DIR: &str = "./playground/large_data_e2e_test/";
 pub const LARGE_FILE_DIR_CASE2: &str = "./playground/large_data_e2e_test_case2/";
 
+pub const TEST_8MIB_FILE_DIR: &str = "./playground/large_data_e2e_8mib_test/";
+pub const TEST_8MIB_FILE_PATH: &str = "./playground/large_data_e2e_8mib_test/8mib_file";
+
 pub const LARGE_FILE_SIZE: usize = 30 * 1024 * 1024;
 pub const LARGE_FILE_KEY: &str = "large_file";
 pub const LARGE_FILE_S3_ETAG: &str = "\"9be3303e9a8d67a0f1e609fb7a29030a-4\"";
+pub const TEST_FILE_SIZE_8MIB: usize = 8 * 1024 * 1024;
+pub const TEST_8MIB_FILE_KEY: &str = "8mib_file";
 
 const TEST_CONTENT_DISPOSITION: &str = "attachment; filename=\"filename.jpg\"";
 const TEST_CONTENT_ENCODING: &str = "deflate";
@@ -1077,6 +1082,88 @@ impl TestHelper {
         assert!(!pipeline.has_error());
     }
 
+    pub async fn sync_8mib_test_data_with_sha256(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "SHA256",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_full_object_crc32(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--full-object-checksum",
+            "--additional-checksum-algorithm",
+            "CRC32",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_full_object_crc32c(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--full-object-checksum",
+            "--additional-checksum-algorithm",
+            "CRC32C",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_full_object_crc64nvme(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "CRC64NVME",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
     pub async fn sync_empty_data_with_sha256(&self, target_bucket_url: &str) {
         Self::create_large_file();
 
@@ -1297,6 +1384,17 @@ impl TestHelper {
 
         let data = vec![1_u8; LARGE_FILE_SIZE];
         std::fs::write(LARGE_FILE_PATH_CASE2, data.as_slice()).unwrap();
+    }
+
+    pub fn create_8mib_file() {
+        if Self::is_file_exist(TEST_8MIB_FILE_PATH) {
+            return;
+        }
+
+        std::fs::create_dir_all(TEST_8MIB_FILE_DIR).unwrap();
+
+        let data = vec![0_u8; TEST_FILE_SIZE_8MIB];
+        std::fs::write(TEST_8MIB_FILE_PATH, data.as_slice()).unwrap();
     }
 
     pub fn touch_file(path: &str, add_sec: i64) {
