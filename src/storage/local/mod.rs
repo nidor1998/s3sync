@@ -300,6 +300,13 @@ impl LocalStorage {
             );
         }
 
+        // Since aws-sdk-s3 1.69.0, the checksum mode is always enabled,
+        // and cannot be disabled(maybe).
+        // So, s3sync check the checksum mode is enabled by the user.
+        if self.config.additional_checksum_mode.is_none() {
+            return Ok(());
+        }
+
         if let Some(source_final_checksum) = source_final_checksum {
             trace!(
                 key = key,
