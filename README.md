@@ -21,7 +21,7 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.10.1"
+s3sync = "1.10.2"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 
@@ -178,8 +178,12 @@ async fn main() {
   ```
 
 - Amazon S3 Express One Zone support  
-  s3sync can be used with Amazon S3 Express.  
-  For more information, see [S3 Express One Zone Availability Zones and Regions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
+  s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).  
+  AWS CLI does not support `aws s3 sync` with Amazon S3 Express One Zone. see [AWS S3 sync operations do not work with S3 directory buckets (S3 Express One Zone)](https://github.com/aws/aws-cli/issues/8470).
+
+  s3sync does not depend on the sorting order of returned objects of ListObjectsV2 API.  
+  s3sync gathers all objects in the target bucket at first step(not concurrently) and store the information with Map.  
+  If you want to sync object with Amazon S3 Express One Zone, s3sync is one of the strong candidates.
 
 - Full object checksum(CRC32/CRC32C/CRC64NVME) support  
   with `--full-object-checksum`, s3sync can use full object checksum(CRC32/CRC32C/CRC64NVME) for each object.
