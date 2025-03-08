@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix: `--auto-chunksize` bug.　#55
 
+### Changed
+
+- aws-sdk-s3 = "1.76.0"
 
 ## [1.10.2] - 2025-02-14
 
