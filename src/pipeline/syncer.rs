@@ -622,6 +622,13 @@ impl ObjectSyncer {
             None
         };
 
+        // If additional_checksum_mode is not set, do not build object checksum regardless of the existence of checksum.
+        let checksum_algorithm = if self.base.config.additional_checksum_mode.is_none() {
+            None
+        } else {
+            checksum_algorithm
+        };
+
         let additional_checksum_value =
             get_additional_checksum(get_object_output, additional_checksum_algorithm.clone());
         let object_parts = self
