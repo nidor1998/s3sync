@@ -35,8 +35,8 @@ use crate::storage::{
 use crate::types::token::PipelineCancellationToken;
 use crate::types::SyncStatistics::{SyncBytes, SyncSkip};
 use crate::types::{
-    clone_object_version_with_key, ObjectChecksum, ObjectVersions, S3syncObject, SseCustomerKey,
-    StoragePath, SyncStatistics,
+    clone_object_version_with_key, get_additional_checksum, is_full_object_checksum,
+    ObjectChecksum, ObjectVersions, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
 };
 use crate::Config;
 
@@ -749,6 +749,11 @@ impl StorageTrait for S3Storage {
 
         // On the case of full object checksum, we don't need to calculate checksum for each part and
         // don't need to pass it to upload manager.
+        let additional_checksum_value = get_additional_checksum(
+            &get_object_output,
+            object_checksum.as_ref().unwrap().checksum_algorithm.clone(),
+        );
+        let full_object_checksum = is_full_object_checksum(&additional_checksum_value);
         #[allow(clippy::unnecessary_unwrap)]
         let checksum = if object_checksum.is_some()
             && object_checksum
@@ -757,6 +762,7 @@ impl StorageTrait for S3Storage {
                 .checksum_algorithm
                 .is_some()
             && !self.config.full_object_checksum
+            && !full_object_checksum
         {
             Some(Arc::new(AdditionalChecksum::new(
                 object_checksum
