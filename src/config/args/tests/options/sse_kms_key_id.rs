@@ -45,6 +45,28 @@ mod tests {
     }
 
     #[test]
+    fn with_custom_value_dsse() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--sse",
+            "aws:kms:dsse",
+            "--sse-kms-key-id",
+            "xyz123",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args).unwrap();
+
+        assert!(config.sse_kms_key_id.id.is_some());
+    }
+    #[test]
     fn with_custom_value_without_sse_error() {
         init_dummy_tracing_subscriber();
 
