@@ -2,7 +2,8 @@ use std::str::FromStr;
 
 use aws_sdk_s3::types::ServerSideEncryption;
 
-const INVALID_SSE_VALUE: &str = "invalid sse value. valid choices: AES256 | aws:kms .";
+const INVALID_SSE_VALUE: &str =
+    "invalid sse value. valid choices: AES256 | aws:kms | aws:kms:dsse.";
 
 pub fn parse_sse(sse: &str) -> Result<String, String> {
     #[allow(deprecated)]

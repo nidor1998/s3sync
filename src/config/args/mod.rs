@@ -103,7 +103,7 @@ const CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
 const SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND: &str = "directory must be specified as a source\n";
 const TARGET_LOCAL_STORAGE_INVALID: &str = "invalid target path\n";
 const SSE_KMS_KEY_ID_ARGUMENTS_CONFLICT: &str =
-    "--sse-kms-key-id must be used with --sse aws:kms\n";
+    "--sse-kms-key-id must be used with --sse aws:kms | aws:kms:dsse\n";
 const LOCAL_STORAGE_SPECIFIED_WITH_SSE_C: &str =
     "with --source-sse-c/--target-sse-c, remote storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_DISABLE_PAYLOAD_SIGNING: &str =
@@ -616,8 +616,10 @@ impl CLIArgs {
 
         if self.sse_kms_key_id.is_some()
             && (self.sse.is_none()
-                || ServerSideEncryption::from_str(self.sse.as_ref().unwrap()).unwrap()
-                    != ServerSideEncryption::AwsKms)
+                || (ServerSideEncryption::from_str(self.sse.as_ref().unwrap()).unwrap()
+                    != ServerSideEncryption::AwsKms
+                    && ServerSideEncryption::from_str(self.sse.as_ref().unwrap()).unwrap()
+                        != ServerSideEncryption::AwsKmsDsse))
         {
             return Err(SSE_KMS_KEY_ID_ARGUMENTS_CONFLICT.to_string());
         }

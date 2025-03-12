@@ -21,7 +21,7 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.10.3"
+s3sync = "1.11.0"
 tokio = { version = "1.43.0", features = ["full"] }
 ```
 
@@ -317,7 +317,7 @@ Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA
 ETag is not always MD5. If the object is uploaded with multipart upload, ETag is not MD5 digest but the MD5 digest of these concatenated values.  
 Even if multipart upload is used, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)
 
-If the object is uploaded with SSE-KMS/SSE-C, ETag is not MD5. In this case, s3sync cannot calculate and compare checksums for the object.
+If the object is uploaded with SSE-KMS/SSE-C/DSSE-KMS, ETag is not MD5. In this case, s3sync cannot calculate and compare checksums for the object.
 
 s3sync always uses the following elements to verify the integrity of the object.
 - `Content-MD5` header(End-to-end API level integrity check, without `--disable-content-md5` option)  
@@ -329,7 +329,7 @@ s3sync always uses the following elements to verify the integrity of the object.
   Note: Some S3-compatible storage ignores this header.
 
 - Additional checksum algorithm(Optional)  
-  Even if the object is uploaded with SSE-KMS/SSE-C, s3sync can calculate and compare additional checksum algorithm.  
+  Even if the object is uploaded with SSE-KMS/SSE-C/DSSE-KMS, s3sync can calculate and compare additional checksum algorithm.  
   Note: As of writing this document, few S3-compatible storage supports additional checksum algorithm.
 
 - TLS(If not explicitly disabled)
@@ -354,13 +354,13 @@ Amazon S3 Express One Zone storage class does not support ETag as verification. 
 | multipart object | always verify | verify as much as possible(without `--auto-chunksize`)<br/> always verify(with `--auto-chunksize`) | verify as much as possible(without `--auto-chunksize`)<br/> always verify(with `--auto-chunksize`) |
 | single object    | always verify | always verify                                                                                      | always verify                                                                                      |
 
-#### ETag(MD5 digest or equivalent): SSE-KMS/SSE-C
+#### ETag(MD5 digest or equivalent): SSE-KMS/SSE-C/DSSE-KMS
 |                  | Local to S3 | S3 to Local | S3 to S3   |
 |------------------|-------------|-------------|------------|
 | multipart object | not verify  | not verify  | not verify |
 | single object    | not verify  | not verify  | not verify |
 
-#### Additional checksum: plain-text/SSE-S3/SSE-KMS/SSE-C
+#### Additional checksum: plain-text/SSE-S3/SSE-KMS/SSE-C/DSSE-KMS
 |                  | Local to S3   | S3 to Local   | S3 to S3                                                                                            |
 |------------------|---------------|---------------|-----------------------------------------------------------------------------------------------------|
 | multipart object | always verify | always verify | verify as much as possible (without `--auto-chunksize`)<br/> always verify(with `--auto-chunksize`) |
@@ -418,6 +418,7 @@ The following SSE is supported.
 - SSE-S3
 - SSE-KMS
 - SSE-C
+- DSSE-KMS
 
 ### Memory usage
 s3sync consumes memory for each worker.   
