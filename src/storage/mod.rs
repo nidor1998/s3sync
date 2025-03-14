@@ -16,7 +16,9 @@ use aws_sdk_s3::types::{ChecksumMode, ObjectPart, ObjectVersion, Tagging};
 use aws_sdk_s3::Client;
 use aws_smithy_types::body::SdkBody;
 use dyn_clone::DynClone;
-use http_body_util::StreamBody;
+use futures_util::stream::TryStreamExt;
+use http_body_util::{BodyExt, StreamBody};
+use hyper::body::Frame;
 use leaky_bucket::RateLimiter;
 use tokio::io::{AsyncRead, BufReader};
 use tokio_util::io::ReaderStream;
@@ -149,16 +151,17 @@ pub fn convert_to_buf_byte_stream_with_callback<R>(
     object_checksum: Option<ObjectChecksum>,
 ) -> ByteStream
 where
-    R: AsyncRead + Send + 'static,
+    R: AsyncRead + Send + 'static + std::marker::Sync,
 {
-    ByteStream::new(SdkBody::from_body_0_4(StreamBody::new(ReaderStream::new(
-        BufReader::new(AsyncReadWithCallback::new(
+    ByteStream::new(SdkBody::from_body_1_x(BodyExt::boxed(StreamBody::new(
+        ReaderStream::new(BufReader::new(AsyncReadWithCallback::new(
             byte_stream,
             stats_sender,
             rate_limit_bandwidth,
             additional_checksum,
             object_checksum,
-        )),
+        )))
+        .map_ok(Frame::data),
     ))))
 }
 
