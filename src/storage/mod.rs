@@ -16,7 +16,7 @@ use aws_sdk_s3::types::{ChecksumMode, ObjectPart, ObjectVersion, Tagging};
 use aws_sdk_s3::Client;
 use aws_smithy_types::body::SdkBody;
 use dyn_clone::DynClone;
-use hyper::Body;
+use http_body_util::StreamBody;
 use leaky_bucket::RateLimiter;
 use tokio::io::{AsyncRead, BufReader};
 use tokio_util::io::ReaderStream;
@@ -151,15 +151,15 @@ pub fn convert_to_buf_byte_stream_with_callback<R>(
 where
     R: AsyncRead + Send + 'static,
 {
-    ByteStream::new(SdkBody::from_body_0_4(Body::wrap_stream(
-        ReaderStream::new(BufReader::new(AsyncReadWithCallback::new(
+    ByteStream::new(SdkBody::from_body_0_4(StreamBody::new(ReaderStream::new(
+        BufReader::new(AsyncReadWithCallback::new(
             byte_stream,
             stats_sender,
             rate_limit_bandwidth,
             additional_checksum,
             object_checksum,
-        ))),
-    )))
+        )),
+    ))))
 }
 
 pub fn get_size_string_from_content_range(get_object_output: &GetObjectOutput) -> String {

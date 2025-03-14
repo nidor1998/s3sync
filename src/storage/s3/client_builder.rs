@@ -10,30 +10,30 @@ use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
 use aws_smithy_runtime_api::client::stalled_stream_protection::StalledStreamProtectionConfig;
 use aws_types::region::Region;
 use aws_types::SdkConfig;
-use hyper::client::HttpConnector;
-use hyper_proxy::{Intercept, Proxy, ProxyConnector};
-use hyper_rustls::HttpsConnector;
-use rustls::client::ServerCertVerified;
-use rustls::client::ServerCertVerifier;
-use rustls::ServerName;
+// use hyper::client::HttpConnector;
+// use hyper_proxy::{Intercept, Proxy, ProxyConnector};
+// use hyper_rustls::HttpsConnector;
+// use rustls::client::ServerCertVerified;
+// use rustls::client::ServerCertVerifier;
+// use rustls::ServerName;
 
 use crate::config::ClientConfig;
 
 pub struct NoCertificateVerification {}
 
-impl ServerCertVerifier for NoCertificateVerification {
-    fn verify_server_cert(
-        &self,
-        _end_entity: &rustls::Certificate,
-        _intermediates: &[rustls::Certificate],
-        _server_name: &ServerName,
-        _scts: &mut dyn Iterator<Item = &[u8]>,
-        _ocsp: &[u8],
-        _now: std::time::SystemTime,
-    ) -> Result<ServerCertVerified, rustls::Error> {
-        Ok(ServerCertVerified::assertion())
-    }
-}
+// impl ServerCertVerifier for NoCertificateVerification {
+//     fn verify_server_cert(
+//         &self,
+//         _end_entity: &rustls::Certificate,
+//         _intermediates: &[rustls::Certificate],
+//         _server_name: &ServerName,
+//         _scts: &mut dyn Iterator<Item = &[u8]>,
+//         _ocsp: &[u8],
+//         _now: std::time::SystemTime,
+//     ) -> Result<ServerCertVerified, rustls::Error> {
+//         Ok(ServerCertVerified::assertion())
+//     }
+// }
 
 impl ClientConfig {
     pub async fn create_client(&self) -> Client {
@@ -41,54 +41,54 @@ impl ClientConfig {
             .force_path_style(self.force_path_style)
             .request_checksum_calculation(self.request_checksum_calculation);
 
-        if self.https_proxy.is_some() || self.http_proxy.is_some() {
-            return Client::from_conf(config_builder.http_client(self.create_proxy()).build());
-        } else if self.no_verify_ssl {
-            return Client::from_conf(
-                config_builder
-                    .http_client(create_no_verify_ssl_connector())
-                    .build(),
-            );
-        }
+        // if self.https_proxy.is_some() || self.http_proxy.is_some() {
+        //     return Client::from_conf(config_builder.http_client(self.create_proxy()).build());
+        // } else if self.no_verify_ssl {
+        //     return Client::from_conf(
+        //         config_builder
+        //             .http_client(create_no_verify_ssl_connector())
+        //             .build(),
+        //     );
+        // }
 
         Client::from_conf(config_builder.build())
     }
 
-    fn create_proxy(&self) -> SharedHttpClient {
-        let connector = HttpConnector::new();
-        let mut proxy_connector = ProxyConnector::new(connector).unwrap();
-
-        let make_proxy = |intercept: Intercept, uri: hyper::Uri| {
-            let mut proxy = Proxy::new(intercept, uri.clone());
-            let authority = uri.authority();
-            if let Some((username, password)) = authority
-                .and_then(|x| x.as_str().split_once('@'))
-                .map(|x| x.0.split_once(':').unwrap())
-            {
-                proxy.set_authorization(headers::Authorization::basic(username, password))
-            }
-            proxy
-        };
-
-        if self.https_proxy.is_some() {
-            if let Ok(uri) = self
-                .https_proxy
-                .as_ref()
-                .unwrap()
-                .to_string()
-                .parse::<hyper::Uri>()
-            {
-                proxy_connector.add_proxy(make_proxy(Intercept::Https, uri));
-            }
-        }
-        if self.http_proxy.is_some() {
-            if let Ok(uri) = self.http_proxy.as_ref().unwrap().to_string().parse() {
-                proxy_connector.add_proxy(make_proxy(Intercept::Http, uri));
-            }
-        }
-
-        HyperClientBuilder::new().build(proxy_connector)
-    }
+    // fn create_proxy(&self) -> SharedHttpClient {
+    //     let connector = HttpConnector::new();
+    //     let mut proxy_connector = ProxyConnector::new(connector).unwrap();
+    //
+    //     let make_proxy = |intercept: Intercept, uri: hyper::Uri| {
+    //         let mut proxy = Proxy::new(intercept, uri.clone());
+    //         let authority = uri.authority();
+    //         if let Some((username, password)) = authority
+    //             .and_then(|x| x.as_str().split_once('@'))
+    //             .map(|x| x.0.split_once(':').unwrap())
+    //         {
+    //             proxy.set_authorization(headers::Authorization::basic(username, password))
+    //         }
+    //         proxy
+    //     };
+    //
+    //     if self.https_proxy.is_some() {
+    //         if let Ok(uri) = self
+    //             .https_proxy
+    //             .as_ref()
+    //             .unwrap()
+    //             .to_string()
+    //             .parse::<hyper::Uri>()
+    //         {
+    //             proxy_connector.add_proxy(make_proxy(Intercept::Https, uri));
+    //         }
+    //     }
+    //     if self.http_proxy.is_some() {
+    //         if let Ok(uri) = self.http_proxy.as_ref().unwrap().to_string().parse() {
+    //             proxy_connector.add_proxy(make_proxy(Intercept::Http, uri));
+    //         }
+    //     }
+    //
+    //     HyperClientBuilder::new().build(proxy_connector)
+    // }
 
     async fn load_sdk_config(&self) -> SdkConfig {
         let config_loader = if self.disable_stalled_stream_protection {
@@ -180,35 +180,35 @@ impl ClientConfig {
     }
 }
 
-fn create_no_verify_ssl_http_connector() -> HttpsConnector<HttpConnector> {
-    let mut root_store = rustls::RootCertStore::empty();
-    root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-        rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-            ta.subject,
-            ta.spki,
-            ta.name_constraints,
-        )
-    }));
+// fn create_no_verify_ssl_http_connector() -> HttpsConnector<HttpConnector> {
+//     let mut root_store = rustls::RootCertStore::empty();
+//     root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
+//         rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+//             ta.subject,
+//             ta.spki,
+//             ta.name_constraints,
+//         )
+//     }));
+//
+//     let mut tls_config = rustls::client::ClientConfig::builder()
+//         .with_safe_defaults()
+//         .with_root_certificates(root_store)
+//         .with_no_client_auth();
+//     tls_config
+//         .dangerous()
+//         .set_certificate_verifier(Arc::new(NoCertificateVerification {}));
+//
+//     hyper_rustls::HttpsConnectorBuilder::new()
+//         .with_tls_config(tls_config)
+//         .https_or_http()
+//         .enable_http1()
+//         .enable_http2()
+//         .build()
+// }
 
-    let mut tls_config = rustls::client::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_root_certificates(root_store)
-        .with_no_client_auth();
-    tls_config
-        .dangerous()
-        .set_certificate_verifier(Arc::new(NoCertificateVerification {}));
-
-    hyper_rustls::HttpsConnectorBuilder::new()
-        .with_tls_config(tls_config)
-        .https_or_http()
-        .enable_http1()
-        .enable_http2()
-        .build()
-}
-
-fn create_no_verify_ssl_connector() -> SharedHttpClient {
-    HyperClientBuilder::new().build(create_no_verify_ssl_http_connector())
-}
+// fn create_no_verify_ssl_connector() -> SharedHttpClient {
+//     HyperClientBuilder::new().build(create_no_verify_ssl_http_connector())
+// }
 
 #[cfg(test)]
 mod tests {
