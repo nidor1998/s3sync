@@ -907,8 +907,8 @@ impl CLIArgs {
 
         #[cfg(feature = "legacy_hyper014_feature")]
         {
-            https_proxy = self.https_proxy.clone();
-            http_proxy = self.http_proxy.clone();
+            https_proxy.clone_from(&self.https_proxy);
+            http_proxy.clone_from(&self.http_proxy);
             no_verify_ssl = self.no_verify_ssl;
         }
 
