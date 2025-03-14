@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[cfg(feature = "legacy_hyper014_feature")]
 mod tests {
     use crate::config::args::*;
 

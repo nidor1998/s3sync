@@ -1,6 +1,7 @@
 use url::Url;
 
 const INVALID_SCHEME: &str = "scheme must be https:// or http:// .";
+#[allow(dead_code)]
 const HTTP_PROXY_AUTH_NOT_SUPPORTED: &str = "HTTP proxy with authentication is not supported.";
 
 pub fn check_scheme(url: &str) -> Result<String, String> {
@@ -13,6 +14,7 @@ pub fn check_scheme(url: &str) -> Result<String, String> {
     Ok(url.to_string())
 }
 
+#[allow(dead_code)]
 pub fn check_scheme_and_no_authority_exist(url: &str) -> Result<String, String> {
     check_scheme(url)?;
 

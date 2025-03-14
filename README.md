@@ -21,8 +21,8 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.11.0"
-tokio = { version = "1.43.0", features = ["full"] }
+s3sync = "1.12.0"
+tokio = { version = "1.44.1", features = ["full"] }
 ```
 
 ```rust
