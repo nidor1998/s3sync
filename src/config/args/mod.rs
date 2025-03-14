@@ -245,10 +245,12 @@ pub struct CLIArgs {
     auto_chunksize: bool,
 
     /// proxy server to use for HTTPS
+    #[cfg(feature = "legacy_hyper014_feature")]
     #[arg(long, env, value_parser = url::check_scheme)]
     https_proxy: Option<String>,
 
     /// proxy server to use for HTTP
+    #[cfg(feature = "legacy_hyper014_feature")]
     #[arg(long, env, value_parser = url::check_scheme_and_no_authority_exist)]
     http_proxy: Option<String>,
 
@@ -433,6 +435,7 @@ pub struct CLIArgs {
     rate_limit_bandwidth: Option<String>,
 
     /// [dangerous] disable to verify SSL certificates.
+    #[cfg(feature = "legacy_hyper014_feature")]
     #[arg(long, env, conflicts_with_all = ["https_proxy", "http_proxy"], default_value_t = DEFAULT_NO_VERIFY_SSL)]
     no_verify_ssl: bool,
 
@@ -890,6 +893,25 @@ impl CLIArgs {
             Some(S3Credentials::FromEnvironment)
         };
 
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut https_proxy = None;
+
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut http_proxy = None;
+
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut no_verify_ssl = DEFAULT_NO_VERIFY_SSL;
+
+        #[cfg(feature = "legacy_hyper014_feature")]
+        {
+            https_proxy = self.https_proxy.clone();
+            http_proxy = self.http_proxy.clone();
+            no_verify_ssl = self.no_verify_ssl;
+        }
+
         let source_client_config = source_credential.map(|source_credential| ClientConfig {
             client_config_location: ClientConfigLocation {
                 aws_config_file: self.aws_config_file.clone(),
@@ -903,9 +925,9 @@ impl CLIArgs {
                 aws_max_attempts: self.aws_max_attempts,
                 initial_backoff_milliseconds: self.initial_backoff_milliseconds,
             },
-            https_proxy: self.https_proxy.clone(),
-            http_proxy: self.http_proxy.clone(),
-            no_verify_ssl: self.no_verify_ssl,
+            https_proxy: https_proxy.clone(),
+            http_proxy: http_proxy.clone(),
+            no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         });
@@ -929,9 +951,9 @@ impl CLIArgs {
                 aws_max_attempts: self.aws_max_attempts,
                 initial_backoff_milliseconds: self.initial_backoff_milliseconds,
             },
-            https_proxy: self.https_proxy.clone(),
-            http_proxy: self.http_proxy.clone(),
-            no_verify_ssl: self.no_verify_ssl,
+            https_proxy,
+            http_proxy,
+            no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation,
         });
