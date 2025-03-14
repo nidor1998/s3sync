@@ -18,7 +18,7 @@ use crate::types::{ObjectChecksum, SyncStatistics};
 const MINIMUM_CHUNKSIZE: usize = 5 * 1024 * 1024;
 
 #[pin_project]
-pub struct AsyncReadWithCallback<R: AsyncRead> {
+pub struct AsyncReadWithCallback<R: AsyncRead + Send + Sync> {
     #[pin]
     inner: R,
     stats_sender: Sender<SyncStatistics>,
@@ -35,7 +35,7 @@ struct Cursor {
     pub eof: bool,
 }
 
-impl<R: AsyncRead> AsyncReadWithCallback<R> {
+impl<R: AsyncRead + Send + Sync> AsyncReadWithCallback<R> {
     pub fn new(
         inner: R,
         stats_sender: Sender<SyncStatistics>,
@@ -54,7 +54,7 @@ impl<R: AsyncRead> AsyncReadWithCallback<R> {
     }
 }
 
-impl<R: AsyncRead> AsyncRead for AsyncReadWithCallback<R> {
+impl<R: AsyncRead + Send + Sync> AsyncRead for AsyncReadWithCallback<R> {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
