@@ -365,7 +365,7 @@ pub struct CLIArgs {
     #[arg(long, env, value_parser = storage_class::parse_storage_class)]
     storage_class: Option<String>,
 
-    /// server-side encryption. valid choices: AES256 | aws:kms
+    /// server-side encryption. valid choices: AES256 | aws:kms | aws:kms:dsse
     #[arg(long, env, value_parser = sse::parse_sse)]
     sse: Option<String>,
 
