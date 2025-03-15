@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2025-03-15
+
+### Changed
+
+Changed to using Hyper 1.x internally, Some features are not available in Hyper 1.x, so separated as `legacy_hyper014_feature` feature.
+
+`--no-verify-ssl`, `--http-proxy` `--https-proxy` options require `legacy_hyper014_feature` feature.It is enabled by default.
+
+see https://github.com/nidor1998/s3sync/issues/59.
+
 ## [1.11.0] - 2025-03-12
 
 ### Added
