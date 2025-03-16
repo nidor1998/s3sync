@@ -99,6 +99,8 @@ const GET_OBJECT_DENY_BUCKET_POLICY: &str = r#"{
     ]
 }"#;
 
+pub const SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST: u64 = 30 * 1000;
+
 #[cfg(feature = "e2e_test")]
 pub struct TestHelper {
     client: Client,
