@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           BINARY_NAME=$APP_NAME
-          RELEASE_NAME=$APP_NAME-linux-glibc2.17-x86_64
+          RELEASE_NAME=$APP_NAME-linux-glibc2.28-x86_64
 
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs >./rust_install.sh
           chmod +x rust_install.sh
@@ -37,8 +37,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.17-x86_64.tar.gz
-            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.17-x86_64.sha256
+            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.28-x86_64.tar.gz
+            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.28-x86_64.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
