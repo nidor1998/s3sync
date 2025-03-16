@@ -15,10 +15,8 @@ mod tests {
 
     use super::*;
 
-    // This test cannot be run in the default stack size.
-    // Configure RUST_MIN_STACK to run this test. (8000000 is recommended)
     #[tokio::test]
-    async fn integrity_check() {
+    async fn integrity_check_local_to_s3() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
@@ -37,34 +35,13 @@ mod tests {
         {
             local_to_s3_single_no_verify_e_tag().await;
             local_to_s3_multipart_no_verify_e_tag().await;
-            s3_to_local_single_no_verify_e_tag().await;
-            s3_to_local_multipart_no_verify_e_tag().await;
-            s3_to_s3_single_no_verify_e_tag().await;
-            s3_to_s3_multipart_no_verify_e_tag().await;
-
             local_to_s3_single_e_tag().await;
-            s3_to_local_single_e_tag().await;
-            s3_to_s3_single_e_tag().await;
             local_to_s3_multipart_e_tag().await;
-            s3_to_local_multipart_e_tag().await;
-            s3_to_s3_multipart_e_tag().await;
-            s3_to_local_multipart_e_tag_ng().await;
-            s3_to_local_multipart_e_tag_auto().await;
-            s3_to_s3_multipart_e_tag_ng().await;
-            s3_to_s3_multipart_e_tag_auto().await;
             local_to_s3_single_checksum().await;
-            s3_to_local_single_checksum().await;
-            s3_to_s3_single_checksum().await;
             local_to_s3_multipart_checksum().await;
             local_to_s3_sse_kms().await;
-            s3_to_local_sse_kms().await;
-            s3_to_s3_sse_kms().await;
             local_to_s3_dsse_kms().await;
-            s3_to_local_dsse_kms().await;
-            s3_to_s3_dsse_kms().await;
             local_to_s3_sse_c().await;
-            s3_to_local_sse_c().await;
-            s3_to_s3_sse_c().await;
             local_to_s3_multipart_sse_kms().await;
             local_to_s3_multipart_dsse_kms().await;
             local_to_s3_multipart_sse_c().await;
@@ -72,34 +49,117 @@ mod tests {
             local_to_s3_multipart_without_content_md5().await;
             local_to_s3_single_checksum_without_content_md5().await;
             local_to_s3_multipart_checksum_without_content_md5().await;
+            local_to_s3_single_crc64nvme_checksum().await;
+            local_to_s3_multipart_crc64nvme_checksum().await;
+            local_to_s3_single_crc64nvme_checksum_without_content_md5().await;
+            local_to_s3_multipart_crc64nvme_checksum_without_content_md5().await;
+            local_to_s3_multipart_crc32_full_object_checksum().await;
+            local_to_s3_multipart_crc32c_full_object_checksum().await;
+        }
 
-            s3_to_s3_multipart_checksum().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
+        ))
+        .await;
+    }
+
+    #[tokio::test]
+    async fn integrity_check_s3_to_local() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+        helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+        {
+            s3_to_local_single_no_verify_e_tag().await;
+            s3_to_local_multipart_no_verify_e_tag().await;
+            s3_to_local_single_e_tag().await;
+            s3_to_local_multipart_e_tag().await;
+            s3_to_local_multipart_e_tag_ng().await;
+            s3_to_local_multipart_e_tag_auto().await;
+            s3_to_local_single_checksum().await;
             s3_to_local_multipart_checksum().await;
+            s3_to_local_sse_kms().await;
+            s3_to_local_dsse_kms().await;
+            s3_to_local_sse_c().await;
+            s3_to_local_multipart_sse_kms().await;
+            s3_to_local_multipart_dsse_kms().await;
+            s3_to_local_multipart_sse_c().await;
+            s3_to_local_single_crc64nvme_checksum().await;
+            s3_to_local_multipart_crc64nvme_checksum().await;
+            s3_to_local_multipart_crc32_full_object_checksum().await;
+            s3_to_local_multipart_crc32c_full_object_checksum().await;
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
+        ))
+        .await;
+    }
+
+    #[tokio::test]
+    async fn integrity_check_s3_to_s3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+        helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+        {
+            s3_to_s3_single_no_verify_e_tag().await;
+            s3_to_s3_multipart_no_verify_e_tag().await;
+            s3_to_s3_single_e_tag().await;
+            s3_to_s3_multipart_e_tag().await;
+            s3_to_s3_multipart_e_tag_ng().await;
+            s3_to_s3_multipart_e_tag_auto().await;
+            s3_to_s3_single_checksum().await;
+            s3_to_s3_sse_kms().await;
+            s3_to_s3_dsse_kms().await;
+            s3_to_s3_sse_c().await;
+            s3_to_s3_multipart_checksum().await;
             s3_to_s3_multipart_checksum_auto().await;
             s3_to_s3_multipart_checksum_ng().await;
             s3_to_s3_multipart_checksum_ng_different_checksum().await;
-            s3_to_local_multipart_sse_kms().await;
             s3_to_s3_multipart_sse_kms().await;
-            s3_to_local_multipart_dsse_kms().await;
             s3_to_s3_multipart_dsse_kms().await;
-            s3_to_local_multipart_sse_c().await;
             s3_to_s3_multipart_sse_c().await;
-
-            local_to_s3_single_crc64nvme_checksum().await;
-            local_to_s3_multipart_crc64nvme_checksum().await;
-            s3_to_local_single_crc64nvme_checksum().await;
-            s3_to_local_multipart_crc64nvme_checksum().await;
             s3_to_s3_single_crc64nvme_checksum().await;
             s3_to_s3_multipart_crc64nvme_checksum().await;
             s3_to_s3_multipart_crc64nvme_checksum_auto().await;
             s3_to_s3_multipart_crc64nvme_checksum_ok().await;
-            local_to_s3_single_crc64nvme_checksum_without_content_md5().await;
-            local_to_s3_multipart_crc64nvme_checksum_without_content_md5().await;
-
-            local_to_s3_multipart_crc32_full_object_checksum().await;
-            local_to_s3_multipart_crc32c_full_object_checksum().await;
-            s3_to_local_multipart_crc32_full_object_checksum().await;
-            s3_to_local_multipart_crc32c_full_object_checksum().await;
             s3_to_s3_multipart_crc32_full_object_checksum().await;
             s3_to_s3_multipart_crc32c_full_object_checksum().await;
             s3_to_s3_multipart_crc32_full_object_checksum_auto().await;
@@ -112,6 +172,11 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&BUCKET2.to_string())
             .await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
+        ))
+        .await;
     }
 
     async fn local_to_s3_single_e_tag() {
