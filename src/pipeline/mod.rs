@@ -122,13 +122,7 @@ impl Pipeline {
 
     async fn check_prerequisites(&self) -> bool {
         if self.config.enable_versioning && !self.is_both_bucket_versioning_enabled().await {
-            error!("Versioning must be enabled on both buckets.");
-
-            self.has_error.store(true, Ordering::SeqCst);
-
-            let error_list = self.errors.clone();
-            let mut error_list = error_list.lock().unwrap();
-            error_list.push_back(anyhow!("Versioning must be enabled on both buckets."));
+            self.store_error(None, "Versioning must be enabled on both buckets.");
 
             return false;
         }
@@ -139,13 +133,9 @@ impl Pipeline {
     async fn is_both_bucket_versioning_enabled(&self) -> bool {
         let source_versioning_enabled = self.source.is_versioning_enabled().await;
         if let Err(e) = source_versioning_enabled {
-            let error = e.to_string();
-            let source = e.source();
-
-            error!(
-                error = error,
-                source = source,
-                "failed to check versioning status of source bucket."
+            self.store_error(
+                Some(e),
+                "failed to check versioning status of source bucket.",
             );
 
             return false;
@@ -153,13 +143,9 @@ impl Pipeline {
 
         let target_versioning_enabled = self.target.is_versioning_enabled().await;
         if let Err(e) = target_versioning_enabled {
-            let error = e.to_string();
-            let source = e.source();
-
-            error!(
-                error = error,
-                source = source,
-                "failed to check versioning status of target bucket."
+            self.store_error(
+                Some(e),
+                "failed to check versioning status of target bucket.",
             );
 
             return false;
@@ -232,19 +218,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    has_error.store(true, Ordering::SeqCst);
-
-                    let error = e.to_string();
-                    let source = e.source();
-
-                    error!(
-                        error = error,
-                        source = source,
-                        "list source objects failed."
-                    );
-
-                    let mut error_list = error_list.lock().unwrap();
-                    error_list.push_back(e);
+                    store_error(has_error, error_list, e, "list source objects failed.");
                 }
             }
         });
@@ -264,19 +238,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    has_error.store(true, Ordering::SeqCst);
-
-                    let error = e.to_string();
-                    let source = e.source();
-
-                    error!(
-                        error = error,
-                        source = source,
-                        "list target objects failed."
-                    );
-
-                    let mut error_list = error_list.lock().unwrap();
-                    error_list.push_back(e);
+                    store_error(has_error, error_list, e, "list target objects failed.");
                 }
             }
         });
@@ -536,6 +498,24 @@ impl Pipeline {
             Some(sender),
             self.cancellation_token.clone(),
         )
+    }
+
+    fn store_error(&self, e: Option<Error>, message: &str) {
+        self.has_error.store(true, Ordering::SeqCst);
+
+        if let Some(e) = e {
+            let error = e.to_string();
+            let source = e.source();
+
+            error!(error = error, source = source, message);
+            self.errors.lock().unwrap().push_back(e);
+        } else {
+            error!("{}", message.to_string());
+            self.errors
+                .lock()
+                .unwrap()
+                .push_back(anyhow!(message.to_string()));
+        }
     }
 
     pub fn get_stats_receiver(&self) -> Receiver<SyncStatistics> {
