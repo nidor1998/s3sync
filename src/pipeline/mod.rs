@@ -303,19 +303,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    has_error.store(true, Ordering::SeqCst);
-
-                    let error = e.to_string();
-                    let source = e.source();
-
-                    error!(
-                        error = error,
-                        source = source,
-                        "object keys aggregation failed."
-                    );
-
-                    let mut error_list = error_list.lock().unwrap();
-                    error_list.push_back(e);
+                    store_error(has_error, error_list, e, "object keys aggregation failed.");
                 }
             }
         });
@@ -403,15 +391,7 @@ impl Pipeline {
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    has_error.store(true, Ordering::SeqCst);
-
-                    let error = e.to_string();
-                    let source = e.source();
-
-                    error!(error = error, source = source, "filter objects failed.",);
-
-                    let mut error_list = error_list.lock().unwrap();
-                    error_list.push_back(e);
+                    store_error(has_error, error_list, e, "filter objects failed.");
                 }
             }
         });
@@ -432,10 +412,7 @@ impl Pipeline {
                 match result {
                     Ok(_) => {}
                     Err(e) => {
-                        has_error.store(true, Ordering::SeqCst);
-
-                        let mut error_list = error_list.lock().unwrap();
-                        error_list.push_back(e);
+                        store_error(has_error, error_list, e, "sync objects failed.");
                     }
                 }
             });
@@ -458,15 +435,7 @@ impl Pipeline {
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    has_error.store(true, Ordering::SeqCst);
-
-                    let error = e.to_string();
-                    let source = e.source();
-
-                    error!(error = error, source = source, "pack objects failed.");
-
-                    let mut error_list = error_list.lock().unwrap();
-                    error_list.push_back(e);
+                    store_error(has_error, error_list, e, "pack objects failed.");
                 }
             }
         });
@@ -501,19 +470,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    has_error.store(true, Ordering::SeqCst);
-
-                    let error = e.to_string();
-                    let source = e.source();
-
-                    error!(
-                        error = error,
-                        source = source,
-                        "difference detection failed."
-                    );
-
-                    let mut error_list = error_list.lock().unwrap();
-                    error_list.push_back(e);
+                    store_error(has_error, error_list, e, "difference detection failed.");
                 }
             }
         });
@@ -539,19 +496,7 @@ impl Pipeline {
                 match result {
                     Ok(_) => {}
                     Err(e) => {
-                        has_error.store(true, Ordering::SeqCst);
-
-                        let error = e.to_string();
-                        let source = e.source();
-
-                        error!(
-                            error = error,
-                            source = source,
-                            "delete target objects failed."
-                        );
-
-                        let mut error_list = error_list.lock().unwrap();
-                        error_list.push_back(e);
+                        store_error(has_error, error_list, e, "delete target objects failed.");
                     }
                 }
             });
@@ -621,6 +566,23 @@ impl Pipeline {
         self.source.get_stats_sender().close();
         self.target.get_stats_sender().close();
     }
+}
+
+fn store_error(
+    has_error: Arc<AtomicBool>,
+    errors: Arc<Mutex<VecDeque<Error>>>,
+    e: Error,
+    message: &str,
+) {
+    has_error.store(true, Ordering::SeqCst);
+
+    let error = e.to_string();
+    let source = e.source();
+
+    error!(error = error, source = source, message);
+
+    let mut error_list = errors.lock().unwrap();
+    error_list.push_back(e);
 }
 
 fn is_listing_source_required(delete_target: bool) -> bool {
