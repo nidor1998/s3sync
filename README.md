@@ -21,7 +21,7 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 ```Toml
 [dependencies]
-s3sync = "1.12.1"
+s3sync = "1.12.2"
 tokio = { version = "1.44.1", features = ["full"] }
 ```
 
