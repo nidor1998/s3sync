@@ -68,10 +68,10 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Mutex;
 
+    use super::*;
     use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
     use aws_sdk_s3::types::Object;
-
-    use super::*;
+    use tracing_subscriber::EnvFilter;
 
     #[test]
     fn before() {
@@ -176,7 +176,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

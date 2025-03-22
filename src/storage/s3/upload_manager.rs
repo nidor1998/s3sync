@@ -1086,9 +1086,9 @@ pub fn get_additional_checksum_from_multipart_upload_result(
 
 #[cfg(test)]
 mod tests {
-    use aws_sdk_s3::primitives::DateTime;
-
     use super::*;
+    use aws_sdk_s3::primitives::DateTime;
+    use tracing_subscriber::EnvFilter;
 
     #[test]
     fn update_versioning_metadata_with_new() {
@@ -1247,7 +1247,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

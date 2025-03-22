@@ -26,6 +26,7 @@ use aws_types::SdkConfig;
 use filetime::{set_file_mtime, FileTime};
 use once_cell::sync::Lazy;
 use tokio::sync::Semaphore;
+use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
@@ -1470,7 +1471,11 @@ impl TestHelper {
 
     pub fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

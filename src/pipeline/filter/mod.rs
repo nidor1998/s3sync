@@ -89,15 +89,15 @@ impl ObjectFilterBase<'_> {
 
 #[cfg(test)]
 mod tests {
-    use async_channel::Receiver;
-    use aws_sdk_s3::types::Object;
-
     use crate::config::args::parse_from_args;
     use crate::storage::local::LocalStorageFactory;
     use crate::storage::StorageFactory;
     use crate::types::token;
     use crate::types::token::PipelineCancellationToken;
     use crate::Config;
+    use async_channel::Receiver;
+    use aws_sdk_s3::types::Object;
+    use tracing_subscriber::EnvFilter;
 
     use super::*;
 
@@ -237,7 +237,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

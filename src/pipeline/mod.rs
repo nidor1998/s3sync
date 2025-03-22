@@ -642,10 +642,10 @@ fn is_listing_target_required(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use crate::config::args::parse_from_args;
     use crate::types::token::create_pipeline_cancellation_token;
+    use std::path::PathBuf;
+    use tracing_subscriber::EnvFilter;
 
     use super::*;
 
@@ -1329,7 +1329,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

@@ -81,15 +81,15 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
-    use aws_sdk_s3::primitives::DateTime;
-    use aws_sdk_s3::types::Object;
-
     use crate::config::args::parse_from_args;
     use crate::pipeline::key_aggregator::{build_object_key_entry, insert_key, KeyAggregator};
     use crate::pipeline::stage::Stage;
     use crate::types::token::create_pipeline_cancellation_token;
     use crate::types::{sha1_digest_from_key, ObjectKey, ObjectKeyMap, S3syncObject};
     use crate::Config;
+    use aws_sdk_s3::primitives::DateTime;
+    use aws_sdk_s3::types::Object;
+    use tracing_subscriber::EnvFilter;
 
     #[test]
     fn build_object_key_entry_test() {
@@ -330,7 +330,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }
