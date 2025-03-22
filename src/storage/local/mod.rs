@@ -1268,7 +1268,7 @@ mod tests {
     }
 
     #[tokio::test]
-    //#[cfg(target_family = "unix")]
+    #[cfg(target_family = "unix")]
     async fn list_storage_special_files_warn_as_error() {
         init_dummy_tracing_subscriber();
 
