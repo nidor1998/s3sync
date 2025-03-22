@@ -1268,6 +1268,38 @@ mod tests {
     }
 
     #[tokio::test]
+    //#[cfg(target_family = "unix")]
+    async fn list_storage_special_files_warn_as_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            "/dev/fd",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.target_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
+        assert!(storage.list_objects(&sender, 1000, true).await.is_err());
+    }
+
+    #[tokio::test]
     #[cfg(target_os = "linux")]
     async fn list_storage_special_files_linux() {
         init_dummy_tracing_subscriber();
