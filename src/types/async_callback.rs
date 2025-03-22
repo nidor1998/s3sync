@@ -753,6 +753,43 @@ mod tests {
         assert!(file_with_callback.read_to_end(&mut buffer).await.is_err())
     }
 
+    #[test]
+    fn is_multipart_test_false() {
+        let object_checksum = ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
+            object_parts: None,
+            final_checksum: None,
+        };
+
+        assert!(!is_multipart(&Some(object_checksum)));
+        assert!(!is_multipart(&None));
+    }
+
+    #[test]
+    fn is_multipart_test_true() {
+        let mut object_parts = Vec::new();
+        object_parts.push(
+            ObjectPartBuilder::default()
+                .size(0)
+                .checksum_sha256(EMPTY_SHA256_BASE64_DIGEST)
+                .build(),
+        );
+
+        let object_checksum = Some(ObjectChecksum {
+            key: "test".to_string(),
+            version_id: None,
+            checksum_algorithm: Some(ChecksumAlgorithm::Sha256),
+            checksum_type: None,
+            object_parts: Some(object_parts),
+            final_checksum: Some(EMPTY_SHA256_BASE64_FINAL_DIGEST.to_string()),
+        });
+
+        assert!(is_multipart(&object_checksum));
+    }
+
     async fn create_large_file() {
         if PathBuf::from(LARGE_FILE_PATH).try_exists().unwrap() {
             return;
