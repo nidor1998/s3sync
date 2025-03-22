@@ -63,10 +63,10 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
+    use crate::types::{ObjectEntry, ObjectKey};
     use aws_sdk_s3::types::Object;
     use regex::Regex;
-
-    use crate::types::{ObjectEntry, ObjectKey};
+    use tracing_subscriber::EnvFilter;
 
     use super::*;
 
@@ -136,7 +136,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

@@ -157,12 +157,12 @@ pub async fn generate_checksum_from_path_with_chunksize(
 mod tests {
     use std::path::PathBuf;
 
-    use aws_sdk_s3::types::ChecksumAlgorithm;
-
     use crate::storage::additional_checksum_verify::{
         generate_checksum_from_path, generate_checksum_from_path_for_check,
         generate_checksum_from_path_with_chunksize, UNKNOWN_CHECKSUM_VALUE,
     };
+    use aws_sdk_s3::types::ChecksumAlgorithm;
+    use tracing_subscriber::EnvFilter;
 
     const TEST_SHA256_BASE64_DIGEST: &str = "WZRHGrsBESr8wYFZ9sx0tPURuZgG2lmzyvWpwXPKz8U=";
 
@@ -528,7 +528,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

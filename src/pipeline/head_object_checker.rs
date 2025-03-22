@@ -1224,15 +1224,15 @@ fn is_head_object_not_found_error(result: &anyhow::Error) -> bool {
 }
 #[cfg(test)]
 mod tests {
-    use aws_sdk_s3::operation::head_object;
-    use aws_sdk_s3::primitives::DateTime;
-    use aws_sdk_s3::types::Object;
-    use aws_smithy_runtime_api::http::{Response, StatusCode};
-
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
     use crate::storage::StoragePair;
     use crate::types::token::create_pipeline_cancellation_token;
+    use aws_sdk_s3::operation::head_object;
+    use aws_sdk_s3::primitives::DateTime;
+    use aws_sdk_s3::types::Object;
+    use aws_smithy_runtime_api::http::{Response, StatusCode};
+    use tracing_subscriber::EnvFilter;
 
     use super::*;
 
@@ -1423,7 +1423,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }

@@ -315,11 +315,11 @@ fn get_checksum(part: &ObjectPart, checksum_algorithm: ChecksumAlgorithm) -> Opt
 mod tests {
     use std::path::PathBuf;
 
+    use super::*;
     use aws_sdk_s3::types::builders::ObjectPartBuilder;
     use tokio::fs::File;
     use tokio::io::AsyncReadExt;
-
-    use super::*;
+    use tracing_subscriber::EnvFilter;
 
     const TEST_DATA_SIZE: usize = 5;
 
@@ -768,7 +768,11 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
             .try_init();
     }
 }
