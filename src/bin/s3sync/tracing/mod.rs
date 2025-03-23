@@ -65,6 +65,8 @@ rusty_fork_test! {
 
     #[test]
     fn init_normal_tracing() {
+        env::remove_var(EVENT_FILTER_ENV_VAR);
+
         init_tracing(&TracingConfig {
             tracing_level: log::Level::Info,
             json_tracing: false,

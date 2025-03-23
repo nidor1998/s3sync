@@ -35,11 +35,7 @@ pub fn parse_human_bytes(value: &str) -> Result<u64, String> {
 
 pub fn check_human_bytes_without_limit(value: &str) -> Result<String, String> {
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
-
-    let try_result = TryInto::<u64>::try_into(result.as_u128());
-    if try_result.is_err() {
-        return Err(format!("'{}' is not a valid number.", value));
-    }
+    TryInto::<u64>::try_into(result.as_u128()).unwrap();
 
     Ok(value.to_string())
 }

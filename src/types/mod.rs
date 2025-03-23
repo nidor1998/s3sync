@@ -584,22 +584,18 @@ mod tests {
             .last_modified(DateTime::from_secs(777))
             .build();
 
-        S3syncObject::clone_versioning_object_with_key(&versioning_object, "cloned");
+        let s3sync_object =
+            S3syncObject::clone_versioning_object_with_key(&versioning_object, "cloned");
 
-        assert_eq!(versioning_object.key().unwrap(), "source");
-        assert_eq!(versioning_object.version_id().unwrap(), "version1");
-        assert_eq!(versioning_object.is_latest().unwrap(), false);
-        assert_eq!(versioning_object.size().unwrap(), 1);
-        assert_eq!(versioning_object.e_tag().unwrap(), "my-etag");
+        assert_eq!(s3sync_object.key(), "cloned");
+        assert_eq!(s3sync_object.version_id().unwrap(), "version1");
+        assert_eq!(s3sync_object.is_latest(), false);
+        assert_eq!(s3sync_object.size(), 1);
+        assert_eq!(s3sync_object.e_tag().unwrap(), "my-etag");
         assert_eq!(
-            versioning_object.storage_class().unwrap(),
-            &ObjectVersionStorageClass::Standard
-        );
-        assert_eq!(
-            versioning_object.checksum_algorithm(),
+            s3sync_object.checksum_algorithm().unwrap(),
             &[ChecksumAlgorithm::Sha256]
         );
-        assert_eq!(versioning_object.owner().unwrap().id().unwrap(), "test_id");
     }
 
     #[test]
