@@ -1,5 +1,4 @@
 use anyhow::Result;
-use log::error;
 use tracing::trace;
 
 use crate::types::{sha1_digest_from_key, ObjectEntry, ObjectKey, ObjectKeyMap, S3syncObject};
@@ -61,10 +60,10 @@ fn insert_key(object: &S3syncObject, key_map: &ObjectKeyMap, sha1_digest_require
         .insert(object_key, build_object_key_entry(object));
 
     if previous_value.is_some() {
-        let message = format!("key already exists in the key map: {}", object.key());
-
-        error!("{}", message);
-        panic!("{}", message);
+        panic!(
+            "{}",
+            format!("key already exists in the key map: {}", object.key())
+        );
     }
 }
 
