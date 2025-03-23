@@ -981,11 +981,11 @@ fn is_express_onezone_storage(bucket: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::config::args::parse_from_args;
     use crate::types::token;
+    use crate::types::token::create_pipeline_cancellation_token;
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     #[test]
     fn remove_s3_prefix_test() {
@@ -1042,6 +1042,55 @@ mod tests {
         .await;
 
         assert!(storage.get_client().is_some());
+    }
+
+    #[tokio::test]
+    async fn get_object_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--dry-run",
+            "--target-access-key",
+            "dummy_access_key",
+            "--target-secret-access-key",
+            "dummy_secret_access_key",
+            "--aws-max-attempts",
+            "1",
+            "--target-endpoint-url",
+            "https://invalid-s3-endpoint-url.6329313.local:65535",
+            "--force-retry-count",
+            "1",
+            "--force-retry-interval-milliseconds",
+            "1",
+            "./test_data/",
+            "s3://dummy-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = S3StorageFactory::create(
+            config.clone(),
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.target_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        assert!(storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .is_err());
     }
 
     #[tokio::test]

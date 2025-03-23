@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::builders::GetObjectOutputBuilder;
-use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::builders::HeadObjectOutputBuilder;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
@@ -60,6 +60,9 @@ const MISMATCH_WARNING_WITH_HELP: &str = "mismatch. object in the local storage 
  or the current multipart_threshold or multipart_chunksize may be different when uploading to the source. \
  To suppress this warning, please add --disable-multipart-verify command line option. \
  To resolve this issue, please add --auto-chunksize command line option(but extra API overheads).";
+
+const NOT_FOUND_TEST_FILE: &str =
+    "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";
 
 pub struct LocalStorageFactory {}
 
@@ -454,6 +457,12 @@ impl StorageTrait for LocalStorage {
                 e_tag,
                 self.config.additional_checksum_algorithm.clone(),
             ));
+
+            // This is special for test emulation.
+            if cfg!(feature = "e2e_test") {
+                let _ = tokio::fs::remove_file(PathBuf::from(NOT_FOUND_TEST_FILE)).await;
+            }
+
             if let Err(e) = sender
                 .send(object)
                 .await
@@ -487,6 +496,12 @@ impl StorageTrait for LocalStorage {
     ) -> Result<GetObjectOutput> {
         let mut path = self.path.clone();
         path.push(key);
+
+        if !path.clone().try_exists().unwrap() {
+            let (get_object_error, response) = build_no_such_key_response();
+
+            return Err(anyhow!(SdkError::service_error(get_object_error, response)));
+        }
 
         let content_type = if self.config.no_guess_mime_type {
             None
@@ -921,6 +936,13 @@ fn build_not_found_response() -> (HeadObjectError, Response<SdkBody>) {
         HeadObjectError::NotFound(aws_sdk_s3::types::error::NotFound::builder().build());
     let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
     (head_object_error, response)
+}
+
+fn build_no_such_key_response() -> (GetObjectError, Response<SdkBody>) {
+    let get_object_error =
+        GetObjectError::NoSuchKey(aws_sdk_s3::types::error::NoSuchKey::builder().build());
+    let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
+    (get_object_error, response)
 }
 
 fn convert_windows_directory_char_to_slash(path: &str) -> String {

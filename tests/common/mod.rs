@@ -47,6 +47,10 @@ pub const LARGE_FILE_PATH_CASE2: &str = "./playground/large_data_e2e_test_case2/
 pub const LARGE_FILE_DIR: &str = "./playground/large_data_e2e_test/";
 pub const LARGE_FILE_DIR_CASE2: &str = "./playground/large_data_e2e_test_case2/";
 
+pub const NOT_FOUND_TEST_DIR: &str = "./playground/not_found_test/";
+pub const NOT_FOUND_TEST_FILE: &str =
+    "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";
+
 pub const TEST_8MIB_FILE_DIR: &str = "./playground/large_data_e2e_8mib_test/";
 pub const TEST_8MIB_FILE_PATH: &str = "./playground/large_data_e2e_8mib_test/8mib_file";
 
@@ -1376,6 +1380,17 @@ impl TestHelper {
 
         let data = vec![0_u8; LARGE_FILE_SIZE];
         std::fs::write(LARGE_FILE_PATH, data.as_slice()).unwrap();
+    }
+
+    pub fn create_not_found_test_file() {
+        if Self::is_file_exist(NOT_FOUND_TEST_FILE) {
+            return;
+        }
+
+        std::fs::create_dir_all(NOT_FOUND_TEST_DIR).unwrap();
+
+        let data = vec![0_u8; 1];
+        std::fs::write(NOT_FOUND_TEST_FILE, data.as_slice()).unwrap();
     }
 
     pub fn create_large_file_case2() {
