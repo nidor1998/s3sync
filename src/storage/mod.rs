@@ -153,16 +153,25 @@ pub fn convert_to_buf_byte_stream_with_callback<R>(
 where
     R: AsyncRead + Send + 'static + std::marker::Sync,
 {
-    ByteStream::new(SdkBody::from_body_1_x(BodyExt::boxed(StreamBody::new(
-        ReaderStream::new(BufReader::new(AsyncReadWithCallback::new(
-            byte_stream,
-            stats_sender,
-            rate_limit_bandwidth,
-            additional_checksum,
-            object_checksum,
-        )))
-        .map_ok(Frame::data),
-    ))))
+    let async_read_with_callback = AsyncReadWithCallback::new(
+        byte_stream,
+        stats_sender,
+        rate_limit_bandwidth,
+        additional_checksum,
+        object_checksum,
+    );
+
+    let buf_reader = BufReader::new(async_read_with_callback);
+
+    let reader_stream = ReaderStream::new(buf_reader).map_ok(Frame::data);
+
+    let stream_body = StreamBody::new(reader_stream);
+
+    let boxed_body = BodyExt::boxed(stream_body);
+
+    let sdk_body = SdkBody::from_body_1_x(boxed_body);
+
+    ByteStream::new(sdk_body)
 }
 
 pub fn get_size_string_from_content_range(get_object_output: &GetObjectOutput) -> String {
