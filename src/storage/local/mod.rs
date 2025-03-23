@@ -30,7 +30,7 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::config::ClientConfig;
@@ -460,6 +460,7 @@ impl StorageTrait for LocalStorage {
 
             // This is special for test emulation.
             if cfg!(feature = "e2e_test") {
+                error!("remove not found test file. This message should not be shown in the production.");
                 let _ = tokio::fs::remove_file(PathBuf::from(NOT_FOUND_TEST_FILE)).await;
             }
 
