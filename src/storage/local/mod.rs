@@ -1911,6 +1911,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn is_express_onezone_storage_false() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            "./test_data/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.target_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        assert!(!storage.is_express_onezone_storage());
+    }
+
+    #[tokio::test]
     #[cfg(target_family = "unix")]
     async fn get_local_path() {
         init_dummy_tracing_subscriber();

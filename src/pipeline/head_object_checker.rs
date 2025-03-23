@@ -1409,6 +1409,212 @@ mod tests {
             .unwrap());
     }
 
+    #[tokio::test]
+    #[should_panic]
+    async fn head_object_check_etag_panic() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-etag",
+            "--auto-chunksize",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } =
+            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+        );
+
+        let source_object =
+            S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(6).build());
+        head_object_checker
+            .is_old_object(&source_object)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn head_object_check_checksum_panic() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-additional-checksum",
+            "SHA256",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } =
+            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+        );
+
+        let source_object =
+            S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(6).build());
+        head_object_checker
+            .is_old_object(&source_object)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn are_different_e_tags_same() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } =
+            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+        );
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("e_tag")
+                .build(),
+        );
+        assert_eq!(
+            head_object_checker
+                .are_different_e_tags("6byte.dat", &source_object, &head_object_output)
+                .await
+                .unwrap(),
+            false
+        );
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn are_different_e_tags_same_different_size() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } =
+            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+        );
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(5)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("e_tag")
+                .build(),
+        );
+        head_object_checker
+            .are_different_e_tags("6byte.dat", &source_object, &head_object_output)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn are_different_e_tags_different() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } =
+            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+        );
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag2")
+            .build();
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("e_tag")
+                .build(),
+        );
+        assert_eq!(
+            head_object_checker
+                .are_different_e_tags("6byte.dat", &source_object, &head_object_output)
+                .await
+                .unwrap(),
+            true
+        );
+    }
+
     fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         let not_found = aws_sdk_s3::types::error::NotFound::builder().build();
         let head_object_error = HeadObjectError::NotFound(not_found);

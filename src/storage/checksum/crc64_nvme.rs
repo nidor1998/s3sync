@@ -67,6 +67,24 @@ mod tests {
         assert_eq!(checksum.finalize_all(), CHECKSUM_TOTAL.to_string());
     }
 
+    #[tokio::test]
+    async fn checksum_crc64_nvme_test_with_new() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+        let mut file = File::open(LARGE_FILE_PATH).await.unwrap();
+
+        let mut checksum = ChecksumCRC64NVMe::new(true);
+
+        let mut buffer = Vec::<u8>::with_capacity(LARGE_FILE_SIZE);
+        buffer.resize_with(LARGE_FILE_SIZE, Default::default);
+        file.read_exact(buffer.as_mut_slice()).await.unwrap();
+        checksum.update(buffer.as_slice());
+
+        assert_eq!(checksum.finalize(), CHECKSUM_TOTAL.to_string());
+        assert_eq!(checksum.finalize_all(), CHECKSUM_TOTAL.to_string());
+    }
+
     async fn create_large_file() {
         if PathBuf::from(LARGE_FILE_PATH).try_exists().unwrap() {
             return;
