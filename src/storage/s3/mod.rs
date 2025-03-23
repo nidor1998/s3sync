@@ -305,19 +305,17 @@ impl StorageTrait for S3Storage {
         max_keys: i32,
         _warn_as_error: bool,
     ) -> Result<()> {
-        let mut continuation_token = "".to_string();
+        let mut continuation_token = None;
         loop {
-            let mut list_object_v2 = self
+            let list_object_v2 = self
                 .client
                 .as_ref()
                 .unwrap()
                 .list_objects_v2()
                 .bucket(&self.bucket)
                 .prefix(&self.prefix)
+                .set_continuation_token(continuation_token)
                 .max_keys(max_keys);
-            if !continuation_token.is_empty() {
-                list_object_v2 = list_object_v2.continuation_token(continuation_token.to_string())
-            }
 
             if self.cancellation_token.is_cancelled() {
                 trace!("list_objects() canceled.");
@@ -361,8 +359,7 @@ impl StorageTrait for S3Storage {
 
             continuation_token = list_objects_output
                 .next_continuation_token()
-                .unwrap()
-                .to_string();
+                .map(|token| token.to_string());
         }
 
         Ok(())
@@ -374,26 +371,22 @@ impl StorageTrait for S3Storage {
         max_keys: i32,
         _warn_as_error: bool,
     ) -> Result<()> {
-        let mut key_marker = "".to_string();
-        let mut version_id_marker = "".to_string();
+        let mut key_marker = None;
+        let mut version_id_marker = None;
 
         let mut s3sync_versioning_map = HashMap::new();
 
         loop {
-            let mut list_object_versions = self
+            let list_object_versions = self
                 .client
                 .as_ref()
                 .unwrap()
                 .list_object_versions()
                 .bucket(&self.bucket)
                 .prefix(&self.prefix)
+                .set_key_marker(key_marker)
+                .set_version_id_marker(version_id_marker)
                 .max_keys(max_keys);
-            if !key_marker.is_empty() {
-                list_object_versions = list_object_versions.key_marker(key_marker)
-            }
-            if !version_id_marker.is_empty() {
-                list_object_versions = list_object_versions.version_id_marker(version_id_marker)
-            }
 
             if self.cancellation_token.is_cancelled() {
                 trace!("list_object_versions() canceled.");
@@ -424,12 +417,10 @@ impl StorageTrait for S3Storage {
 
             key_marker = list_object_versions_output
                 .next_key_marker()
-                .unwrap()
-                .to_string();
+                .map(|marker| marker.to_string());
             version_id_marker = list_object_versions_output
                 .next_version_id_marker()
-                .unwrap()
-                .to_string();
+                .map(|marker| marker.to_string());
         }
 
         // send remaining versioning objects
@@ -475,8 +466,8 @@ impl StorageTrait for S3Storage {
     }
 
     async fn get_object_versions(&self, key: &str, max_keys: i32) -> Result<Vec<ObjectVersion>> {
-        let mut key_marker = "".to_string();
-        let mut version_id_marker = "".to_string();
+        let mut key_marker = None;
+        let mut version_id_marker = None;
 
         let mut object_versions = Vec::new();
 
@@ -484,21 +475,16 @@ impl StorageTrait for S3Storage {
         let key_without_prefix = remove_s3_prefix(&key, &self.prefix);
 
         loop {
-            let mut list_object_versions = self
+            let list_object_versions = self
                 .client
                 .as_ref()
                 .unwrap()
                 .list_object_versions()
                 .bucket(&self.bucket)
                 .prefix(&key)
+                .set_key_marker(key_marker)
+                .set_version_id_marker(version_id_marker)
                 .max_keys(max_keys);
-            if !key_marker.is_empty() {
-                list_object_versions = list_object_versions.key_marker(key_marker.to_string())
-            }
-            if !version_id_marker.is_empty() {
-                list_object_versions =
-                    list_object_versions.version_id_marker(version_id_marker.to_string())
-            }
 
             if self.cancellation_token.is_cancelled() {
                 trace!("list_object_versions() canceled.");
@@ -526,12 +512,10 @@ impl StorageTrait for S3Storage {
 
             key_marker = list_object_versions_output
                 .next_key_marker()
-                .unwrap()
-                .to_string();
+                .map(|marker| marker.to_string());
             version_id_marker = list_object_versions_output
                 .next_version_id_marker()
-                .unwrap()
-                .to_string();
+                .map(|marker| marker.to_string());
         }
 
         Ok(object_versions)
