@@ -482,6 +482,7 @@ mod tests {
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
+                "--allow-e2e-test-dangerous-simulation",
                 NOT_FOUND_TEST_DIR,
                 &target_bucket_url,
             ];
@@ -489,7 +490,10 @@ mod tests {
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
+            TestHelper::enable_not_found_dangerous_simulation();
             pipeline.run().await;
+            TestHelper::disable_not_found_dangerous_simulation();
+
             assert!(!pipeline.has_error());
             assert_eq!(
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
@@ -524,6 +528,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--warn-as-error",
+                "--allow-e2e-test-dangerous-simulation",
                 NOT_FOUND_TEST_DIR,
                 &target_bucket_url,
             ];
@@ -531,7 +536,10 @@ mod tests {
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
+            TestHelper::enable_not_found_dangerous_simulation();
             pipeline.run().await;
+            TestHelper::disable_not_found_dangerous_simulation();
+
             assert!(pipeline.has_error());
         }
 

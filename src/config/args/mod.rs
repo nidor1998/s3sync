@@ -452,6 +452,11 @@ pub struct CLIArgs {
     #[arg(long, hide = true, default_value_t = false)]
     allow_both_local_storage: bool,
 
+    /// [dangerous] test purpose only
+    #[cfg(feature = "e2c_test_dangerous_simulations")]
+    #[arg(long, hide = true, default_value_t = false)]
+    allow_e2e_test_dangerous_simulation: bool,
+
     /// generate a auto completions script. Valid values: bash, fish, zsh, powershell, elvish.
     #[arg(long, env, value_name = "SHELL", value_parser = clap_complete::shells::Shell::from_str)]
     auto_complete_shell: Option<clap_complete::shells::Shell>,
@@ -1063,6 +1068,15 @@ impl TryFrom<CLIArgs> for Config {
             value.full_object_checksum
         };
 
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut allow_e2e_test_dangerous_simulation = false;
+
+        #[cfg(feature = "e2c_test_dangerous_simulations")]
+        {
+            allow_e2e_test_dangerous_simulation = value.allow_e2e_test_dangerous_simulation;
+        }
+
         Ok(Config {
             source: storage_path::parse_storage_path(&value.source),
             target: storage_path::parse_storage_path(&value.target),
@@ -1144,6 +1158,7 @@ impl TryFrom<CLIArgs> for Config {
             disable_payload_signing: value.disable_payload_signing,
             disable_content_md5_header: value.disable_content_md5_header,
             full_object_checksum,
+            allow_e2e_test_dangerous_simulation,
         })
     }
 }
