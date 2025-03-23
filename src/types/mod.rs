@@ -599,6 +599,37 @@ mod tests {
     }
 
     #[test]
+    fn versioning_object_getter_test_no_checksum() {
+        init_dummy_tracing_subscriber();
+
+        let versioning_object = ObjectVersion::builder()
+            .key("source")
+            .version_id("version1".to_string())
+            .is_latest(false)
+            .size(1)
+            .e_tag("my-etag")
+            .storage_class(ObjectVersionStorageClass::Standard)
+            .owner(
+                Owner::builder()
+                    .id("test_id")
+                    .display_name("test_name")
+                    .build(),
+            )
+            .last_modified(DateTime::from_secs(777))
+            .build();
+
+        let s3sync_object =
+            S3syncObject::clone_versioning_object_with_key(&versioning_object, "cloned");
+
+        assert_eq!(s3sync_object.key(), "cloned");
+        assert_eq!(s3sync_object.version_id().unwrap(), "version1");
+        assert_eq!(s3sync_object.is_latest(), false);
+        assert_eq!(s3sync_object.size(), 1);
+        assert_eq!(s3sync_object.e_tag().unwrap(), "my-etag");
+        assert!(s3sync_object.checksum_algorithm().is_none());
+    }
+
+    #[test]
     fn clone_delete_marker_with_key_test() {
         init_dummy_tracing_subscriber();
 
