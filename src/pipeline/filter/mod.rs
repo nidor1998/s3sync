@@ -55,31 +55,37 @@ impl ObjectFilterBase<'_> {
         };
 
         loop {
-            tokio::select! {
-                result = self.base.receiver.as_ref().unwrap().recv() => {
-                    match result {
-                        Ok(object) => {
-                            if !filter_fn(&object, &self.base.config.filter_config, &target_key_map) {
-                                let _ = self.base.target.as_ref().unwrap().get_stats_sender().send(SyncStatistics::SyncSkip {key: object.key().to_string()}).await;
-                                continue;
-                            }
+            if self.base.cancellation_token.is_cancelled() {
+                trace!(name = self.name, "filter has been cancelled.");
+                return Ok(());
+            }
 
-                            if let Err(e) = self.base.send(object).await {
-                                return if !self.base.is_channel_closed() {
-                                    Err(e)
-                                } else {
-                                    Ok(())
-                                };
-                            }
-                        },
-                        Err(_) => {
-                            trace!(name = self.name, "filter has been completed.");
-                            return Ok(());
-                        }
+            match self.base.receiver.as_ref().unwrap().recv().await {
+                Ok(object) => {
+                    if !filter_fn(&object, &self.base.config.filter_config, &target_key_map) {
+                        let _ = self
+                            .base
+                            .target
+                            .as_ref()
+                            .unwrap()
+                            .get_stats_sender()
+                            .send(SyncStatistics::SyncSkip {
+                                key: object.key().to_string(),
+                            })
+                            .await;
+                        continue;
                     }
-                },
-                _ = self.base.cancellation_token.cancelled() => {
-                    trace!(name = self.name, "filter has been cancelled.");
+
+                    if let Err(e) = self.base.send(object).await {
+                        return if !self.base.is_channel_closed() {
+                            Err(e)
+                        } else {
+                            Ok(())
+                        };
+                    }
+                }
+                Err(_) => {
+                    trace!(name = self.name, "filter has been completed.");
                     return Ok(());
                 }
             }
