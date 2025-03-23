@@ -1821,6 +1821,55 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_local_with_directory_traversal_warn_as_error() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+
+            helper
+                .put_object_with_metadata(
+                    &BUCKET1.to_string(),
+                    "data1/../data2",
+                    "./test_data/e2e_test/case1/data1",
+                )
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--warn-as-error",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(pipeline.has_error());
+        }
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+
+    #[tokio::test]
     async fn s3_to_local_with_incompatible_object() {
         TestHelper::init_dummy_tracing_subscriber();
 

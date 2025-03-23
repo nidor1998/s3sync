@@ -122,7 +122,7 @@ impl Pipeline {
 
     async fn check_prerequisites(&self) -> bool {
         if self.config.enable_versioning && !self.is_both_bucket_versioning_enabled().await {
-            self.store_error(None, "Versioning must be enabled on both buckets.");
+            self.print_and_store_error(None, "Versioning must be enabled on both buckets.");
 
             return false;
         }
@@ -133,7 +133,7 @@ impl Pipeline {
     async fn is_both_bucket_versioning_enabled(&self) -> bool {
         let source_versioning_enabled = self.source.is_versioning_enabled().await;
         if let Err(e) = source_versioning_enabled {
-            self.store_error(
+            self.print_and_store_error(
                 Some(e),
                 "failed to check versioning status of source bucket.",
             );
@@ -143,7 +143,7 @@ impl Pipeline {
 
         let target_versioning_enabled = self.target.is_versioning_enabled().await;
         if let Err(e) = target_versioning_enabled {
-            self.store_error(
+            self.print_and_store_error(
                 Some(e),
                 "failed to check versioning status of target bucket.",
             );
@@ -218,7 +218,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    store_error(has_error, error_list, e, "list source objects failed.");
+                    print_and_store_error(has_error, error_list, e, "list source objects failed.");
                 }
             }
         });
@@ -238,7 +238,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    store_error(has_error, error_list, e, "list target objects failed.");
+                    print_and_store_error(has_error, error_list, e, "list target objects failed.");
                 }
             }
         });
@@ -265,7 +265,12 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    store_error(has_error, error_list, e, "object keys aggregation failed.");
+                    print_and_store_error(
+                        has_error,
+                        error_list,
+                        e,
+                        "object keys aggregation failed.",
+                    );
                 }
             }
         });
@@ -353,7 +358,7 @@ impl Pipeline {
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    store_error(has_error, error_list, e, "filter objects failed.");
+                    print_and_store_error(has_error, error_list, e, "filter objects failed.");
                 }
             }
         });
@@ -374,7 +379,7 @@ impl Pipeline {
                 match result {
                     Ok(_) => {}
                     Err(e) => {
-                        store_error(has_error, error_list, e, "sync objects failed.");
+                        print_and_store_error(has_error, error_list, e, "sync objects failed.");
                     }
                 }
             });
@@ -397,7 +402,7 @@ impl Pipeline {
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    store_error(has_error, error_list, e, "pack objects failed.");
+                    print_and_store_error(has_error, error_list, e, "pack objects failed.");
                 }
             }
         });
@@ -432,7 +437,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    store_error(has_error, error_list, e, "difference detection failed.");
+                    print_and_store_error(has_error, error_list, e, "difference detection failed.");
                 }
             }
         });
@@ -458,7 +463,12 @@ impl Pipeline {
                 match result {
                     Ok(_) => {}
                     Err(e) => {
-                        store_error(has_error, error_list, e, "delete target objects failed.");
+                        print_and_store_error(
+                            has_error,
+                            error_list,
+                            e,
+                            "delete target objects failed.",
+                        );
                     }
                 }
             });
@@ -500,7 +510,7 @@ impl Pipeline {
         )
     }
 
-    fn store_error(&self, e: Option<Error>, message: &str) {
+    fn print_and_store_error(&self, e: Option<Error>, message: &str) {
         self.has_error.store(true, Ordering::SeqCst);
 
         if let Some(e) = e {
@@ -548,7 +558,7 @@ impl Pipeline {
     }
 }
 
-fn store_error(
+fn print_and_store_error(
     has_error: Arc<AtomicBool>,
     errors: Arc<Mutex<VecDeque<Error>>>,
     e: Error,

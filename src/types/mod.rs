@@ -433,6 +433,45 @@ mod tests {
 
         assert_eq!(cloned_object, expected_object);
     }
+    #[test]
+    fn clone_non_versioning_object_with_key_test_no_checksum() {
+        init_dummy_tracing_subscriber();
+
+        let source_object = Object::builder()
+            .key("source")
+            .size(1)
+            .e_tag("my-etag")
+            .storage_class(ObjectStorageClass::Glacier)
+            .owner(
+                Owner::builder()
+                    .id("test_id")
+                    .display_name("test_name")
+                    .build(),
+            )
+            .last_modified(DateTime::from_secs(777))
+            .build();
+
+        let expected_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("cloned")
+                .size(1)
+                .e_tag("my-etag")
+                .storage_class(ObjectStorageClass::Glacier)
+                .owner(
+                    Owner::builder()
+                        .id("test_id")
+                        .display_name("test_name")
+                        .build(),
+                )
+                .last_modified(DateTime::from_secs(777))
+                .build(),
+        );
+
+        let cloned_object =
+            S3syncObject::clone_non_versioning_object_with_key(&source_object, "cloned");
+
+        assert_eq!(cloned_object, expected_object);
+    }
 
     #[test]
     fn clone_versioning_object_with_key_test() {
@@ -478,6 +517,89 @@ mod tests {
             S3syncObject::clone_versioning_object_with_key(&source_object, "cloned");
 
         assert_eq!(cloned_object, expected_object);
+    }
+
+    #[test]
+    fn clone_versioning_object_with_key_test_no_checksum() {
+        init_dummy_tracing_subscriber();
+
+        let source_object = ObjectVersion::builder()
+            .key("source")
+            .version_id("version1".to_string())
+            .is_latest(false)
+            .size(1)
+            .e_tag("my-etag")
+            .storage_class(ObjectVersionStorageClass::Standard)
+            .owner(
+                Owner::builder()
+                    .id("test_id")
+                    .display_name("test_name")
+                    .build(),
+            )
+            .last_modified(DateTime::from_secs(777))
+            .build();
+
+        let expected_object = S3syncObject::Versioning(
+            ObjectVersion::builder()
+                .key("cloned")
+                .version_id("version1".to_string())
+                .is_latest(false)
+                .size(1)
+                .e_tag("my-etag")
+                .storage_class(ObjectVersionStorageClass::Standard)
+                .owner(
+                    Owner::builder()
+                        .id("test_id")
+                        .display_name("test_name")
+                        .build(),
+                )
+                .last_modified(DateTime::from_secs(777))
+                .build(),
+        );
+
+        let cloned_object =
+            S3syncObject::clone_versioning_object_with_key(&source_object, "cloned");
+
+        assert_eq!(cloned_object, expected_object);
+    }
+
+    #[test]
+    fn versioning_object_getter_test() {
+        init_dummy_tracing_subscriber();
+
+        let versioning_object = ObjectVersion::builder()
+            .key("source")
+            .version_id("version1".to_string())
+            .is_latest(false)
+            .size(1)
+            .e_tag("my-etag")
+            .storage_class(ObjectVersionStorageClass::Standard)
+            .checksum_algorithm(ChecksumAlgorithm::Sha256)
+            .owner(
+                Owner::builder()
+                    .id("test_id")
+                    .display_name("test_name")
+                    .build(),
+            )
+            .last_modified(DateTime::from_secs(777))
+            .build();
+
+        S3syncObject::clone_versioning_object_with_key(&versioning_object, "cloned");
+
+        assert_eq!(versioning_object.key().unwrap(), "source");
+        assert_eq!(versioning_object.version_id().unwrap(), "version1");
+        assert_eq!(versioning_object.is_latest().unwrap(), false);
+        assert_eq!(versioning_object.size().unwrap(), 1);
+        assert_eq!(versioning_object.e_tag().unwrap(), "my-etag");
+        assert_eq!(
+            versioning_object.storage_class().unwrap(),
+            &ObjectVersionStorageClass::Standard
+        );
+        assert_eq!(
+            versioning_object.checksum_algorithm(),
+            &[ChecksumAlgorithm::Sha256]
+        );
+        assert_eq!(versioning_object.owner().unwrap().id().unwrap(), "test_id");
     }
 
     #[test]

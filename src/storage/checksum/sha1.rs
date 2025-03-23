@@ -24,6 +24,7 @@ impl Checksum for ChecksumSha1 {
     fn new(_full_object_checksum: bool) -> Self {
         Self::default()
     }
+
     fn update(&mut self, data: &[u8]) {
         self.hasher.update(data);
     }
@@ -74,6 +75,42 @@ mod tests {
         let mut file = File::open(LARGE_FILE_PATH).await.unwrap();
 
         let mut checksum = ChecksumSha1::default();
+
+        let mut buffer = Vec::<u8>::with_capacity(17179870);
+        buffer.resize_with(17179870, Default::default);
+        file.read_exact(buffer.as_mut_slice()).await.unwrap();
+        checksum.update(buffer.as_slice());
+        assert_eq!(checksum.finalize(), CHECKSUM_PART_1_TO_3.to_string());
+
+        let mut buffer = Vec::<u8>::with_capacity(17179870);
+        buffer.resize_with(17179870, Default::default);
+        file.read_exact(buffer.as_mut_slice()).await.unwrap();
+        checksum.update(buffer.as_slice());
+        assert_eq!(checksum.finalize(), CHECKSUM_PART_1_TO_3.to_string());
+
+        let mut buffer = Vec::<u8>::with_capacity(17179870);
+        buffer.resize_with(17179870, Default::default);
+        file.read_exact(buffer.as_mut_slice()).await.unwrap();
+        checksum.update(buffer.as_slice());
+        assert_eq!(checksum.finalize(), CHECKSUM_PART_1_TO_3.to_string());
+
+        let mut buffer = Vec::<u8>::with_capacity(889190);
+        buffer.resize_with(889190, Default::default);
+        file.read_exact(buffer.as_mut_slice()).await.unwrap();
+        checksum.update(buffer.as_slice());
+        assert_eq!(checksum.finalize(), CHECKSUM_LAST_PART.to_string());
+
+        assert_eq!(checksum.finalize_all(), CHECKSUM_TOTAL.to_string());
+    }
+
+    #[tokio::test]
+    async fn checksum_sha1_test_with_new() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+        let mut file = File::open(LARGE_FILE_PATH).await.unwrap();
+
+        let mut checksum = ChecksumSha1::new(true);
 
         let mut buffer = Vec::<u8>::with_capacity(17179870);
         buffer.resize_with(17179870, Default::default);

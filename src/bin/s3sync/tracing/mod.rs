@@ -64,6 +64,17 @@ rusty_fork_test! {
     }
 
     #[test]
+    fn init_normal_tracing() {
+        init_tracing(&TracingConfig {
+            tracing_level: log::Level::Info,
+            json_tracing: false,
+            aws_sdk_tracing: false,
+            span_events_tracing: false,
+            disable_color_tracing: false,
+        });
+    }
+
+    #[test]
     fn init_span_events_tracing() {
         init_tracing(&TracingConfig {
             tracing_level: log::Level::Info,

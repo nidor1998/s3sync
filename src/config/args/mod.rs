@@ -96,7 +96,8 @@ const CHECK_SIZE_CONFLICT: &str =
 
 const CHECK_ETAG_CONFLICT: &str =
     "--head-each-target is required for --check-etag, or remove --remove-modified-filter\n";
-const CHECK_ETAG_CONFLICT_SSE_KMS: &str = "--check-etag is not supported with --sse aws:kms\n";
+const CHECK_ETAG_CONFLICT_SSE_KMS: &str =
+    "--check-etag is not supported with --sse aws:kms | aws:kms:dsse \n";
 const CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--check-etag is not supported with express onezone storage class\n";
 
@@ -744,11 +745,11 @@ impl CLIArgs {
             return Err(CHECK_ETAG_CONFLICT.to_string());
         }
 
-        if self.sse.is_some()
-            && ServerSideEncryption::from_str(self.sse.as_ref().unwrap()).unwrap()
-                == ServerSideEncryption::AwsKms
-        {
-            return Err(CHECK_ETAG_CONFLICT_SSE_KMS.to_string());
+        if self.sse.is_some() {
+            let sse = ServerSideEncryption::from_str(self.sse.as_ref().unwrap()).unwrap();
+            if sse == ServerSideEncryption::AwsKms || sse == ServerSideEncryption::AwsKmsDsse {
+                return Err(CHECK_ETAG_CONFLICT_SSE_KMS.to_string());
+            }
         }
 
         if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {

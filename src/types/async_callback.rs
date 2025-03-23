@@ -112,11 +112,10 @@ impl<R: AsyncRead + Send + Sync> AsyncRead for AsyncReadWithCallback<R> {
 }
 
 fn is_multipart(object_checksum: &Option<ObjectChecksum>) -> bool {
-    if object_checksum.is_none() {
-        return false;
-    }
-
-    if object_checksum.as_ref().unwrap().object_parts.is_none() {
+    if object_checksum
+        .as_ref()
+        .map_or(true, |checksum| checksum.object_parts.is_none())
+    {
         return false;
     }
 
