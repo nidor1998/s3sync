@@ -106,6 +106,9 @@ const GET_OBJECT_DENY_BUCKET_POLICY: &str = r#"{
 
 pub const SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST: u64 = 30 * 1000;
 
+const NOT_FOUND_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_NOT_FOUND_DANGEROUS_SIMULATION";
+const NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
 #[cfg(feature = "e2e_test")]
 pub struct TestHelper {
     client: Client,
@@ -1492,5 +1495,16 @@ impl TestHelper {
                     .unwrap(),
             )
             .try_init();
+    }
+
+    pub fn enable_not_found_dangerous_simulation() {
+        std::env::set_var(
+            NOT_FOUND_DANGEROUS_SIMULATION_ENV,
+            NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW,
+        );
+    }
+
+    pub fn disable_not_found_dangerous_simulation() {
+        std::env::remove_var(NOT_FOUND_DANGEROUS_SIMULATION_ENV);
     }
 }

@@ -30,7 +30,7 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, info, trace, warn};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::config::ClientConfig;
@@ -60,9 +60,6 @@ const MISMATCH_WARNING_WITH_HELP: &str = "mismatch. object in the local storage 
  or the current multipart_threshold or multipart_chunksize may be different when uploading to the source. \
  To suppress this warning, please add --disable-multipart-verify command line option. \
  To resolve this issue, please add --auto-chunksize command line option(but extra API overheads).";
-
-const NOT_FOUND_TEST_FILE: &str =
-    "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";
 
 pub struct LocalStorageFactory {}
 
@@ -459,9 +456,11 @@ impl StorageTrait for LocalStorage {
             ));
 
             // This is special for test emulation.
-            if cfg!(feature = "e2e_test") {
-                error!("remove not found test file. This message should not be shown in the production.");
-                let _ = tokio::fs::remove_file(PathBuf::from(NOT_FOUND_TEST_FILE)).await;
+            #[allow(clippy::collapsible_if)]
+            if cfg!(feature = "e2c_test_dangerous_simulations") {
+                if self.config.allow_e2e_test_dangerous_simulation {
+                    simulate_not_found_test_case().await;
+                }
             }
 
             if let Err(e) = sender
@@ -896,6 +895,25 @@ impl StorageTrait for LocalStorage {
     }
     fn get_local_path(&self) -> PathBuf {
         self.path.clone()
+    }
+}
+
+async fn simulate_not_found_test_case() {
+    #[cfg(feature = "e2c_test_dangerous_simulations")]
+    {
+        const NOT_FOUND_TEST_FILE: &str =
+            "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";
+        const NOT_FOUND_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_NOT_FOUND_DANGEROUS_SIMULATION";
+        const NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+        if std::env::var(NOT_FOUND_DANGEROUS_SIMULATION_ENV)
+            .is_ok_and(|v| v == NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW)
+        {
+            tracing::error!(
+                "remove not found test file. This message should not be shown in the production."
+            );
+            let _ = tokio::fs::remove_file(PathBuf::from(NOT_FOUND_TEST_FILE)).await;
+        }
     }
 }
 
