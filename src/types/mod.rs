@@ -589,7 +589,7 @@ mod tests {
 
         assert_eq!(s3sync_object.key(), "cloned");
         assert_eq!(s3sync_object.version_id().unwrap(), "version1");
-        assert_eq!(s3sync_object.is_latest(), false);
+        assert!(!s3sync_object.is_latest());
         assert_eq!(s3sync_object.size(), 1);
         assert_eq!(s3sync_object.e_tag().unwrap(), "my-etag");
         assert_eq!(
@@ -623,7 +623,7 @@ mod tests {
 
         assert_eq!(s3sync_object.key(), "cloned");
         assert_eq!(s3sync_object.version_id().unwrap(), "version1");
-        assert_eq!(s3sync_object.is_latest(), false);
+        assert!(!s3sync_object.is_latest());
         assert_eq!(s3sync_object.size(), 1);
         assert_eq!(s3sync_object.e_tag().unwrap(), "my-etag");
         assert!(s3sync_object.checksum_algorithm().is_none());
