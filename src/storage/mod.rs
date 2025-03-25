@@ -143,6 +143,7 @@ pub trait StorageTrait: DynClone {
     fn get_local_path(&self) -> PathBuf;
 }
 
+#[rustfmt::skip] // For coverage tool incorrectness
 pub fn convert_to_buf_byte_stream_with_callback<R>(
     byte_stream: R,
     stats_sender: Sender<SyncStatistics>,
@@ -153,15 +154,9 @@ pub fn convert_to_buf_byte_stream_with_callback<R>(
 where
     R: AsyncRead + Send + 'static + std::marker::Sync,
 {
-    let async_read_with_callback = AsyncReadWithCallback::new(
-        byte_stream,
-        stats_sender,
-        rate_limit_bandwidth,
-        additional_checksum,
-        object_checksum,
-    );
+    let async_read = AsyncReadWithCallback::new(byte_stream, stats_sender, rate_limit_bandwidth, additional_checksum, object_checksum);
 
-    let buf_reader = BufReader::new(async_read_with_callback);
+    let buf_reader = BufReader::new(async_read);
 
     let reader_stream = ReaderStream::new(buf_reader).map_ok(Frame::data);
 

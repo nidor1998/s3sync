@@ -36,13 +36,7 @@ impl DiffLister {
                 Object::builder().set_key(Some(key.to_string())).build(),
             );
 
-            if let Err(e) = self.base.send(object).await {
-                return if !self.base.is_channel_closed() {
-                    Err(e)
-                } else {
-                    Ok(())
-                };
-            }
+            self.base.send(object).await?;
         }
         trace!("diff list has been completed.");
 

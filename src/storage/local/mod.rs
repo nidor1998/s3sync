@@ -191,6 +191,7 @@ impl LocalStorage {
         target_content_length: u64,
         source_express_onezone_storage: bool,
     ) -> Result<()> {
+        let key = key.to_string();
         if !self.config.disable_etag_verify && !source_express_onezone_storage {
             trace!(
                 key = key,
@@ -241,11 +242,6 @@ impl LocalStorage {
                             "skip e_tag verification."
                         );
                     } else {
-                        self.send_stats(SyncWarning {
-                            key: key.to_string(),
-                        })
-                        .await;
-
                         let message = if source_content_length
                             == fs_util::get_file_size(real_path).await
                             && is_multipart_upload_e_tag(source_e_tag)
@@ -269,35 +265,31 @@ impl LocalStorage {
                             target_e_tag = target_e_tag,
                             message
                         );
+
+                        self.send_stats(SyncWarning { key: key.clone() }).await;
                     }
                 } else {
-                    self.send_stats(ETagVerified {
-                        key: key.to_string(),
-                    })
-                    .await;
-
                     let source_e_tag = source_e_tag.clone().unwrap();
                     let target_e_tag = target_e_tag.clone().unwrap();
                     trace!(
-                        key = key,
+                        key = &key,
                         source_e_tag = source_e_tag,
                         target_e_tag = target_e_tag,
                         "e_tag verified."
                     );
+
+                    self.send_stats(ETagVerified { key: key.clone() }).await;
                 }
             }
         } else if source_content_length != target_content_length {
-            self.send_stats(SyncWarning {
-                key: key.to_string(),
-            })
-            .await;
-
             warn!(
-                key = key,
+                key = &key,
                 source_content_length = source_content_length,
                 target_content_length = target_content_length,
                 "content length mismatch. file in the local storage may be corrupted."
             );
+
+            self.send_stats(SyncWarning { key: key.clone() }).await;
         }
 
         // Since aws-sdk-s3 1.69.0, the checksum mode is always enabled,
@@ -309,7 +301,7 @@ impl LocalStorage {
 
         if let Some(source_final_checksum) = source_final_checksum {
             trace!(
-                key = key,
+                key = &key,
                 size = source_content_length,
                 "start to additional checksum verify. depends on the size, this may take a while.",
             );
@@ -349,18 +341,15 @@ impl LocalStorage {
                     "additional checksum mismatch. file in the local storage may be corrupted."
                 );
             } else {
-                self.send_stats(ChecksumVerified {
-                    key: key.to_string(),
-                })
-                .await;
-
                 trace!(
-                    key = key,
+                    key = &key,
                     additional_checksum_algorithm = additional_checksum_algorithm,
                     source_final_checksum = source_final_checksum,
                     target_final_checksum = target_final_checksum,
                     "additional checksum verified."
                 );
+
+                self.send_stats(ChecksumVerified { key: key.clone() }).await;
             }
         }
         Ok(())
