@@ -218,7 +218,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    print_and_store_error(has_error, error_list, e, "list source objects failed.");
+                    log_error(has_error, error_list, e, "list source objects failed.");
                 }
             }
         });
@@ -238,7 +238,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    print_and_store_error(has_error, error_list, e, "list target objects failed.");
+                    log_error(has_error, error_list, e, "list target objects failed.");
                 }
             }
         });
@@ -265,12 +265,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    print_and_store_error(
-                        has_error,
-                        error_list,
-                        e,
-                        "object keys aggregation failed.",
-                    );
+                    log_error(has_error, error_list, e, "keys aggregation failed.");
                 }
             }
         });
@@ -358,7 +353,7 @@ impl Pipeline {
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    print_and_store_error(has_error, error_list, e, "filter objects failed.");
+                    log_error(has_error, error_list, e, "filter objects failed.");
                 }
             }
         });
@@ -379,7 +374,7 @@ impl Pipeline {
                 match result {
                     Ok(_) => {}
                     Err(e) => {
-                        print_and_store_error(has_error, error_list, e, "sync objects failed.");
+                        log_error(has_error, error_list, e, "sync objects failed.");
                     }
                 }
             });
@@ -402,7 +397,7 @@ impl Pipeline {
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    print_and_store_error(has_error, error_list, e, "pack objects failed.");
+                    log_error(has_error, error_list, e, "pack objects failed.");
                 }
             }
         });
@@ -437,7 +432,7 @@ impl Pipeline {
             match result {
                 Ok(()) => {}
                 Err(e) => {
-                    print_and_store_error(has_error, error_list, e, "difference detection failed.");
+                    log_error(has_error, error_list, e, "difference detection failed.");
                 }
             }
         });
@@ -463,12 +458,7 @@ impl Pipeline {
                 match result {
                     Ok(_) => {}
                     Err(e) => {
-                        print_and_store_error(
-                            has_error,
-                            error_list,
-                            e,
-                            "delete target objects failed.",
-                        );
+                        log_error(has_error, error_list, e, "delete target objects failed.");
                     }
                 }
             });
@@ -558,7 +548,7 @@ impl Pipeline {
     }
 }
 
-fn print_and_store_error(
+fn log_error(
     has_error: Arc<AtomicBool>,
     errors: Arc<Mutex<VecDeque<Error>>>,
     e: Error,

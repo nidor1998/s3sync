@@ -23,14 +23,7 @@ impl KeyAggregator {
                     match result {
                         Ok(object) => {
                             insert_key(&object, key_map, sha1_digest_required);
-
-                            if let Err(e) = self.base.send(object).await {
-                                return if !self.base.is_channel_closed() {
-                                    Err(e)
-                                } else {
-                                    Ok(())
-                                };
-                            }
+                            self.base.send(object).await?;
                         },
                         Err(_) => {
                             trace!("key aggregator has been completed.");

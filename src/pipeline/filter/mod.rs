@@ -76,13 +76,7 @@ impl ObjectFilterBase<'_> {
                         continue;
                     }
 
-                    if let Err(e) = self.base.send(object).await {
-                        return if !self.base.is_channel_closed() {
-                            Err(e)
-                        } else {
-                            Ok(())
-                        };
-                    }
+                    self.base.send(object).await?;
                 }
                 Err(_) => {
                     trace!(name = self.name, "filter has been completed.");

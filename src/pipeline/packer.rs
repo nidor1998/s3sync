@@ -62,14 +62,6 @@ impl ObjectVersionsPacker {
     ) -> Result<()> {
         let packed_versions = types::pack_object_versions(key, object_versions);
 
-        if let Err(e) = self.base.send(packed_versions).await {
-            return if !self.base.is_channel_closed() {
-                Err(e)
-            } else {
-                Ok(())
-            };
-        }
-
-        Ok(())
+        self.base.send(packed_versions).await
     }
 }

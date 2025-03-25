@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_channel::{Receiver, Sender};
 
 use crate::storage::Storage;
@@ -35,12 +35,23 @@ impl Stage {
     }
 
     pub async fn send(&self, object: S3syncObject) -> Result<()> {
-        self.sender
+        let result = self
+            .sender
             .as_ref()
             .unwrap()
             .send(object)
             .await
-            .context("async_channel::Sender::send() failed.")
+            .context("async_channel::Sender::send() failed.");
+
+        if let Err(e) = result {
+            return if !self.is_channel_closed() {
+                Err(anyhow!(e))
+            } else {
+                Ok(())
+            };
+        }
+
+        Ok(())
     }
 
     pub fn is_channel_closed(&self) -> bool {
