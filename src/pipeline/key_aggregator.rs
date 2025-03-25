@@ -23,7 +23,7 @@ impl KeyAggregator {
                     match result {
                         Ok(object) => {
                             insert_key(&object, key_map, sha1_digest_required);
-                            self.base.send(object).await?;
+                            return self.base.send(object).await;
                         },
                         Err(_) => {
                             trace!("key aggregator has been completed.");

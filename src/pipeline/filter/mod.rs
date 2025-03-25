@@ -76,7 +76,7 @@ impl ObjectFilterBase<'_> {
                         continue;
                     }
 
-                    self.base.send(object).await?;
+                    return self.base.send(object).await;
                 }
                 Err(_) => {
                     trace!(name = self.name, "filter has been completed.");
