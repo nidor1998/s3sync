@@ -540,6 +540,8 @@ impl ObjectSyncer {
             return Ok(None);
         }
 
+        let key = key.to_string();
+
         if let Some(algorithm) = checksum_algorithm {
             // A full object checksum has no object parts.
             if !algorithm.is_empty() && !full_object_checksum {
@@ -549,7 +551,7 @@ impl ObjectSyncer {
                         .as_ref()
                         .unwrap()
                         .get_object_parts_attributes(
-                            key,
+                            &key,
                             version_id.map(|version_id| version_id.to_string()),
                             self.base.config.max_keys,
                             self.base.config.source_sse_c.clone(),
@@ -571,7 +573,7 @@ impl ObjectSyncer {
                 .as_ref()
                 .unwrap()
                 .get_object_parts(
-                    key,
+                    &key,
                     version_id.map(|version_id| version_id.to_string()),
                     self.base.config.source_sse_c.clone(),
                     self.base.config.source_sse_c_key.clone(),
@@ -581,18 +583,14 @@ impl ObjectSyncer {
                 .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?;
 
             if object_parts.is_empty() {
-                self.base
-                    .send_stats(SyncWarning {
-                        key: key.to_string(),
-                    })
-                    .await;
-
                 warn!(
                     worker_index = self.worker_index,
                     key = key,
                     "failed to get object parts information. e-tag verification may fail. \
                     this is most likely due to the lack of HeadObject support for partNumber parameter"
                 );
+
+                self.base.send_stats(SyncWarning { key }).await;
 
                 return Ok(None);
             }

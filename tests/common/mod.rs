@@ -958,6 +958,32 @@ impl TestHelper {
         assert!(!pipeline.has_error());
     }
 
+    pub async fn sync_large_test_data_with_custom_chunksize_sha1(
+        &self,
+        target_bucket_url: &str,
+        chunksize: &str,
+    ) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            "--additional-checksum-algorithm",
+            "SHA1",
+            "--multipart-chunksize",
+            chunksize,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
     pub async fn sync_large_test_data_with_custom_chunksize_crc64nvme(
         &self,
         target_bucket_url: &str,

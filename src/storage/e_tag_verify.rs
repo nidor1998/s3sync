@@ -125,10 +125,7 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
         if read_result.is_err() {
             return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
             {
-                Err(anyhow!(
-                    "Failed to read file: {:?}",
-                    read_result.unwrap_err()
-                ))
+                Err(anyhow!("Failed to read: {:?}", read_result.unwrap_err()))
             } else {
                 Ok(UNKNOWN_E_TAG_VALUE.to_string())
             };

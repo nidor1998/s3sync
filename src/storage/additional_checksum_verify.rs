@@ -36,10 +36,7 @@ pub async fn generate_checksum_from_path(
         if read_result.is_err() {
             return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
             {
-                Err(anyhow!(
-                    "Failed to read file: {:?}",
-                    read_result.unwrap_err()
-                ))
+                Err(anyhow!("Failed to read: {:?}", read_result.unwrap_err()))
             } else {
                 Ok(UNKNOWN_CHECKSUM_VALUE.to_string())
             };
@@ -88,10 +85,7 @@ pub async fn generate_checksum_from_path_for_check(
         if read_result.is_err() {
             return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
             {
-                Err(anyhow!(
-                    "Failed to read file: {:?}",
-                    read_result.unwrap_err()
-                ))
+                Err(anyhow!("Failed to read: {:?}", read_result.unwrap_err()))
             } else {
                 Ok(UNKNOWN_CHECKSUM_VALUE.to_string())
             };
