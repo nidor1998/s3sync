@@ -350,7 +350,8 @@ impl ObjectSyncer {
             })
             .await;
 
-        self.base.send(object).await
+        self.base.send(object).await?;
+        Ok(())
     }
 
     async fn sync_tagging(&self, key: &str) -> Result<bool> {

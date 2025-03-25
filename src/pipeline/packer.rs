@@ -62,6 +62,7 @@ impl ObjectVersionsPacker {
     ) -> Result<()> {
         let packed_versions = types::pack_object_versions(key, object_versions);
 
-        self.base.send(packed_versions).await
+        self.base.send(packed_versions).await?;
+        Ok(())
     }
 }

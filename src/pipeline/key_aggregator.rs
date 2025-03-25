@@ -3,7 +3,7 @@ use tracing::trace;
 
 use crate::types::{sha1_digest_from_key, ObjectEntry, ObjectKey, ObjectKeyMap, S3syncObject};
 
-use super::stage::Stage;
+use super::stage::{SendResult, Stage};
 
 pub struct KeyAggregator {
     base: Stage,
@@ -23,7 +23,9 @@ impl KeyAggregator {
                     match result {
                         Ok(object) => {
                             insert_key(&object, key_map, sha1_digest_required);
-                            return self.base.send(object).await;
+                            if self.base.send(object).await? == SendResult::Closed {
+                                return Ok(());
+                            }
                         },
                         Err(_) => {
                             trace!("key aggregator has been completed.");

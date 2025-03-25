@@ -6,7 +6,7 @@ use tracing::trace;
 
 use crate::types::{ObjectKey, ObjectKeyMap, S3syncObject};
 
-use super::stage::Stage;
+use super::stage::{SendResult, Stage};
 
 pub struct DiffLister {
     base: Stage,
@@ -36,7 +36,9 @@ impl DiffLister {
                 Object::builder().set_key(Some(key.to_string())).build(),
             );
 
-            return self.base.send(object).await;
+            if self.base.send(object).await? == SendResult::Closed {
+                return Ok(());
+            }
         }
         trace!("diff list has been completed.");
 
