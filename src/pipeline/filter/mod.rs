@@ -15,7 +15,7 @@ pub use crate::pipeline::filter::mtime_before::MtimeBeforeFilter;
 pub use crate::pipeline::filter::smaller_size::SmallerSizeFilter;
 use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics};
 
-use super::stage::Stage;
+use super::stage::{SendResult, Stage};
 
 mod exclude_regex;
 mod include_regex;
@@ -76,7 +76,9 @@ impl ObjectFilterBase<'_> {
                         continue;
                     }
 
-                    return self.base.send(object).await;
+                    if self.base.send(object).await? == SendResult::Closed {
+                        return Ok(());
+                    }
                 }
                 Err(_) => {
                     trace!(name = self.name, "filter has been completed.");

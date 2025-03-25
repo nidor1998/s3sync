@@ -15,6 +15,12 @@ pub struct Stage {
     pub cancellation_token: PipelineCancellationToken,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum SendResult {
+    Success,
+    Closed,
+}
+
 impl Stage {
     pub fn new(
         config: Config,
@@ -34,7 +40,7 @@ impl Stage {
         }
     }
 
-    pub async fn send(&self, object: S3syncObject) -> Result<()> {
+    pub async fn send(&self, object: S3syncObject) -> Result<SendResult> {
         let result = self
             .sender
             .as_ref()
@@ -47,11 +53,11 @@ impl Stage {
             return if !self.is_channel_closed() {
                 Err(anyhow!(e))
             } else {
-                Ok(())
+                Ok(SendResult::Closed)
             };
         }
 
-        Ok(())
+        Ok(SendResult::Success)
     }
 
     pub fn is_channel_closed(&self) -> bool {
