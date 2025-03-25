@@ -1,3 +1,5 @@
+use std::io::Error;
+use std::io::ErrorKind::InvalidData;
 use std::io::Result;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -55,6 +57,7 @@ impl<R: AsyncRead + Send + Sync> AsyncReadWithCallback<R> {
 }
 
 impl<R: AsyncRead + Send + Sync> AsyncRead for AsyncReadWithCallback<R> {
+    #[rustfmt::skip] // For coverage tool incorrectness
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -96,15 +99,7 @@ impl<R: AsyncRead + Send + Sync> AsyncRead for AsyncReadWithCallback<R> {
             let hasher = &mut this.additional_checksum.as_mut().unwrap();
             let hasher = Arc::get_mut(hasher).unwrap();
 
-            return validate_checksum(
-                buf,
-                before,
-                sync_bytes,
-                hasher,
-                this.cursor,
-                this.object_checksum.as_ref().unwrap(),
-                result,
-            );
+            return validate_checksum(buf, before, sync_bytes, hasher, this.cursor, this.object_checksum.as_ref().unwrap(), result);
         }
 
         result
@@ -164,19 +159,12 @@ fn validate_checksum(
                     part_number = part_number,
                     "additional checksum mismatch."
                 );
-
-                return Poll::Ready(Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "additional checksum mismatch.",
-                )));
+                return Poll::Ready(Err(Error::new(InvalidData, "checksum mismatch")));
             }
 
             let local_final_checksum = hasher.finalize_all();
             if local_final_checksum != *object_checksum.final_checksum.as_ref().unwrap() {
-                return Poll::Ready(Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "additional checksum mismatch",
-                )));
+                return Poll::Ready(Err(Error::new(InvalidData, "checksum mismatch")));
             }
 
             trace!(
@@ -201,10 +189,7 @@ fn validate_checksum(
                 "unexpected I/O behavior."
             );
 
-            return Poll::Ready(Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "unexpected I/O behavior.",
-            )));
+            return Poll::Ready(Err(Error::new(InvalidData, "unexpected I/O behavior.")));
         }
 
         let current_part_size = object_checksum.object_parts.as_ref().unwrap()[cursor.part_number]
@@ -235,10 +220,7 @@ fn validate_checksum(
                         "additional checksum mismatch."
                     );
 
-                    return Poll::Ready(Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "additional checksum mismatch.",
-                    )));
+                    return Poll::Ready(Err(Error::new(InvalidData, "checksum mismatch.")));
                 }
 
                 if cursor.part_number == object_checksum.object_parts.as_ref().unwrap().len() - 1 {
@@ -253,10 +235,7 @@ fn validate_checksum(
                     cursor.eof = true;
 
                     if local_final_checksum != *object_checksum.final_checksum.as_ref().unwrap() {
-                        return Poll::Ready(Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            "additional checksum mismatch",
-                        )));
+                        return Poll::Ready(Err(Error::new(InvalidData, "checksum mismatch.")));
                     }
                 }
 
@@ -282,11 +261,7 @@ fn validate_checksum(
                     part_number = part_number,
                     "additional checksum mismatch."
                 );
-
-                return Poll::Ready(Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "additional checksum mismatch.",
-                )));
+                return Poll::Ready(Err(Error::new(InvalidData, "checksum mismatch.")));
             }
 
             hasher.update(&buf.filled()[remaining..]);

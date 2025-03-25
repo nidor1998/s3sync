@@ -328,11 +328,6 @@ impl LocalStorage {
                 source_checksum_algorithm.as_ref().unwrap().as_str();
 
             if source_final_checksum != target_final_checksum {
-                self.send_stats(SyncWarning {
-                    key: key.to_string(),
-                })
-                .await;
-
                 warn!(
                     key = key,
                     additional_checksum_algorithm = additional_checksum_algorithm,
@@ -340,6 +335,8 @@ impl LocalStorage {
                     target_final_checksum = target_final_checksum,
                     "additional checksum mismatch. file in the local storage may be corrupted."
                 );
+
+                self.send_stats(SyncWarning { key }).await;
             } else {
                 trace!(
                     key = &key,
