@@ -36,7 +36,7 @@ impl DiffLister {
                 Object::builder().set_key(Some(key.to_string())).build(),
             );
 
-            self.base.send(object).await?;
+            return self.base.send(object).await;
         }
         trace!("diff list has been completed.");
 
