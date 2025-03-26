@@ -76,6 +76,12 @@ impl ObjectSyncer {
     async fn sync_object_with_force_retry(&self, object: S3syncObject) -> Result<()> {
         let key = object.key();
 
+        // This is special for test emulation.
+        #[allow(clippy::collapsible_if)]
+        if cfg!(feature = "e2c_test_dangerous_simulations") {
+            self.do_cancel_simulation("sync_object_with_force_retry");
+        }
+
         for _ in 0..=self.base.config.force_retry_config.force_retry_count {
             let result = if self.base.config.enable_versioning {
                 self.sync_object_versions(object.clone()).await
@@ -83,19 +89,19 @@ impl ObjectSyncer {
                 self.sync_object(object.clone()).await
             };
 
+            if self.base.cancellation_token.is_cancelled() {
+                info!(
+                    worker_index = self.worker_index,
+                    key = key,
+                    "cancellation_token has been cancelled."
+                );
+
+                return Ok(());
+            }
+
             return if result.is_ok() {
                 Ok(())
             } else {
-                if self.base.cancellation_token.is_cancelled() {
-                    info!(
-                        worker_index = self.worker_index,
-                        key = key,
-                        "cancellation_token has been cancelled."
-                    );
-
-                    return Ok(());
-                }
-
                 let e = result.unwrap_err();
                 let error = e.to_string();
 
@@ -105,6 +111,7 @@ impl ObjectSyncer {
                             key: key.to_string(),
                         })
                         .await;
+
                     warn!(
                         worker_index = self.worker_index,
                         key = key,
@@ -259,6 +266,12 @@ impl ObjectSyncer {
             self.worker_index,
         );
 
+        // This is special for test emulation.
+        #[allow(clippy::collapsible_if)]
+        if cfg!(feature = "e2c_test_dangerous_simulations") {
+            self.do_cancel_simulation("sync_object_versions");
+        }
+
         let objects_to_sync = versioning_info_collector
             .collect_object_versions_to_sync(&object)
             .await?;
@@ -295,6 +308,12 @@ impl ObjectSyncer {
                 self.base.config.source_sse_c_key_md5.clone(),
             )
             .await;
+
+        // This is special for test emulation.
+        #[allow(clippy::collapsible_if)]
+        if cfg!(feature = "e2c_test_dangerous_simulations") {
+            self.do_cancel_simulation("sync_or_delete_object");
+        }
 
         if self.base.cancellation_token.is_cancelled() {
             info!(
@@ -477,6 +496,12 @@ impl ObjectSyncer {
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput> {
+        // This is special for test emulation.
+        #[allow(clippy::collapsible_if)]
+        if cfg!(feature = "e2c_test_dangerous_simulations") {
+            self.do_cancel_simulation("put_object");
+        }
+
         self.base
             .target
             .as_ref()
@@ -653,6 +678,23 @@ impl ObjectSyncer {
                 additional_checksum_algorithm,
             ),
         }))
+    }
+
+    fn do_cancel_simulation(&self, cancellation_point: &str) {
+        const CANCEL_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_CANCEL_DANGEROUS_SIMULATION";
+        const CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+        if std::env::var(CANCEL_DANGEROUS_SIMULATION_ENV)
+            .is_ok_and(|v| v == CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW)
+            && self
+                .base
+                .config
+                .cancellation_point
+                .as_ref()
+                .is_some_and(|point| point == cancellation_point)
+        {
+            self.base.cancellation_token.cancel();
+        }
     }
 }
 

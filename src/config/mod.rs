@@ -62,6 +62,7 @@ pub struct Config {
     pub disable_content_md5_header: bool,
     pub full_object_checksum: bool,
     pub allow_e2e_test_dangerous_simulation: bool,
+    pub cancellation_point: Option<String>,
 }
 
 impl Config {

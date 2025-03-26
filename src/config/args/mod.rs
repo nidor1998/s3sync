@@ -476,6 +476,11 @@ pub struct CLIArgs {
     /// Use full object checksum for verification. CRC64NVME automatically use full object checksum. This option cannot be used with SHA1/SHA256 additional checksum.
     #[arg(long, env, default_value_t = DEFAULT_FULL_OBJECT_CHECKSUM)]
     full_object_checksum: bool,
+
+    /// [dangerous] test purpose only
+    #[cfg(feature = "e2c_test_dangerous_simulations")]
+    #[arg(long, hide = true)]
+    cancellation_point: Option<String>,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -1072,9 +1077,14 @@ impl TryFrom<CLIArgs> for Config {
         #[allow(unused_mut)]
         let mut allow_e2e_test_dangerous_simulation = false;
 
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut cancellation_point = None;
+
         #[cfg(feature = "e2c_test_dangerous_simulations")]
         {
             allow_e2e_test_dangerous_simulation = value.allow_e2e_test_dangerous_simulation;
+            cancellation_point = value.cancellation_point
         }
 
         Ok(Config {
@@ -1159,6 +1169,7 @@ impl TryFrom<CLIArgs> for Config {
             disable_content_md5_header: value.disable_content_md5_header,
             full_object_checksum,
             allow_e2e_test_dangerous_simulation,
+            cancellation_point,
         })
     }
 }
