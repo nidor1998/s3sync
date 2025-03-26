@@ -693,6 +693,9 @@ impl ObjectSyncer {
                 .as_ref()
                 .is_some_and(|point| point == cancellation_point)
         {
+            error!(
+                "cancel simulation has been triggered. This message should not be shown in the production.",
+            );
             self.base.cancellation_token.cancel();
         }
     }
