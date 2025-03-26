@@ -108,6 +108,8 @@ pub const SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST: u64 = 30 * 1000;
 
 const NOT_FOUND_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_NOT_FOUND_DANGEROUS_SIMULATION";
 const NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+const CANCEL_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_CANCEL_DANGEROUS_SIMULATION";
+const CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
 
 #[cfg(feature = "e2e_test")]
 pub struct TestHelper {
@@ -1532,5 +1534,16 @@ impl TestHelper {
 
     pub fn disable_not_found_dangerous_simulation() {
         std::env::remove_var(NOT_FOUND_DANGEROUS_SIMULATION_ENV);
+    }
+
+    pub fn enable_cancel_dangerous_simulation() {
+        std::env::set_var(
+            CANCEL_DANGEROUS_SIMULATION_ENV,
+            CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW,
+        );
+    }
+
+    pub fn disable_cancel_dangerous_simulation() {
+        std::env::remove_var(CANCEL_DANGEROUS_SIMULATION_ENV);
     }
 }

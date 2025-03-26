@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use async_channel::Sender;
+use aws_sdk_s3::operation::abort_multipart_upload::AbortMultipartUploadOutput;
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
@@ -288,18 +289,16 @@ impl UploadManager {
             .await
             .context("upload_parts() failed.");
         if upload_result.is_err() {
-            self.client
-                .abort_multipart_upload()
-                .bucket(bucket)
-                .key(key)
-                .upload_id(upload_id)
-                .send()
-                .await
-                .context("aws_sdk_s3::client::Client abort_multipart_upload() failed.")?;
+            self.abort_multipart_upload(bucket, key, upload_id).await?;
             return Err(upload_result.err().unwrap());
         }
 
         upload_result
+    }
+
+    #[rustfmt::skip] // For coverage tool incorrectness
+    async fn abort_multipart_upload(&self, bucket: &str, key: &str, upload_id: &str) -> Result<AbortMultipartUploadOutput> {
+        self.client.abort_multipart_upload().bucket(bucket).key(key).upload_id(upload_id).send().await.context("aws_sdk_s3::client::Client abort_multipart_upload() failed.")
     }
 
     async fn upload_parts_and_complete(
