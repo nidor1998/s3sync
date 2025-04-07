@@ -23,7 +23,7 @@ For more information, see [s3sync homepage](https://github.com/nidor1998/s3sync)
 ## As a library
 s3sync can be used as a library.
 
-s3sync CLI is a very thin wrapper of the s3sync library. You can use every feature of s3sync CLI in the library.
+s3sync CLI is a very thin wrapper of the s3sync library. You can use all features of s3sync CLI in the library.
 
 s3sync library has many features that are not documented. You can refer to the s3sync CLI help(`s3sync -h`) for the features and pass the arguments to the library.
 
@@ -34,8 +34,8 @@ Example usage
 
 ```Toml
 [dependencies]
-s3sync = "1.12.3"
-tokio = { version = "1.44.1", features = ["full"] }
+s3sync = "1.13.0"
+tokio = { version = "1.44.2", features = ["full"] }
 ```
 
 ```no_run

@@ -66,6 +66,7 @@ const DEFAULT_DISABLE_STALLED_STREAM_PROTECTION: bool = false;
 const DEFAULT_DISABLE_PAYLOAD_SIGNING: bool = false;
 const DEFAULT_DISABLE_CONTENT_MD5_HEADER: bool = false;
 const DEFAULT_FULL_OBJECT_CHECKSUM: bool = false;
+const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -481,6 +482,10 @@ pub struct CLIArgs {
     #[cfg(feature = "e2c_test_dangerous_simulations")]
     #[arg(long, hide = true)]
     cancellation_point: Option<String>,
+
+    /// disable default additional checksum verification in Express One Zone storage class
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM)]
+    disable_express_one_zone_additional_checksum: bool,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -863,7 +868,10 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn build_client_configs(&self) -> (Option<ClientConfig>, Option<ClientConfig>) {
+    fn build_client_configs(
+        &self,
+        request_checksum_calculation: RequestChecksumCalculation,
+    ) -> (Option<ClientConfig>, Option<ClientConfig>) {
         let source_credential = if let Some(source_profile) = self.source_profile.clone() {
             Some(S3Credentials::Profile(source_profile))
         } else if self.source_access_key.is_some() {
@@ -943,12 +951,6 @@ impl CLIArgs {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
         });
 
-        let request_checksum_calculation = if self.additional_checksum_algorithm.is_some() {
-            RequestChecksumCalculation::WhenSupported
-        } else {
-            RequestChecksumCalculation::WhenRequired
-        };
-
         let target_client_config = target_credential.map(|target_credential| ClientConfig {
             client_config_location: ClientConfigLocation {
                 aws_config_file: self.aws_config_file.clone(),
@@ -979,7 +981,7 @@ impl TryFrom<CLIArgs> for Config {
     fn try_from(value: CLIArgs) -> Result<Self, Self::Error> {
         value.validate_storage_config()?;
 
-        let (source_client_config, target_client_config) = value.build_client_configs();
+        let original_cloned_value = value.clone();
 
         let mut tracing_config = value.verbosity.log_level().map(|log_level| TracingConfig {
             tracing_level: log_level,
@@ -1033,7 +1035,7 @@ impl TryFrom<CLIArgs> for Config {
             .rate_limit_bandwidth
             .map(|bandwidth| human_bytes::parse_human_bandwidth(&bandwidth).unwrap());
 
-        let additional_checksum_algorithm = value
+        let mut additional_checksum_algorithm = value
             .additional_checksum_algorithm
             .map(|algorithm| ChecksumAlgorithm::from(algorithm.as_str()));
 
@@ -1041,7 +1043,7 @@ impl TryFrom<CLIArgs> for Config {
             .check_additional_checksum
             .map(|algorithm| ChecksumAlgorithm::from(algorithm.as_str()));
 
-        let checksum_mode = if value.enable_additional_checksum {
+        let mut checksum_mode = if value.enable_additional_checksum {
             Some(ChecksumMode::Enabled)
         } else {
             None
@@ -1050,7 +1052,6 @@ impl TryFrom<CLIArgs> for Config {
         let tagging = value
             .tagging
             .map(|tagging| tagging::parse_tagging(&tagging).unwrap());
-
         let filter_larger_size = value
             .filter_larger_size
             .map(|human_bytes| human_bytes::parse_human_bytes_without_limit(&human_bytes).unwrap());
@@ -1064,7 +1065,7 @@ impl TryFrom<CLIArgs> for Config {
             None
         };
 
-        let full_object_checksum = if additional_checksum_algorithm
+        let mut full_object_checksum = if additional_checksum_algorithm
             .as_ref()
             .is_some_and(|algorithm| algorithm == &ChecksumAlgorithm::Crc64Nvme)
         {
@@ -1072,6 +1073,31 @@ impl TryFrom<CLIArgs> for Config {
         } else {
             value.full_object_checksum
         };
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&value.source) {
+            if is_express_onezone_storage(&bucket)
+                && !value.disable_express_one_zone_additional_checksum
+            {
+                checksum_mode = Some(ChecksumMode::Enabled);
+            }
+        }
+
+        let mut request_checksum_calculation = RequestChecksumCalculation::WhenRequired;
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&value.target) {
+            if is_express_onezone_storage(&bucket)
+                && additional_checksum_algorithm.is_none()
+                && !value.disable_express_one_zone_additional_checksum
+            {
+                additional_checksum_algorithm = Some(ChecksumAlgorithm::Crc64Nvme);
+                full_object_checksum = true;
+                request_checksum_calculation = RequestChecksumCalculation::WhenSupported;
+            } else if additional_checksum_algorithm.is_some() {
+                request_checksum_calculation = RequestChecksumCalculation::WhenSupported;
+            }
+        }
+
+        let (source_client_config, target_client_config) =
+            original_cloned_value.build_client_configs(request_checksum_calculation);
 
         #[allow(unused_assignments)]
         #[allow(unused_mut)]

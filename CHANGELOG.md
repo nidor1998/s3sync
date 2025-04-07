@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.13.0] - 2025-04-07
+
+### Changed
+
+Added default additional checksum verification for Express One Zone.
+
+see https://github.com/nidor1998/s3sync/issues/65
+
+### Changed
+
+- aws-sdk-s3 = "1.82.0"
+
 ## [1.12.3] - 2025-03-27
 
 ### Changed
