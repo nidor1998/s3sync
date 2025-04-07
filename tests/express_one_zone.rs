@@ -548,6 +548,215 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn single_part_operations_with_default_additional_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+
+        let helper = TestHelper::new().await;
+
+        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+
+        {
+            let target_bucket_url = format!("s3://{}", &bucket1);
+            helper
+                .create_directory_bucket(&bucket1, EXPRESS_ONE_ZONE_AZ)
+                .await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            helper
+                .create_directory_bucket(&bucket2, EXPRESS_ONE_ZONE_AZ)
+                .await;
+
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-additional-checksum",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", &bucket2);
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--enable-additional-checksum",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn single_part_operations_with_disable_additional_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+
+        let helper = TestHelper::new().await;
+
+        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+
+        {
+            let target_bucket_url = format!("s3://{}", &bucket1);
+            helper
+                .create_directory_bucket(&bucket1, EXPRESS_ONE_ZONE_AZ)
+                .await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--disable-express-one-zone-additional-checksum",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            helper
+                .create_directory_bucket(&bucket2, EXPRESS_ONE_ZONE_AZ)
+                .await;
+
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--disable-express-one-zone-additional-checksum",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", &bucket2);
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--disable-express-one-zone-additional-checksum",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
     async fn multipart_operations_with_crc64nvme() {
         TestHelper::init_dummy_tracing_subscriber();
 
