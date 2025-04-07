@@ -17,7 +17,8 @@ mod tests {
         ];
 
         if let Ok(config_args) = parse_from_args(args) {
-            let (source_config_result, target_config_result) = config_args.build_client_configs();
+            let (source_config_result, target_config_result) =
+                config_args.build_client_configs(RequestChecksumCalculation::WhenRequired);
 
             if let S3Credentials::Profile(profile_name) = source_config_result.unwrap().credential {
                 assert_eq!(profile_name, "source_profile".to_string());
@@ -58,7 +59,8 @@ mod tests {
         ];
 
         if let Ok(config_args) = parse_from_args(args) {
-            let (source_config_result, target_config_result) = config_args.build_client_configs();
+            let (source_config_result, target_config_result) =
+                config_args.build_client_configs(RequestChecksumCalculation::WhenRequired);
 
             if let S3Credentials::Credentials { access_keys } =
                 source_config_result.unwrap().credential
