@@ -526,10 +526,7 @@ impl ObjectSyncer {
         key: &str,
         get_object_output: &GetObjectOutput,
     ) -> Result<Option<GetObjectTaggingOutput>> {
-        if get_object_output
-            .tag_count()
-            .map_or(true, |count| count == 0)
-        {
+        if get_object_output.tag_count().is_none_or(|count| count == 0) {
             return Ok(None);
         }
 

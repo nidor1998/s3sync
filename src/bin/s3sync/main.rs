@@ -30,9 +30,7 @@ async fn main() -> Result<()> {
 
     trace!("config = {:?}", config);
 
-    let _result = cli::run(config).await;
-
-    Ok(())
+    cli::run(config).await
 }
 
 #[cfg(not(tarpaulin_include))]
