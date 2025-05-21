@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2025-05-21
+
+### Fixed
+- fixed exit code when s3sync fails. https://github.com/nidor1998/s3sync/issues/68
+- fixed latest version of clippy warnings.
+
+### Changed
+
+- MSRV = 1.82.0
+- aws-sdk-s3 = "1.86.0"
+
 
 ## [1.13.0] - 2025-04-07
 
