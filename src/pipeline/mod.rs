@@ -24,6 +24,7 @@ use crate::Config;
 const CHANNEL_CAPACITY: usize = 20000;
 
 mod deleter;
+mod diff_detector;
 mod diff_lister;
 mod filter;
 mod head_object_checker;
