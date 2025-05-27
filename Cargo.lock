@@ -2124,12 +2124,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "map-ok"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "865d498d5ef7e58564f3d9f10d5133c9afedde2c635558fbe38b704030849ee7"
-
-[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2914,7 +2908,6 @@ dependencies = [
  "aws-config",
  "aws-runtime",
  "aws-sdk-s3",
- "aws-smithy-http",
  "aws-smithy-runtime",
  "aws-smithy-runtime-api",
  "aws-smithy-types",
@@ -2922,7 +2915,6 @@ dependencies = [
  "aws-types",
  "base64 0.22.1",
  "byte-unit",
- "bytes",
  "cfg-if",
  "chrono",
  "clap",
@@ -2945,7 +2937,6 @@ dependencies = [
  "indicatif",
  "leaky-bucket",
  "log",
- "map-ok",
  "md5",
  "mime_guess",
  "nix",
@@ -2962,7 +2953,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "tokio-stream",
  "tokio-util",
  "tracing",
  "tracing-subscriber",
@@ -3475,17 +3465,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-stream"
-version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eca58d7bba4a75707817a2c44174253f9236b2d5fbd055602e9d5c07c139a047"
-dependencies = [
- "futures-core",
- "pin-project-lite",
- "tokio",
-]
-
-[[package]]
 name = "tokio-util"
 version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3771,9 +3750,9 @@ checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
 
 [[package]]
 name = "wait-timeout"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f200f5b12eb75f8c1ed65abd4b2db8a6e1b138a20de009dacee265a2498f3f6"
+checksum = "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11"
 dependencies = [
  "libc",
 ]
