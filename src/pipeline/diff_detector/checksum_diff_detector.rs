@@ -585,3 +585,113 @@ impl ChecksumDiffDetector {
         Ok(true)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::config::args::parse_from_args;
+    use crate::pipeline::storage_factory::create_storage_pair;
+    use crate::storage::StoragePair;
+    use crate::types::token::create_pipeline_cancellation_token;
+    use aws_sdk_s3::operation::head_object;
+    use aws_sdk_s3::primitives::DateTime;
+    use aws_sdk_s3::types::ChecksumAlgorithm;
+    use tracing_subscriber::EnvFilter;
+
+    use super::*;
+
+    const TEST_OBJECT_CHECKSUM: &str = "CVmbZh4IWzA=";
+
+    #[tokio::test]
+    async fn is_source_local_checksum_different_from_target_s3_same() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-additional-checksum",
+            "CRC64NVME",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        config.additional_checksum_algorithm = Some(ChecksumAlgorithm::Crc64Nvme);
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } =
+            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+
+        let diff_detector = ChecksumDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .checksum_crc64_nvme(TEST_OBJECT_CHECKSUM)
+            .build();
+
+        assert_eq!(
+            diff_detector
+                .is_source_local_checksum_different_from_target_s3("6byte.dat", &head_object_output)
+                .await
+                .unwrap(),
+            false
+        );
+    }
+
+    #[tokio::test]
+    async fn is_source_local_checksum_different_from_target_s3_different() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-additional-checksum",
+            "CRC64NVME",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        config.additional_checksum_algorithm = Some(ChecksumAlgorithm::Crc64Nvme);
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } =
+            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+
+        let diff_detector = ChecksumDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(5))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .checksum_crc64_nvme(TEST_OBJECT_CHECKSUM)
+            .build();
+
+        assert_eq!(
+            diff_detector
+                .is_source_local_checksum_different_from_target_s3("6byte.dat", &head_object_output)
+                .await
+                .unwrap(),
+            false
+        );
+    }
+
+    fn init_dummy_tracing_subscriber() {
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
+            .try_init();
+    }
+}
