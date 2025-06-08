@@ -32,7 +32,7 @@ mod tests {
                 panic!("no target client profile");
             }
         } else {
-            panic!("error occurred.");
+            assert!(false, "error occurred.");
         }
     }
 
@@ -94,7 +94,7 @@ mod tests {
                 panic!("no target credential");
             }
         } else {
-            panic!("error occurred.");
+            assert!(false, "error occurred.");
         }
     }
 
