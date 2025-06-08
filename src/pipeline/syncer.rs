@@ -1074,7 +1074,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         if nix::unistd::Uid::effective().is_root() {
-            panic!("run tests from root");
+            panic!("run tests from root. This test does not work with root user.");
         }
 
         let args = vec![
