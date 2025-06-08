@@ -98,7 +98,7 @@ impl S3Storage {
         let (bucket, prefix) = if let StoragePath::S3 { bucket, prefix } = path {
             (bucket, prefix)
         } else {
-            panic!("s3 path no found")
+            panic!("s3 path not found")
         };
 
         let storage = S3Storage {
@@ -958,7 +958,7 @@ impl StorageTrait for S3Storage {
 
     #[cfg(not(tarpaulin_include))]
     fn get_local_path(&self) -> PathBuf {
-        panic!("not implemented");
+        unimplemented!();
     }
 }
 

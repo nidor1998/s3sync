@@ -468,7 +468,7 @@ impl StorageTrait for LocalStorage {
         _max_keys: i32,
         _warn_as_error: bool,
     ) -> Result<()> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     async fn get_object(
@@ -583,7 +583,7 @@ impl StorageTrait for LocalStorage {
 
     #[cfg(not(tarpaulin_include))]
     async fn get_object_versions(&self, _key: &str, _max_keys: i32) -> Result<Vec<ObjectVersion>> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     #[cfg(not(tarpaulin_include))]
@@ -592,7 +592,7 @@ impl StorageTrait for LocalStorage {
         _key: &str,
         _version_id: Option<String>,
     ) -> Result<GetObjectTaggingOutput> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     async fn head_object(
@@ -650,7 +650,7 @@ impl StorageTrait for LocalStorage {
         _sse_c_key: SseCustomerKey,
         _sse_c_key_md5: Option<String>,
     ) -> Result<Vec<ObjectPart>> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     #[cfg(not(tarpaulin_include))]
@@ -663,7 +663,7 @@ impl StorageTrait for LocalStorage {
         _sse_c_key: SseCustomerKey,
         _sse_c_key_md5: Option<String>,
     ) -> Result<Vec<ObjectPart>> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     async fn put_object(
@@ -820,7 +820,7 @@ impl StorageTrait for LocalStorage {
         _version_id: Option<String>,
         _tagging: Tagging,
     ) -> Result<PutObjectTaggingOutput> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     async fn delete_object(
@@ -854,12 +854,12 @@ impl StorageTrait for LocalStorage {
         _key: &str,
         _version_id: Option<String>,
     ) -> Result<DeleteObjectTaggingOutput> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     #[cfg(not(tarpaulin_include))]
     async fn is_versioning_enabled(&self) -> Result<bool> {
-        panic!("not implemented");
+        unimplemented!();
     }
 
     fn get_client(&self) -> Option<Arc<Client>> {
