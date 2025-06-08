@@ -1221,7 +1221,7 @@ mod tests {
             assert!(object.key().is_some());
             assert!(object.last_modified().is_some());
         } else {
-            panic!("NotVersing object not found")
+            panic!("NotVersioning object not found")
         }
     }
 
@@ -1387,7 +1387,7 @@ mod tests {
             assert_eq!(object.key().unwrap(), "dir1/data1");
             assert!(object.last_modified().is_some());
         } else {
-            panic!("NotVersing object not found")
+            panic!("NotVersioning object not found")
         }
     }
 
@@ -1436,7 +1436,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         if nix::unistd::geteuid().is_root() {
-            panic!("run tests from root");
+            panic!("run tests from root. This test does not work with root user.");
         }
 
         let mut permissions = fs::metadata("./test_data/denied_dir6")
@@ -1714,7 +1714,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         if nix::unistd::geteuid().is_root() {
-            panic!("run tests from root");
+            panic!("run tests from root. This test does not work with root user.");
         }
 
         let mut permissions = fs::metadata("./test_data/denied_dir5")

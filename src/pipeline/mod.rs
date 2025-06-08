@@ -900,7 +900,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         if nix::unistd::geteuid().is_root() {
-            panic!("run tests from root");
+            panic!("run tests from root. This test does not work with root user.");
         }
 
         let args = vec![
@@ -971,7 +971,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         if nix::unistd::geteuid().is_root() {
-            panic!("run tests from root");
+            panic!("run tests from root. This test does not work with root user.");
         }
 
         let args = vec![
@@ -1013,7 +1013,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         if nix::unistd::geteuid().is_root() {
-            panic!("run tests from root");
+            panic!("run tests from root. This test does not work with root user.");
         }
 
         let args = vec![
