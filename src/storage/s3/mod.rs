@@ -958,6 +958,7 @@ impl StorageTrait for S3Storage {
 
     #[cfg(not(tarpaulin_include))]
     fn get_local_path(&self) -> PathBuf {
+        // S3 storage does not have a local path.
         unimplemented!();
     }
 }

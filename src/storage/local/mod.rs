@@ -468,6 +468,7 @@ impl StorageTrait for LocalStorage {
         _max_keys: i32,
         _warn_as_error: bool,
     ) -> Result<()> {
+        // local storage does not support versioning.
         unimplemented!();
     }
 
@@ -583,6 +584,7 @@ impl StorageTrait for LocalStorage {
 
     #[cfg(not(tarpaulin_include))]
     async fn get_object_versions(&self, _key: &str, _max_keys: i32) -> Result<Vec<ObjectVersion>> {
+        // local storage does not support versioning.
         unimplemented!();
     }
 
@@ -592,6 +594,7 @@ impl StorageTrait for LocalStorage {
         _key: &str,
         _version_id: Option<String>,
     ) -> Result<GetObjectTaggingOutput> {
+        // local storage does not support tagging.
         unimplemented!();
     }
 
@@ -650,6 +653,7 @@ impl StorageTrait for LocalStorage {
         _sse_c_key: SseCustomerKey,
         _sse_c_key_md5: Option<String>,
     ) -> Result<Vec<ObjectPart>> {
+        // local storage does not support multipart upload.
         unimplemented!();
     }
 
@@ -663,6 +667,7 @@ impl StorageTrait for LocalStorage {
         _sse_c_key: SseCustomerKey,
         _sse_c_key_md5: Option<String>,
     ) -> Result<Vec<ObjectPart>> {
+        // local storage does not support multipart upload.
         unimplemented!();
     }
 
@@ -820,6 +825,7 @@ impl StorageTrait for LocalStorage {
         _version_id: Option<String>,
         _tagging: Tagging,
     ) -> Result<PutObjectTaggingOutput> {
+        // local storage does not support tagging.
         unimplemented!();
     }
 
@@ -854,6 +860,7 @@ impl StorageTrait for LocalStorage {
         _key: &str,
         _version_id: Option<String>,
     ) -> Result<DeleteObjectTaggingOutput> {
+        // local storage does not support tagging.
         unimplemented!();
     }
 
