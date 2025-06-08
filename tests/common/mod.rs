@@ -231,7 +231,7 @@ impl TestHelper {
             if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
-                panic!("S3 API error has occurred.")
+                assert!(false, "S3 API error has occurred.")
             }
 
             return false;
@@ -276,7 +276,7 @@ impl TestHelper {
             if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
-                panic!("S3 API error has occurred.")
+                assert!(false, "S3 API error has occurred.")
             }
         }
 
@@ -297,7 +297,7 @@ impl TestHelper {
             if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
-                panic!("S3 API error has occurred.")
+                assert!(false, "S3 API error has occurred.")
             }
         }
 
@@ -515,7 +515,7 @@ impl TestHelper {
                 assert_eq!(code, "NoSuchBucket");
             } else {
                 println!("{:?}", service_error);
-                panic!("S3 API error has occurred.")
+                assert!(false, "S3 API error has occurred.")
             }
 
             return;

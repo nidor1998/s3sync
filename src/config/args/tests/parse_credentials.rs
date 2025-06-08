@@ -23,13 +23,13 @@ mod tests {
             if let S3Credentials::Profile(profile_name) = source_config_result.unwrap().credential {
                 assert_eq!(profile_name, "source_profile".to_string());
             } else {
-                panic!("no source client profile");
+                assert!(false, "no source client profile");
             }
 
             if let S3Credentials::Profile(profile_name) = target_config_result.unwrap().credential {
                 assert_eq!(profile_name, "target_profile".to_string());
             } else {
-                panic!("no target client profile");
+                assert!(false, "no target client profile");
             }
         } else {
             assert!(false, "error occurred.");
@@ -75,7 +75,7 @@ mod tests {
                     Some("source_session_token".to_string())
                 );
             } else {
-                panic!("no source credential");
+                assert!(false, "no source credential");
             }
 
             if let S3Credentials::Credentials { access_keys } =
@@ -91,7 +91,7 @@ mod tests {
                     Some("target_session_token".to_string())
                 );
             } else {
-                panic!("no target credential");
+                assert!(false, "no target credential");
             }
         } else {
             assert!(false, "error occurred.");

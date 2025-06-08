@@ -1442,9 +1442,10 @@ mod tests {
         use std::fs;
         use std::os::unix::fs::PermissionsExt;
 
-        if nix::unistd::geteuid().is_root() {
-            panic!("run tests from root. This test does not work with root user.");
-        }
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
 
         let mut permissions = fs::metadata("./test_data/denied_dir6")
             .unwrap()
@@ -1709,7 +1710,7 @@ mod tests {
             return;
         }
 
-        panic!("no 404 error occurred")
+        assert!(false, "no 404 error occurred")
     }
 
     #[tokio::test]
@@ -1720,9 +1721,10 @@ mod tests {
         use std::fs;
         use std::os::unix::fs::PermissionsExt;
 
-        if nix::unistd::geteuid().is_root() {
-            panic!("run tests from root. This test does not work with root user.");
-        }
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
 
         let mut permissions = fs::metadata("./test_data/denied_dir5")
             .unwrap()
@@ -1779,7 +1781,7 @@ mod tests {
                 .downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>(),
             Some(SdkError::ServiceError(_))
         ) {
-            panic!("ServiceError occurred");
+            assert!(false, "ServiceError occurred");
         }
     }
 
