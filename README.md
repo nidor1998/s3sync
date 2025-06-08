@@ -460,6 +460,8 @@ You can specify the proxy server for https.
 
 Proxy authentication is supported. Like `http(s)://user:password@proxy:port`.
 
+Warning: Proxy support is achieved by older version crates(hyper0.14/rustls/webpki/ring). So, It should be used with caution, especially from a security perspective.
+
 #### `--disable-multipart-verify`
 When object is uploaded with multipart upload, its ETag may not match that of the target object.  
 This can occur when the chunk size that the object was uploaded with is different. If you don't know the correct chunk size, you can disable the verification with this option.  
