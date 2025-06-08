@@ -543,7 +543,7 @@ mod tests {
             return;
         }
 
-        panic!("no error occurred");
+        assert!(false, "no error occurred");
     }
 
     #[test]
@@ -562,7 +562,7 @@ mod tests {
             return;
         }
 
-        panic!("no error occurred");
+        assert!(false, "no error occurred");
     }
 
     #[test]
@@ -594,7 +594,7 @@ mod tests {
             return;
         }
 
-        panic!("no error occurred");
+        assert!(false, "no error occurred");
     }
 
     #[test]
@@ -608,7 +608,7 @@ mod tests {
             return;
         }
 
-        panic!("no error occurred");
+        assert!(false, "no error occurred");
     }
 
     fn init_dummy_tracing_subscriber() {
