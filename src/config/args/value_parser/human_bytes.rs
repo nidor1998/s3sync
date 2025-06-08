@@ -111,14 +111,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_human_bytes("524287a");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
 
         let result = check_human_bytes("5Zib");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
     }
 
     #[test]
@@ -126,14 +122,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_human_bytes_without_limit("524287a");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
 
         let result = check_human_bytes_without_limit("5Zib");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
     }
 
     #[test]
@@ -141,14 +133,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_human_bandwidth("524287a");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
 
         let result = check_human_bandwidth("5Zib");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
     }
 
     #[test]
@@ -156,11 +144,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_human_bytes("5242879");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, UNDER_MIN_VALUE);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -169,17 +156,17 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_human_bytes("5368709121");
+        assert!(result.is_err());
+
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_VALUE);
-        } else {
-            panic!("No error occurred.")
         }
 
         let result = check_human_bytes("5Eib");
+        assert!(result.is_err());
+
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_VALUE);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -188,11 +175,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_human_bandwidth("1048575");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, UNDER_MIN_BANDWIDTH);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -201,17 +187,16 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_human_bandwidth("107374182401");
+        assert!(result.is_err());
+
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_BANDWIDTH);
-        } else {
-            panic!("No error occurred.")
         }
 
         let result = check_human_bandwidth("5Eib");
+        assert!(result.is_err());
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_BANDWIDTH);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -246,14 +231,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = parse_human_bytes("524287a");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
 
         let result = parse_human_bytes("5Zib");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
     }
 
     #[test]
@@ -261,14 +242,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = parse_human_bytes_without_limit("524287a");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
 
         let result = parse_human_bytes_without_limit("5Zib");
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
     }
 
     #[test]
@@ -276,11 +253,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = parse_human_bytes("5242879");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, UNDER_MIN_VALUE);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -289,11 +265,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = parse_human_bytes("5368709121");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_VALUE);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -313,10 +288,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = parse_human_bandwidth("524287a");
-
-        if result.is_ok() {
-            panic!("No error occurred.")
-        }
+        assert!(result.is_err());
     }
 
     #[test]
@@ -324,11 +296,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = parse_human_bandwidth("1048575");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, UNDER_MIN_BANDWIDTH);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -337,11 +308,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = parse_human_bandwidth("107374182401");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, OVER_MAX_BANDWIDTH);
-        } else {
-            panic!("No error occurred.")
         }
     }
 

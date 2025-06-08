@@ -327,11 +327,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_storage_path("");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, NO_PATH_SPECIFIED);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -340,11 +339,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_storage_path("https://my-bucket");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, INVALID_SCHEME);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
@@ -353,11 +351,10 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let result = check_storage_path("s3://");
+        assert!(result.is_err());
 
         if let Err(e) = result {
             assert_eq!(e, NO_BUCKET_NAME_SPECIFIED);
-        } else {
-            panic!("No error occurred.")
         }
     }
 
