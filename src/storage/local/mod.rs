@@ -1710,6 +1710,7 @@ mod tests {
             return;
         }
 
+        // skipcq: RS-W1021
         assert!(false, "no 404 error occurred")
     }
 
@@ -1781,6 +1782,7 @@ mod tests {
                 .downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>(),
             Some(SdkError::ServiceError(_))
         ) {
+            // skipcq: RS-W1021
             assert!(false, "ServiceError occurred");
         }
     }

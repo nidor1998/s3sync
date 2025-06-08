@@ -23,15 +23,18 @@ mod tests {
             if let S3Credentials::Profile(profile_name) = source_config_result.unwrap().credential {
                 assert_eq!(profile_name, "source_profile".to_string());
             } else {
+                // skipcq: RS-W1021
                 assert!(false, "no source client profile");
             }
 
             if let S3Credentials::Profile(profile_name) = target_config_result.unwrap().credential {
                 assert_eq!(profile_name, "target_profile".to_string());
             } else {
+                // skipcq: RS-W1021
                 assert!(false, "no target client profile");
             }
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -75,6 +78,7 @@ mod tests {
                     Some("source_session_token".to_string())
                 );
             } else {
+                // skipcq: RS-W1021
                 assert!(false, "no source credential");
             }
 
@@ -91,9 +95,11 @@ mod tests {
                     Some("target_session_token".to_string())
                 );
             } else {
+                // skipcq: RS-W1021
                 assert!(false, "no target credential");
             }
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
