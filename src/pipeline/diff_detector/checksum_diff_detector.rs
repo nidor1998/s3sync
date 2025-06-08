@@ -34,12 +34,10 @@ impl DiffDetectionStrategy for ChecksumDiffDetector {
         if !self.source.is_local_storage() && !self.target.is_local_storage() {
             self.are_different_checksums(key, target_object).await
         } else if self.source.is_local_storage() && !self.target.is_local_storage() {
-            self
-                .is_source_local_checksum_different_from_target_s3(key, target_object)
+            self.is_source_local_checksum_different_from_target_s3(key, target_object)
                 .await
         } else if !self.source.is_local_storage() && self.target.is_local_storage() {
-            self
-                .is_target_local_checksum_different_from_source_s3(key, target_object)
+            self.is_target_local_checksum_different_from_source_s3(key, target_object)
                 .await
         } else {
             panic!("source and target are both local storage.")
