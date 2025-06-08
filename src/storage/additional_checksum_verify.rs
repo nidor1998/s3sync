@@ -41,7 +41,7 @@ pub async fn generate_checksum_from_path(
                 Ok(UNKNOWN_CHECKSUM_VALUE.to_string())
             };
         }
-        read_bytes += read_result.unwrap();
+        read_bytes += read_result?;
 
         checksum.update(buffer.as_slice());
         last_hash = checksum.finalize()
@@ -90,7 +90,7 @@ pub async fn generate_checksum_from_path_for_check(
                 Ok(UNKNOWN_CHECKSUM_VALUE.to_string())
             };
         }
-        read_bytes += read_result.unwrap();
+        read_bytes += read_result?;
 
         checksum.update(buffer.as_slice());
         last_hash = checksum.finalize()
@@ -115,7 +115,7 @@ pub async fn generate_checksum_from_path_with_chunksize(
     full_object_checksum: bool,
 ) -> Result<String> {
     let mut file = File::open(path).await?;
-    let mut remaining_bytes = file.metadata().await.unwrap().len();
+    let mut remaining_bytes = file.metadata().await?.len();
 
     let mut checksum = AdditionalChecksum::new(checksum_algorithm, full_object_checksum);
 

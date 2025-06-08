@@ -806,13 +806,10 @@ impl UploadManager {
                     DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
                 })
             } else {
-                Some(
-                    DateTime::from_str(
-                        &self.config.expires.unwrap().to_rfc3339(),
-                        DateTimeFormat::DateTimeWithOffset,
-                    )
-                    .unwrap(),
-                )
+                Some(DateTime::from_str(
+                    &self.config.expires.unwrap().to_rfc3339(),
+                    DateTimeFormat::DateTimeWithOffset,
+                )?)
             })
             .set_server_side_encryption(self.config.sse.clone())
             .set_ssekms_key_id(self.config.sse_kms_key_id.clone().id.clone())

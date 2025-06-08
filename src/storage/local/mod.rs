@@ -154,7 +154,7 @@ impl LocalStorage {
 
             return Ok(false);
         }
-        if !regular_file_check_result.unwrap() {
+        if !regular_file_check_result? {
             let path = entry.path().to_str().unwrap();
 
             debug!(path = path, "skip non regular file.");
@@ -483,7 +483,7 @@ impl StorageTrait for LocalStorage {
         let mut path = self.path.clone();
         path.push(key);
 
-        if !path.clone().try_exists().unwrap() {
+        if !path.clone().try_exists()? {
             let (get_object_error, response) = build_no_such_key_response();
 
             return Err(anyhow!(SdkError::service_error(get_object_error, response)));
@@ -620,7 +620,7 @@ impl StorageTrait for LocalStorage {
             return Err(anyhow!("failed to path.try_exists()."));
         }
 
-        if !result.unwrap() {
+        if !result? {
             let (head_object_error, response) = build_not_found_response();
 
             return Err(anyhow!(SdkError::service_error(
@@ -688,16 +688,10 @@ impl StorageTrait for LocalStorage {
         };
         let source_storage_class = get_object_output.storage_class().cloned();
 
-        let source_last_modified = DateTime::from_millis(
-            get_object_output
-                .last_modified
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        )
-        .to_chrono_utc()
-        .unwrap()
-        .to_rfc3339();
+        let source_last_modified =
+            DateTime::from_millis(get_object_output.last_modified.unwrap().to_millis()?)
+                .to_chrono_utc()?
+                .to_rfc3339();
 
         if fs_util::check_directory_traversal(key) {
             return Err(anyhow!(S3syncError::DirectoryTraversalError));
@@ -733,7 +727,7 @@ impl StorageTrait for LocalStorage {
         }
 
         let mut temp_file = fs_util::create_temp_file_from_key(&self.path, key).await?;
-        let mut file = tokio::fs::File::from_std(temp_file.as_file_mut().try_clone().unwrap());
+        let mut file = tokio::fs::File::from_std(temp_file.as_file_mut().try_clone()?);
 
         let seconds = get_object_output.last_modified().as_ref().unwrap().secs();
         let nanos = get_object_output
@@ -781,9 +775,9 @@ impl StorageTrait for LocalStorage {
         drop(file);
 
         let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key);
-        temp_file.persist(&real_path).unwrap();
+        temp_file.persist(&real_path)?;
 
-        fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos).unwrap();
+        fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos)?;
 
         let target_object_parts = if let Some(object_checksum) = &object_checksum {
             object_checksum.object_parts.clone()

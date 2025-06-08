@@ -56,9 +56,8 @@ impl VersioningInfoCollector {
                 } else {
                     let source_version_id = marker.version_id().unwrap();
                     let source_last_modified =
-                        DateTime::from_millis(source_object.last_modified().to_millis().unwrap())
-                            .to_chrono_utc()
-                            .unwrap()
+                        DateTime::from_millis(source_object.last_modified().to_millis()?)
+                            .to_chrono_utc()?
                             .to_rfc3339();
                     debug!(
                         worker_index = self.worker_index,
@@ -76,9 +75,8 @@ impl VersioningInfoCollector {
                 object_versions_to_sync.push(source_object);
             } else {
                 let source_last_modified =
-                    DateTime::from_millis(source_object.last_modified().to_millis().unwrap())
-                        .to_chrono_utc()
-                        .unwrap()
+                    DateTime::from_millis(source_object.last_modified().to_millis()?)
+                        .to_chrono_utc()?
                         .to_rfc3339();
 
                 debug!(

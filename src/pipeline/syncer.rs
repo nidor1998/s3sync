@@ -20,7 +20,6 @@ use tracing::{error, info, trace, warn};
 use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
 use crate::storage::e_tag_verify;
-use crate::types;
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
 use crate::types::{
@@ -670,7 +669,7 @@ impl ObjectSyncer {
             checksum_algorithm: additional_checksum_algorithm.clone(),
             checksum_type: get_object_output.checksum_type().cloned(),
             object_parts,
-            final_checksum: types::get_additional_checksum(
+            final_checksum: get_additional_checksum(
                 get_object_output,
                 additional_checksum_algorithm,
             ),

@@ -27,7 +27,7 @@ pub async fn run(config: Config) -> Result<()> {
     );
 
     pipeline.run().await;
-    indicator_join_handle.await.unwrap();
+    indicator_join_handle.await?;
 
     let duration_sec = format!("{:.3}", start_time.elapsed().as_secs_f32());
     if pipeline.has_error() {
