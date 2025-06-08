@@ -231,6 +231,7 @@ impl TestHelper {
             if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
+                // skipcq: RS-W1021
                 assert!(false, "S3 API error has occurred.")
             }
 
@@ -276,6 +277,7 @@ impl TestHelper {
             if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
+                // skipcq: RS-W1021
                 assert!(false, "S3 API error has occurred.")
             }
         }
@@ -297,6 +299,7 @@ impl TestHelper {
             if let Some(code) = service_error.meta().code() {
                 assert_eq!(code, "NoSuchBucket");
             } else {
+                // skipcq: RS-W1021
                 assert!(false, "S3 API error has occurred.")
             }
         }
@@ -515,6 +518,7 @@ impl TestHelper {
                 assert_eq!(code, "NoSuchBucket");
             } else {
                 println!("{:?}", service_error);
+                // skipcq: RS-W1021
                 assert!(false, "S3 API error has occurred.")
             }
 

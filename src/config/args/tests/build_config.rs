@@ -22,6 +22,7 @@ mod tests {
             assert_eq!(bucket, "source-bucket".to_string());
             assert_eq!(prefix, "source_key".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
 
@@ -29,6 +30,7 @@ mod tests {
             assert_eq!(bucket, "target-bucket".to_string());
             assert_eq!(prefix, "target_key".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
 
@@ -52,6 +54,7 @@ mod tests {
         {
             assert_eq!(profile_name.to_string(), "source_profile".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "source profile not found")
         }
 
@@ -114,6 +117,7 @@ mod tests {
         {
             assert_eq!(profile_name.to_string(), "target_profile".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "target profile not found")
         }
 
@@ -231,6 +235,7 @@ mod tests {
                 Some("source_session_token".to_string())
             );
         } else {
+            // skipcq: RS-W1021
             assert!(false, "source access keys not found")
         }
         assert_eq!(
@@ -280,6 +285,7 @@ mod tests {
                 Some("target_session_token".to_string())
             );
         } else {
+            // skipcq: RS-W1021
             assert!(false, "target access keys not found")
         }
         assert_eq!(
@@ -337,6 +343,7 @@ mod tests {
             assert_eq!(bucket, "source-bucket".to_string());
             assert_eq!(prefix, "".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
 
@@ -344,6 +351,7 @@ mod tests {
             assert_eq!(bucket, "target-bucket".to_string());
             assert_eq!(prefix, "".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
     }
@@ -367,12 +375,14 @@ mod tests {
             assert_eq!(bucket, "source-bucket".to_string());
             assert_eq!(prefix, "".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
 
         if let StoragePath::Local(path) = config.target {
             assert_eq!(path.to_str().unwrap(), "target-dir/".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "local path not found");
         }
     }
@@ -395,6 +405,7 @@ mod tests {
         if let StoragePath::Local(path) = config.source {
             assert_eq!(path.to_str().unwrap(), "./test_data/source/".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "local path not found");
         }
 
@@ -402,6 +413,7 @@ mod tests {
             assert_eq!(bucket, "target-bucket".to_string());
             assert_eq!(prefix, "".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
     }
@@ -424,6 +436,7 @@ mod tests {
         if let StoragePath::Local(path) = config.source {
             assert_eq!(path.to_str().unwrap(), ".\\test_data\\source\\".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "local path not found");
         }
 
@@ -431,6 +444,7 @@ mod tests {
             assert_eq!(bucket, "target-bucket".to_string());
             assert_eq!(prefix, "".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
     }
@@ -453,6 +467,7 @@ mod tests {
         if let StoragePath::Local(path) = config.source {
             assert_eq!(path.to_str().unwrap(), "./test_data/source/".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "local path not found");
         }
 
@@ -460,6 +475,7 @@ mod tests {
             assert_eq!(bucket, "target-bucket".to_string());
             assert_eq!(prefix, "".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
     }
@@ -518,6 +534,7 @@ mod tests {
         if let StoragePath::Local(path) = config.source {
             assert_eq!(path.to_str().unwrap(), ".\\test_data\\source\\".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "local path not found");
         }
 
@@ -525,6 +542,7 @@ mod tests {
             assert_eq!(bucket, "target-bucket".to_string());
             assert_eq!(prefix, "".to_string());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
     }
@@ -543,6 +561,7 @@ mod tests {
             return;
         }
 
+        // skipcq: RS-W1021
         assert!(false, "no error occurred");
     }
 
@@ -562,6 +581,7 @@ mod tests {
             return;
         }
 
+        // skipcq: RS-W1021
         assert!(false, "no error occurred");
     }
 
@@ -594,6 +614,7 @@ mod tests {
             return;
         }
 
+        // skipcq: RS-W1021
         assert!(false, "no error occurred");
     }
 
@@ -608,6 +629,7 @@ mod tests {
             return;
         }
 
+        // skipcq: RS-W1021
         assert!(false, "no error occurred");
     }
 

@@ -17,6 +17,7 @@ mod tests {
         if let Ok(config_args) = parse_from_args(args) {
             assert!(config_args.validate_storage_config().is_ok());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -36,6 +37,7 @@ mod tests {
         if let Ok(config_args) = parse_from_args(args) {
             assert!(config_args.validate_storage_config().is_ok());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -57,6 +59,7 @@ mod tests {
         if let Ok(config_args) = parse_from_args(args) {
             assert!(config_args.validate_storage_config().is_ok());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -70,6 +73,7 @@ mod tests {
         if let Ok(config_args) = parse_from_args(args) {
             assert!(config_args.validate_storage_config().is_err());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -95,6 +99,7 @@ mod tests {
                 assert_eq!(e, NO_SOURCE_CREDENTIAL_REQUIRED.to_string());
             }
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -120,6 +125,7 @@ mod tests {
                 assert_eq!(e, NO_TARGET_CREDENTIAL_REQUIRED.to_string());
             }
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -141,6 +147,7 @@ mod tests {
         if let Ok(config_args) = parse_from_args(args) {
             assert!(config_args.validate_storage_config().is_ok());
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -169,6 +176,7 @@ mod tests {
                 );
             }
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
@@ -197,6 +205,7 @@ mod tests {
                 );
             }
         } else {
+            // skipcq: RS-W1021
             assert!(false, "error occurred.");
         }
     }
