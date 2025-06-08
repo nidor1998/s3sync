@@ -34,8 +34,7 @@ impl DiffDetectionStrategy for ETagDiffDetector {
     ) -> anyhow::Result<bool> {
         let key = source_object.key();
         if !self.source.is_local_storage() && !self.target.is_local_storage() {
-            self
-                .are_different_e_tags(key, source_object, target_object)
+            self.are_different_e_tags(key, source_object, target_object)
                 .await
         } else if self.source.is_local_storage() && !self.target.is_local_storage() {
             Ok(self
