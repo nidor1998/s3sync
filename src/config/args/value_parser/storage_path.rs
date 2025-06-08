@@ -151,7 +151,7 @@ mod tests {
         if let StoragePath::Local(path) = parse_storage_path(local_path) {
             assert_eq!(path, PathBuf::from("dir1/"));
         } else {
-            panic!("local path not found");
+            assert!(false, "local path not found");
         }
     }
 
@@ -165,7 +165,7 @@ mod tests {
         if let StoragePath::Local(path) = parse_storage_path(local_path) {
             assert_eq!(path, PathBuf::from("c:\\dir1"));
         } else {
-            panic!("local path not found");
+            assert!(false, "local path not found");
         }
     }
 
@@ -179,7 +179,7 @@ mod tests {
         if let StoragePath::Local(path) = parse_storage_path(local_path) {
             assert_eq!(path, PathBuf::from("\\dir1"));
         } else {
-            panic!("local path not found");
+            assert!(false, "local path not found");
         }
     }
 
@@ -192,7 +192,7 @@ mod tests {
         if let StoragePath::Local(path) = parse_storage_path(local_path) {
             assert_eq!(path, PathBuf::from("/dir1"));
         } else {
-            panic!("local path not found");
+            assert!(false, "local path not found");
         }
     }
 
@@ -206,7 +206,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -220,7 +220,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -234,7 +234,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "/");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -248,7 +248,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "my_key");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -262,7 +262,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "my_key/");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -276,7 +276,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "dir1/dir2/my_key");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -290,7 +290,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "dir1/dir2/my_key/");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -304,7 +304,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "/my_key");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
@@ -318,7 +318,7 @@ mod tests {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "こんにちは/Καλησπέρα σας");
         } else {
-            panic!("s3 url not found");
+            assert!(false, "s3 url not found");
         }
     }
 
