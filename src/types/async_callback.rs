@@ -140,7 +140,7 @@ fn validate_checksum(
     let part_number = cursor.part_number + 1;
 
     if sync_bytes == 0 {
-        if !(cursor.eof) {
+        if !cursor.eof {
             // last part
             let local_checksum = hasher.finalize();
             let remote_checksum = get_checksum(

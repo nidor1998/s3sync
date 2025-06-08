@@ -152,7 +152,7 @@ pub fn convert_to_buf_byte_stream_with_callback<R>(
     object_checksum: Option<ObjectChecksum>,
 ) -> ByteStream
 where
-    R: AsyncRead + Send + 'static + std::marker::Sync,
+    R: AsyncRead + Send + 'static + Sync,
 {
     let async_read = AsyncReadWithCallback::new(byte_stream, stats_sender, rate_limit_bandwidth, additional_checksum, object_checksum);
 

@@ -32,15 +32,15 @@ impl DiffDetectionStrategy for ChecksumDiffDetector {
     ) -> anyhow::Result<bool> {
         let key = source_object.key();
         if !self.source.is_local_storage() && !self.target.is_local_storage() {
-            return self.are_different_checksums(key, target_object).await;
+            self.are_different_checksums(key, target_object).await
         } else if self.source.is_local_storage() && !self.target.is_local_storage() {
-            return self
+            self
                 .is_source_local_checksum_different_from_target_s3(key, target_object)
-                .await;
+                .await
         } else if !self.source.is_local_storage() && self.target.is_local_storage() {
-            return self
+            self
                 .is_target_local_checksum_different_from_source_s3(key, target_object)
-                .await;
+                .await
         } else {
             panic!("source and target are both local storage.")
         }
@@ -418,10 +418,8 @@ impl ChecksumDiffDetector {
             head_source_object_output
                 .last_modified()
                 .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))
-        .unwrap()
+                .to_millis()?,
+        ))?
         .to_rfc3339();
         let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
             head_target_object_output

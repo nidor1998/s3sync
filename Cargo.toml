@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.13.3"
+version = "1.13.4"
 edition = "2021"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "very fast, and powerful synchronization command line tool for S3."
@@ -19,7 +19,7 @@ async-trait = "0.1.88"
 async-channel = "2.3.1"
 aws-config = { version = "1.6.3", features = ["behavior-version-latest"] }
 aws-runtime = "1.5.7"
-aws-sdk-s3 = "1.88.0"
+aws-sdk-s3 = "1.91.0"
 aws-smithy-runtime = "1.8.3"
 aws-smithy-runtime-api = "1.8.0"
 aws-smithy-types = {  version = "1.3.1"}
@@ -28,8 +28,8 @@ aws-types = "1.3.7"
 base64 = "0.22.1"
 byte-unit = "5.1.6"
 cfg-if = "1.0.0"
-clap = { version = "4.5.38", features = ["derive", "env", "cargo", "string"] }
-clap_complete = "4.5.50"
+clap = { version = "4.5.39", features = ["derive", "env", "cargo", "string"] }
+clap_complete = "4.5.52"
 clap-verbosity-flag = "3.0.3"
 chrono = "0.4.41"
 crc32c = "0.6.8"
@@ -37,6 +37,7 @@ crc32fast = "1.4.2"
 crc64fast-nvme = "1.2.0"
 dyn-clone = "1.0.19"
 filetime = "0.2.25"
+futures-util = "0.3.31"
 leaky-bucket = "1.1.2"
 md5 = "0.7.0"
 mime_guess = "2.0.5"
@@ -65,7 +66,6 @@ urlencoding = "2.1.3"
 walkdir = "2.5.0"
 zeroize = "1.8.1"
 zeroize_derive = "1.4.2"
-futures-util = "0.3.31"
 
 # The following dependencies are only required for the legacy_hyper014_feature
 hyper_014 = { package = "hyper", version = "0.14.13", optional = true }
@@ -78,7 +78,7 @@ webpki-roots = { version = "0.25.4", optional = true }
 [dev-dependencies]
 nix = { version = "0.30.1", features = ["user", "process", "signal"] }
 once_cell = "1.21.3"
-uuid = { version = "1.16.0", features = ["v4"] }
+uuid = { version = "1.17.0", features = ["v4"] }
 
 [build-dependencies]
 shadow-rs = { version = "1.1.1", optional = true }

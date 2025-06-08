@@ -700,14 +700,9 @@ impl StorageTrait for S3Storage {
         }
         let target_key = generate_full_key(&self.prefix, key);
         let source_last_modified = aws_smithy_types::DateTime::from_millis(
-            get_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
+            get_object_output.last_modified().unwrap().to_millis()?,
         )
-        .to_chrono_utc()
-        .unwrap()
+        .to_chrono_utc()?
         .to_rfc3339();
 
         if self.config.dry_run {
@@ -983,7 +978,6 @@ fn is_express_onezone_storage(bucket: &str) -> bool {
 mod tests {
     use super::*;
     use crate::config::args::parse_from_args;
-    use crate::types::token;
     use crate::types::token::create_pipeline_cancellation_token;
     use tracing_subscriber::EnvFilter;
 
@@ -1033,7 +1027,7 @@ mod tests {
         let storage = S3StorageFactory::create(
             config.clone(),
             config.source.clone(),
-            token::create_pipeline_cancellation_token(),
+            create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
             None,
@@ -1116,7 +1110,7 @@ mod tests {
         let storage = S3StorageFactory::create(
             config.clone(),
             config.source.clone(),
-            token::create_pipeline_cancellation_token(),
+            create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
             None,
@@ -1152,7 +1146,7 @@ mod tests {
         S3StorageFactory::create(
             config.clone(),
             config.source.clone(),
-            token::create_pipeline_cancellation_token(),
+            create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
             None,
@@ -1184,7 +1178,7 @@ mod tests {
         let storage = S3StorageFactory::create(
             config.clone(),
             config.source.clone(),
-            token::create_pipeline_cancellation_token(),
+            create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
             None,

@@ -34,9 +34,9 @@ impl DiffDetectionStrategy for ETagDiffDetector {
     ) -> anyhow::Result<bool> {
         let key = source_object.key();
         if !self.source.is_local_storage() && !self.target.is_local_storage() {
-            return self
+            self
                 .are_different_e_tags(key, source_object, target_object)
-                .await;
+                .await
         } else if self.source.is_local_storage() && !self.target.is_local_storage() {
             Ok(self
                 .is_source_local_e_tag_different_from_target_s3(key, target_object)
@@ -72,9 +72,8 @@ impl ETagDiffDetector {
         ));
 
         let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            source_object.last_modified().to_millis().unwrap(),
-        ))
-        .unwrap()
+            source_object.last_modified().to_millis()?,
+        ))?
         .to_rfc3339();
         let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
             head_target_object_output
@@ -396,9 +395,8 @@ impl ETagDiffDetector {
             .await?;
 
         let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            source_object.last_modified().to_millis().unwrap(),
-        ))
-        .unwrap()
+            source_object.last_modified().to_millis()?,
+        ))?
         .to_rfc3339();
         let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
             head_target_object_output

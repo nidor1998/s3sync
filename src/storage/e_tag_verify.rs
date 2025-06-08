@@ -72,7 +72,7 @@ pub async fn generate_e_tag_hash_from_path(
 ) -> Result<String> {
     let mut file = File::open(path).await?;
 
-    let mut remaining_bytes = file.metadata().await.unwrap().len();
+    let mut remaining_bytes = file.metadata().await?.len();
 
     if remaining_bytes < multipart_threshold as u64 {
         let mut buffer = Vec::<u8>::with_capacity(multipart_threshold);
@@ -130,7 +130,7 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
                 Ok(UNKNOWN_E_TAG_VALUE.to_string())
             };
         }
-        read_bytes += read_result.unwrap();
+        read_bytes += read_result?;
 
         let mut md5_digest = md5::compute(&buffer).as_slice().to_vec();
         concatnated_md5_hash.append(&mut md5_digest);

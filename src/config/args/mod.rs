@@ -1128,10 +1128,8 @@ impl TryFrom<CLIArgs> for Config {
             },
 
             transfer_config: TransferConfig {
-                multipart_threshold: human_bytes::parse_human_bytes(&value.multipart_threshold)
-                    .unwrap(),
-                multipart_chunksize: human_bytes::parse_human_bytes(&value.multipart_chunksize)
-                    .unwrap(),
+                multipart_threshold: human_bytes::parse_human_bytes(&value.multipart_threshold)?,
+                multipart_chunksize: human_bytes::parse_human_bytes(&value.multipart_chunksize)?,
                 auto_chunksize: value.auto_chunksize,
             },
 

@@ -73,7 +73,7 @@ pub async fn create_directory_hierarchy_from_key(path: PathBuf, key: &str) -> Re
     let directory_path = key_to_directory_without_filename(path, key);
 
     let result = directory_path.try_exists();
-    if result.is_ok() && result.unwrap() {
+    if result.is_ok() && result? {
         return Ok(false);
     }
 
