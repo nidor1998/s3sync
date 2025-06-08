@@ -443,7 +443,7 @@ impl StorageTrait for LocalStorage {
 
             // This is special for test emulation.
             #[allow(clippy::collapsible_if)]
-            if cfg!(feature = "e2c_test_dangerous_simulations") {
+            if cfg!(feature = "e2e_test_dangerous_simulations") {
                 if self.config.allow_e2e_test_dangerous_simulation {
                     simulate_not_found_test_case().await;
                 }
@@ -879,7 +879,7 @@ impl StorageTrait for LocalStorage {
 }
 
 async fn simulate_not_found_test_case() {
-    #[cfg(feature = "e2c_test_dangerous_simulations")]
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
     {
         const NOT_FOUND_TEST_FILE: &str =
             "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";

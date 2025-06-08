@@ -89,7 +89,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 [features]
 default = ["version", "legacy_hyper014_feature"]
 e2e_test = []
-e2c_test_dangerous_simulations = []
+e2e_test_dangerous_simulations = []
 
 # Add detailed build information to the CLI version output
 version = ["dep:shadow-rs"]

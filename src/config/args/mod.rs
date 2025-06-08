@@ -454,7 +454,7 @@ pub struct CLIArgs {
     allow_both_local_storage: bool,
 
     /// [dangerous] test purpose only
-    #[cfg(feature = "e2c_test_dangerous_simulations")]
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true, default_value_t = false)]
     allow_e2e_test_dangerous_simulation: bool,
 
@@ -479,7 +479,7 @@ pub struct CLIArgs {
     full_object_checksum: bool,
 
     /// [dangerous] test purpose only
-    #[cfg(feature = "e2c_test_dangerous_simulations")]
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true)]
     cancellation_point: Option<String>,
 
@@ -1107,7 +1107,7 @@ impl TryFrom<CLIArgs> for Config {
         #[allow(unused_mut)]
         let mut cancellation_point = None;
 
-        #[cfg(feature = "e2c_test_dangerous_simulations")]
+        #[cfg(feature = "e2e_test_dangerous_simulations")]
         {
             allow_e2e_test_dangerous_simulation = value.allow_e2e_test_dangerous_simulation;
             cancellation_point = value.cancellation_point
