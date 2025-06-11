@@ -26,6 +26,7 @@ use aws_sdk_s3::Client;
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::{Response, StatusCode};
 use aws_smithy_types::body::SdkBody;
+use aws_smithy_types::byte_stream::Length;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
 use tokio::io::BufReader;
@@ -477,6 +478,7 @@ impl StorageTrait for LocalStorage {
         key: &str,
         _version_id: Option<String>,
         _checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         _sse_c: Option<String>,
         _sse_c_key: SseCustomerKey,
         _sse_c_key_md5: Option<String>,
@@ -500,7 +502,27 @@ impl StorageTrait for LocalStorage {
             )
         };
 
-        let checksum = if self.config.additional_checksum_algorithm.is_some() {
+        let mut need_checksum = true;
+        let body;
+
+        if range.is_some() {
+            let file_range = parse_range_header(&range.unwrap())?;
+            body = Some(
+                ByteStream::read_from()
+                    .path(path.clone())
+                    .offset(file_range.offset)
+                    .length(Length::Exact(file_range.size))
+                    .buffer_size(self.config.transfer_config.multipart_chunksize as usize)
+                    .build()
+                    .await?,
+            );
+            // For performance, if the range is specified, we need to calculate the checksum only if the offset is 0.
+            need_checksum = file_range.offset == 0;
+        } else {
+            body = Some(ByteStream::from_path(path.clone()).await?)
+        }
+
+        let checksum = if self.config.additional_checksum_algorithm.is_some() && need_checksum {
             Some(
                 generate_checksum_from_path_with_chunksize(
                     &path,
@@ -520,6 +542,7 @@ impl StorageTrait for LocalStorage {
         };
 
         let checksum_sha256 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
             && matches!(
                 self.config.additional_checksum_algorithm.as_ref().unwrap(),
                 ChecksumAlgorithm::Sha256
@@ -530,6 +553,7 @@ impl StorageTrait for LocalStorage {
         };
 
         let checksum_sha1 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
             && matches!(
                 self.config.additional_checksum_algorithm.as_ref().unwrap(),
                 ChecksumAlgorithm::Sha1
@@ -540,6 +564,7 @@ impl StorageTrait for LocalStorage {
         };
 
         let checksum_crc32 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
             && matches!(
                 self.config.additional_checksum_algorithm.as_ref().unwrap(),
                 ChecksumAlgorithm::Crc32
@@ -550,6 +575,7 @@ impl StorageTrait for LocalStorage {
         };
 
         let checksum_crc32_c = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
             && matches!(
                 self.config.additional_checksum_algorithm.as_ref().unwrap(),
                 ChecksumAlgorithm::Crc32C
@@ -560,6 +586,7 @@ impl StorageTrait for LocalStorage {
         };
 
         let checksum_crc64_nvme = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
             && matches!(
                 self.config.additional_checksum_algorithm.as_ref().unwrap(),
                 ChecksumAlgorithm::Crc64Nvme
@@ -573,7 +600,7 @@ impl StorageTrait for LocalStorage {
             .set_content_length(Some(fs_util::get_file_size(&path).await as i64))
             .set_content_type(content_type)
             .last_modified(fs_util::get_last_modified(&path).await)
-            .set_body(Some(ByteStream::from_path(path).await?))
+            .set_body(body)
             .set_checksum_sha256(checksum_sha256)
             .set_checksum_sha1(checksum_sha1)
             .set_checksum_crc32(checksum_crc32)
@@ -955,11 +982,46 @@ fn convert_windows_directory_char_to_slash(path: &str) -> String {
     path.replace('\\', "/")
 }
 
+#[derive(Clone)]
+struct FileRange {
+    pub offset: u64,
+    pub size: u64,
+}
+
+fn parse_range_header(range_header: &str) -> Result<FileRange> {
+    if !range_header.starts_with("bytes=") {
+        return Err(anyhow!(
+            "Range header must start with 'bytes=': {}",
+            range_header
+        ));
+    }
+
+    let range = range_header.trim_start_matches("bytes=");
+    let parts: Vec<_> = range.split('-').collect();
+    if parts.len() != 2 {
+        return Err(anyhow!("Invalid range format: {}", range));
+    }
+
+    let offset = parts[0].parse::<u64>()?;
+    let size = if parts[1].is_empty() {
+        return Err(anyhow!("Invalid range format: {}", range));
+    } else {
+        let end = parts[1].parse::<u64>()?;
+        if end <= offset {
+            return Err(anyhow!("End of range cannot be less than start: {}", range));
+        }
+        end - offset
+    };
+
+    Ok(FileRange { offset, size })
+}
+
 #[cfg(test)]
 mod tests {
     use crate::config::args::parse_from_args;
     use crate::storage::local::remove_local_path_prefix;
     use crate::types::token::create_pipeline_cancellation_token;
+    use tokio::io::AsyncReadExt;
     use tracing_subscriber::EnvFilter;
 
     use super::*;
@@ -1613,6 +1675,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SseCustomerKey { key: None },
                 None,
             )
@@ -1620,6 +1683,439 @@ mod tests {
             .unwrap();
     }
 
+    #[tokio::test]
+    async fn get_object_range() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            "./test_data/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.target_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        let mut data = String::new();
+        get_object_result
+            .body
+            .into_async_read()
+            .read_to_string(&mut data)
+            .await
+            .unwrap();
+        assert_eq!(data, "data");
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=1-3".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        let mut data = String::new();
+        get_object_result
+            .body
+            .into_async_read()
+            .read_to_string(&mut data)
+            .await
+            .unwrap();
+        assert_eq!(data, "at");
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-5".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        let mut data = String::new();
+        get_object_result
+            .body
+            .into_async_read()
+            .read_to_string(&mut data)
+            .await
+            .unwrap();
+        assert_eq!(data, "data1");
+    }
+
+    #[tokio::test]
+    async fn get_object_range_with_checksum_sha256() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-access-key",
+            "dummy_access_key",
+            "--target-secret-access-key",
+            "dummy_secret_access_key",
+            "--additional-checksum-algorithm",
+            "SHA256",
+            "./test_data/",
+            "s3://dummy-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_some());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=1-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_object_range_with_checksum_sha1() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-access-key",
+            "dummy_access_key",
+            "--target-secret-access-key",
+            "dummy_secret_access_key",
+            "--additional-checksum-algorithm",
+            "SHA1",
+            "./test_data/",
+            "s3://dummy-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_some());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=1-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_object_range_with_checksum_crc32() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-access-key",
+            "dummy_access_key",
+            "--target-secret-access-key",
+            "dummy_secret_access_key",
+            "--additional-checksum-algorithm",
+            "CRC32",
+            "./test_data/",
+            "s3://dummy-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_some());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=1-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_object_range_with_checksum_crc32c() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-access-key",
+            "dummy_access_key",
+            "--target-secret-access-key",
+            "dummy_secret_access_key",
+            "--additional-checksum-algorithm",
+            "CRC32C",
+            "./test_data/",
+            "s3://dummy-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_some());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=1-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_object_range_with_checksum_crc64nvme() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-access-key",
+            "dummy_access_key",
+            "--target-secret-access-key",
+            "dummy_secret_access_key",
+            "--additional-checksum-algorithm",
+            "CRC64NVME",
+            "./test_data/",
+            "s3://dummy-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_some());
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=1-4".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(get_object_result.checksum_sha256.is_none());
+        assert!(get_object_result.checksum_sha1.is_none());
+        assert!(get_object_result.checksum_crc32.is_none());
+        assert!(get_object_result.checksum_crc32_c.is_none());
+        assert!(get_object_result.checksum_crc64_nvme.is_none());
+    }
     #[tokio::test]
     async fn head_object() {
         init_dummy_tracing_subscriber();
@@ -1820,6 +2316,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SseCustomerKey { key: None },
                 None,
             )
@@ -2002,6 +2499,23 @@ mod tests {
 
         assert_eq!(storage.get_local_path().to_str().unwrap(), "./test_data/");
     }
+
+    #[test]
+    fn test_parse_range_header() { 
+        let range = parse_range_header("bytes=55-120").unwrap();
+        assert_eq!(range.offset, 55);
+        assert_eq!(range.size, 65);
+    }
+
+    #[test]
+    fn test_parse_range_header_error() {
+        assert!(parse_range_header("0-55").is_err());
+        assert!(parse_range_header("bytes=0-").is_err());
+        assert!(parse_range_header("bytes=-55").is_err());
+        assert!(parse_range_header("bytes=60-55").is_err());
+        assert!(parse_range_header("bytes=65-65").is_err());
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(
