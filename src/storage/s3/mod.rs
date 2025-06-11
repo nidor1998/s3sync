@@ -436,6 +436,7 @@ impl StorageTrait for S3Storage {
         key: &str,
         version_id: Option<String>,
         checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
@@ -455,6 +456,7 @@ impl StorageTrait for S3Storage {
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id)
             .set_checksum_mode(checksum_mode)
+            .set_range(range)
             .set_sse_customer_algorithm(sse_c)
             .set_sse_customer_key(sse_c_key.key.clone())
             .set_sse_customer_key_md5(sse_c_key_md5)
@@ -1078,6 +1080,7 @@ mod tests {
         assert!(storage
             .get_object(
                 "source/data1",
+                None,
                 None,
                 None,
                 None,

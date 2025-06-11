@@ -302,6 +302,7 @@ impl ObjectSyncer {
                 key,
                 object.version_id().map(|version_id| version_id.to_string()),
                 self.base.config.additional_checksum_mode.clone(),
+                None, // ToDo: support range
                 self.base.config.source_sse_c.clone(),
                 self.base.config.source_sse_c_key.clone(),
                 self.base.config.source_sse_c_key_md5.clone(),
@@ -468,6 +469,7 @@ impl ObjectSyncer {
         key: &str,
         version_id: Option<String>,
         checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
@@ -480,6 +482,7 @@ impl ObjectSyncer {
                 key,
                 version_id,
                 checksum_mode,
+                range,
                 sse_c,
                 sse_c_key,
                 sse_c_key_md5,
