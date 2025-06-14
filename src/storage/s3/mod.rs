@@ -724,25 +724,29 @@ impl StorageTrait for S3Storage {
         source: Storage,
         source_size: u64,
         source_additional_checksum: Option<String>,
-        mut get_object_output: GetObjectOutput,
+        mut get_object_output_first_chunk: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput> {
         let mut version_id = "".to_string();
-        if let Some(source_version_id) = get_object_output.version_id().as_ref() {
+        if let Some(source_version_id) = get_object_output_first_chunk.version_id().as_ref() {
             version_id = source_version_id.to_string();
         }
         let target_key = generate_full_key(&self.prefix, key);
         let source_key = key;
         let source_last_modified = aws_smithy_types::DateTime::from_millis(
-            get_object_output.last_modified().unwrap().to_millis()?,
+            get_object_output_first_chunk
+                .last_modified()
+                .unwrap()
+                .to_millis()?,
         )
         .to_chrono_utc()?
         .to_rfc3339();
 
         if self.config.dry_run {
             // In a dry run, content-range is set.
-            let content_length_string = get_size_string_from_content_range(&get_object_output);
+            let content_length_string =
+                get_size_string_from_content_range(&get_object_output_first_chunk);
 
             self.send_stats(SyncBytes(
                 u64::from_str(&content_length_string).unwrap_or_default(),
@@ -761,10 +765,10 @@ impl StorageTrait for S3Storage {
             return Ok(PutObjectOutput::builder().build());
         }
 
-        // On the case of full object checksum, we don't need to calculate checksum for each part and
-        // don't need to pass it to upload manager.
+        // In the case of full object checksum, we don't need to calculate checksum for each part and
+        // don't need to pass it to the upload manager.
         let additional_checksum_value = get_additional_checksum(
-            &get_object_output,
+            &get_object_output_first_chunk,
             object_checksum.as_ref().unwrap().checksum_algorithm.clone(),
         );
         let full_object_checksum = is_full_object_checksum(&additional_checksum_value);
@@ -792,8 +796,8 @@ impl StorageTrait for S3Storage {
             None
         };
 
-        get_object_output.body = convert_to_buf_byte_stream_with_callback(
-            get_object_output.body.into_async_read(),
+        get_object_output_first_chunk.body = convert_to_buf_byte_stream_with_callback(
+            get_object_output_first_chunk.body.into_async_read(),
             self.get_stats_sender(),
             self.rate_limit_bandwidth.clone(),
             checksum,
@@ -817,7 +821,7 @@ impl StorageTrait for S3Storage {
         self.exec_rate_limit_objects_per_sec().await;
 
         let put_object_output = upload_manager
-            .upload(&self.bucket, &target_key, get_object_output)
+            .upload(&self.bucket, &target_key, get_object_output_first_chunk)
             .await?;
 
         info!(

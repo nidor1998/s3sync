@@ -132,7 +132,7 @@ pub trait StorageTrait: DynClone {
         source: Storage,
         source_size: u64,
         source_additional_checksum: Option<String>,
-        get_object_output: GetObjectOutput,
+        get_object_output_first_chunk: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput>;

@@ -718,13 +718,17 @@ impl StorageTrait for LocalStorage {
         source: Storage,
         source_size: u64,
         source_additional_checksum: Option<String>,
-        get_object_output: GetObjectOutput,
+        get_object_output_first_chunk: GetObjectOutput,
         _tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput> {
-        let source_sse = get_object_output.server_side_encryption().cloned();
-        let source_e_tag = get_object_output.e_tag().map(|e_tag| e_tag.to_string());
-        let source_content_length = get_object_output.content_length().unwrap() as u64;
+        let source_sse = get_object_output_first_chunk
+            .server_side_encryption()
+            .cloned();
+        let source_e_tag = get_object_output_first_chunk
+            .e_tag()
+            .map(|e_tag| e_tag.to_string());
+        let source_content_length = get_object_output_first_chunk.content_length().unwrap() as u64;
         let source_final_checksum = if let Some(object_checksum) = object_checksum.as_ref() {
             object_checksum.final_checksum.clone()
         } else {
@@ -735,12 +739,16 @@ impl StorageTrait for LocalStorage {
         } else {
             None
         };
-        let source_storage_class = get_object_output.storage_class().cloned();
+        let source_storage_class = get_object_output_first_chunk.storage_class().cloned();
 
-        let source_last_modified =
-            DateTime::from_millis(get_object_output.last_modified.unwrap().to_millis()?)
-                .to_chrono_utc()?
-                .to_rfc3339();
+        let source_last_modified = DateTime::from_millis(
+            get_object_output_first_chunk
+                .last_modified
+                .unwrap()
+                .to_millis()?,
+        )
+        .to_chrono_utc()?
+        .to_rfc3339();
 
         if fs_util::check_directory_traversal(key) {
             return Err(anyhow!(S3syncError::DirectoryTraversalError));
@@ -748,7 +756,8 @@ impl StorageTrait for LocalStorage {
 
         if self.config.dry_run {
             // In a dry run, content-range is set.
-            let content_length_string = get_size_string_from_content_range(&get_object_output);
+            let content_length_string =
+                get_size_string_from_content_range(&get_object_output_first_chunk);
 
             self.send_stats(SyncBytes(
                 u64::from_str(&content_length_string).unwrap_or_default(),
@@ -778,8 +787,12 @@ impl StorageTrait for LocalStorage {
         let mut temp_file = fs_util::create_temp_file_from_key(&self.path, key).await?;
         let mut file = tokio::fs::File::from_std(temp_file.as_file_mut().try_clone()?);
 
-        let seconds = get_object_output.last_modified().as_ref().unwrap().secs();
-        let nanos = get_object_output
+        let seconds = get_object_output_first_chunk
+            .last_modified()
+            .as_ref()
+            .unwrap()
+            .secs();
+        let nanos = get_object_output_first_chunk
             .last_modified()
             .as_ref()
             .unwrap()
@@ -788,7 +801,7 @@ impl StorageTrait for LocalStorage {
         self.exec_rate_limit_objects_per_sec().await;
 
         let byte_stream = convert_to_buf_byte_stream_with_callback(
-            get_object_output.body.into_async_read(),
+            get_object_output_first_chunk.body.into_async_read(),
             self.get_stats_sender(),
             self.rate_limit_bandwidth.clone(),
             None,
@@ -2314,11 +2327,8 @@ mod tests {
 
         let args = vec![
             "s3sync",
-            "--source-access-key",
-            "dummy_access_key",
-            "--source-secret-access-key",
-            "dummy_secret_access_key",
-            "s3://dummy-bucket",
+            "--allow-both-local-storage",
+            "./test_data/",
             "./test_data/",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2379,11 +2389,8 @@ mod tests {
 
         let args = vec![
             "s3sync",
-            "--source-access-key",
-            "dummy_access_key",
-            "--source-secret-access-key",
-            "dummy_secret_access_key",
-            "s3://dummy-bucket",
+            "--allow-both-local-storage",
+            "./test_data/",
             "./test_data/",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2434,11 +2441,8 @@ mod tests {
 
         let args = vec![
             "s3sync",
-            "--source-access-key",
-            "dummy_access_key",
-            "--source-secret-access-key",
-            "dummy_secret_access_key",
-            "s3://dummy-bucket",
+            "--allow-both-local-storage",
+            "./test_data/",
             "./test_data/",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
