@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use async_channel::Sender;
@@ -17,12 +16,16 @@ use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::SecondsFormat;
+use std::sync::{Arc, Mutex};
 use tokio::io::AsyncReadExt;
+use tokio::task;
+use tokio::task::JoinHandle;
 use tracing::{trace, warn};
 
 use crate::config::Config;
 use crate::storage;
 use crate::storage::e_tag_verify::{generate_e_tag_hash, is_multipart_upload_e_tag};
+use crate::storage::Storage;
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
@@ -35,6 +38,10 @@ const MISMATCH_WARNING_WITH_HELP: &str = "mismatch. object in the target storage
  To suppress this warning, please add --disable-multipart-verify command line option. \
  To resolve this issue, please add --auto-chunksize command line option(but extra API overheads).";
 
+pub struct MutipartEtags {
+    pub digest: Vec<u8>,
+    pub part_number: i32,
+}
 pub struct UploadManager {
     client: Arc<Client>,
     config: Config,
@@ -44,9 +51,14 @@ pub struct UploadManager {
     object_parts: Option<Vec<ObjectPart>>,
     concatnated_md5_hash: Vec<u8>,
     express_onezone_storage: bool,
+    source: Storage,
+    source_key: String,
+    source_total_size: u64,
+    source_additional_checksum: Option<String>,
 }
 
 impl UploadManager {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         client: Arc<Client>,
         config: Config,
@@ -55,6 +67,10 @@ impl UploadManager {
         tagging: Option<String>,
         object_parts: Option<Vec<ObjectPart>>,
         express_onezone_storage: bool,
+        source: Storage,
+        source_key: String,
+        source_total_size: u64,
+        source_additional_checksum: Option<String>,
     ) -> Self {
         UploadManager {
             client,
@@ -63,8 +79,12 @@ impl UploadManager {
             stats_sender,
             tagging,
             object_parts,
-            concatnated_md5_hash: vec![],
+            concatnated_md5_hash: Vec::new(),
             express_onezone_storage,
+            source,
+            source_key,
+            source_total_size,
+            source_additional_checksum,
         }
     }
 
@@ -85,7 +105,7 @@ impl UploadManager {
         let put_object_output = if self
             .config
             .transfer_config
-            .is_multipart_upload_required(get_object_output.content_length().unwrap() as u64)
+            .is_multipart_upload_required(self.source_total_size)
         {
             self.multipart_upload(bucket, key, get_object_output)
                 .await?
@@ -310,13 +330,10 @@ impl UploadManager {
     ) -> Result<PutObjectOutput> {
         let source_sse = get_object_output.server_side_encryption().cloned();
         let source_remote_storage = get_object_output.e_tag().is_some();
-        let source_content_length = get_object_output.content_length().unwrap();
+        let source_content_length = self.source_total_size;
         let source_e_tag = get_object_output.e_tag().map(|e_tag| e_tag.to_string());
         let source_local_storage = source_e_tag.is_none();
-        let source_checksum = get_additional_checksum_from_get_object_result(
-            &get_object_output,
-            self.config.additional_checksum_algorithm.as_ref().cloned(),
-        );
+        let source_checksum = self.source_additional_checksum.clone();
         let source_storage_class = get_object_output.storage_class().cloned();
 
         let upload_parts = if self.is_auto_chunksize_enabled() {
@@ -361,7 +378,7 @@ impl UploadManager {
         );
 
         let source_e_tag = if source_local_storage {
-            Some(self.generate_e_tag_hash(self.calculate_parts_count(source_content_length)))
+            Some(self.generate_e_tag_hash(self.calculate_parts_count(source_content_length as i64)))
         } else {
             source_e_tag
         };
@@ -487,110 +504,201 @@ impl UploadManager {
         upload_id: &str,
         get_object_output: GetObjectOutput,
     ) -> Result<Vec<CompletedPart>> {
-        let mut upload_parts: Vec<CompletedPart> = Vec::new();
+        let shared_source_version_id = get_object_output.version_id().map(|v| v.to_string());
+        let shared_multipart_etags = Arc::new(Mutex::new(Vec::new()));
+        let shared_upload_parts = Arc::new(Mutex::new(Vec::new()));
 
-        let mut part_number = 1;
-        let mut remaining_bytes = get_object_output.content_length().unwrap() as u64;
+        let config_chunksize = self.config.transfer_config.multipart_chunksize as usize;
+        let source_total_size = self.source_total_size as usize;
 
         let mut body = get_object_output.body.into_async_read();
-        while 0 < remaining_bytes {
+
+        let mut upload_parts_join_handles = vec![];
+        let mut part_number = 1;
+        for offset in (0..self.source_total_size as usize).step_by(config_chunksize) {
             if self.cancellation_token.is_cancelled() {
                 return Err(anyhow!(S3syncError::Cancelled));
             }
 
-            let chunksize = if remaining_bytes < self.config.transfer_config.multipart_chunksize {
-                remaining_bytes
+            let source = dyn_clone::clone_box(&*(self.source));
+            let source_key = self.source_key.clone();
+            let source_version_id = shared_source_version_id.clone();
+            let source_sse_c = self.config.source_sse_c.clone();
+            let source_sse_c_key = self.config.source_sse_c_key.clone();
+            let source_sse_c_key_md5 = self.config.source_sse_c_key_md5.clone();
+
+            let target = dyn_clone::clone_box(&*(self.client));
+            let target_bucket = bucket.to_string();
+            let target_key = key.to_string();
+            let target_upload_id = upload_id.to_string();
+            let target_sse_c = self.config.target_sse_c.clone();
+            let target_sse_c_key = self.config.target_sse_c_key.clone().key.clone();
+            let target_sse_c_key_md5 = self.config.target_sse_c_key_md5.clone();
+
+            let chunksize = if offset + config_chunksize > source_total_size {
+                source_total_size - offset
             } else {
-                self.config.transfer_config.multipart_chunksize
+                config_chunksize
             };
 
-            let mut buffer =
-                Vec::<u8>::with_capacity(self.config.transfer_config.multipart_chunksize as usize);
-            buffer.resize_with(chunksize as usize, Default::default);
-            body.read_exact(buffer.as_mut_slice())
-                .await
-                .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+            let upload_parts = Arc::clone(&shared_upload_parts);
+            let multipart_etags = Arc::clone(&shared_multipart_etags);
 
-            let md5_digest_base64 =
-                if !self.express_onezone_storage && !self.config.disable_content_md5_header {
-                    let md5_digest = md5::compute(&buffer);
-                    self.concatnated_md5_hash
-                        .append(&mut md5_digest.as_slice().to_vec());
+            let additional_checksum_mode = self.config.additional_checksum_mode.clone();
+            let additional_checksum_algorithm = self.config.additional_checksum_algorithm.clone();
+            let disable_payload_signing = self.config.disable_payload_signing;
+            let multipart_chunksize = self.config.transfer_config.multipart_chunksize;
+            let express_onezone_storage = self.express_onezone_storage;
+            let disable_content_md5_header = self.config.disable_content_md5_header;
 
-                    Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+            let mut buffer = Vec::<u8>::with_capacity(multipart_chunksize as usize);
+            buffer.resize_with(chunksize, Default::default);
+
+            // For the first part, we read the data from the supplied body.
+            if part_number == 1 {
+                body.read_exact(buffer.as_mut_slice())
+                    .await
+                    .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+            }
+
+            let task: JoinHandle<Result<()>> = task::spawn(async move {
+                let range = Some(format!("bytes={}-{}", offset, offset + chunksize));
+
+                // If the part number is greater than 1, we need to get the object from the source storage.
+                if part_number > 1 {
+                    let get_object_output = source
+                        .get_object(
+                            &source_key,
+                            source_version_id,
+                            additional_checksum_mode,
+                            range,
+                            source_sse_c,
+                            source_sse_c_key,
+                            source_sse_c_key_md5,
+                        )
+                        .await;
+                    let mut body = get_object_output
+                        .context("get_object() failed.")?
+                        .body
+                        .into_async_read();
+                    body.read_exact(buffer.as_mut_slice())
+                        .await
+                        .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                }
+
+                let md5_digest;
+                let md5_digest_base64 = if !express_onezone_storage && !disable_content_md5_header {
+                    let md5_digest_raw = md5::compute(&buffer);
+                    md5_digest = Some(md5_digest_raw);
+                    Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
                 } else {
+                    md5_digest = None;
                     None
                 };
 
-            let builder = self
-                .client
-                .upload_part()
-                .bucket(bucket)
-                .key(key)
-                .upload_id(upload_id)
-                .part_number(part_number)
-                .set_content_md5(md5_digest_base64)
-                .content_length(chunksize as i64)
-                .set_checksum_algorithm(self.config.additional_checksum_algorithm.clone())
-                .set_sse_customer_algorithm(self.config.target_sse_c.clone())
-                .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
-                .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
-                .body(ByteStream::from(buffer));
-
-            let upload_part_output = if self.config.disable_payload_signing {
-                builder
-                    .customize()
-                    .disable_payload_signing()
-                    .send()
-                    .await
-                    .context("aws_sdk_s3::client::Client upload_part() failed.")?
-            } else {
-                builder
-                    .send()
-                    .await
-                    .context("aws_sdk_s3::client::Client upload_part() failed.")?
-            };
-
-            trace!(key = key, "{upload_part_output:?}");
-
-            upload_parts.push(
-                CompletedPart::builder()
-                    .e_tag(upload_part_output.e_tag().unwrap())
-                    .set_checksum_sha256(
-                        upload_part_output
-                            .checksum_sha256()
-                            .map(|digest| digest.to_string()),
-                    )
-                    .set_checksum_sha1(
-                        upload_part_output
-                            .checksum_sha1()
-                            .map(|digest| digest.to_string()),
-                    )
-                    .set_checksum_crc32(
-                        upload_part_output
-                            .checksum_crc32()
-                            .map(|digest| digest.to_string()),
-                    )
-                    .set_checksum_crc32_c(
-                        upload_part_output
-                            .checksum_crc32_c()
-                            .map(|digest| digest.to_string()),
-                    )
-                    .set_checksum_crc64_nvme(
-                        upload_part_output
-                            .checksum_crc64_nvme()
-                            .map(|digest| digest.to_string()),
-                    )
+                let builder = target
+                    .upload_part()
+                    .bucket(&target_bucket)
+                    .key(&target_key)
+                    .upload_id(target_upload_id.clone())
                     .part_number(part_number)
-                    .build(),
-            );
+                    .set_content_md5(md5_digest_base64)
+                    .content_length(chunksize as i64)
+                    .set_checksum_algorithm(additional_checksum_algorithm)
+                    .set_sse_customer_algorithm(target_sse_c)
+                    .set_sse_customer_key(target_sse_c_key)
+                    .set_sse_customer_key_md5(target_sse_c_key_md5)
+                    .body(ByteStream::from(buffer));
 
-            remaining_bytes -= chunksize;
+                let upload_part_output = if disable_payload_signing {
+                    builder
+                        .customize()
+                        .disable_payload_signing()
+                        .send()
+                        .await
+                        .context("aws_sdk_s3::client::Client upload_part() failed.")?
+                } else {
+                    builder
+                        .send()
+                        .await
+                        .context("aws_sdk_s3::client::Client upload_part() failed.")?
+                };
+
+                trace!(key = &target_key, "{upload_part_output:?}");
+
+                if md5_digest.is_some() {
+                    let mut locked_multipart_etags = multipart_etags.lock().unwrap();
+                    locked_multipart_etags.push(MutipartEtags {
+                        digest: md5_digest.as_ref().unwrap().as_slice().to_vec(),
+                        part_number,
+                    });
+                }
+
+                let mut locked_upload_parts = upload_parts.lock().unwrap();
+                locked_upload_parts.push(
+                    CompletedPart::builder()
+                        .e_tag(upload_part_output.e_tag().unwrap())
+                        .set_checksum_sha256(
+                            upload_part_output
+                                .checksum_sha256()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_sha1(
+                            upload_part_output
+                                .checksum_sha1()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_crc32(
+                            upload_part_output
+                                .checksum_crc32()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_crc32_c(
+                            upload_part_output
+                                .checksum_crc32_c()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_crc64_nvme(
+                            upload_part_output
+                                .checksum_crc64_nvme()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .part_number(part_number)
+                        .build(),
+                );
+
+                trace!(
+                    key = &target_key,
+                    upload_id = &target_upload_id,
+                    "{locked_upload_parts:?}"
+                );
+
+                Ok(())
+            });
+
+            upload_parts_join_handles.push(task);
+
             part_number += 1;
         }
-        trace!(key = key, upload_id = upload_id, "{upload_parts:?}");
 
-        Ok(upload_parts)
+        for handle in upload_parts_join_handles {
+            if self.cancellation_token.is_cancelled() {
+                return Err(anyhow!(S3syncError::Cancelled));
+            }
+            handle.await??;
+        }
+
+        // Etags are concatenated in the order of part number. Otherwise, ETag verification will fail.
+        let mut locked_multipart_etags = shared_multipart_etags.lock().unwrap();
+        locked_multipart_etags.sort_by_key(|e| e.part_number);
+        for etag in locked_multipart_etags.iter() {
+            self.concatnated_md5_hash.append(&mut etag.digest.clone());
+        }
+
+        // CompletedParts must be sorted by part number. Otherwise, CompleteMultipartUpload will fail.
+        let mut parts = shared_upload_parts.lock().unwrap().clone();
+        parts.sort_by_key(|part| part.part_number.unwrap());
+        Ok(parts)
     }
 
     async fn upload_parts_with_auto_chunksize(
@@ -715,10 +823,7 @@ impl UploadManager {
         let source_remote_storage = get_object_output.e_tag().is_some();
         let source_e_tag = get_object_output.e_tag().map(|e_tag| e_tag.to_string());
         let source_local_storage = source_e_tag.is_none();
-        let source_checksum = get_additional_checksum_from_get_object_result(
-            &get_object_output,
-            self.config.additional_checksum_algorithm.as_ref().cloned(),
-        );
+        let source_checksum = self.source_additional_checksum.clone();
         let source_storage_class = get_object_output.storage_class().cloned();
 
         let mut body = get_object_output.body.into_async_read();
@@ -726,12 +831,8 @@ impl UploadManager {
 
         // When created from an SdkBody, care must be taken to ensure retriability.
         // An SdkBody is retryable when constructed from in-memory data or when using SdkBody::retryable.
-        let mut buffer =
-            Vec::<u8>::with_capacity(get_object_output.content_length().unwrap() as usize);
-        buffer.resize_with(
-            get_object_output.content_length().unwrap() as usize,
-            Default::default,
-        );
+        let mut buffer = Vec::<u8>::with_capacity(self.source_total_size as usize);
+        buffer.resize_with(self.source_total_size as usize, Default::default);
         body.read_exact(buffer.as_mut_slice())
             .await
             .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
@@ -739,6 +840,7 @@ impl UploadManager {
         let md5_digest_base64 =
             if !self.express_onezone_storage && !self.config.disable_content_md5_header {
                 let md5_digest = md5::compute(&buffer);
+
                 self.concatnated_md5_hash
                     .append(&mut md5_digest.as_slice().to_vec());
 
@@ -761,7 +863,7 @@ impl UploadManager {
             .set_storage_class(storage_class)
             .bucket(bucket)
             .key(key)
-            .content_length(get_object_output.content_length().unwrap())
+            .content_length(self.source_total_size as i64)
             .body(buffer_stream)
             .set_metadata(get_object_output.metadata().cloned())
             .set_tagging(self.tagging.clone())
@@ -1016,34 +1118,6 @@ pub fn get_additional_checksum_from_put_object_result(
             .checksum_crc32_c()
             .map(|checksum| checksum.to_string()),
         ChecksumAlgorithm::Crc64Nvme => put_object_output
-            .checksum_crc64_nvme()
-            .map(|checksum| checksum.to_string()),
-        _ => {
-            panic!("unknown algorithm")
-        }
-    }
-}
-
-pub fn get_additional_checksum_from_get_object_result(
-    get_object_output: &GetObjectOutput,
-    checksum_algorithm: Option<ChecksumAlgorithm>,
-) -> Option<String> {
-    checksum_algorithm.as_ref()?;
-
-    match checksum_algorithm.unwrap() {
-        ChecksumAlgorithm::Sha256 => get_object_output
-            .checksum_sha256()
-            .map(|checksum| checksum.to_string()),
-        ChecksumAlgorithm::Sha1 => get_object_output
-            .checksum_sha1()
-            .map(|checksum| checksum.to_string()),
-        ChecksumAlgorithm::Crc32 => get_object_output
-            .checksum_crc32()
-            .map(|checksum| checksum.to_string()),
-        ChecksumAlgorithm::Crc32C => get_object_output
-            .checksum_crc32_c()
-            .map(|checksum| checksum.to_string()),
-        ChecksumAlgorithm::Crc64Nvme => get_object_output
             .checksum_crc64_nvme()
             .map(|checksum| checksum.to_string()),
         _ => {

@@ -19,6 +19,7 @@ pub mod token;
 
 pub const S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY: &str = "s3sync_origin_version_id";
 pub const S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY: &str = "s3sync_origin_last_modified";
+pub(crate) const MINIMUM_CHUNKSIZE: usize = 5 * 1024 * 1024;
 
 pub type Sha1Digest = [u8; 20];
 

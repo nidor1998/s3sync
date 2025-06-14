@@ -72,6 +72,7 @@ pub trait StorageTrait: DynClone {
         max_keys: i32,
         warn_as_error: bool,
     ) -> Result<()>;
+    #[allow(clippy::too_many_arguments)]
     async fn get_object(
         &self,
         key: &str,
@@ -97,6 +98,16 @@ pub trait StorageTrait: DynClone {
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
     ) -> Result<HeadObjectOutput>;
+    async fn head_object_first_part(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        checksum_mode: Option<ChecksumMode>,
+        sse_c: Option<String>,
+        sse_c_key: SseCustomerKey,
+        sse_c_key_md5: Option<String>,
+    ) -> Result<HeadObjectOutput>;
+
     async fn get_object_parts(
         &self,
         key: &str,
@@ -114,9 +125,13 @@ pub trait StorageTrait: DynClone {
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
     ) -> Result<Vec<ObjectPart>>;
+    #[allow(clippy::too_many_arguments)]
     async fn put_object(
         &self,
         key: &str,
+        source: Storage,
+        source_size: u64,
+        source_additional_checksum: Option<String>,
         get_object_output: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
