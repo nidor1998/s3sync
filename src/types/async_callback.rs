@@ -15,9 +15,7 @@ use tokio::task;
 use tracing::{error, trace};
 
 use crate::storage::checksum::AdditionalChecksum;
-use crate::types::{ObjectChecksum, SyncStatistics};
-
-const MINIMUM_CHUNKSIZE: usize = 5 * 1024 * 1024;
+use crate::types::{ObjectChecksum, SyncStatistics, MINIMUM_CHUNKSIZE};
 
 #[pin_project]
 pub struct AsyncReadWithCallback<R: AsyncRead + Send + Sync> {

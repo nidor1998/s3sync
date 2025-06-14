@@ -504,7 +504,7 @@ impl StorageTrait for LocalStorage {
 
         let mut need_checksum = true;
         let body;
-
+        let content_length;
         if range.is_some() {
             let file_range = parse_range_header(&range.unwrap())?;
             body = Some(
@@ -518,8 +518,10 @@ impl StorageTrait for LocalStorage {
             );
             // For performance, if the range is specified, we need to calculate the checksum only if the offset is 0.
             need_checksum = file_range.offset == 0;
+            content_length = file_range.size as i64;
         } else {
-            body = Some(ByteStream::from_path(path.clone()).await?)
+            body = Some(ByteStream::from_path(path.clone()).await?);
+            content_length = fs_util::get_file_size(&path).await as i64;
         }
 
         let checksum = if self.config.additional_checksum_algorithm.is_some() && need_checksum {
@@ -597,7 +599,7 @@ impl StorageTrait for LocalStorage {
         };
 
         Ok(GetObjectOutputBuilder::default()
-            .set_content_length(Some(fs_util::get_file_size(&path).await as i64))
+            .set_content_length(Some(content_length))
             .set_content_type(content_type)
             .last_modified(fs_util::get_last_modified(&path).await)
             .set_body(body)
@@ -671,6 +673,18 @@ impl StorageTrait for LocalStorage {
             .build())
     }
 
+    async fn head_object_first_part(
+        &self,
+        _key: &str,
+        _version_id: Option<String>,
+        _checksum_mode: Option<ChecksumMode>,
+        _sse_c: Option<String>,
+        _sse_c_key: SseCustomerKey,
+        _sse_c_key_md5: Option<String>,
+    ) -> Result<HeadObjectOutput> {
+        unimplemented!();
+    }
+
     #[cfg(not(tarpaulin_include))]
     async fn get_object_parts(
         &self,
@@ -701,6 +715,9 @@ impl StorageTrait for LocalStorage {
     async fn put_object(
         &self,
         key: &str,
+        source: Storage,
+        source_size: u64,
+        source_additional_checksum: Option<String>,
         get_object_output: GetObjectOutput,
         _tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
@@ -1669,7 +1686,7 @@ mod tests {
         )
         .await;
 
-        storage
+        let get_object_result = storage
             .get_object(
                 "source/data1",
                 None,
@@ -1681,6 +1698,7 @@ mod tests {
             )
             .await
             .unwrap();
+        assert_eq!(get_object_result.content_length, Some(6));
     }
 
     #[tokio::test]
@@ -1731,6 +1749,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(data, "data");
+        assert_eq!(get_object_result.content_length, Some(4));
 
         let get_object_result = storage
             .get_object(
@@ -1753,6 +1772,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(data, "at");
+        assert_eq!(get_object_result.content_length, Some(2));
 
         let get_object_result = storage
             .get_object(
@@ -1775,6 +1795,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(data, "data1");
+        assert_eq!(get_object_result.content_length, Some(5));
     }
 
     #[tokio::test]
@@ -2303,7 +2324,7 @@ mod tests {
             config.clone(),
             config.target.clone(),
             create_pipeline_cancellation_token(),
-            stats_sender,
+            stats_sender.clone(),
             config.target_client_config.clone(),
             None,
             None,
@@ -2323,8 +2344,27 @@ mod tests {
             .await
             .unwrap();
 
+        let source_storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
         storage
-            .put_object("target/data1", get_object_output, None, None)
+            .put_object(
+                "target/data1",
+                source_storage,
+                6,
+                None,
+                get_object_output,
+                None,
+                None,
+            )
             .await
             .unwrap();
     }
@@ -2349,8 +2389,19 @@ mod tests {
             config.clone(),
             config.target.clone(),
             create_pipeline_cancellation_token(),
-            stats_sender,
+            stats_sender.clone(),
             config.target_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let source_storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
             None,
             None,
         )
@@ -2359,6 +2410,9 @@ mod tests {
         storage
             .put_object(
                 "target/",
+                source_storage,
+                6,
+                None,
                 GetObjectOutputBuilder::default()
                     .set_content_length(Some(0))
                     .last_modified(DateTime::from_secs(1))
@@ -2390,8 +2444,19 @@ mod tests {
             config.clone(),
             config.target.clone(),
             create_pipeline_cancellation_token(),
-            stats_sender,
+            stats_sender.clone(),
             config.target_client_config.clone(),
+            None,
+            None,
+        )
+        .await;
+
+        let source_storage = LocalStorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
             None,
             None,
         )
@@ -2400,6 +2465,9 @@ mod tests {
         let e = storage
             .put_object(
                 "target/../../etc/passwd",
+                source_storage,
+                6,
+                None,
                 GetObjectOutputBuilder::default()
                     .set_content_length(Some(1))
                     .last_modified(DateTime::from_secs(1))
@@ -2501,7 +2569,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_range_header() { 
+    fn test_parse_range_header() {
         let range = parse_range_header("bytes=55-120").unwrap();
         assert_eq!(range.offset, 55);
         assert_eq!(range.size, 65);

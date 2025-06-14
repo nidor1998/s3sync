@@ -571,6 +571,35 @@ impl StorageTrait for S3Storage {
         Ok(result)
     }
 
+    async fn head_object_first_part(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        checksum_mode: Option<ChecksumMode>,
+        sse_c: Option<String>,
+        sse_c_key: SseCustomerKey,
+        sse_c_key_md5: Option<String>,
+    ) -> Result<HeadObjectOutput> {
+        let result = self
+            .client
+            .as_ref()
+            .unwrap()
+            .head_object()
+            .bucket(&self.bucket)
+            .key(generate_full_key(&self.prefix, key))
+            .set_version_id(version_id)
+            .part_number(1)
+            .set_checksum_mode(checksum_mode)
+            .set_sse_customer_algorithm(sse_c)
+            .set_sse_customer_key(sse_c_key.key.clone())
+            .set_sse_customer_key_md5(sse_c_key_md5)
+            .send()
+            .await
+            .context("aws_sdk_s3::client::head_object() failed.")?;
+
+        Ok(result)
+    }
+
     async fn get_object_parts(
         &self,
         key: &str,
@@ -692,6 +721,9 @@ impl StorageTrait for S3Storage {
     async fn put_object(
         &self,
         key: &str,
+        source: Storage,
+        source_size: u64,
+        source_additional_checksum: Option<String>,
         mut get_object_output: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
@@ -701,6 +733,7 @@ impl StorageTrait for S3Storage {
             version_id = source_version_id.to_string();
         }
         let target_key = generate_full_key(&self.prefix, key);
+        let source_key = key;
         let source_last_modified = aws_smithy_types::DateTime::from_millis(
             get_object_output.last_modified().unwrap().to_millis()?,
         )
@@ -767,8 +800,6 @@ impl StorageTrait for S3Storage {
             object_checksum.clone(),
         );
 
-        let content_length = get_object_output.content_length();
-
         let mut upload_manager = UploadManager::new(
             self.client.clone().unwrap(),
             self.config.clone(),
@@ -777,6 +808,10 @@ impl StorageTrait for S3Storage {
             tagging,
             object_checksum.unwrap_or_default().object_parts,
             self.is_express_onezone_storage(),
+            source,
+            source_key.to_string(),
+            source_size,
+            source_additional_checksum,
         );
 
         self.exec_rate_limit_objects_per_sec().await;
@@ -790,7 +825,7 @@ impl StorageTrait for S3Storage {
             source_version_id = version_id,
             source_last_modified = source_last_modified,
             target_key = target_key,
-            size = content_length,
+            size = source_size,
             "sync completed.",
         );
 
