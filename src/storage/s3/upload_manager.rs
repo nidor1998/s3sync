@@ -20,12 +20,12 @@ use std::sync::{Arc, Mutex};
 use tokio::io::AsyncReadExt;
 use tokio::task;
 use tokio::task::JoinHandle;
-use tracing::{trace, warn};
+use tracing::{debug, trace, warn};
 
 use crate::config::Config;
 use crate::storage;
 use crate::storage::e_tag_verify::{generate_e_tag_hash, is_multipart_upload_e_tag};
-use crate::storage::Storage;
+use crate::storage::{convert_to_buf_byte_stream_with_callback, Storage};
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
@@ -79,7 +79,7 @@ impl UploadManager {
             stats_sender,
             tagging,
             object_parts,
-            concatnated_md5_hash: Vec::new(),
+            concatnated_md5_hash: vec![],
             express_onezone_storage,
             source,
             source_key,
@@ -561,8 +561,23 @@ impl UploadManager {
                     .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
             }
 
+            let permit = self
+                .config
+                .clone()
+                .target_client_config
+                .unwrap()
+                .parallel_upload_semaphore
+                .acquire_owned()
+                .await?;
             let task: JoinHandle<Result<()>> = task::spawn(async move {
+                let _permit = permit; // Keep the semaphore permit in scope
                 let range = Some(format!("bytes={}-{}", offset, offset + chunksize));
+
+                debug!(
+                    key = &target_key,
+                    part_number = part_number,
+                    "upload_part() start. range = {range:?}",
+                );
 
                 // If the part number is greater than 1, we need to get the object from the source storage.
                 if part_number > 1 {
@@ -577,10 +592,17 @@ impl UploadManager {
                             source_sse_c_key_md5,
                         )
                         .await;
-                    let mut body = get_object_output
-                        .context("get_object() failed.")?
-                        .body
-                        .into_async_read();
+                    let mut body = convert_to_buf_byte_stream_with_callback(
+                        get_object_output
+                            .context("get_object() failed.")?
+                            .body
+                            .into_async_read(),
+                        source.get_stats_sender().clone(),
+                        source.get_rate_limit_bandwidth(),
+                        None,
+                        None,
+                    )
+                    .into_async_read();
                     body.read_exact(buffer.as_mut_slice())
                         .await
                         .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
@@ -623,6 +645,12 @@ impl UploadManager {
                         .await
                         .context("aws_sdk_s3::client::Client upload_part() failed.")?
                 };
+
+                debug!(
+                    key = &target_key,
+                    part_number = part_number,
+                    "upload_part() complete",
+                );
 
                 trace!(key = &target_key, "{upload_part_output:?}");
 

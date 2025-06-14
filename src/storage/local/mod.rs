@@ -927,6 +927,10 @@ impl StorageTrait for LocalStorage {
     fn get_local_path(&self) -> PathBuf {
         self.path.clone()
     }
+
+    fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>> {
+        self.rate_limit_bandwidth.clone()
+    }
 }
 
 async fn simulate_not_found_test_case() {

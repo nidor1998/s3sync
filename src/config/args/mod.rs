@@ -1,19 +1,3 @@
-use std::ffi::OsString;
-use std::path::PathBuf;
-use std::str::FromStr;
-
-use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, ServerSideEncryption, StorageClass,
-};
-use aws_smithy_types::checksum_config::RequestChecksumCalculation;
-use chrono::{DateTime, Utc};
-use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
-use clap::Parser;
-use clap_verbosity_flag::{Verbosity, WarnLevel};
-use regex::Regex;
-#[cfg(feature = "version")]
-use shadow_rs::shadow;
-
 use crate::config::args::value_parser::{
     canned_acl, checksum_algorithm, human_bytes, metadata, sse, storage_class, storage_path,
     tagging, url,
@@ -25,6 +9,22 @@ use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
 };
 use crate::Config;
+use aws_sdk_s3::types::{
+    ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, ServerSideEncryption, StorageClass,
+};
+use aws_smithy_types::checksum_config::RequestChecksumCalculation;
+use chrono::{DateTime, Utc};
+use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
+use clap::Parser;
+use clap_verbosity_flag::{Verbosity, WarnLevel};
+use regex::Regex;
+#[cfg(feature = "version")]
+use shadow_rs::shadow;
+use std::ffi::OsString;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 
 mod tests;
 mod value_parser;
@@ -67,6 +67,7 @@ const DEFAULT_DISABLE_PAYLOAD_SIGNING: bool = false;
 const DEFAULT_DISABLE_CONTENT_MD5_HEADER: bool = false;
 const DEFAULT_FULL_OBJECT_CHECKSUM: bool = false;
 const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
+const DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS: u16 = 16;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -486,6 +487,10 @@ pub struct CLIArgs {
     /// disable default additional checksum verification in Express One Zone storage class
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM)]
     disable_express_one_zone_additional_checksum: bool,
+
+    /// maximum number of parallel multipart uploads
+    #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS, value_parser = clap::value_parser!(u16).range(1..))]
+    max_parallel_uploads: u16,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -931,6 +936,9 @@ impl CLIArgs {
             no_verify_ssl = self.no_verify_ssl;
         }
 
+        let parallel_upload_semaphore =
+            Arc::new(Semaphore::new(self.max_parallel_uploads as usize));
+        
         let source_client_config = source_credential.map(|source_credential| ClientConfig {
             client_config_location: ClientConfigLocation {
                 aws_config_file: self.aws_config_file.clone(),
@@ -949,6 +957,7 @@ impl CLIArgs {
             no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
+            parallel_upload_semaphore: parallel_upload_semaphore.clone(),
         });
 
         let target_client_config = target_credential.map(|target_credential| ClientConfig {
@@ -969,6 +978,7 @@ impl CLIArgs {
             no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation,
+            parallel_upload_semaphore,
         });
 
         (source_client_config, target_client_config)

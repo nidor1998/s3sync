@@ -157,6 +157,7 @@ pub trait StorageTrait: DynClone {
     fn get_stats_sender(&self) -> Sender<SyncStatistics>;
     async fn send_stats(&self, stats: SyncStatistics);
     fn get_local_path(&self) -> PathBuf;
+    fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>>;
 }
 
 #[rustfmt::skip] // For coverage tool incorrectness

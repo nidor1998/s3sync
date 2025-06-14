@@ -23,8 +23,8 @@ use crate::storage::e_tag_verify;
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
 use crate::types::{
-    get_additional_checksum, is_full_object_checksum, ObjectChecksum, S3syncObject, SseCustomerKey,
-    MINIMUM_CHUNKSIZE,
+    get_additional_checksum, get_additional_checksum_with_head_object, is_full_object_checksum,
+    ObjectChecksum, S3syncObject, SseCustomerKey, MINIMUM_CHUNKSIZE,
 };
 
 use super::stage::Stage;
@@ -299,8 +299,9 @@ impl ObjectSyncer {
             return Ok(());
         }
 
+        // Get the first chunk range if multipart upload is required.
+        // If not, the whole object will be downloaded.
         let range = self.get_first_chunk_range(object.clone()).await?;
-
         let get_object_output = self
             .get_object(
                 key,
@@ -331,6 +332,8 @@ impl ObjectSyncer {
 
         match get_object_output {
             Ok(get_object_output) => {
+                // If multipart upload is required, the first chunk does not contain the final checksum.
+                // So, we need to get the final checksum from the head object.
                 let final_checksum = self
                     .get_final_checksum(&get_object_output, object.clone())
                     .await;
@@ -587,6 +590,7 @@ impl ObjectSyncer {
     ) -> Option<String> {
         self.base.config.additional_checksum_algorithm.as_ref()?;
 
+        // If the object is from local storage, we can get the additional checksum directly.
         if self.base.source.as_ref().unwrap().is_local_storage() {
             return get_additional_checksum(
                 get_object_output,
@@ -594,6 +598,7 @@ impl ObjectSyncer {
             );
         }
 
+        // If range option is not specified, the final checksum is already calculated.
         if object.size() == get_object_output.content_length.unwrap() {
             return get_additional_checksum(
                 get_object_output,
@@ -601,6 +606,7 @@ impl ObjectSyncer {
             );
         }
 
+        // if range option is specified, we need to get the final checksum from the head object.
         let head_object_result = self
             .base
             .source
@@ -634,13 +640,14 @@ impl ObjectSyncer {
             return None;
         }
 
-        get_additional_checksum(
-            get_object_output,
+        get_additional_checksum_with_head_object(
+            &head_object_result.unwrap(),
             self.base.config.additional_checksum_algorithm.clone(),
         )
     }
 
     async fn get_first_chunk_range(&self, object: S3syncObject) -> Result<Option<String>> {
+        // If the object size is less than the minimum chunk size, no need to get the first chunk range.
         if self.base.config.dry_run || object.size() < MINIMUM_CHUNKSIZE as i64 {
             return Ok(None);
         }
@@ -660,12 +667,14 @@ impl ObjectSyncer {
             return Ok(None);
         }
 
-        // source is not local storage.
+        // If the object is not a multipart upload, no need to get the first chunk range.
         if !e_tag_verify::is_multipart_upload_e_tag(&object.e_tag().map(|e_tag| e_tag.to_string()))
         {
             return Ok(None);
         }
 
+        // If auto_chunksize is enabled, we need to get the first chunk size from the head object.
+        // And if additional_checksum_algorithm is set, we also need to get the first chunk size from the head object.
         if self.base.config.transfer_config.auto_chunksize
             || self.base.config.additional_checksum_algorithm.is_some()
         {
