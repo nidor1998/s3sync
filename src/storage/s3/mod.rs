@@ -998,6 +998,10 @@ impl StorageTrait for S3Storage {
         // S3 storage does not have a local path.
         unimplemented!();
     }
+
+    fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>> {
+        self.rate_limit_bandwidth.clone()
+    }
 }
 
 pub fn remove_s3_prefix(key: &str, prefix: &str) -> String {
