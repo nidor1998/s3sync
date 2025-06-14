@@ -1341,6 +1341,7 @@ mod tests {
             .send(S3syncObject::NotVersioning(
                 Object::builder()
                     .set_key(Some("6byte.dat".to_string()))
+                    .size(1)
                     .build(),
             ))
             .await
@@ -1395,7 +1396,10 @@ mod tests {
 
         sender
             .send(S3syncObject::NotVersioning(
-                Object::builder().set_key(Some("data4".to_string())).build(),
+                Object::builder()
+                    .set_key(Some("data4".to_string()))
+                    .size(1)
+                    .build(),
             ))
             .await
             .unwrap();

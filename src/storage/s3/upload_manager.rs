@@ -92,13 +92,13 @@ impl UploadManager {
         &mut self,
         bucket: &str,
         key: &str,
-        mut get_object_output: GetObjectOutput,
+        mut get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<PutObjectOutput> {
-        get_object_output = self.modify_metadata(get_object_output);
+        get_object_output_first_chunk = self.modify_metadata(get_object_output_first_chunk);
 
         if self.is_auto_chunksize_enabled() {
             return self
-                .upload_with_auto_chunksize(bucket, key, get_object_output)
+                .upload_with_auto_chunksize(bucket, key, get_object_output_first_chunk)
                 .await;
         }
 
@@ -107,10 +107,10 @@ impl UploadManager {
             .transfer_config
             .is_multipart_upload_required(self.source_total_size)
         {
-            self.multipart_upload(bucket, key, get_object_output)
+            self.multipart_upload(bucket, key, get_object_output_first_chunk)
                 .await?
         } else {
-            self.singlepart_upload(bucket, key, get_object_output)
+            self.singlepart_upload(bucket, key, get_object_output_first_chunk)
                 .await?
         };
 
@@ -202,14 +202,14 @@ impl UploadManager {
         &mut self,
         bucket: &str,
         key: &str,
-        get_object_output: GetObjectOutput,
+        get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<PutObjectOutput> {
         if self.object_parts.as_ref().unwrap().is_empty() {
             panic!("Illegal object_parts state");
         }
 
         let put_object_output = self
-            .multipart_upload(bucket, key, get_object_output)
+            .multipart_upload(bucket, key, get_object_output_first_chunk)
             .await?;
 
         trace!(key = key, "{put_object_output:?}");
@@ -221,10 +221,10 @@ impl UploadManager {
         &mut self,
         bucket: &str,
         key: &str,
-        get_object_output: GetObjectOutput,
+        get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<PutObjectOutput> {
         let storage_class = if self.config.storage_class.is_none() {
-            get_object_output.storage_class().cloned()
+            get_object_output_first_chunk.storage_class().cloned()
         } else {
             Some(self.config.storage_class.as_ref().unwrap().clone())
         };
@@ -241,47 +241,49 @@ impl UploadManager {
             .set_storage_class(storage_class)
             .bucket(bucket)
             .key(key)
-            .set_metadata(get_object_output.metadata().cloned())
+            .set_metadata(get_object_output_first_chunk.metadata().cloned())
             .set_tagging(self.tagging.clone())
             .set_content_type(if self.config.content_type.is_none() {
-                get_object_output
+                get_object_output_first_chunk
                     .content_type()
                     .map(|value| value.to_string())
             } else {
                 self.config.content_type.clone()
             })
             .set_content_encoding(if self.config.content_encoding.is_none() {
-                get_object_output
+                get_object_output_first_chunk
                     .content_encoding()
                     .map(|value| value.to_string())
             } else {
                 self.config.content_encoding.clone()
             })
             .set_cache_control(if self.config.cache_control.is_none() {
-                get_object_output
+                get_object_output_first_chunk
                     .cache_control()
                     .map(|value| value.to_string())
             } else {
                 self.config.cache_control.clone()
             })
             .set_content_disposition(if self.config.content_disposition.is_none() {
-                get_object_output
+                get_object_output_first_chunk
                     .content_disposition()
                     .map(|value| value.to_string())
             } else {
                 self.config.content_disposition.clone()
             })
             .set_content_language(if self.config.content_language.is_none() {
-                get_object_output
+                get_object_output_first_chunk
                     .content_language()
                     .map(|value| value.to_string())
             } else {
                 self.config.content_language.clone()
             })
             .set_expires(if self.config.expires.is_none() {
-                get_object_output.expires_string().map(|expires_string| {
-                    DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
-                })
+                get_object_output_first_chunk
+                    .expires_string()
+                    .map(|expires_string| {
+                        DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
+                    })
             } else {
                 Some(
                     DateTime::from_str(
@@ -305,7 +307,7 @@ impl UploadManager {
         let upload_id = create_multipart_upload_output.upload_id().unwrap();
 
         let upload_result = self
-            .upload_parts_and_complete(bucket, key, upload_id, get_object_output)
+            .upload_parts_and_complete(bucket, key, upload_id, get_object_output_first_chunk)
             .await
             .context("upload_parts() failed.");
         if upload_result.is_err() {
@@ -326,22 +328,31 @@ impl UploadManager {
         bucket: &str,
         key: &str,
         upload_id: &str,
-        get_object_output: GetObjectOutput,
+        get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<PutObjectOutput> {
-        let source_sse = get_object_output.server_side_encryption().cloned();
-        let source_remote_storage = get_object_output.e_tag().is_some();
+        let source_sse = get_object_output_first_chunk
+            .server_side_encryption()
+            .cloned();
+        let source_remote_storage = get_object_output_first_chunk.e_tag().is_some();
         let source_content_length = self.source_total_size;
-        let source_e_tag = get_object_output.e_tag().map(|e_tag| e_tag.to_string());
+        let source_e_tag = get_object_output_first_chunk
+            .e_tag()
+            .map(|e_tag| e_tag.to_string());
         let source_local_storage = source_e_tag.is_none();
         let source_checksum = self.source_additional_checksum.clone();
-        let source_storage_class = get_object_output.storage_class().cloned();
+        let source_storage_class = get_object_output_first_chunk.storage_class().cloned();
 
         let upload_parts = if self.is_auto_chunksize_enabled() {
-            self.upload_parts_with_auto_chunksize(bucket, key, upload_id, get_object_output)
-                .await
-                .context("upload_parts_with_auto_chunksize() failed.")?
+            self.upload_parts_with_auto_chunksize(
+                bucket,
+                key,
+                upload_id,
+                get_object_output_first_chunk,
+            )
+            .await
+            .context("upload_parts_with_auto_chunksize() failed.")?
         } else {
-            self.upload_parts(bucket, key, upload_id, get_object_output)
+            self.upload_parts(bucket, key, upload_id, get_object_output_first_chunk)
                 .await
                 .context("upload_parts() failed.")?
         };
@@ -502,16 +513,18 @@ impl UploadManager {
         bucket: &str,
         key: &str,
         upload_id: &str,
-        get_object_output: GetObjectOutput,
+        get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<Vec<CompletedPart>> {
-        let shared_source_version_id = get_object_output.version_id().map(|v| v.to_string());
+        let shared_source_version_id = get_object_output_first_chunk
+            .version_id()
+            .map(|v| v.to_string());
         let shared_multipart_etags = Arc::new(Mutex::new(Vec::new()));
         let shared_upload_parts = Arc::new(Mutex::new(Vec::new()));
 
         let config_chunksize = self.config.transfer_config.multipart_chunksize as usize;
         let source_total_size = self.source_total_size as usize;
 
-        let mut body = get_object_output.body.into_async_read();
+        let mut body = get_object_output_first_chunk.body.into_async_read();
 
         let mut upload_parts_join_handles = vec![];
         let mut part_number = 1;
@@ -734,13 +747,13 @@ impl UploadManager {
         bucket: &str,
         key: &str,
         upload_id: &str,
-        get_object_output: GetObjectOutput,
+        get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<Vec<CompletedPart>> {
         let mut upload_parts: Vec<CompletedPart> = Vec::new();
 
         let mut part_number = 1;
 
-        let mut body = get_object_output.body.into_async_read();
+        let mut body = get_object_output_first_chunk.body.into_async_read();
         while part_number <= self.object_parts.as_ref().unwrap().len() {
             if self.cancellation_token.is_cancelled() {
                 return Err(anyhow!(S3syncError::Cancelled));

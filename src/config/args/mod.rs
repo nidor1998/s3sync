@@ -938,7 +938,7 @@ impl CLIArgs {
 
         let parallel_upload_semaphore =
             Arc::new(Semaphore::new(self.max_parallel_uploads as usize));
-        
+
         let source_client_config = source_credential.map(|source_credential| ClientConfig {
             client_config_location: ClientConfigLocation {
                 aws_config_file: self.aws_config_file.clone(),
