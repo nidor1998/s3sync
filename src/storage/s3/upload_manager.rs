@@ -548,7 +548,6 @@ impl UploadManager {
             let target_sse_c_key = self.config.target_sse_c_key.clone().key.clone();
             let target_sse_c_key_md5 = self.config.target_sse_c_key_md5.clone();
 
-            // todo
             let chunksize = if offset + config_chunksize > source_total_size {
                 source_total_size - offset
             } else {
