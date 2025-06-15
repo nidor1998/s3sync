@@ -30,7 +30,9 @@ use aws_smithy_types::byte_stream::Length;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
 use tokio::io::BufReader;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncSeekExt, AsyncWriteExt};
+use tokio::task;
+use tokio::task::JoinHandle;
 use tracing::{debug, info, trace, warn};
 use walkdir::{DirEntry, WalkDir};
 
@@ -352,6 +354,481 @@ impl LocalStorage {
         }
         Ok(())
     }
+
+    async fn put_object_single_part(
+        &self,
+        key: &str,
+        source: Storage,
+        get_object_output: GetObjectOutput,
+        _tagging: Option<String>,
+        object_checksum: Option<ObjectChecksum>,
+    ) -> Result<PutObjectOutput> {
+        let source_sse = get_object_output.server_side_encryption().cloned();
+        let source_e_tag = get_object_output.e_tag().map(|e_tag| e_tag.to_string());
+        let source_content_length = get_object_output.content_length().unwrap() as u64;
+        let source_final_checksum = if let Some(object_checksum) = object_checksum.as_ref() {
+            object_checksum.final_checksum.clone()
+        } else {
+            None
+        };
+        let source_checksum_algorithm = if let Some(object_checksum) = object_checksum.as_ref() {
+            object_checksum.checksum_algorithm.clone()
+        } else {
+            None
+        };
+        let source_storage_class = get_object_output.storage_class().cloned();
+
+        let source_last_modified =
+            DateTime::from_millis(get_object_output.last_modified.unwrap().to_millis()?)
+                .to_chrono_utc()?
+                .to_rfc3339();
+
+        if fs_util::check_directory_traversal(key) {
+            return Err(anyhow!(S3syncError::DirectoryTraversalError));
+        }
+
+        if self.config.dry_run {
+            // In a dry run, content-range is set.
+            let content_length_string = get_size_string_from_content_range(&get_object_output);
+
+            self.send_stats(SyncBytes(
+                u64::from_str(&content_length_string).unwrap_or_default(),
+            ))
+            .await;
+
+            let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key)
+                .to_string_lossy()
+                .to_string();
+            info!(
+                key = key,
+                real_path = real_path,
+                source_last_modified = source_last_modified,
+                size = content_length_string,
+                "[dry-run] sync completed.",
+            );
+
+            return Ok(PutObjectOutput::builder().build());
+        }
+
+        if fs_util::is_key_a_directory(key) {
+            fs_util::create_directory_hierarchy_from_key(self.path.clone(), key).await?;
+
+            return Ok(PutObjectOutput::builder().build());
+        }
+
+        let mut temp_file = fs_util::create_temp_file_from_key(&self.path, key).await?;
+        let mut file = tokio::fs::File::from_std(temp_file.as_file_mut().try_clone()?);
+
+        let seconds = get_object_output.last_modified().as_ref().unwrap().secs();
+        let nanos = get_object_output
+            .last_modified()
+            .as_ref()
+            .unwrap()
+            .subsec_nanos();
+
+        self.exec_rate_limit_objects_per_sec().await;
+
+        let byte_stream = convert_to_buf_byte_stream_with_callback(
+            get_object_output.body.into_async_read(),
+            self.get_stats_sender(),
+            source.get_rate_limit_bandwidth(),
+            None,
+            None,
+        );
+
+        let mut buf_reader = BufReader::new(byte_stream.into_async_read());
+
+        let mut chunked_remaining: u64 = 0;
+        loop {
+            let buffer = buf_reader.fill_buf().await?;
+            if buffer.is_empty() {
+                break;
+            }
+
+            let buffer_len = buffer.len();
+            file.write_all(buffer).await?;
+            buf_reader.consume(buffer_len);
+
+            // make it easy to cancel
+            chunked_remaining += buffer_len as u64;
+            if chunked_remaining > self.config.transfer_config.multipart_chunksize {
+                chunked_remaining = 0;
+
+                if self.cancellation_token.is_cancelled() {
+                    warn!(key = key, "sync cancelled.",);
+                    return Err(anyhow!(S3syncError::Cancelled));
+                }
+            }
+        }
+
+        file.flush().await?;
+        drop(file);
+
+        let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key);
+        temp_file.persist(&real_path)?;
+
+        fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos)?;
+
+        let target_object_parts = if let Some(object_checksum) = &object_checksum {
+            object_checksum.object_parts.clone()
+        } else {
+            None
+        };
+
+        let target_content_length = fs_util::get_file_size(&real_path).await;
+
+        self.verify_local_file(
+            key,
+            object_checksum,
+            &source_sse,
+            &source_e_tag,
+            source_content_length,
+            source_final_checksum,
+            source_checksum_algorithm,
+            &real_path,
+            target_object_parts,
+            target_content_length,
+            source_storage_class == Some(StorageClass::ExpressOnezone),
+        )
+        .await?;
+
+        let lossy_path = real_path.to_string_lossy().to_string();
+        info!(
+            key = key,
+            real_path = lossy_path,
+            size = source_content_length,
+            "sync completed.",
+        );
+
+        Ok(PutObjectOutput::builder().build())
+    }
+    #[allow(clippy::too_many_arguments)]
+    async fn put_object_multipart(
+        &self,
+        key: &str,
+        source: Storage,
+        source_size: u64,
+        source_additional_checksum: Option<String>,
+        get_object_output_first_chunk: GetObjectOutput,
+        _tagging: Option<String>,
+        object_checksum: Option<ObjectChecksum>,
+    ) -> Result<PutObjectOutput> {
+        let source_version_id = get_object_output_first_chunk
+            .version_id()
+            .map(|v| v.to_string());
+        let source_sse = get_object_output_first_chunk
+            .server_side_encryption()
+            .cloned();
+        let source_e_tag = get_object_output_first_chunk
+            .e_tag()
+            .map(|e_tag| e_tag.to_string());
+        let source_checksum_algorithm = if let Some(object_checksum) = object_checksum.as_ref() {
+            object_checksum.checksum_algorithm.clone()
+        } else {
+            None
+        };
+        let source_storage_class = get_object_output_first_chunk.storage_class().cloned();
+        let source_last_modified = DateTime::from_millis(
+            get_object_output_first_chunk
+                .last_modified
+                .unwrap()
+                .to_millis()?,
+        )
+        .to_chrono_utc()?
+        .to_rfc3339();
+        let source_last_modified_seconds = get_object_output_first_chunk
+            .last_modified()
+            .as_ref()
+            .unwrap()
+            .secs();
+        let source_last_modified_nanos = get_object_output_first_chunk
+            .last_modified()
+            .as_ref()
+            .unwrap()
+            .subsec_nanos();
+
+        if fs_util::check_directory_traversal(key) {
+            return Err(anyhow!(S3syncError::DirectoryTraversalError));
+        }
+
+        if self.config.dry_run {
+            self.send_stats(SyncBytes(
+                u64::from_str(&source_size.to_string()).unwrap_or_default(),
+            ))
+            .await;
+
+            let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key)
+                .to_string_lossy()
+                .to_string();
+            info!(
+                key = key,
+                real_path = real_path,
+                source_last_modified = source_last_modified,
+                size = source_size,
+                "[dry-run] sync completed.",
+            );
+
+            return Ok(PutObjectOutput::builder().build());
+        }
+
+        if fs_util::is_key_a_directory(key) {
+            fs_util::create_directory_hierarchy_from_key(self.path.clone(), key).await?;
+
+            return Ok(PutObjectOutput::builder().build());
+        }
+
+        let mut temp_file = fs_util::create_temp_file_from_key(&self.path, key).await?;
+        let mut file = tokio::fs::File::from_std(temp_file.as_file_mut().try_clone()?);
+
+        let config_chunksize = self.config.transfer_config.multipart_chunksize as usize;
+
+        let byte_stream = convert_to_buf_byte_stream_with_callback(
+            get_object_output_first_chunk.body.into_async_read(),
+            self.get_stats_sender(),
+            source.get_rate_limit_bandwidth(),
+            None,
+            None,
+        );
+
+        self.exec_rate_limit_objects_per_sec().await;
+
+        let first_chunk_content_length =
+            get_object_output_first_chunk.content_length.unwrap() as usize;
+        let mut chunked_remaining: u64 = 0;
+        let mut first_chunk_data = Vec::<u8>::with_capacity(first_chunk_content_length);
+        let mut buf_reader = BufReader::new(byte_stream.into_async_read());
+        let mut read_data_size = 0;
+        loop {
+            let tmp_buffer = buf_reader.fill_buf().await?;
+            if tmp_buffer.is_empty() {
+                if read_data_size != first_chunk_content_length {
+                    return Err(anyhow!("Invalid first chunk data size. Expected: {first_chunk_content_length}, Actual: {read_data_size}"));
+                }
+                break;
+            }
+            let buffer_len = tmp_buffer.len();
+            first_chunk_data.append(tmp_buffer.to_vec().as_mut());
+            buf_reader.consume(buffer_len);
+
+            read_data_size += buffer_len;
+
+            // make it easy to cancel
+            chunked_remaining += buffer_len as u64;
+            if chunked_remaining > config_chunksize as u64 {
+                chunked_remaining = 0;
+
+                if self.cancellation_token.is_cancelled() {
+                    warn!(key = key, "sync cancelled.",);
+                    return Err(anyhow!(S3syncError::Cancelled));
+                }
+            }
+        }
+
+        let mut offset = 0;
+        let mut part_number = 1;
+        let mut upload_parts_join_handles = vec![];
+        loop {
+            let chunksize = if part_number == 1 {
+                first_chunk_content_length
+            } else if offset + config_chunksize as u64 > source_size {
+                (source_size - offset) as usize
+            } else {
+                config_chunksize
+            };
+
+            let mut cloned_file = tokio::fs::File::from_std(temp_file.reopen()?);
+
+            let cloned_source = dyn_clone::clone_box(&*(source));
+            let source_key = key.to_string();
+            let source_version_id = source_version_id.clone();
+            let source_sse_c = self.config.source_sse_c.clone();
+            let source_sse_c_key = self.config.source_sse_c_key.clone();
+            let source_sse_c_key_md5 = self.config.source_sse_c_key_md5.clone();
+
+            let additional_checksum_mode = self.config.additional_checksum_mode.clone();
+
+            let cancellation_token = self.cancellation_token.clone();
+            let mut chunk_whole_data = Vec::<u8>::with_capacity(chunksize);
+            chunk_whole_data.resize_with(chunksize, Default::default);
+
+            if part_number == 1 {
+                chunk_whole_data.copy_from_slice(&first_chunk_data);
+            }
+
+            let permit = self
+                .config
+                .clone()
+                .target_client_config
+                .unwrap()
+                .parallel_upload_semaphore
+                .acquire_owned()
+                .await?;
+
+            let task: JoinHandle<Result<()>> = task::spawn(async move {
+                let _permit = permit; // Keep the semaphore permit in scope
+
+                debug!(
+                    key = &source_key,
+                    part_number = part_number,
+                    offset = offset,
+                    chunksize = chunksize,
+                    "LocalStorage: write to local file",
+                );
+
+                // If the part number is greater than 1, we need to get the object from the source storage.
+                if part_number > 1 {
+                    let range = Some(format!(
+                        "bytes={}-{}",
+                        offset,
+                        offset + chunksize as u64 - 1
+                    ));
+                    debug!(
+                        key = &source_key,
+                        part_number = part_number,
+                        "LocalStorage: source get_object() start. range = {range:?}",
+                    );
+
+                    let get_object_output = cloned_source
+                        .get_object(
+                            &source_key,
+                            source_version_id,
+                            additional_checksum_mode,
+                            range,
+                            source_sse_c,
+                            source_sse_c_key,
+                            source_sse_c_key_md5,
+                        )
+                        .await;
+                    let chunk_content_length =
+                        get_object_output.as_ref().unwrap().content_length.unwrap() as usize;
+                    let body = convert_to_buf_byte_stream_with_callback(
+                        get_object_output
+                            .context("get_object() failed.")?
+                            .body
+                            .into_async_read(),
+                        cloned_source.get_stats_sender().clone(),
+                        cloned_source.get_rate_limit_bandwidth(),
+                        None,
+                        None,
+                    )
+                    .into_async_read();
+
+                    let mut chunked_remaining: u64 = 0;
+                    let mut chunk_data = Vec::<u8>::with_capacity(chunk_content_length);
+                    let mut buf_reader = BufReader::new(body);
+                    let mut read_data_size = 0;
+                    loop {
+                        let tmp_buffer = buf_reader.fill_buf().await?;
+                        if tmp_buffer.is_empty() {
+                            if read_data_size != chunk_content_length {
+                                return Err(anyhow!("Invalid chunk data size. Expected: {chunk_content_length}, Actual: {read_data_size}"));
+                            }
+                            break;
+                        }
+
+                        let buffer_len = tmp_buffer.len();
+                        chunk_data.append(tmp_buffer.to_vec().as_mut());
+                        buf_reader.consume(buffer_len);
+
+                        read_data_size += buffer_len;
+
+                        chunked_remaining += buffer_len as u64;
+                        if chunked_remaining > config_chunksize as u64 {
+                            chunked_remaining = 0;
+
+                            if cancellation_token.is_cancelled() {
+                                warn!(key = &source_key, "sync cancelled.",);
+                                return Err(anyhow!(S3syncError::Cancelled));
+                            }
+                        }
+                    }
+
+                    chunk_whole_data.copy_from_slice(&chunk_data);
+                } else {
+                    debug!(
+                        key = &source_key,
+                        part_number = part_number,
+                        first_chunk_content_length = first_chunk_content_length,
+                        "LocalStorage: source get_object() skipped for first part.",
+                    );
+                }
+
+                cloned_file.seek(io::SeekFrom::Start(offset)).await?;
+                cloned_file.write_all(&chunk_whole_data).await?;
+                cloned_file.flush().await?;
+
+                debug!(
+                    key = &source_key,
+                    part_number = part_number,
+                    "LocalStorage: write_all() completed",
+                );
+
+                Ok(())
+            });
+
+            upload_parts_join_handles.push(task);
+
+            part_number += 1;
+            offset += chunksize as u64;
+
+            if offset >= source_size {
+                break;
+            }
+        }
+
+        for handle in upload_parts_join_handles {
+            if self.cancellation_token.is_cancelled() {
+                return Err(anyhow!(S3syncError::Cancelled));
+            }
+            handle.await??;
+        }
+
+        file.flush().await?;
+        drop(file);
+
+        let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key);
+        temp_file.persist(&real_path)?;
+
+        fs_util::set_last_modified(
+            self.path.to_path_buf(),
+            key,
+            source_last_modified_seconds,
+            source_last_modified_nanos,
+        )?;
+
+        let target_object_parts = if let Some(object_checksum) = &object_checksum {
+            object_checksum.object_parts.clone()
+        } else {
+            None
+        };
+
+        let target_content_length = fs_util::get_file_size(&real_path).await;
+
+        self.verify_local_file(
+            key,
+            object_checksum,
+            &source_sse,
+            &source_e_tag,
+            source_size,
+            source_additional_checksum,
+            source_checksum_algorithm,
+            &real_path,
+            target_object_parts,
+            target_content_length,
+            source_storage_class == Some(StorageClass::ExpressOnezone),
+        )
+        .await?;
+
+        let lossy_path = real_path.to_string_lossy().to_string();
+        info!(
+            key = key,
+            real_path = lossy_path,
+            size = source_size,
+            "sync completed.",
+        );
+
+        Ok(PutObjectOutput::builder().build())
+    }
 }
 
 #[async_trait]
@@ -505,6 +982,7 @@ impl StorageTrait for LocalStorage {
         let mut need_checksum = true;
         let body;
         let content_length;
+        let content_range;
         if range.is_some() {
             let file_range = parse_range_header(&range.unwrap())?;
             body = Some(
@@ -519,9 +997,16 @@ impl StorageTrait for LocalStorage {
             // For performance, if the range is specified, we need to calculate the checksum only if the offset is 0.
             need_checksum = file_range.offset == 0;
             content_length = file_range.size as i64;
+            content_range = Some(format!(
+                "bytes {}-{}/{}",
+                file_range.offset,
+                file_range.offset + file_range.size - 1,
+                fs_util::get_file_size(&path).await
+            ));
         } else {
             body = Some(ByteStream::from_path(path.clone()).await?);
             content_length = fs_util::get_file_size(&path).await as i64;
+            content_range = None;
         }
 
         let checksum = if self.config.additional_checksum_algorithm.is_some() && need_checksum {
@@ -601,6 +1086,7 @@ impl StorageTrait for LocalStorage {
         Ok(GetObjectOutputBuilder::default()
             .set_content_length(Some(content_length))
             .set_content_type(content_type)
+            .set_content_range(content_range)
             .last_modified(fs_util::get_last_modified(&path).await)
             .set_body(body)
             .set_checksum_sha256(checksum_sha256)
@@ -722,157 +1208,27 @@ impl StorageTrait for LocalStorage {
         _tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput> {
-        let source_sse = get_object_output_first_chunk
-            .server_side_encryption()
-            .cloned();
-        let source_e_tag = get_object_output_first_chunk
-            .e_tag()
-            .map(|e_tag| e_tag.to_string());
-        let source_content_length = get_object_output_first_chunk.content_length().unwrap() as u64;
-        let source_final_checksum = if let Some(object_checksum) = object_checksum.as_ref() {
-            object_checksum.final_checksum.clone()
+        if get_object_output_first_chunk.content_range.is_none() {
+            self.put_object_single_part(
+                key,
+                source,
+                get_object_output_first_chunk,
+                _tagging,
+                object_checksum,
+            )
+            .await
         } else {
-            None
-        };
-        let source_checksum_algorithm = if let Some(object_checksum) = object_checksum.as_ref() {
-            object_checksum.checksum_algorithm.clone()
-        } else {
-            None
-        };
-        let source_storage_class = get_object_output_first_chunk.storage_class().cloned();
-
-        let source_last_modified = DateTime::from_millis(
-            get_object_output_first_chunk
-                .last_modified
-                .unwrap()
-                .to_millis()?,
-        )
-        .to_chrono_utc()?
-        .to_rfc3339();
-
-        if fs_util::check_directory_traversal(key) {
-            return Err(anyhow!(S3syncError::DirectoryTraversalError));
+            self.put_object_multipart(
+                key,
+                source,
+                source_size,
+                source_additional_checksum,
+                get_object_output_first_chunk,
+                _tagging,
+                object_checksum,
+            )
+            .await
         }
-
-        if self.config.dry_run {
-            // In a dry run, content-range is set.
-            let content_length_string =
-                get_size_string_from_content_range(&get_object_output_first_chunk);
-
-            self.send_stats(SyncBytes(
-                u64::from_str(&content_length_string).unwrap_or_default(),
-            ))
-            .await;
-
-            let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key)
-                .to_string_lossy()
-                .to_string();
-            info!(
-                key = key,
-                real_path = real_path,
-                source_last_modified = source_last_modified,
-                size = content_length_string,
-                "[dry-run] sync completed.",
-            );
-
-            return Ok(PutObjectOutput::builder().build());
-        }
-
-        if fs_util::is_key_a_directory(key) {
-            fs_util::create_directory_hierarchy_from_key(self.path.clone(), key).await?;
-
-            return Ok(PutObjectOutput::builder().build());
-        }
-
-        let mut temp_file = fs_util::create_temp_file_from_key(&self.path, key).await?;
-        let mut file = tokio::fs::File::from_std(temp_file.as_file_mut().try_clone()?);
-
-        let seconds = get_object_output_first_chunk
-            .last_modified()
-            .as_ref()
-            .unwrap()
-            .secs();
-        let nanos = get_object_output_first_chunk
-            .last_modified()
-            .as_ref()
-            .unwrap()
-            .subsec_nanos();
-
-        self.exec_rate_limit_objects_per_sec().await;
-
-        let byte_stream = convert_to_buf_byte_stream_with_callback(
-            get_object_output_first_chunk.body.into_async_read(),
-            self.get_stats_sender(),
-            self.rate_limit_bandwidth.clone(),
-            None,
-            None,
-        );
-
-        let mut buf_reader = BufReader::new(byte_stream.into_async_read());
-
-        let mut chunked_remaining: u64 = 0;
-        loop {
-            let buffer = buf_reader.fill_buf().await?;
-            if buffer.is_empty() {
-                break;
-            }
-
-            let buffer_len = buffer.len();
-            file.write_all(buffer).await?;
-            buf_reader.consume(buffer_len);
-
-            // make it easy to cancel
-            chunked_remaining += buffer_len as u64;
-            if chunked_remaining > self.config.transfer_config.multipart_chunksize {
-                chunked_remaining = 0;
-
-                if self.cancellation_token.is_cancelled() {
-                    warn!(key = key, "sync cancelled.",);
-                    return Err(anyhow!(S3syncError::Cancelled));
-                }
-            }
-        }
-
-        file.flush().await?;
-        drop(file);
-
-        let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key);
-        temp_file.persist(&real_path)?;
-
-        fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos)?;
-
-        let target_object_parts = if let Some(object_checksum) = &object_checksum {
-            object_checksum.object_parts.clone()
-        } else {
-            None
-        };
-
-        let target_content_length = fs_util::get_file_size(&real_path).await;
-
-        self.verify_local_file(
-            key,
-            object_checksum,
-            &source_sse,
-            &source_e_tag,
-            source_content_length,
-            source_final_checksum,
-            source_checksum_algorithm,
-            &real_path,
-            target_object_parts,
-            target_content_length,
-            source_storage_class == Some(StorageClass::ExpressOnezone),
-        )
-        .await?;
-
-        let lossy_path = real_path.to_string_lossy().to_string();
-        info!(
-            key = key,
-            real_path = lossy_path,
-            size = source_content_length,
-            "sync completed.",
-        );
-
-        Ok(PutObjectOutput::builder().build())
     }
 
     #[cfg(not(tarpaulin_include))]
@@ -1041,10 +1397,10 @@ fn parse_range_header(range_header: &str) -> Result<FileRange> {
         return Err(anyhow!("Invalid range format: {}", range));
     } else {
         let end = parts[1].parse::<u64>()?;
-        if end <= offset {
+        if end < offset {
             return Err(anyhow!("End of range cannot be less than start: {}", range));
         }
-        end - offset
+        end - offset + 1
     };
 
     Ok(FileRange { offset, size })
@@ -1716,6 +2072,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(get_object_result.content_length, Some(6));
+        assert!(get_object_result.content_range.is_none());
     }
 
     #[tokio::test]
@@ -1767,6 +2124,10 @@ mod tests {
             .unwrap();
         assert_eq!(data, "data");
         assert_eq!(get_object_result.content_length, Some(4));
+        assert_eq!(
+            get_object_result.content_range,
+            Some("bytes 0-3/6".to_string())
+        );
 
         let get_object_result = storage
             .get_object(
@@ -1790,6 +2151,10 @@ mod tests {
             .unwrap();
         assert_eq!(data, "at");
         assert_eq!(get_object_result.content_length, Some(2));
+        assert_eq!(
+            get_object_result.content_range,
+            Some("bytes 1-2/6".to_string())
+        );
 
         let get_object_result = storage
             .get_object(
@@ -1813,6 +2178,37 @@ mod tests {
             .unwrap();
         assert_eq!(data, "data1");
         assert_eq!(get_object_result.content_length, Some(5));
+        assert_eq!(
+            get_object_result.content_range,
+            Some("bytes 0-4/6".to_string())
+        );
+
+        let get_object_result = storage
+            .get_object(
+                "source/data1",
+                None,
+                None,
+                Some("bytes=0-6".to_string()),
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await
+            .unwrap();
+
+        let mut data = String::new();
+        get_object_result
+            .body
+            .into_async_read()
+            .read_to_string(&mut data)
+            .await
+            .unwrap();
+        assert_eq!(data, "data1\n");
+        assert_eq!(get_object_result.content_length, Some(6));
+        assert_eq!(
+            get_object_result.content_range,
+            Some("bytes 0-5/6".to_string())
+        );
     }
 
     #[tokio::test]
