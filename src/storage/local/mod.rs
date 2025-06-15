@@ -2230,15 +2230,17 @@ mod tests {
             .read_to_string(&mut data)
             .await
             .unwrap();
-        assert_eq!(data, "data1\n");
+        
         assert_eq!(get_object_result.content_length, Some(6));
 
         if cfg!(target_family = "windows") {
+            assert_eq!(data, "data1\r");
             assert_eq!(
                 get_object_result.content_range,
                 Some("bytes 0-5/7".to_string())
             );
         } else {
+            assert_eq!(data, "data1\n");
             assert_eq!(
                 get_object_result.content_range,
                 Some("bytes 0-5/6".to_string())
