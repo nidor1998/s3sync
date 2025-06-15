@@ -502,9 +502,9 @@ impl LocalStorage {
 
         Ok(PutObjectOutput::builder().build())
     }
-    
-    // skipcq: RS-R1000
+
     #[allow(clippy::too_many_arguments)]
+    // skipcq: RS-R1000
     async fn put_object_multipart(
         &self,
         key: &str,
