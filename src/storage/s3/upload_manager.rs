@@ -548,6 +548,7 @@ impl UploadManager {
             let target_sse_c_key = self.config.target_sse_c_key.clone().key.clone();
             let target_sse_c_key_md5 = self.config.target_sse_c_key_md5.clone();
 
+            // todo
             let chunksize = if offset + config_chunksize > source_total_size {
                 source_total_size - offset
             } else {
@@ -584,7 +585,7 @@ impl UploadManager {
                 .await?;
             let task: JoinHandle<Result<()>> = task::spawn(async move {
                 let _permit = permit; // Keep the semaphore permit in scope
-                let range = Some(format!("bytes={}-{}", offset, offset + chunksize));
+                let range = Some(format!("bytes={}-{}", offset, offset + chunksize - 1));
 
                 debug!(
                     key = &target_key,
@@ -822,7 +823,7 @@ impl UploadManager {
                 let range = Some(format!(
                     "bytes={}-{}",
                     offset,
-                    offset + object_part_chunksize
+                    offset + object_part_chunksize - 1
                 ));
 
                 debug!(

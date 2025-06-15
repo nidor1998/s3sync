@@ -1,6 +1,15 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
+use crate::pipeline::head_object_checker::HeadObjectChecker;
+use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
+use crate::storage::e_tag_verify;
+use crate::types::error::S3syncError;
+use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
+use crate::types::{
+    get_additional_checksum, get_additional_checksum_with_head_object, is_full_object_checksum,
+    ObjectChecksum, S3syncObject, SseCustomerKey, MINIMUM_CHUNKSIZE,
+};
 use anyhow::{anyhow, Context, Error, Result};
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingError;
@@ -15,17 +24,7 @@ use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ChecksumType, ObjectPar
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
-use tracing::{error, info, trace, warn};
-
-use crate::pipeline::head_object_checker::HeadObjectChecker;
-use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
-use crate::storage::e_tag_verify;
-use crate::types::error::S3syncError;
-use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
-use crate::types::{
-    get_additional_checksum, get_additional_checksum_with_head_object, is_full_object_checksum,
-    ObjectChecksum, S3syncObject, SseCustomerKey, MINIMUM_CHUNKSIZE,
-};
+use tracing::{debug, error, info, trace, warn};
 
 use super::stage::Stage;
 
@@ -302,6 +301,14 @@ impl ObjectSyncer {
         // Get the first chunk range if multipart upload is required.
         // If not, the whole object will be downloaded.
         let range = self.get_first_chunk_range(object.clone()).await?;
+
+        debug!(
+            worker_index = self.worker_index,
+            key = key,
+            size = size,
+            range = range.as_deref(),
+            "first chunk range for the object",
+        );
         let get_object_output = self
             .get_object(
                 key,
@@ -335,7 +342,12 @@ impl ObjectSyncer {
                 // If multipart upload is required, the first chunk does not contain the final checksum.
                 // So, we need to get the final checksum from the head object.
                 let final_checksum = self
-                    .get_final_checksum(&get_object_output, range, object.clone())
+                    .get_final_checksum(
+                        &get_object_output,
+                        range,
+                        object.clone(),
+                        object.checksum_algorithm(),
+                    )
                     .await;
 
                 let tagging = if self.base.config.disable_tagging {
@@ -588,8 +600,21 @@ impl ObjectSyncer {
         get_object_output: &GetObjectOutput,
         range: Option<String>,
         object: S3syncObject,
+        checksum_algorithm: Option<&[ChecksumAlgorithm]>,
     ) -> Option<String> {
-        self.base.config.additional_checksum_algorithm.as_ref()?;
+        let additional_checksum_algorithm = if let Some(algorithm) = checksum_algorithm {
+            if algorithm.is_empty()
+                || (self.base.config.additional_checksum_mode.is_none()
+                    && !self.base.target.as_ref().unwrap().is_local_storage())
+            {
+                None
+            } else {
+                // Only one algorithm supported
+                Some(algorithm[0].clone())
+            }
+        } else {
+            None
+        };
 
         // If the object is from local storage, we can get the additional checksum directly.
         if self.base.source.as_ref().unwrap().is_local_storage() {
@@ -598,6 +623,9 @@ impl ObjectSyncer {
                 self.base.config.additional_checksum_algorithm.clone(),
             );
         }
+
+        // If additional_checksum_mode is not set in remote storage, we cannot get the final checksum.
+        self.base.config.additional_checksum_mode.as_ref()?;
 
         // If range option is not specified, the final checksum is already calculated.
         if range.is_none() {
@@ -643,7 +671,7 @@ impl ObjectSyncer {
 
         get_additional_checksum_with_head_object(
             &head_object_result.unwrap(),
-            self.base.config.additional_checksum_algorithm.clone(),
+            additional_checksum_algorithm,
         )
     }
 
@@ -662,7 +690,7 @@ impl ObjectSyncer {
             {
                 return Ok(Some(format!(
                     "bytes=0-{}",
-                    self.base.config.transfer_config.multipart_chunksize
+                    self.base.config.transfer_config.multipart_chunksize - 1
                 )));
             }
             return Ok(None);
@@ -683,7 +711,7 @@ impl ObjectSyncer {
 
         if object.checksum_type() == Some(&ChecksumType::FullObject) {
             // If the object is a full object checksum, get the first chunk range as defined in the config.
-            return Ok(Some(format!("bytes=0-{}", first_chunk_size)));
+            return Ok(Some(format!("bytes=0-{}", first_chunk_size - 1)));
         }
 
         // If auto_chunksize is enabled, we need to get the first chunk size from the head object.
@@ -726,11 +754,11 @@ impl ObjectSyncer {
 
             return Ok(Some(format!(
                 "bytes=0-{}",
-                head_object_result?.content_length.unwrap()
+                head_object_result?.content_length.unwrap() - 1
             )));
         }
 
-        Ok(None)
+        Ok(Some(format!("bytes=0-{}", first_chunk_size - 1)))
     }
 
     async fn get_object_parts_if_necessary(
