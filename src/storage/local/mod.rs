@@ -2071,7 +2071,12 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(get_object_result.content_length, Some(6));
+        if cfg!(target_family = "windows") {
+            assert_eq!(get_object_result.content_length, Some(7));
+        } else {
+            assert_eq!(get_object_result.content_length, Some(6));
+        }
+
         assert!(get_object_result.content_range.is_none());
     }
 
@@ -2124,10 +2129,18 @@ mod tests {
             .unwrap();
         assert_eq!(data, "data");
         assert_eq!(get_object_result.content_length, Some(4));
-        assert_eq!(
-            get_object_result.content_range,
-            Some("bytes 0-3/6".to_string())
-        );
+
+        if cfg!(target_family = "windows") {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 0-3/7".to_string())
+            );
+        } else {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 0-3/6".to_string())
+            );
+        }
 
         let get_object_result = storage
             .get_object(
@@ -2151,10 +2164,17 @@ mod tests {
             .unwrap();
         assert_eq!(data, "at");
         assert_eq!(get_object_result.content_length, Some(2));
-        assert_eq!(
-            get_object_result.content_range,
-            Some("bytes 1-2/6".to_string())
-        );
+        if cfg!(target_family = "windows") {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 1-2/7".to_string())
+            );
+        } else {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 1-2/6".to_string())
+            );
+        }
 
         let get_object_result = storage
             .get_object(
@@ -2178,10 +2198,17 @@ mod tests {
             .unwrap();
         assert_eq!(data, "data1");
         assert_eq!(get_object_result.content_length, Some(5));
-        assert_eq!(
-            get_object_result.content_range,
-            Some("bytes 0-4/6".to_string())
-        );
+        if cfg!(target_family = "windows") {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 0-4/7".to_string())
+            );
+        } else {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 0-4/6".to_string())
+            );
+        }
 
         let get_object_result = storage
             .get_object(
@@ -2205,10 +2232,18 @@ mod tests {
             .unwrap();
         assert_eq!(data, "data1\n");
         assert_eq!(get_object_result.content_length, Some(6));
-        assert_eq!(
-            get_object_result.content_range,
-            Some("bytes 0-5/6".to_string())
-        );
+
+        if cfg!(target_family = "windows") {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 0-5/7".to_string())
+            );
+        } else {
+            assert_eq!(
+                get_object_result.content_range,
+                Some("bytes 0-5/6".to_string())
+            );
+        }
     }
 
     #[tokio::test]

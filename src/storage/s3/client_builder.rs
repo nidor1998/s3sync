@@ -425,6 +425,7 @@ mod tests {
             no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
+            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
         };
 
         let _ = client_config.create_client().await;
