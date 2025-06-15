@@ -781,7 +781,7 @@ impl LocalStorage {
         }
 
         while let Some(result) = upload_parts_join_handles.next().await {
-            let _ = result?;
+            result??;
             if self.cancellation_token.is_cancelled() {
                 return Err(anyhow!(S3syncError::Cancelled));
             }
