@@ -502,6 +502,8 @@ impl LocalStorage {
 
         Ok(PutObjectOutput::builder().build())
     }
+    
+    // skipcq: RS-R1000
     #[allow(clippy::too_many_arguments)]
     async fn put_object_multipart(
         &self,
@@ -950,6 +952,7 @@ impl StorageTrait for LocalStorage {
         unimplemented!();
     }
 
+    // skipcq: RS-R1000
     async fn get_object(
         &self,
         key: &str,
@@ -2120,7 +2123,7 @@ mod tests {
             .await
             .unwrap();
 
-        let mut data = String::new();
+        let mut data = "".to_string();
         get_object_result
             .body
             .into_async_read()
@@ -2155,7 +2158,7 @@ mod tests {
             .await
             .unwrap();
 
-        let mut data = String::new();
+        let mut data = "".to_string();
         get_object_result
             .body
             .into_async_read()
@@ -2189,7 +2192,7 @@ mod tests {
             .await
             .unwrap();
 
-        let mut data = String::new();
+        let mut data = "".to_string();
         get_object_result
             .body
             .into_async_read()
@@ -2223,7 +2226,7 @@ mod tests {
             .await
             .unwrap();
 
-        let mut data = String::new();
+        let mut data = "".to_string();
         get_object_result
             .body
             .into_async_read()
