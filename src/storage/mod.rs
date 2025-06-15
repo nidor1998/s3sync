@@ -72,11 +72,13 @@ pub trait StorageTrait: DynClone {
         max_keys: i32,
         warn_as_error: bool,
     ) -> Result<()>;
+    #[allow(clippy::too_many_arguments)]
     async fn get_object(
         &self,
         key: &str,
         version_id: Option<String>,
         checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
@@ -96,6 +98,16 @@ pub trait StorageTrait: DynClone {
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
     ) -> Result<HeadObjectOutput>;
+    async fn head_object_first_part(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        checksum_mode: Option<ChecksumMode>,
+        sse_c: Option<String>,
+        sse_c_key: SseCustomerKey,
+        sse_c_key_md5: Option<String>,
+    ) -> Result<HeadObjectOutput>;
+
     async fn get_object_parts(
         &self,
         key: &str,
@@ -113,10 +125,14 @@ pub trait StorageTrait: DynClone {
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
     ) -> Result<Vec<ObjectPart>>;
+    #[allow(clippy::too_many_arguments)]
     async fn put_object(
         &self,
         key: &str,
-        get_object_output: GetObjectOutput,
+        source: Storage,
+        source_size: u64,
+        source_additional_checksum: Option<String>,
+        get_object_output_first_chunk: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput>;
@@ -141,6 +157,7 @@ pub trait StorageTrait: DynClone {
     fn get_stats_sender(&self) -> Sender<SyncStatistics>;
     async fn send_stats(&self, stats: SyncStatistics);
     fn get_local_path(&self) -> PathBuf;
+    fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>>;
 }
 
 #[rustfmt::skip] // For coverage tool incorrectness

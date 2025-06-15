@@ -19,6 +19,7 @@ pub mod token;
 
 pub const S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY: &str = "s3sync_origin_version_id";
 pub const S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY: &str = "s3sync_origin_last_modified";
+pub(crate) const MINIMUM_CHUNKSIZE: usize = 5 * 1024 * 1024;
 
 pub type Sha1Digest = [u8; 20];
 
@@ -144,6 +145,17 @@ impl S3syncObject {
         }
     }
 
+    pub fn checksum_type(&self) -> Option<&ChecksumType> {
+        match &self {
+            Self::Versioning(object) => object.checksum_type(),
+            Self::NotVersioning(object) => object.checksum_type(),
+            Self::DeleteMarker(_) => panic!("DeleteMarker doesn't have checksum_type."),
+            Self::PackedVersions(_) => {
+                panic!("PackedVersions doesn't have checksum_type.")
+            }
+        }
+    }
+
     pub fn is_latest(&self) -> bool {
         match &self {
             Self::Versioning(object) => object.is_latest().unwrap(),
@@ -208,6 +220,7 @@ pub fn clone_object_with_key(object: &Object, key: &str) -> Object {
         .set_owner(object.owner().cloned())
         .set_storage_class(object.storage_class().cloned())
         .set_checksum_algorithm(checksum_algorithm)
+        .set_checksum_type(object.checksum_type().cloned())
         .build()
 }
 

@@ -436,6 +436,7 @@ impl StorageTrait for S3Storage {
         key: &str,
         version_id: Option<String>,
         checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
@@ -455,6 +456,7 @@ impl StorageTrait for S3Storage {
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id)
             .set_checksum_mode(checksum_mode)
+            .set_range(range)
             .set_sse_customer_algorithm(sse_c)
             .set_sse_customer_key(sse_c_key.key.clone())
             .set_sse_customer_key_md5(sse_c_key_md5)
@@ -558,6 +560,35 @@ impl StorageTrait for S3Storage {
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id)
+            .set_checksum_mode(checksum_mode)
+            .set_sse_customer_algorithm(sse_c)
+            .set_sse_customer_key(sse_c_key.key.clone())
+            .set_sse_customer_key_md5(sse_c_key_md5)
+            .send()
+            .await
+            .context("aws_sdk_s3::client::head_object() failed.")?;
+
+        Ok(result)
+    }
+
+    async fn head_object_first_part(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        checksum_mode: Option<ChecksumMode>,
+        sse_c: Option<String>,
+        sse_c_key: SseCustomerKey,
+        sse_c_key_md5: Option<String>,
+    ) -> Result<HeadObjectOutput> {
+        let result = self
+            .client
+            .as_ref()
+            .unwrap()
+            .head_object()
+            .bucket(&self.bucket)
+            .key(generate_full_key(&self.prefix, key))
+            .set_version_id(version_id)
+            .part_number(1)
             .set_checksum_mode(checksum_mode)
             .set_sse_customer_algorithm(sse_c)
             .set_sse_customer_key(sse_c_key.key.clone())
@@ -690,24 +721,32 @@ impl StorageTrait for S3Storage {
     async fn put_object(
         &self,
         key: &str,
-        mut get_object_output: GetObjectOutput,
+        source: Storage,
+        source_size: u64,
+        source_additional_checksum: Option<String>,
+        mut get_object_output_first_chunk: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput> {
         let mut version_id = "".to_string();
-        if let Some(source_version_id) = get_object_output.version_id().as_ref() {
+        if let Some(source_version_id) = get_object_output_first_chunk.version_id().as_ref() {
             version_id = source_version_id.to_string();
         }
         let target_key = generate_full_key(&self.prefix, key);
+        let source_key = key;
         let source_last_modified = aws_smithy_types::DateTime::from_millis(
-            get_object_output.last_modified().unwrap().to_millis()?,
+            get_object_output_first_chunk
+                .last_modified()
+                .unwrap()
+                .to_millis()?,
         )
         .to_chrono_utc()?
         .to_rfc3339();
 
         if self.config.dry_run {
             // In a dry run, content-range is set.
-            let content_length_string = get_size_string_from_content_range(&get_object_output);
+            let content_length_string =
+                get_size_string_from_content_range(&get_object_output_first_chunk);
 
             self.send_stats(SyncBytes(
                 u64::from_str(&content_length_string).unwrap_or_default(),
@@ -726,10 +765,10 @@ impl StorageTrait for S3Storage {
             return Ok(PutObjectOutput::builder().build());
         }
 
-        // On the case of full object checksum, we don't need to calculate checksum for each part and
-        // don't need to pass it to upload manager.
+        // In the case of full object checksum, we don't need to calculate checksum for each part and
+        // don't need to pass it to the upload manager.
         let additional_checksum_value = get_additional_checksum(
-            &get_object_output,
+            &get_object_output_first_chunk,
             object_checksum.as_ref().unwrap().checksum_algorithm.clone(),
         );
         let full_object_checksum = is_full_object_checksum(&additional_checksum_value);
@@ -757,15 +796,13 @@ impl StorageTrait for S3Storage {
             None
         };
 
-        get_object_output.body = convert_to_buf_byte_stream_with_callback(
-            get_object_output.body.into_async_read(),
+        get_object_output_first_chunk.body = convert_to_buf_byte_stream_with_callback(
+            get_object_output_first_chunk.body.into_async_read(),
             self.get_stats_sender(),
             self.rate_limit_bandwidth.clone(),
             checksum,
             object_checksum.clone(),
         );
-
-        let content_length = get_object_output.content_length();
 
         let mut upload_manager = UploadManager::new(
             self.client.clone().unwrap(),
@@ -775,12 +812,16 @@ impl StorageTrait for S3Storage {
             tagging,
             object_checksum.unwrap_or_default().object_parts,
             self.is_express_onezone_storage(),
+            source,
+            source_key.to_string(),
+            source_size,
+            source_additional_checksum,
         );
 
         self.exec_rate_limit_objects_per_sec().await;
 
         let put_object_output = upload_manager
-            .upload(&self.bucket, &target_key, get_object_output)
+            .upload(&self.bucket, &target_key, get_object_output_first_chunk)
             .await?;
 
         info!(
@@ -788,7 +829,7 @@ impl StorageTrait for S3Storage {
             source_version_id = version_id,
             source_last_modified = source_last_modified,
             target_key = target_key,
-            size = content_length,
+            size = source_size,
             "sync completed.",
         );
 
@@ -961,6 +1002,10 @@ impl StorageTrait for S3Storage {
         // S3 storage does not have a local path.
         unimplemented!();
     }
+
+    fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>> {
+        self.rate_limit_bandwidth.clone()
+    }
 }
 
 pub fn remove_s3_prefix(key: &str, prefix: &str) -> String {
@@ -1078,6 +1123,7 @@ mod tests {
         assert!(storage
             .get_object(
                 "source/data1",
+                None,
                 None,
                 None,
                 None,
