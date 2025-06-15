@@ -16,6 +16,7 @@ use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::SecondsFormat;
+use futures::stream::{FuturesUnordered, StreamExt};
 use std::sync::{Arc, Mutex};
 use tokio::io::AsyncReadExt;
 use tokio::task;
@@ -526,7 +527,7 @@ impl UploadManager {
 
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
-        let mut upload_parts_join_handles = vec![];
+        let mut upload_parts_join_handles = FuturesUnordered::new();
         let mut part_number = 1;
         for offset in (0..self.source_total_size as usize).step_by(config_chunksize) {
             if self.cancellation_token.is_cancelled() {
@@ -722,11 +723,11 @@ impl UploadManager {
             part_number += 1;
         }
 
-        for handle in upload_parts_join_handles {
+        while let Some(result) = upload_parts_join_handles.next().await {
+            let _ = result?;
             if self.cancellation_token.is_cancelled() {
                 return Err(anyhow!(S3syncError::Cancelled));
             }
-            handle.await??;
         }
 
         // Etags are concatenated in the order of part number. Otherwise, ETag verification will fail.
@@ -757,7 +758,7 @@ impl UploadManager {
 
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
-        let mut upload_parts_join_handles = vec![];
+        let mut upload_parts_join_handles = FuturesUnordered::new();
         let mut part_number = 1;
         let mut offset = 0;
 
@@ -962,11 +963,11 @@ impl UploadManager {
             part_number += 1;
         }
 
-        for handle in upload_parts_join_handles {
+        while let Some(result) = upload_parts_join_handles.next().await {
+            let _ = result?;
             if self.cancellation_token.is_cancelled() {
                 return Err(anyhow!(S3syncError::Cancelled));
             }
-            handle.await??;
         }
 
         // Etags are concatenated in the order of part number. Otherwise, ETag verification will fail.
