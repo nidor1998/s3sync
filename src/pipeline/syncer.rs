@@ -284,7 +284,6 @@ impl ObjectSyncer {
 
     async fn sync_or_delete_object(&self, object: S3syncObject) -> Result<()> {
         let key = object.key();
-        let size = object.size();
 
         if object.is_delete_marker() {
             self.delete_object(key).await?;
@@ -297,6 +296,8 @@ impl ObjectSyncer {
 
             return Ok(());
         }
+
+        let size = object.size();
 
         // Get the first chunk range if multipart upload is required.
         // If not, the whole object will be downloaded.

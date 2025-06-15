@@ -28,6 +28,8 @@ use aws_smithy_runtime_api::http::{Response, StatusCode};
 use aws_smithy_types::body::SdkBody;
 use aws_smithy_types::byte_stream::Length;
 use aws_smithy_types_convert::date_time::DateTimeExt;
+use futures_util::stream::FuturesUnordered;
+use futures_util::StreamExt;
 use leaky_bucket::RateLimiter;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncSeekExt, AsyncWriteExt};
@@ -628,7 +630,7 @@ impl LocalStorage {
 
         let mut offset = 0;
         let mut part_number = 1;
-        let mut upload_parts_join_handles = vec![];
+        let mut upload_parts_join_handles = FuturesUnordered::new();
         loop {
             let chunksize = if part_number == 1 {
                 first_chunk_content_length
@@ -778,11 +780,11 @@ impl LocalStorage {
             }
         }
 
-        for handle in upload_parts_join_handles {
+        while let Some(result) = upload_parts_join_handles.next().await {
+            let _ = result?;
             if self.cancellation_token.is_cancelled() {
                 return Err(anyhow!(S3syncError::Cancelled));
             }
-            handle.await??;
         }
 
         file.flush().await?;
