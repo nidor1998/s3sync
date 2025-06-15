@@ -2107,7 +2107,7 @@ mod tests {
                 "source/data1",
                 None,
                 None,
-                Some("bytes=0-4".to_string()),
+                Some("bytes=0-3".to_string()),
                 None,
                 SseCustomerKey { key: None },
                 None,
@@ -2134,7 +2134,7 @@ mod tests {
                 "source/data1",
                 None,
                 None,
-                Some("bytes=1-3".to_string()),
+                Some("bytes=1-2".to_string()),
                 None,
                 SseCustomerKey { key: None },
                 None,
@@ -2161,7 +2161,7 @@ mod tests {
                 "source/data1",
                 None,
                 None,
-                Some("bytes=0-5".to_string()),
+                Some("bytes=0-4".to_string()),
                 None,
                 SseCustomerKey { key: None },
                 None,
@@ -2188,7 +2188,7 @@ mod tests {
                 "source/data1",
                 None,
                 None,
-                Some("bytes=0-6".to_string()),
+                Some("bytes=0-5".to_string()),
                 None,
                 SseCustomerKey { key: None },
                 None,
@@ -2976,7 +2976,9 @@ mod tests {
     fn test_parse_range_header() {
         let range = parse_range_header("bytes=55-120").unwrap();
         assert_eq!(range.offset, 55);
-        assert_eq!(range.size, 65);
+        assert_eq!(range.size, 66);
+
+        assert!(parse_range_header("bytes=65-65").is_ok());
     }
 
     #[test]
@@ -2985,7 +2987,7 @@ mod tests {
         assert!(parse_range_header("bytes=0-").is_err());
         assert!(parse_range_header("bytes=-55").is_err());
         assert!(parse_range_header("bytes=60-55").is_err());
-        assert!(parse_range_header("bytes=65-65").is_err());
+        assert!(parse_range_header("bytes=65-64").is_err());
     }
 
     fn init_dummy_tracing_subscriber() {
