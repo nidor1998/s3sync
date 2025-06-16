@@ -151,6 +151,7 @@ mod tests {
             s3_to_s3_sse_c().await;
             s3_to_s3_multipart_checksum().await;
             s3_to_s3_multipart_checksum_auto().await;
+            s3_to_s3_multipart_checksum_ng().await;
             s3_to_s3_multipart_checksum_ng_different_checksum().await;
             s3_to_s3_multipart_sse_kms().await;
             s3_to_s3_multipart_dsse_kms().await;
@@ -1865,6 +1866,50 @@ mod tests {
             assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 1);
+        }
+
+        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
+    }
+
+    async fn s3_to_s3_multipart_checksum_ng() {
+        let helper = TestHelper::new().await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            helper
+                .sync_large_test_data_with_custom_chunksize_sha256(&target_bucket_url, "5MiB")
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "SHA256",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 2);
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;

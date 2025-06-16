@@ -97,7 +97,7 @@ impl UploadManager {
     ) -> Result<PutObjectOutput> {
         get_object_output_first_chunk = self.modify_metadata(get_object_output_first_chunk);
 
-        if self.is_auto_chunksize_enabled() || self.object_parts.is_some() {
+        if self.is_auto_chunksize_enabled() {
             return self
                 .upload_with_auto_chunksize(bucket, key, get_object_output_first_chunk)
                 .await;
