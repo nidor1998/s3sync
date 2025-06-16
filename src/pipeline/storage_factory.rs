@@ -32,7 +32,7 @@ pub async fn create_storage_pair(
                 .max(rate_limit_value as usize)
                 .initial(rate_limit_value as usize)
                 .refill(refill)
-                .fair(false)
+                .fair(true)
                 .build(),
         ))
     } else {
@@ -47,7 +47,7 @@ pub async fn create_storage_pair(
                 .max(rate_limit_bandwidth as usize)
                 .initial(rate_limit_bandwidth as usize)
                 .refill(refill)
-                .fair(false)
+                .fair(true)
                 .build(),
         ))
     } else {
