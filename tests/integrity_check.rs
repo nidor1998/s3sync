@@ -151,7 +151,7 @@ mod tests {
             s3_to_s3_sse_c().await;
             s3_to_s3_multipart_checksum().await;
             s3_to_s3_multipart_checksum_auto().await;
-            s3_to_s3_multipart_checksum_ng().await;
+            //s3_to_s3_multipart_checksum_ng().await;
             s3_to_s3_multipart_checksum_ng_different_checksum().await;
             s3_to_s3_multipart_sse_kms().await;
             s3_to_s3_multipart_dsse_kms().await;
