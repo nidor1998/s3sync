@@ -20,7 +20,7 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
-use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ChecksumType, ObjectPart, Tag, Tagging};
+use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
@@ -703,18 +703,6 @@ impl ObjectSyncer {
             return Ok(None);
         }
 
-        let first_chunk_size =
-            if object.size() < self.base.config.transfer_config.multipart_chunksize as i64 {
-                object.size() as u64
-            } else {
-                self.base.config.transfer_config.multipart_chunksize
-            };
-
-        if object.checksum_type() == Some(&ChecksumType::FullObject) {
-            // If the object is a full object checksum, get the first chunk range as defined in the config.
-            return Ok(Some(format!("bytes=0-{}", first_chunk_size - 1)));
-        }
-
         // If auto_chunksize is enabled, we need to get the first chunk size from the head object.
         // And if additional_checksum_algorithm is set, we also need to get the first chunk size from the head object.
         if self.base.config.transfer_config.auto_chunksize
@@ -758,6 +746,13 @@ impl ObjectSyncer {
                 head_object_result?.content_length.unwrap() - 1
             )));
         }
+
+        let first_chunk_size =
+            if object.size() < self.base.config.transfer_config.multipart_chunksize as i64 {
+                object.size() as u64
+            } else {
+                self.base.config.transfer_config.multipart_chunksize
+            };
 
         Ok(Some(format!("bytes=0-{}", first_chunk_size - 1)))
     }
