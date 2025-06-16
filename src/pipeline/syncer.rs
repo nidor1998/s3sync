@@ -704,10 +704,7 @@ impl ObjectSyncer {
         }
 
         // If auto_chunksize is enabled, we need to get the first chunk size from the head object.
-        // And if additional_checksum_algorithm is set, we also need to get the first chunk size from the head object.
-        if self.base.config.transfer_config.auto_chunksize
-            || self.base.config.additional_checksum_algorithm.is_some()
-        {
+        if self.base.config.transfer_config.auto_chunksize {
             let head_object_result = self
                 .base
                 .source
