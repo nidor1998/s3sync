@@ -521,7 +521,9 @@ impl UploadManager {
             .map(|v| v.to_string());
         let shared_multipart_etags = Arc::new(Mutex::new(Vec::new()));
         let shared_upload_parts = Arc::new(Mutex::new(Vec::new()));
+        let shared_total_upload_size = Arc::new(Mutex::new(Vec::new()));
 
+        let first_chunk_size = get_object_output_first_chunk.content_length().unwrap();
         let config_chunksize = self.config.transfer_config.multipart_chunksize as usize;
         let source_total_size = self.source_total_size as usize;
 
@@ -557,6 +559,7 @@ impl UploadManager {
 
             let upload_parts = Arc::clone(&shared_upload_parts);
             let multipart_etags = Arc::clone(&shared_multipart_etags);
+            let total_upload_size = Arc::clone(&shared_total_upload_size);
 
             let additional_checksum_mode = self.config.additional_checksum_mode.clone();
             let additional_checksum_algorithm = self.config.additional_checksum_algorithm.clone();
@@ -593,6 +596,7 @@ impl UploadManager {
                     "upload_part() start. range = {range:?}",
                 );
 
+                let upload_size;
                 // If the part number is greater than 1, we need to get the object from the source storage.
                 if part_number > 1 {
                     let get_object_output = source
@@ -605,21 +609,24 @@ impl UploadManager {
                             source_sse_c_key,
                             source_sse_c_key_md5,
                         )
-                        .await;
+                        .await
+                        .context("source.get_object() failed.")?;
+                    upload_size = get_object_output.content_length().unwrap();
+
                     let mut body = convert_to_buf_byte_stream_with_callback(
-                        get_object_output
-                            .context("get_object() failed.")?
-                            .body
-                            .into_async_read(),
+                        get_object_output.body.into_async_read(),
                         source.get_stats_sender().clone(),
                         source.get_rate_limit_bandwidth(),
                         None,
                         None,
                     )
                     .into_async_read();
+
                     body.read_exact(buffer.as_mut_slice())
                         .await
                         .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                } else {
+                    upload_size = first_chunk_size;
                 }
 
                 let md5_digest;
@@ -676,6 +683,9 @@ impl UploadManager {
                     });
                 }
 
+                let mut upload_size_vec = total_upload_size.lock().unwrap();
+                upload_size_vec.push(upload_size);
+
                 let mut locked_upload_parts = upload_parts.lock().unwrap();
                 locked_upload_parts.push(
                     CompletedPart::builder()
@@ -730,6 +740,19 @@ impl UploadManager {
             }
         }
 
+        let total_upload_size: i64 = shared_total_upload_size.lock().unwrap().iter().sum();
+        if total_upload_size == self.source_total_size as i64 {
+            debug!(
+                key,
+                total_upload_size, "multipart upload completed successfully."
+            );
+        } else {
+            return Err(anyhow!(format!(
+                "multipart upload size mismatch: key={key}, expected = {0}, actual {total_upload_size}",
+                self.source_total_size
+            )));
+        }
+
         // Etags are concatenated in the order of part number. Otherwise, ETag verification will fail.
         let mut locked_multipart_etags = shared_multipart_etags.lock().unwrap();
         locked_multipart_etags.sort_by_key(|e| e.part_number);
@@ -755,7 +778,9 @@ impl UploadManager {
             .map(|v| v.to_string());
         let shared_multipart_etags = Arc::new(Mutex::new(Vec::new()));
         let shared_upload_parts = Arc::new(Mutex::new(Vec::new()));
+        let shared_total_upload_size = Arc::new(Mutex::new(Vec::new()));
 
+        let first_chunk_size = get_object_output_first_chunk.content_length().unwrap();
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
         let mut upload_parts_join_handles = FuturesUnordered::new();
@@ -793,6 +818,7 @@ impl UploadManager {
 
             let upload_parts = Arc::clone(&shared_upload_parts);
             let multipart_etags = Arc::clone(&shared_multipart_etags);
+            let total_upload_size = Arc::clone(&shared_total_upload_size);
 
             let additional_checksum_mode = self.config.additional_checksum_mode.clone();
             let additional_checksum_algorithm = self.config.additional_checksum_algorithm.clone();
@@ -832,6 +858,7 @@ impl UploadManager {
                     "upload_part() start. range = {range:?}",
                 );
 
+                let upload_size;
                 // If the part number is greater than 1, we need to get the object from the source storage.
                 if part_number > 1 {
                     let get_object_output = source
@@ -844,12 +871,12 @@ impl UploadManager {
                             source_sse_c_key,
                             source_sse_c_key_md5,
                         )
-                        .await;
+                        .await
+                        .context("source.get_object() failed.")?;
+                    upload_size = get_object_output.content_length().unwrap();
+
                     let mut body = convert_to_buf_byte_stream_with_callback(
-                        get_object_output
-                            .context("get_object() failed.")?
-                            .body
-                            .into_async_read(),
+                        get_object_output.body.into_async_read(),
                         source.get_stats_sender().clone(),
                         source.get_rate_limit_bandwidth(),
                         None,
@@ -859,6 +886,8 @@ impl UploadManager {
                     body.read_exact(buffer.as_mut_slice())
                         .await
                         .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                } else {
+                    upload_size = first_chunk_size;
                 }
 
                 let md5_digest;
@@ -948,6 +977,9 @@ impl UploadManager {
                         .build(),
                 );
 
+                let mut upload_size_vec = total_upload_size.lock().unwrap();
+                upload_size_vec.push(upload_size);
+
                 trace!(
                     key = &target_key,
                     upload_id = &target_upload_id,
@@ -968,6 +1000,19 @@ impl UploadManager {
             if self.cancellation_token.is_cancelled() {
                 return Err(anyhow!(S3syncError::Cancelled));
             }
+        }
+
+        let total_upload_size: i64 = shared_total_upload_size.lock().unwrap().iter().sum();
+        if total_upload_size == self.source_total_size as i64 {
+            debug!(
+                key,
+                total_upload_size, "multipart upload(auto-chunksize) completed successfully."
+            );
+        } else {
+            return Err(anyhow!(format!(
+                "multipart upload(auto-chunksize) size mismatch: key={key}, expected = {0}, actual {total_upload_size}",
+                self.source_total_size
+            )));
         }
 
         // Etags are concatenated in the order of part number. Otherwise, ETag verification will fail.
