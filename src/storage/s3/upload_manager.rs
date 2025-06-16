@@ -343,7 +343,7 @@ impl UploadManager {
         let source_checksum = self.source_additional_checksum.clone();
         let source_storage_class = get_object_output_first_chunk.storage_class().cloned();
 
-        let upload_parts = if self.is_auto_chunksize_enabled() || self.object_parts.is_some() {
+        let upload_parts = if self.is_auto_chunksize_enabled() {
             self.upload_parts_with_auto_chunksize(
                 bucket,
                 key,
