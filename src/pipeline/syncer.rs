@@ -697,12 +697,6 @@ impl ObjectSyncer {
             return Ok(None);
         }
 
-        // If the object is not a multipart upload, no need to get the first chunk range.
-        if !e_tag_verify::is_multipart_upload_e_tag(&object.e_tag().map(|e_tag| e_tag.to_string()))
-        {
-            return Ok(None);
-        }
-
         // If auto_chunksize is enabled, we need to get the first chunk size from the head object.
         // Without auto_chunksize, we do not need to get the first chunk range, even if the object has a additional checksum,
         if self.base.config.transfer_config.auto_chunksize {
