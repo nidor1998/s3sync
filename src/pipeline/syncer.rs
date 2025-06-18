@@ -781,22 +781,57 @@ impl ObjectSyncer {
         if let Some(algorithm) = checksum_algorithm {
             // A full object checksum has no object parts.
             if !algorithm.is_empty() && !full_object_checksum {
-                return Ok(Some(
-                    self.base
-                        .source
-                        .as_ref()
-                        .unwrap()
-                        .get_object_parts_attributes(
-                            &key,
-                            version_id.map(|version_id| version_id.to_string()),
-                            self.base.config.max_keys,
-                            self.base.config.source_sse_c.clone(),
-                            self.base.config.source_sse_c_key.clone(),
-                            self.base.config.source_sse_c_key_md5.clone(),
-                        )
-                        .await
-                        .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?,
-                ));
+                let object_parts = self
+                    .base
+                    .source
+                    .as_ref()
+                    .unwrap()
+                    .get_object_parts_attributes(
+                        &key,
+                        version_id.map(|version_id| version_id.to_string()),
+                        self.base.config.max_keys,
+                        self.base.config.source_sse_c.clone(),
+                        self.base.config.source_sse_c_key.clone(),
+                        self.base.config.source_sse_c_key_md5.clone(),
+                    )
+                    .await
+                    .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?;
+
+                if object_parts.is_empty()
+                    && e_tag_verify::is_multipart_upload_e_tag(
+                        &e_tag.map(|e_tag| e_tag.to_string()),
+                    )
+                {
+                    error!(
+                        worker_index = self.worker_index,
+                        key = key,
+                        "failed to get object attributes information. \
+                            Please remove --auto-chunksize option and retry."
+                    );
+
+                    self.base.send_stats(SyncError { key }).await;
+
+                    return Err(anyhow!("failed to get object attributes information."));
+                }
+
+                if self.base.config.transfer_config.auto_chunksize
+                    && object_parts[0].size.unwrap() != content_length
+                {
+                    error!(
+                        worker_index = self.worker_index,
+                        key = key,
+                        "object parts(attribute) size does not match content length. \
+                        This is unexpected. Please remove --auto-chunksize option and retry."
+                    );
+
+                    self.base.send_stats(SyncError { key }).await;
+
+                    return Err(anyhow!(
+                        "object parts(attribute) size does not match content length."
+                    ));
+                }
+
+                return Ok(Some(object_parts));
             }
         }
 
@@ -819,23 +854,37 @@ impl ObjectSyncer {
                 .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?;
 
             if e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string())) {
-                // If the object is a multipart upload, and the object parts are empty, it should be a warning.
+                // If the object is a multipart upload, and the object parts are empty, it should be a error.
                 if object_parts.is_empty() {
-                    warn!(
+                    error!(
                         worker_index = self.worker_index,
                         key = key,
-                        "failed to get object parts information. e-tag verification may fail. \
-                        this is most likely due to the lack of HeadObject support for partNumber parameter"
+                        "failed to get object parts information. \
+                        this is most likely due to the lack of HeadObject support for partNumber parameter. \
+                        Please remove --auto-chunksize option and retry."
                     );
 
-                    self.base.send_stats(SyncWarning { key }).await;
+                    self.base.send_stats(SyncError { key }).await;
 
-                    return Ok(None);
+                    return Err(anyhow!("failed to get object parts information."));
                 }
             } else {
                 // Even if the object is not a multipart upload, we need to return the object parts for auto-chunksize.
                 let object_parts = vec![ObjectPartBuilder::default().size(content_length).build()];
                 return Ok(Some(object_parts));
+            }
+
+            if object_parts[0].size.unwrap() != content_length {
+                error!(
+                    worker_index = self.worker_index,
+                    key = key,
+                    "object parts size does not match content length. \
+                    This is unexpected. Please remove --auto-chunksize option and retry."
+                );
+
+                self.base.send_stats(SyncError { key }).await;
+
+                return Err(anyhow!("object parts size does not match content length."));
             }
 
             Ok(Some(object_parts))
