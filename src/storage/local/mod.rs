@@ -206,13 +206,26 @@ impl LocalStorage {
 
             let target_sse = None;
             let target_e_tag = if let Some(parts) = target_object_parts.as_ref() {
-                Some(
-                    generate_e_tag_hash_from_path_with_auto_chunksize(
-                        real_path,
-                        parts.iter().map(|part| part.size().unwrap()).collect(),
+                // If the source object is a multipart upload, we need to calculate the ETag from the parts.
+                if is_multipart_upload_e_tag(source_e_tag) {
+                    Some(
+                        generate_e_tag_hash_from_path_with_auto_chunksize(
+                            real_path,
+                            parts.iter().map(|part| part.size().unwrap()).collect(),
+                        )
+                        .await?,
                     )
-                    .await?,
-                )
+                } else {
+                    // If the source object is not a multipart upload, we need to calculate the ETag from the whole file.
+                    Some(
+                        generate_e_tag_hash_from_path(
+                            real_path,
+                            source_content_length as usize + 1,
+                            source_content_length as usize + 1,
+                        )
+                        .await?,
+                    )
+                }
             } else {
                 Some(
                     generate_e_tag_hash_from_path(
@@ -320,11 +333,18 @@ impl LocalStorage {
                 vec![source_content_length as i64]
             };
 
+            // If the source object is not a multipart upload, we need to calculate the checksum whole the file.
+            let multipart_threshold = if !is_multipart_upload_e_tag(source_e_tag) {
+                source_content_length as usize + 1
+            } else {
+                self.config.transfer_config.multipart_threshold as usize
+            };
+
             let target_final_checksum = generate_checksum_from_path(
                 real_path,
                 source_checksum_algorithm.as_ref().unwrap().clone(),
                 parts,
-                self.config.transfer_config.multipart_threshold as usize,
+                multipart_threshold,
                 is_full_object_checksum(&Some(source_final_checksum.clone())),
             )
             .await?;

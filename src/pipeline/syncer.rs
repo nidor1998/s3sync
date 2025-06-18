@@ -20,6 +20,7 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
+use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
@@ -340,6 +341,14 @@ impl ObjectSyncer {
 
         match get_object_output {
             Ok(get_object_output) => {
+                if range.is_some() && get_object_output.content_range().is_none() {
+                    error!("get_object() returned no content range. This is unexpected.");
+                    return Err(anyhow!(
+                        "get_object() returned no content range. This is unexpected. key={}.",
+                        key
+                    ));
+                }
+
                 // If multipart upload is required, the first chunk does not contain the final checksum.
                 // So, we need to get the final checksum from the head object.
                 let final_checksum = self
@@ -748,16 +757,19 @@ impl ObjectSyncer {
         Ok(Some(format!("bytes=0-{}", first_chunk_size - 1)))
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn get_object_parts_if_necessary(
         &self,
         key: &str,
         version_id: Option<&str>,
         e_tag: Option<&str>,
+        content_length: i64,
         checksum_algorithm: Option<&[ChecksumAlgorithm]>,
         full_object_checksum: bool,
+        range: Option<&str>,
     ) -> Result<Option<Vec<ObjectPart>>> {
-        // a local object does not have ETag.
-        if !e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string()))
+        if (!e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string()))
+            && range.is_none())
             || self.base.config.dry_run
         {
             return Ok(None);
@@ -806,17 +818,24 @@ impl ObjectSyncer {
                 .await
                 .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?;
 
-            if object_parts.is_empty() {
-                warn!(
-                    worker_index = self.worker_index,
-                    key = key,
-                    "failed to get object parts information. e-tag verification may fail. \
-                    this is most likely due to the lack of HeadObject support for partNumber parameter"
-                );
+            if e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string())) {
+                // If the object is a multipart upload, and the object parts are empty, it should be a warning.
+                if object_parts.is_empty() {
+                    warn!(
+                        worker_index = self.worker_index,
+                        key = key,
+                        "failed to get object parts information. e-tag verification may fail. \
+                        this is most likely due to the lack of HeadObject support for partNumber parameter"
+                    );
 
-                self.base.send_stats(SyncWarning { key }).await;
+                    self.base.send_stats(SyncWarning { key }).await;
 
-                return Ok(None);
+                    return Ok(None);
+                }
+            } else {
+                // Even if the object is not a multipart upload, we need to return the object parts for auto-chunksize.
+                let object_parts = vec![ObjectPartBuilder::default().size(content_length).build()];
+                return Ok(Some(object_parts));
             }
 
             Ok(Some(object_parts))
@@ -858,8 +877,10 @@ impl ObjectSyncer {
                 key,
                 get_object_output.version_id(),
                 get_object_output.e_tag(),
+                get_object_output.content_length.unwrap(),
                 checksum_algorithm,
                 is_full_object_checksum(&final_checksum),
+                get_object_output.content_range(),
             )
             .await?;
 

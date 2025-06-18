@@ -98,9 +98,22 @@ impl UploadManager {
         get_object_output_first_chunk = self.modify_metadata(get_object_output_first_chunk);
 
         if self.is_auto_chunksize_enabled() {
-            return self
-                .upload_with_auto_chunksize(bucket, key, get_object_output_first_chunk)
-                .await;
+            if is_multipart_upload_e_tag(
+                &get_object_output_first_chunk
+                    .e_tag()
+                    .map(|e_tag| e_tag.to_string()),
+            ) {
+                return self
+                    .upload_with_auto_chunksize(bucket, key, get_object_output_first_chunk)
+                    .await;
+            }
+
+            // If auto-chunksize is enabled but the ETag is not a multipart upload ETag, it should be a single part upload.
+            let put_object_output = self
+                .singlepart_upload(bucket, key, get_object_output_first_chunk)
+                .await?;
+            trace!(key = key, "{put_object_output:?}");
+            return Ok(put_object_output);
         }
 
         let put_object_output = if self
