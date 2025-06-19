@@ -718,6 +718,7 @@ mod tests {
             helper.enable_bucket_versioning(&BUCKET2.to_string()).await;
 
             helper.sync_large_test_data(&target_bucket_url).await;
+            helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         let source_bucket_url = format!("s3://{}", BUCKET1.to_string());

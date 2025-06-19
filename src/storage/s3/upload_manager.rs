@@ -21,12 +21,15 @@ use std::sync::{Arc, Mutex};
 use tokio::io::AsyncReadExt;
 use tokio::task;
 use tokio::task::JoinHandle;
-use tracing::{debug, trace, warn};
+use tracing::{debug, error, trace, warn};
 
 use crate::config::Config;
 use crate::storage;
 use crate::storage::e_tag_verify::{generate_e_tag_hash, is_multipart_upload_e_tag};
-use crate::storage::{convert_to_buf_byte_stream_with_callback, Storage};
+use crate::storage::{
+    convert_to_buf_byte_stream_with_callback, get_range_from_content_range,
+    parse_range_header_string, Storage,
+};
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
@@ -106,6 +109,22 @@ impl UploadManager {
                 return self
                     .upload_with_auto_chunksize(bucket, key, get_object_output_first_chunk)
                     .await;
+            }
+
+            let first_chunk_size = self
+                .object_parts
+                .as_ref()
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .size()
+                .unwrap();
+            if self.source_total_size != first_chunk_size as u64 {
+                return Err(anyhow!(format!(
+                    "source_total_size does not match the first object part size: \
+                     source_total_size = {}, first object part size = {}",
+                    self.source_total_size, first_chunk_size
+                )));
             }
 
             // If auto-chunksize is enabled but the ETag is not a multipart upload ETag, it should be a single part upload.
@@ -601,7 +620,7 @@ impl UploadManager {
                 .await?;
             let task: JoinHandle<Result<()>> = task::spawn(async move {
                 let _permit = permit; // Keep the semaphore permit in scope
-                let range = Some(format!("bytes={}-{}", offset, offset + chunksize - 1));
+                let range = format!("bytes={}-{}", offset, offset + chunksize - 1);
 
                 debug!(
                     key = &target_key,
@@ -617,7 +636,7 @@ impl UploadManager {
                             &source_key,
                             source_version_id,
                             additional_checksum_mode,
-                            range,
+                            Some(range.clone()),
                             source_sse_c,
                             source_sse_c_key,
                             source_sse_c_key_md5,
@@ -625,6 +644,29 @@ impl UploadManager {
                         .await
                         .context("source.get_object() failed.")?;
                     upload_size = get_object_output.content_length().unwrap();
+
+                    if get_object_output.content_range().is_none() {
+                        error!("get_object() returned no content range. This is unexpected.");
+                        return Err(anyhow!(
+                            "get_object() returned no content range. This is unexpected. key={}.",
+                            &target_key
+                        ));
+                    }
+                    let (request_start, request_end) = parse_range_header_string(&range)
+                        .context("failed to parse request range header")?;
+                    let (response_start, response_end) =
+                        get_range_from_content_range(&get_object_output)
+                            .context("get_object() returned no content range")?;
+                    if (request_start != response_start) || (request_end != response_end) {
+                        return Err(anyhow!(
+                            "get_object() returned unexpected content range. \
+                            expected: {}-{}, actual: {}-{}",
+                            request_start,
+                            request_end,
+                            response_start,
+                            response_end,
+                        ));
+                    }
 
                     let mut body = convert_to_buf_byte_stream_with_callback(
                         get_object_output.body.into_async_read(),
@@ -859,11 +901,7 @@ impl UploadManager {
                 .await?;
             let task: JoinHandle<Result<()>> = task::spawn(async move {
                 let _permit = permit; // Keep the semaphore permit in scope
-                let range = Some(format!(
-                    "bytes={}-{}",
-                    offset,
-                    offset + object_part_chunksize - 1
-                ));
+                let range = format!("bytes={}-{}", offset, offset + object_part_chunksize - 1);
 
                 debug!(
                     key = &target_key,
@@ -879,7 +917,7 @@ impl UploadManager {
                             &source_key,
                             source_version_id,
                             additional_checksum_mode,
-                            range,
+                            Some(range.clone()),
                             source_sse_c,
                             source_sse_c_key,
                             source_sse_c_key_md5,
@@ -887,6 +925,29 @@ impl UploadManager {
                         .await
                         .context("source.get_object() failed.")?;
                     upload_size = get_object_output.content_length().unwrap();
+
+                    if get_object_output.content_range().is_none() {
+                        error!("get_object() - auto-chunksize returned no content range. This is unexpected.");
+                        return Err(anyhow!(
+                            "get_object() returned no content range. This is unexpected. key={}.",
+                            &target_key
+                        ));
+                    }
+                    let (request_start, request_end) = parse_range_header_string(&range)
+                        .context("failed to parse request range header")?;
+                    let (response_start, response_end) =
+                        get_range_from_content_range(&get_object_output)
+                            .context("get_object() returned no content range")?;
+                    if (request_start != response_start) || (request_end != response_end) {
+                        return Err(anyhow!(
+                            "get_object() - auto-chunksize returned unexpected content range. \
+                            expected: {}-{}, actual: {}-{}",
+                            request_start,
+                            request_end,
+                            response_start,
+                            response_end,
+                        ));
+                    }
 
                     let mut body = convert_to_buf_byte_stream_with_callback(
                         get_object_output.body.into_async_read(),

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_channel::Sender;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
@@ -202,6 +202,68 @@ pub fn get_size_string_from_content_range(get_object_output: &GetObjectOutput) -
     size.to_string()
 }
 
+pub fn get_range_from_content_range(get_object_output: &GetObjectOutput) -> Option<(u64, u64)> {
+    let content_range = get_object_output.content_range()?;
+    let parts: Vec<&str> = content_range.split_whitespace().collect();
+    if parts.len() == 2 {
+        let range_parts: Vec<&str> = parts[1].split('/').collect();
+        if range_parts.len() == 2 {
+            let byte_range: Vec<&str> = range_parts[0].split('-').collect();
+            if byte_range.len() == 2 {
+                let start = byte_range[0].parse::<u64>().ok()?;
+                let end = byte_range[1].parse::<u64>().ok()?;
+                return Some((start, end));
+            }
+        }
+    }
+
+    None
+}
+
+#[derive(Clone)]
+pub struct FileRange {
+    pub offset: u64,
+    pub size: u64,
+}
+
+pub fn parse_range_header(range_header: &str) -> Result<FileRange> {
+    if !range_header.starts_with("bytes=") {
+        return Err(anyhow!(
+            "Range header must start with 'bytes=': {}",
+            range_header
+        ));
+    }
+
+    let range = range_header.trim_start_matches("bytes=");
+    let parts: Vec<_> = range.split('-').collect();
+    if parts.len() != 2 {
+        return Err(anyhow!("Invalid range format: {}", range));
+    }
+
+    let offset = parts[0].parse::<u64>()?;
+    let size = if parts[1].is_empty() {
+        return Err(anyhow!("Invalid range format: {}", range));
+    } else {
+        let end = parts[1].parse::<u64>()?;
+        if end < offset {
+            return Err(anyhow!("End of range cannot be less than start: {}", range));
+        }
+        end - offset + 1
+    };
+
+    Ok(FileRange { offset, size })
+}
+
+pub fn parse_range_header_string(range: &str) -> Option<(u64, u64)> {
+    let parts: Vec<&str> = range.trim_start_matches("bytes=").split('-').collect();
+    if parts.len() == 2 {
+        let start = parts[0].parse::<u64>().ok()?;
+        let end = parts[1].parse::<u64>().ok()?;
+        return Some((start, end));
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,6 +290,117 @@ mod tests {
             get_size_string_from_content_range(&get_object_output),
             "*".to_string()
         );
+    }
+
+    #[test]
+    fn get_range_from_content_range_test() {
+        init_dummy_tracing_subscriber();
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes 0-1000/67589")
+            .build();
+        let (start, end) = get_range_from_content_range(&get_object_output).unwrap();
+        assert_eq!(start, 0);
+        assert_eq!(end, 1000);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes 0-0/67589")
+            .build();
+        let (start, end) = get_range_from_content_range(&get_object_output).unwrap();
+        assert_eq!(start, 0);
+        assert_eq!(end, 0);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes 500-999/67589")
+            .build();
+        let (start, end) = get_range_from_content_range(&get_object_output).unwrap();
+        assert_eq!(start, 500);
+        assert_eq!(end, 999);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes 500-999/*")
+            .build();
+        let (start, end) = get_range_from_content_range(&get_object_output).unwrap();
+        assert_eq!(start, 500);
+        assert_eq!(end, 999);
+    }
+
+    #[test]
+    fn get_range_from_content_range_error_test() {
+        init_dummy_tracing_subscriber();
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("0-1000/67589")
+            .build();
+        assert_eq!(get_range_from_content_range(&get_object_output), None);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes 0-1000")
+            .build();
+        assert_eq!(get_range_from_content_range(&get_object_output), None);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes 0-/67589")
+            .build();
+        assert_eq!(get_range_from_content_range(&get_object_output), None);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes -1000/67589")
+            .build();
+        assert_eq!(get_range_from_content_range(&get_object_output), None);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes a-1000/67589")
+            .build();
+        assert_eq!(get_range_from_content_range(&get_object_output), None);
+
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(67589))
+            .content_range("bytes 0-a/67589")
+            .build();
+        assert_eq!(get_range_from_content_range(&get_object_output), None);
+    }
+
+    #[test]
+    fn test_parse_range_header() {
+        let range = parse_range_header("bytes=55-120").unwrap();
+        assert_eq!(range.offset, 55);
+        assert_eq!(range.size, 66);
+
+        assert!(parse_range_header("bytes=65-65").is_ok());
+    }
+
+    #[test]
+    fn test_parse_range_header_error() {
+        assert!(parse_range_header("0-55").is_err());
+        assert!(parse_range_header("bytes=0-").is_err());
+        assert!(parse_range_header("bytes=-55").is_err());
+        assert!(parse_range_header("bytes=60-55").is_err());
+        assert!(parse_range_header("bytes=65-64").is_err());
+    }
+
+    #[test]
+    fn test_parse_range_header_string() {
+        let (start, end) = parse_range_header_string("bytes=55-120").unwrap();
+        assert_eq!(start, 55);
+        assert_eq!(end, 120);
+
+        assert!(parse_range_header("bytes=65-65").is_ok());
+    }
+
+    #[test]
+    fn test_parse_range_header_string_error() {
+        assert!(parse_range_header_string("bytes=0-").is_none());
+        assert!(parse_range_header_string("bytes=-55").is_none());
     }
 
     fn init_dummy_tracing_subscriber() {

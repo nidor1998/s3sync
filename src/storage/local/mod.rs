@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, Context, Result};
 use async_channel::Sender;
@@ -57,7 +57,7 @@ use crate::types::{
     is_full_object_checksum, ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath,
     SyncStatistics,
 };
-use crate::Config;
+use crate::{storage, Config};
 
 pub mod fs_util;
 
@@ -601,6 +601,8 @@ impl LocalStorage {
             return Ok(PutObjectOutput::builder().build());
         }
 
+        let shared_total_upload_size = Arc::new(Mutex::new(Vec::new()));
+
         let mut temp_file = fs_util::create_temp_file_from_key(&self.path, key).await?;
         let mut file = tokio::fs::File::from_std(temp_file.as_file_mut().try_clone()?);
 
@@ -670,6 +672,8 @@ impl LocalStorage {
             let source_sse_c_key_md5 = self.config.source_sse_c_key_md5.clone();
 
             let additional_checksum_mode = self.config.additional_checksum_mode.clone();
+
+            let total_upload_size = Arc::clone(&shared_total_upload_size);
 
             let cancellation_token = self.cancellation_token.clone();
             let mut chunk_whole_data = Vec::<u8>::with_capacity(chunksize);
@@ -777,9 +781,13 @@ impl LocalStorage {
                     );
                 }
 
+                let chunk_whole_data_size = chunk_whole_data.len();
                 cloned_file.seek(io::SeekFrom::Start(offset)).await?;
                 cloned_file.write_all(&chunk_whole_data).await?;
                 cloned_file.flush().await?;
+
+                let mut upload_size_vec = total_upload_size.lock().unwrap();
+                upload_size_vec.push(chunk_whole_data_size as u64);
 
                 debug!(
                     key = &source_key,
@@ -825,6 +833,19 @@ impl LocalStorage {
         } else {
             None
         };
+
+        let total_upload_size: u64 = shared_total_upload_size.lock().unwrap().iter().sum();
+        if total_upload_size == source_size {
+            debug!(
+                key,
+                total_upload_size, "multipart upload(local) completed successfully."
+            );
+        } else {
+            return Err(anyhow!(format!(
+                "multipart upload(local) size mismatch: key={key}, expected = {0}, actual {total_upload_size}",
+                source_size
+            )));
+        }
 
         let target_content_length = fs_util::get_file_size(&real_path).await;
 
@@ -1009,7 +1030,7 @@ impl StorageTrait for LocalStorage {
         let content_length;
         let content_range;
         if range.is_some() {
-            let file_range = parse_range_header(&range.unwrap())?;
+            let file_range = storage::parse_range_header(&range.unwrap())?;
             body = Some(
                 ByteStream::read_from()
                     .path(path.clone())
@@ -1397,49 +1418,14 @@ fn convert_windows_directory_char_to_slash(path: &str) -> String {
     path.replace('\\', "/")
 }
 
-#[derive(Clone)]
-struct FileRange {
-    pub offset: u64,
-    pub size: u64,
-}
-
-fn parse_range_header(range_header: &str) -> Result<FileRange> {
-    if !range_header.starts_with("bytes=") {
-        return Err(anyhow!(
-            "Range header must start with 'bytes=': {}",
-            range_header
-        ));
-    }
-
-    let range = range_header.trim_start_matches("bytes=");
-    let parts: Vec<_> = range.split('-').collect();
-    if parts.len() != 2 {
-        return Err(anyhow!("Invalid range format: {}", range));
-    }
-
-    let offset = parts[0].parse::<u64>()?;
-    let size = if parts[1].is_empty() {
-        return Err(anyhow!("Invalid range format: {}", range));
-    } else {
-        let end = parts[1].parse::<u64>()?;
-        if end < offset {
-            return Err(anyhow!("End of range cannot be less than start: {}", range));
-        }
-        end - offset + 1
-    };
-
-    Ok(FileRange { offset, size })
-}
-
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::config::args::parse_from_args;
     use crate::storage::local::remove_local_path_prefix;
     use crate::types::token::create_pipeline_cancellation_token;
     use tokio::io::AsyncReadExt;
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     const TEST_DATA_SIZE: u64 = 5;
     const TEST_SOURCE_OBJECTS_COUNT: usize = 6;
@@ -3032,24 +3018,6 @@ mod tests {
         .await;
 
         assert_eq!(storage.get_local_path().to_str().unwrap(), "./test_data/");
-    }
-
-    #[test]
-    fn test_parse_range_header() {
-        let range = parse_range_header("bytes=55-120").unwrap();
-        assert_eq!(range.offset, 55);
-        assert_eq!(range.size, 66);
-
-        assert!(parse_range_header("bytes=65-65").is_ok());
-    }
-
-    #[test]
-    fn test_parse_range_header_error() {
-        assert!(parse_range_header("0-55").is_err());
-        assert!(parse_range_header("bytes=0-").is_err());
-        assert!(parse_range_header("bytes=-55").is_err());
-        assert!(parse_range_header("bytes=60-55").is_err());
-        assert!(parse_range_header("bytes=65-64").is_err());
     }
 
     fn init_dummy_tracing_subscriber() {

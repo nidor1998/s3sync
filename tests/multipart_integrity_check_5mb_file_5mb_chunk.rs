@@ -190,6 +190,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1() {
@@ -301,6 +302,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_minus_1() {
@@ -412,6 +414,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_auto_chunksize() {
@@ -517,6 +520,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_kms() {
@@ -622,6 +626,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_sha256() {
@@ -741,6 +746,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_sha256() {
@@ -866,6 +872,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_minus_1_sha256() {
@@ -991,6 +998,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_sha256_auto_chunksize() {
@@ -1110,6 +1118,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_sha256_kms() {
@@ -1237,6 +1246,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_crc64nvme() {
@@ -1362,6 +1372,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_crc64nvme() {
@@ -1487,6 +1498,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_minus_1_crc64nvme() {
@@ -1612,6 +1624,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_crc64nvme_auto_chunksize() {
@@ -1731,6 +1744,7 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 
     async fn test_multipart_upload_5mb_plus_1_crc64nvme_kms() {
@@ -1858,5 +1872,6 @@ mod tests {
         }
 
         helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&BUCKET2.to_string()).await;
     }
 }
