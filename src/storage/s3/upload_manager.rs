@@ -115,7 +115,7 @@ impl UploadManager {
                 .object_parts
                 .as_ref()
                 .unwrap()
-                .get(0)
+                .first()
                 .unwrap()
                 .size()
                 .unwrap();
