@@ -3,7 +3,7 @@ use std::ops::Add;
 
 use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
-use crate::storage::e_tag_verify;
+use crate::storage::{e_tag_verify, get_range_from_content_range, parse_range_header_string};
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
 use crate::types::{
@@ -341,12 +341,30 @@ impl ObjectSyncer {
 
         match get_object_output {
             Ok(get_object_output) => {
-                if range.is_some() && get_object_output.content_range().is_none() {
-                    error!("get_object() returned no content range. This is unexpected.");
-                    return Err(anyhow!(
-                        "get_object() returned no content range. This is unexpected. key={}.",
-                        key
-                    ));
+                if range.is_some() {
+                    if get_object_output.content_range().is_none() {
+                        error!("get_object() returned no content range. This is unexpected.");
+                        return Err(anyhow!(
+                            "get_object() returned no content range. This is unexpected. key={}.",
+                            key
+                        ));
+                    }
+                    let (request_start, request_end) =
+                        parse_range_header_string(&range.clone().unwrap())
+                            .context("failed to parse request range header")?;
+                    let (response_start, response_end) =
+                        get_range_from_content_range(&get_object_output)
+                            .context("get_object() returned no content range")?;
+                    if (request_start != response_start) || (request_end != response_end) {
+                        return Err(anyhow!(
+                            "get_object() returned unexpected content range. \
+                            expected: {}-{}, actual: {}-{}",
+                            request_start,
+                            request_end,
+                            response_start,
+                            response_end,
+                        ));
+                    }
                 }
 
                 // If multipart upload is required, the first chunk does not contain the final checksum.
@@ -726,20 +744,19 @@ impl ObjectSyncer {
                 .context("pipeline::syncer::get_first_chunk_range() failed.");
 
             if head_object_result.is_err() {
-                warn!(
+                error!(
                     worker_index = self.worker_index,
                     key = object.key(),
-                    "failed to get object parts information. e-tag/checksum verification may fail. \
-                    this is most likely due to the lack of HeadObject support for partNumber parameter"
+                    "pipeline::syncer::get_first_chunk_range() failed."
                 );
 
                 self.base
-                    .send_stats(SyncWarning {
+                    .send_stats(SyncError {
                         key: object.key().to_string(),
                     })
                     .await;
 
-                return Ok(None);
+                return Err(anyhow!("pipeline::syncer::get_first_chunk_range() failed."));
             }
 
             return Ok(Some(format!(
