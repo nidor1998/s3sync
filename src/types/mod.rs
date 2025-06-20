@@ -247,6 +247,7 @@ pub fn clone_object_version_with_key(object: &ObjectVersion, key: &str) -> Objec
         .set_owner(object.owner().cloned())
         .set_storage_class(object.storage_class().cloned())
         .set_checksum_algorithm(checksum_algorithm)
+        .set_checksum_type(object.checksum_type().cloned())
         .build()
 }
 
@@ -415,6 +416,7 @@ mod tests {
             .e_tag("my-etag")
             .storage_class(ObjectStorageClass::Glacier)
             .checksum_algorithm(ChecksumAlgorithm::Sha256)
+            .checksum_type(ChecksumType::FullObject)
             .owner(
                 Owner::builder()
                     .id("test_id")
@@ -431,6 +433,7 @@ mod tests {
                 .e_tag("my-etag")
                 .storage_class(ObjectStorageClass::Glacier)
                 .checksum_algorithm(ChecksumAlgorithm::Sha256)
+                .checksum_type(ChecksumType::FullObject)
                 .owner(
                     Owner::builder()
                         .id("test_id")
@@ -498,6 +501,7 @@ mod tests {
             .e_tag("my-etag")
             .storage_class(ObjectVersionStorageClass::Standard)
             .checksum_algorithm(ChecksumAlgorithm::Sha256)
+            .checksum_type(ChecksumType::FullObject)
             .owner(
                 Owner::builder()
                     .id("test_id")
@@ -516,6 +520,7 @@ mod tests {
                 .e_tag("my-etag")
                 .storage_class(ObjectVersionStorageClass::Standard)
                 .checksum_algorithm(ChecksumAlgorithm::Sha256)
+                .checksum_type(ChecksumType::FullObject)
                 .owner(
                     Owner::builder()
                         .id("test_id")
@@ -588,6 +593,7 @@ mod tests {
             .e_tag("my-etag")
             .storage_class(ObjectVersionStorageClass::Standard)
             .checksum_algorithm(ChecksumAlgorithm::Sha256)
+            .checksum_type(ChecksumType::FullObject)
             .owner(
                 Owner::builder()
                     .id("test_id")
@@ -605,6 +611,46 @@ mod tests {
         assert!(!s3sync_object.is_latest());
         assert_eq!(s3sync_object.size(), 1);
         assert_eq!(s3sync_object.e_tag().unwrap(), "my-etag");
+        assert_eq!(
+            s3sync_object.checksum_type().unwrap(),
+            &ChecksumType::FullObject
+        );
+        assert_eq!(
+            s3sync_object.checksum_algorithm().unwrap(),
+            &[ChecksumAlgorithm::Sha256]
+        );
+    }
+
+    #[test]
+    fn non_versioning_object_getter_test() {
+        init_dummy_tracing_subscriber();
+
+        let versioning_object = Object::builder()
+            .key("source")
+            .size(1)
+            .e_tag("my-etag")
+            .storage_class(ObjectStorageClass::Standard)
+            .checksum_algorithm(ChecksumAlgorithm::Sha256)
+            .checksum_type(ChecksumType::FullObject)
+            .owner(
+                Owner::builder()
+                    .id("test_id")
+                    .display_name("test_name")
+                    .build(),
+            )
+            .last_modified(DateTime::from_secs(777))
+            .build();
+
+        let s3sync_object =
+            S3syncObject::clone_non_versioning_object_with_key(&versioning_object, "cloned");
+
+        assert_eq!(s3sync_object.key(), "cloned");
+        assert_eq!(s3sync_object.size(), 1);
+        assert_eq!(s3sync_object.e_tag().unwrap(), "my-etag");
+        assert_eq!(
+            s3sync_object.checksum_type().unwrap(),
+            &ChecksumType::FullObject
+        );
         assert_eq!(
             s3sync_object.checksum_algorithm().unwrap(),
             &[ChecksumAlgorithm::Sha256]
