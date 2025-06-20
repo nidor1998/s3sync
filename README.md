@@ -63,7 +63,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   ```
   S3 to Local, `c7a.large(2vCPU, 4GB)` 16 objects(6GiB objects), 96.00 GiB | 41.67 MiB/sec, 39 minutes, and all objects are end-to-end integrity verified(MD5, SHA256).  
   ETag/additional checksum verification is costly in the case of S3 to Local. Because s3sync needs to read the entire downloaded object from local disk to calculate ETag/checksum.   
-  You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`.
+  You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`. Without all verifications, the result was 96.00 GiB | 125.42 MiB/sec, 14 minutes.
   ```
   [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 64 --enable-additional-checksum s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/ ./download/
   96.00 GiB | 41.67 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 39 minutes
@@ -427,7 +427,7 @@ If you specify many workers, you may need to increase the number of open files.
 For example, on Linux: `ulimit -n 8192`
 
 #### `--max-parallel-uploads`
-The maximum number of parallel uploads/downloads for objects larger than `multipart-threshold`.
+The maximum number of parallel uploads/downloads for objects larger than `multipart-threshold`.  
 Default: 16
 
 #### `--force-retry-count`
