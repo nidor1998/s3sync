@@ -780,7 +780,7 @@ impl ObjectSyncer {
         key: &str,
         version_id: Option<&str>,
         e_tag: Option<&str>,
-        content_length: i64,
+        first_chunk_content_length: i64,
         checksum_algorithm: Option<&[ChecksumAlgorithm]>,
         full_object_checksum: bool,
         range: Option<&str>,
@@ -832,7 +832,7 @@ impl ObjectSyncer {
                 }
 
                 if self.base.config.transfer_config.auto_chunksize
-                    && object_parts[0].size.unwrap() != content_length
+                    && object_parts[0].size.unwrap() != first_chunk_content_length
                 {
                     error!(
                         worker_index = self.worker_index,
@@ -887,11 +887,13 @@ impl ObjectSyncer {
                 }
             } else {
                 // Even if the object is not a multipart upload, we need to return the object parts for auto-chunksize.
-                let object_parts = vec![ObjectPartBuilder::default().size(content_length).build()];
+                let object_parts = vec![ObjectPartBuilder::default()
+                    .size(first_chunk_content_length)
+                    .build()];
                 return Ok(Some(object_parts));
             }
 
-            if object_parts[0].size.unwrap() != content_length {
+            if object_parts[0].size.unwrap() != first_chunk_content_length {
                 error!(
                     worker_index = self.worker_index,
                     key = key,
