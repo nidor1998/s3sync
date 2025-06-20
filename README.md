@@ -29,47 +29,48 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Very fast  
   s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
-  In my environment(`c7a.large`, with 256 workers), Local to S3, about 4,200 objects/sec (small objects 10KiB).  
-  s3sync is optimized for synchronizing large amounts(over millions) of objects.
-  Not optimized for transferring small amounts of objects(less than worker-size: default 16) of large size.(Of course, it can be used for this purpose.)
+  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB).
+  The following is the benchmark result of `c7a.large(2vCPU, 4GB)/Amazon Linux 2023 AMI` instance on AWS on `ap-northeast-1`. And no special optimization is applied to the instance and network topology to s3 and anything else.
+  You can reproduce the benchmark with the following commands.
 
-  Local to S3, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects), 976.56 MiB | 41.57 MiB/sec, 23 seconds, and all objects are end-to-end integrity verified(MD5, SHA256).
+
+  Local to S3, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects), 976.56 MiB | 38.88 MiB/sec, 25 seconds, and all objects are end-to-end integrity verified(MD5, SHA256).
   ```
-  [ec2-user@ip-foo ~]$ time s3sync --worker-size 256 --additional-checksum-algorithm SHA256 ~/testdata s3://5786c9fb-e2a7-407c-814a-84ed9590e35c/testdata/
-  976.56 MiB | 41.57 MiB/sec,  transferred 100000 objects | 4,257 objects/sec,  etag verified 100000 objects,  checksum verified 100000 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 23 seconds
+  [ec2-user@aws-c7a-large s3sync]$ time s3sync --worker-size 256 --additional-checksum-algorithm SHA256 ~/testdata s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/testdata/
+  976.56 MiB | 38.88 MiB/sec,  transferred 100000 objects | 3,981 objects/sec,  etag verified 100000 objects,  checksum verified 100000 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 25 seconds
   
-  real	0m23.506s
-  user	0m26.714s
-  sys	0m19.023s
+  real	0m25.135s
+  user	0m29.255s
+  sys	0m19.745s
   ```
-  S3 to Local, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects),  976.56 MiB | 26.40 MiB/sec, 37 seconds, and all objects are end-to-end integrity verified(MD5, SHA256).
+  S3 to Local, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects), 976.56 MiB | 25.97 MiB/sec, 38 seconds, and all objects are end-to-end integrity verified(MD5, SHA256).
   ```
-  [ec2-user@ip-foo ~]$ time s3sync --worker-size 256 --enable-additional-checksum  s3://5786c9fb-e2a7-407c-814a-84ed9590e35c/ ./download/
-  976.56 MiB | 26.40 MiB/sec,  transferred 100000 objects | 2,702 objects/sec,  etag verified 100000 objects,  checksum verified 100000 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 37 seconds
+  [ec2-user@aws-c7a-large s3sync]$ time s3sync --worker-size 256 --enable-additional-checksum  s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/ ./download/
+  976.56 MiB | 25.97 MiB/sec,  transferred 100000 objects | 2,659 objects/sec,  etag verified 100000 objects,  checksum verified 100000 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 38 seconds
   
-  real	0m37.030s
-  user	0m41.286s
-  sys	0m28.527s
+  real	0m37.626s
+  user	0m44.012s
+  sys	0m27.000s
   ```
-  Local to S3, `c7a.large(2vCPU, 4GB)` 16 objects(6GiB objects), 96.00 GiB | 62.45 MiB/sec, 26 minutes, and all objects are end-to-end integrity verified(MD5, SHA256).
+  Local to S3, `c7a.large(2vCPU, 4GB)` 16 objects(6GiB objects), 96.00 GiB | 287.91 MiB/sec, 5.41 minutes, and all objects are end-to-end integrity verified(MD5, SHA256).
   ```
-  [ec2-user@ip-foo ~]$ time s3sync --additional-checksum-algorithm SHA256 ~/testdata s3://5786c9fb-e2a7-407c-814a-84ed9590e35c/testdata/
-  96.00 GiB | 62.45 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 26 minutes
+  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 64 --additional-checksum-algorithm SHA256 ~/testdata s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/testdata/
+  96.00 GiB | 287.91 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 6 minutes
   
-  real	26m14.107s
-  user	8m48.093s
-  sys	6m20.679s
+  real	5m41.643s
+  user	9m36.389s
+  sys	1m37.730s
   ```
   S3 to Local, `c7a.large(2vCPU, 4GB)` 16 objects(6GiB objects), 96.00 GiB | 41.67 MiB/sec, 39 minutes, and all objects are end-to-end integrity verified(MD5, SHA256).  
   ETag/additional checksum verification is costly in the case of S3 to Local. Because s3sync needs to read the entire downloaded object from local disk to calculate ETag/checksum.   
   You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`.
   ```
-  [ec2-user@ip-foo ~]$ time ./s3sync --enable-additional-checksum s3://b2f99466-6665-4b8e-8327-a7bdabff8a10 ./download/
+  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 64 --enable-additional-checksum s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/ ./download/
   96.00 GiB | 41.67 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 39 minutes
-    
-  real    39m19.267s
-  user    11m3.478s
-  sys     8m35.242s
+  
+  real	39m19.500s
+  user	9m30.455s
+  sys	2m33.711s
   ```
 
 - Multiple ways
@@ -83,7 +84,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Low memory usage  
   Memory usage is low and does not depend on the object size or number of objects.
   It mainly depends on the number of workers and multipart chunk size.  
-  The default setting uses only about 500MB of maximum memory for any object size or number of objects.
+  The default setting uses only about 700MB of maximum memory for any object size or number of objects.
 
 - Incremental transfer(Normal transfer)  
   Transfer only modified objects. If the object modification time is newer than the target object, the object is transferred.
@@ -367,7 +368,7 @@ The following SSE is supported.
 ### Memory usage
 s3sync consumes memory for each worker.   
 For single object, approximately `average size of the object * worker-size(default 16) * 2`.  
-For multipart object, approximately `multipart chunksize(default 8MiB) * worker-size(default 16) * 2`.
+For multipart object, approximately `multipart chunksize(default 8MiB) * worker-size(default 16) + multipart chunksize(default 8MiB) * max-parallel-uploads(default 16)`.
 
 Because s3sync uses incremental transfer, it lists all objects in the target bucket and stores the result in memory.  
 Therefore, if there are a large number of objects in the target bucket, s3sync can consume a lot of memory.  
@@ -424,6 +425,10 @@ Default: 16
 
 If you specify many workers, you may need to increase the number of open files.  
 For example, on Linux: `ulimit -n 8192`
+
+#### `--max-parallel-uploads`
+The maximum number of parallel uploads/downloads for objects larger than `multipart-threshold`.
+Default: 16
 
 #### `--force-retry-count`
 s3sync forcibly retries the operation that AWS SDK for Rust cannot retry.  
