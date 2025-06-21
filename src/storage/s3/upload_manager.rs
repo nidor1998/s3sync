@@ -541,6 +541,7 @@ impl UploadManager {
         }
     }
 
+    // skipcq: RS-R1000
     async fn upload_parts(
         &mut self,
         bucket: &str,
@@ -821,6 +822,7 @@ impl UploadManager {
         Ok(parts)
     }
 
+    // skipcq: RS-R1000
     async fn upload_parts_with_auto_chunksize(
         &mut self,
         bucket: &str,
