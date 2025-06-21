@@ -41,6 +41,7 @@ use walkdir::{DirEntry, WalkDir};
 use crate::config::ClientConfig;
 use crate::storage::additional_checksum_verify::{
     generate_checksum_from_path, generate_checksum_from_path_with_chunksize,
+    is_multipart_upload_checksum,
 };
 use crate::storage::e_tag_verify::{
     generate_e_tag_hash_from_path, generate_e_tag_hash_from_path_with_auto_chunksize,
@@ -334,11 +335,18 @@ impl LocalStorage {
             };
 
             // If the source object is not a multipart upload, we need to calculate the checksum whole the file.
-            let multipart_threshold = if !is_multipart_upload_e_tag(source_e_tag) {
-                source_content_length as usize + 1
-            } else {
-                self.config.transfer_config.multipart_threshold as usize
-            };
+            let multipart_threshold =
+                if !is_multipart_upload_checksum(&Some(source_final_checksum.clone())) {
+                    source_content_length as usize + 1
+                } else {
+                    // If the source object is a multipart upload, and first chunk size is equal to the first part size,
+                    // We adjust the multipart threshold to the first part size.
+                    if source_content_length == (*parts.clone().first().unwrap() as u64) {
+                        source_content_length as usize
+                    } else {
+                        self.config.transfer_config.multipart_threshold as usize
+                    }
+                };
 
             let target_final_checksum = generate_checksum_from_path(
                 real_path,

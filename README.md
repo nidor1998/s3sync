@@ -86,7 +86,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Low memory usage  
   Memory usage is low and does not depend on the object size or number of objects.
   It mainly depends on the number of workers and multipart chunk size.  
-  The default setting uses only about 700MB of maximum memory for any object size or number of objects.
+  The default setting uses only about 1.2GB of maximum memory for any object size or number of objects.
 
 - Incremental transfer(Normal transfer)  
   Transfer only modified objects. If the object modification time is newer than the target object, the object is transferred.
@@ -370,7 +370,7 @@ The following SSE is supported.
 ### Memory usage
 s3sync consumes memory for each worker.   
 For single object, approximately `average size of the object * worker-size(default 16) * 2`.  
-For multipart object, approximately `multipart chunksize(default 8MiB) * worker-size(default 16) + multipart chunksize(default 8MiB) * max-parallel-uploads(default 16)`.
+For multipart object, approximately `multipart chunksize(default 8MiB) * worker-size(default 16) * 2 + multipart chunksize(default 8MiB) * max-parallel-uploads(default 16)`.
 
 Because s3sync uses incremental transfer, it lists all objects in the target bucket and stores the result in memory.  
 Therefore, if there are a large number of objects in the target bucket, s3sync can consume a lot of memory.  
