@@ -33,6 +33,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   The following is the benchmark result of `c7a.large(2vCPU, 4GB)/Amazon Linux 2023 AMI` instance on AWS on `ap-northeast-1`. And no special optimization is applied to the instance and network topology to s3 and anything else.
   You can reproduce the benchmark with the following commands.
 
+  Note: The default s3sync setting uses `--worker-size 16` and `--max-parallel-uploads 16`. This is a moderate setting for most cases. If you want to improve performance, you can increase `--worker-size` and `--max-parallel-uploads`. But it will increase CPU and memory usage.
+
 
   Local to S3, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects), 976.56 MiB | 38.88 MiB/sec, 25 seconds, and all objects are end-to-end integrity verified(MD5, SHA256).
   ```
