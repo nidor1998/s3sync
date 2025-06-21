@@ -1,11 +1,6 @@
 #![allow(dead_code)]
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time;
-use std::time::SystemTime;
-
+use anyhow::Result;
 use async_channel::Receiver;
 use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
 use aws_config::{BehaviorVersion, ConfigLoader};
@@ -17,7 +12,7 @@ use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
-    BucketInfo, BucketLocationConstraint, BucketType, BucketVersioningStatus,
+    BucketInfo, BucketLocationConstraint, BucketType, BucketVersioningStatus, ChecksumMode,
     CreateBucketConfiguration, DataRedundancy, LocationInfo, LocationType, Object, ObjectVersion,
     Tag, Tagging, VersioningConfiguration,
 };
@@ -25,11 +20,21 @@ use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
 use aws_types::SdkConfig;
 use filetime::{set_file_mtime, FileTime};
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time;
+use std::time::SystemTime;
 use tokio::sync::Semaphore;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
+
+use sha2::{Digest, Sha256};
 
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
@@ -46,7 +51,9 @@ pub const LARGE_FILE_PATH: &str = "./playground/large_data_e2e_test/large_file";
 pub const LARGE_FILE_PATH_CASE2: &str = "./playground/large_data_e2e_test_case2/large_file";
 pub const LARGE_FILE_DIR: &str = "./playground/large_data_e2e_test/";
 pub const LARGE_FILE_DIR_CASE2: &str = "./playground/large_data_e2e_test_case2/";
+pub const RANDOM_DATA_FILE_DIR: &str = "./playground/random_data_file_dir/";
 
+pub const RANDOM_DATA_SEED_FILE: &str = "./test_data/random_data_seed";
 pub const NOT_FOUND_TEST_DIR: &str = "./playground/not_found_test/";
 pub const NOT_FOUND_TEST_FILE: &str =
     "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";
@@ -59,6 +66,8 @@ pub const LARGE_FILE_KEY: &str = "large_file";
 pub const LARGE_FILE_S3_ETAG: &str = "\"9be3303e9a8d67a0f1e609fb7a29030a-4\"";
 pub const TEST_FILE_SIZE_8MIB: usize = 8 * 1024 * 1024;
 pub const TEST_8MIB_FILE_KEY: &str = "8mib_file";
+
+pub const TEST_RANDOM_DATA_FILE_KEY: &str = "random_data";
 
 const TEST_CONTENT_DISPOSITION: &str = "attachment; filename=\"filename.jpg\"";
 const TEST_CONTENT_ENCODING: &str = "deflate";
@@ -344,6 +353,7 @@ impl TestHelper {
             .bucket(bucket)
             .key(key)
             .set_version_id(version_id.clone())
+            .checksum_mode(ChecksumMode::Enabled)
             .send()
             .await
             .unwrap()
@@ -1463,6 +1473,49 @@ impl TestHelper {
             ),
         )
         .unwrap();
+    }
+
+    pub fn create_random_test_data_file(size_mb: usize, extra: i32) -> Result<()> {
+        std::fs::create_dir_all(RANDOM_DATA_FILE_DIR).unwrap();
+
+        let mut random_file = File::open(RANDOM_DATA_SEED_FILE)?;
+        let mut random_data = vec![0; 1024];
+        random_file.read_exact(&mut random_data)?;
+
+        let output_path = Path::new(RANDOM_DATA_FILE_DIR).join(TEST_RANDOM_DATA_FILE_KEY);
+        let mut output_file = File::create(output_path)?;
+
+        for _ in 0..size_mb * 1024 {
+            output_file.write_all(&random_data)?;
+        }
+
+        if extra > 0 {
+            output_file.write_all(b"Z")?;
+        } else if extra < 0 {
+            let current_pos = output_file.seek(SeekFrom::End(0))?;
+            output_file.set_len(current_pos - 1)?;
+        }
+
+        output_file.flush()?;
+
+        return Ok(());
+    }
+
+    pub fn get_sha256_from_file(file_path: &str) -> String {
+        let mut file = File::open(file_path).unwrap();
+        let mut hasher = Sha256::new();
+        let mut buffer = [0; 1024];
+
+        loop {
+            let bytes_read = file.read(&mut buffer).unwrap();
+            if bytes_read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..bytes_read]);
+        }
+
+        let hash_result = hasher.finalize();
+        format!("{:x}", hash_result)
     }
 
     pub fn tag_set_to_map(tag_set: &[Tag]) -> HashMap<String, String> {

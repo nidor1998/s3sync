@@ -1,13 +1,21 @@
 use std::path::Path;
 
+use crate::storage::checksum::AdditionalChecksum;
 use anyhow::{anyhow, Result};
 use aws_sdk_s3::types::ChecksumAlgorithm;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-use crate::storage::checksum::AdditionalChecksum;
-
 const UNKNOWN_CHECKSUM_VALUE: &str = "UNKNOWN";
+
+pub fn is_multipart_upload_checksum(checksum: &Option<String>) -> bool {
+    if checksum.is_none() {
+        return false;
+    }
+
+    let find_result = checksum.as_ref().unwrap().find('-');
+    find_result.is_some()
+}
 
 pub async fn generate_checksum_from_path(
     path: &Path,
@@ -153,7 +161,8 @@ mod tests {
 
     use crate::storage::additional_checksum_verify::{
         generate_checksum_from_path, generate_checksum_from_path_for_check,
-        generate_checksum_from_path_with_chunksize, UNKNOWN_CHECKSUM_VALUE,
+        generate_checksum_from_path_with_chunksize, is_multipart_upload_checksum,
+        UNKNOWN_CHECKSUM_VALUE,
     };
     use aws_sdk_s3::types::ChecksumAlgorithm;
     use tracing_subscriber::EnvFilter;
@@ -174,6 +183,23 @@ mod tests {
     const LARGE_FILE_CRC64NVME_FULL_OBJECT_BASE64_DIGEST: &str = "1q6/IYHP8XY=";
 
     const TEST_CRC32_BASE64_DIGEST: &str = "y/U6HA==";
+
+    #[test]
+    fn is_multipart_upload_checksum_test() {
+        init_dummy_tracing_subscriber();
+
+        assert!(!is_multipart_upload_checksum(&None));
+        assert!(!is_multipart_upload_checksum(&Some(
+            "G2nS8dFcgMbpp8z9aYGNm97xnMGIf9BRjqs7z7hskVk=".to_string()
+        )));
+
+        assert!(is_multipart_upload_checksum(&Some(
+            "wCfoo1d9Hfd+fHyNC38fUcN2GClCUsbud3NqVCs9Vww=-1".to_string()
+        )));
+        assert!(is_multipart_upload_checksum(&Some(
+            "wCfoo1d9Hfd+fHyNC38fUcN2GClCUsbud3NqVCs9Vww=-2".to_string()
+        )));
+    }
 
     #[tokio::test]
     async fn generate_checksum_from_path_test() {

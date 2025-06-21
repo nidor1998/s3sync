@@ -1,6 +1,15 @@
 use std::collections::HashMap;
 use std::ops::Add;
 
+use crate::pipeline::head_object_checker::HeadObjectChecker;
+use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
+use crate::storage::{e_tag_verify, get_range_from_content_range, parse_range_header_string};
+use crate::types::error::S3syncError;
+use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
+use crate::types::{
+    get_additional_checksum, get_additional_checksum_with_head_object, is_full_object_checksum,
+    ObjectChecksum, S3syncObject, SseCustomerKey, MINIMUM_CHUNKSIZE,
+};
 use anyhow::{anyhow, Context, Error, Result};
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingError;
@@ -11,20 +20,12 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
+use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
-use tracing::{error, info, trace, warn};
-
-use crate::pipeline::head_object_checker::HeadObjectChecker;
-use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
-use crate::storage::e_tag_verify;
-use crate::types::error::S3syncError;
-use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
-use crate::types::{
-    get_additional_checksum, is_full_object_checksum, ObjectChecksum, S3syncObject, SseCustomerKey,
-};
+use tracing::{debug, error, info, trace, warn};
 
 use super::stage::Stage;
 
@@ -297,11 +298,25 @@ impl ObjectSyncer {
             return Ok(());
         }
 
+        let size = object.size();
+
+        // Get the first chunk range if multipart upload is required.
+        // If not, the whole object will be downloaded.
+        let range = self.get_first_chunk_range(object.clone()).await?;
+
+        debug!(
+            worker_index = self.worker_index,
+            key = key,
+            size = size,
+            range = range.as_deref(),
+            "first chunk range for the object",
+        );
         let get_object_output = self
             .get_object(
                 key,
                 object.version_id().map(|version_id| version_id.to_string()),
                 self.base.config.additional_checksum_mode.clone(),
+                range.clone(),
                 self.base.config.source_sse_c.clone(),
                 self.base.config.source_sse_c_key.clone(),
                 self.base.config.source_sse_c_key_md5.clone(),
@@ -326,6 +341,43 @@ impl ObjectSyncer {
 
         match get_object_output {
             Ok(get_object_output) => {
+                if range.is_some() {
+                    if get_object_output.content_range().is_none() {
+                        error!("get_object() returned no content range. This is unexpected.");
+                        return Err(anyhow!(
+                            "get_object() returned no content range. This is unexpected. key={}.",
+                            key
+                        ));
+                    }
+                    let (request_start, request_end) =
+                        parse_range_header_string(&range.clone().unwrap())
+                            .context("failed to parse request range header")?;
+                    let (response_start, response_end) =
+                        get_range_from_content_range(&get_object_output)
+                            .context("get_object() returned no content range")?;
+                    if (request_start != response_start) || (request_end != response_end) {
+                        return Err(anyhow!(
+                            "get_object() returned unexpected content range. \
+                            expected: {}-{}, actual: {}-{}",
+                            request_start,
+                            request_end,
+                            response_start,
+                            response_end,
+                        ));
+                    }
+                }
+
+                // If multipart upload is required, the first chunk does not contain the final checksum.
+                // So, we need to get the final checksum from the head object.
+                let final_checksum = self
+                    .get_final_checksum(
+                        &get_object_output,
+                        range,
+                        object.clone(),
+                        object.checksum_algorithm(),
+                    )
+                    .await;
+
                 let tagging = if self.base.config.disable_tagging {
                     None
                 } else if self.base.config.tagging.is_some() {
@@ -347,11 +399,23 @@ impl ObjectSyncer {
                 };
 
                 let object_checksum = self
-                    .build_object_checksum(key, &get_object_output, object.checksum_algorithm())
+                    .build_object_checksum(
+                        key,
+                        &get_object_output,
+                        object.checksum_algorithm(),
+                        final_checksum.clone(),
+                    )
                     .await?;
 
                 let put_object_output = self
-                    .put_object(key, get_object_output, tagging, object_checksum)
+                    .put_object(
+                        key,
+                        size as u64,
+                        final_checksum,
+                        get_object_output,
+                        tagging,
+                        object_checksum,
+                    )
                     .await;
                 if let Err(e) = put_object_output {
                     return self.handle_put_object_error(key, e).await;
@@ -463,11 +527,13 @@ impl ObjectSyncer {
         Err(e)
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn get_object(
         &self,
         key: &str,
         version_id: Option<String>,
         checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
@@ -480,6 +546,7 @@ impl ObjectSyncer {
                 key,
                 version_id,
                 checksum_mode,
+                range,
                 sse_c,
                 sse_c_key,
                 sse_c_key_md5,
@@ -491,6 +558,8 @@ impl ObjectSyncer {
     async fn put_object(
         &self,
         key: &str,
+        source_size: u64,
+        source_additional_checksum: Option<String>,
         get_object_output: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
@@ -505,7 +574,15 @@ impl ObjectSyncer {
             .target
             .as_ref()
             .unwrap()
-            .put_object(key, get_object_output, tagging, object_checksum)
+            .put_object(
+                key,
+                dyn_clone::clone_box(&*(*self.base.source.as_ref().unwrap())),
+                source_size,
+                source_additional_checksum,
+                get_object_output,
+                tagging,
+                object_checksum,
+            )
             .await
             .context("pipeline::syncer::put_object() failed.")
     }
@@ -546,16 +623,170 @@ impl ObjectSyncer {
         Ok(Some(get_object_tagging_output))
     }
 
+    async fn get_final_checksum(
+        &self,
+        get_object_output: &GetObjectOutput,
+        range: Option<String>,
+        object: S3syncObject,
+        checksum_algorithm: Option<&[ChecksumAlgorithm]>,
+    ) -> Option<String> {
+        let additional_checksum_algorithm = if let Some(algorithm) = checksum_algorithm {
+            if algorithm.is_empty()
+                || (self.base.config.additional_checksum_mode.is_none()
+                    && !self.base.target.as_ref().unwrap().is_local_storage())
+            {
+                None
+            } else {
+                // Only one algorithm supported
+                Some(algorithm[0].clone())
+            }
+        } else {
+            None
+        };
+
+        // If the object is from local storage, we can get the additional checksum directly.
+        if self.base.source.as_ref().unwrap().is_local_storage() {
+            return get_additional_checksum(
+                get_object_output,
+                self.base.config.additional_checksum_algorithm.clone(),
+            );
+        }
+
+        // If additional_checksum_mode is not set in remote storage, we cannot get the final checksum.
+        self.base.config.additional_checksum_mode.as_ref()?;
+
+        // If range option is not specified, the final checksum is already calculated.
+        if range.is_none() {
+            return get_additional_checksum(
+                get_object_output,
+                self.base.config.additional_checksum_algorithm.clone(),
+            );
+        }
+
+        // if range option is specified, we need to get the final checksum from the head object.
+        let head_object_result = self
+            .base
+            .source
+            .as_ref()
+            .unwrap()
+            .head_object(
+                object.key(),
+                object.version_id().map(|version_id| version_id.to_string()),
+                self.base.config.additional_checksum_mode.clone(),
+                self.base.config.source_sse_c.clone(),
+                self.base.config.source_sse_c_key.clone(),
+                self.base.config.source_sse_c_key_md5.clone(),
+            )
+            .await
+            .context("pipeline::syncer::get_final_checksum() failed.");
+
+        if head_object_result.is_err() {
+            warn!(
+                    worker_index = self.worker_index,
+                    key = object.key(),
+                    "failed to get object parts information. checksum verification may fail. \
+                    this is most likely due to the lack of HeadObject support for partNumber parameter"
+                );
+
+            self.base
+                .send_stats(SyncWarning {
+                    key: object.key().to_string(),
+                })
+                .await;
+
+            return None;
+        }
+
+        get_additional_checksum_with_head_object(
+            &head_object_result.unwrap(),
+            additional_checksum_algorithm,
+        )
+    }
+
+    async fn get_first_chunk_range(&self, object: S3syncObject) -> Result<Option<String>> {
+        // If the object size is less than the minimum chunk size, no need to get the first chunk range.
+        if self.base.config.dry_run || object.size() < MINIMUM_CHUNKSIZE as i64 {
+            return Ok(None);
+        }
+
+        if self.base.source.as_ref().unwrap().is_local_storage() {
+            if self
+                .base
+                .config
+                .transfer_config
+                .is_multipart_upload_required(object.size() as u64)
+            {
+                return Ok(Some(format!(
+                    "bytes=0-{}",
+                    self.base.config.transfer_config.multipart_chunksize - 1
+                )));
+            }
+            return Ok(None);
+        }
+
+        // If auto_chunksize is enabled, we need to get the first chunk size from the head object.
+        // Without auto_chunksize, we do not need to get the first chunk range, even if the object has a additional checksum,
+        if self.base.config.transfer_config.auto_chunksize {
+            let head_object_result = self
+                .base
+                .source
+                .as_ref()
+                .unwrap()
+                .head_object_first_part(
+                    object.key(),
+                    object.version_id().map(|version_id| version_id.to_string()),
+                    Some(ChecksumMode::Enabled),
+                    self.base.config.source_sse_c.clone(),
+                    self.base.config.source_sse_c_key.clone(),
+                    self.base.config.source_sse_c_key_md5.clone(),
+                )
+                .await
+                .context("pipeline::syncer::get_first_chunk_range() failed.");
+
+            if head_object_result.is_err() {
+                error!(
+                    worker_index = self.worker_index,
+                    key = object.key(),
+                    "pipeline::syncer::get_first_chunk_range() failed."
+                );
+
+                self.base
+                    .send_stats(SyncError {
+                        key: object.key().to_string(),
+                    })
+                    .await;
+
+                return Err(anyhow!("pipeline::syncer::get_first_chunk_range() failed."));
+            }
+
+            return Ok(Some(format!(
+                "bytes=0-{}",
+                head_object_result?.content_length.unwrap() - 1
+            )));
+        }
+
+        let first_chunk_size =
+            if object.size() < self.base.config.transfer_config.multipart_chunksize as i64 {
+                object.size() as u64
+            } else {
+                self.base.config.transfer_config.multipart_chunksize
+            };
+        Ok(Some(format!("bytes=0-{}", first_chunk_size - 1)))
+    }
+
+    #[allow(clippy::too_many_arguments)]
     async fn get_object_parts_if_necessary(
         &self,
         key: &str,
         version_id: Option<&str>,
         e_tag: Option<&str>,
+        first_chunk_content_length: i64,
         checksum_algorithm: Option<&[ChecksumAlgorithm]>,
         full_object_checksum: bool,
+        range: Option<&str>,
     ) -> Result<Option<Vec<ObjectPart>>> {
-        // a local object does not have ETag.
-        if !e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string()))
+        if (!e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string()))
+            && range.is_none())
             || self.base.config.dry_run
         {
             return Ok(None);
@@ -563,25 +794,61 @@ impl ObjectSyncer {
 
         let key = key.to_string();
 
+        // If auto_chunksize is disabled, we still need to get the object parts if the checksum algorithm is specified.
         if let Some(algorithm) = checksum_algorithm {
             // A full object checksum has no object parts.
             if !algorithm.is_empty() && !full_object_checksum {
-                return Ok(Some(
-                    self.base
-                        .source
-                        .as_ref()
-                        .unwrap()
-                        .get_object_parts_attributes(
-                            &key,
-                            version_id.map(|version_id| version_id.to_string()),
-                            self.base.config.max_keys,
-                            self.base.config.source_sse_c.clone(),
-                            self.base.config.source_sse_c_key.clone(),
-                            self.base.config.source_sse_c_key_md5.clone(),
-                        )
-                        .await
-                        .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?,
-                ));
+                let object_parts = self
+                    .base
+                    .source
+                    .as_ref()
+                    .unwrap()
+                    .get_object_parts_attributes(
+                        &key,
+                        version_id.map(|version_id| version_id.to_string()),
+                        self.base.config.max_keys,
+                        self.base.config.source_sse_c.clone(),
+                        self.base.config.source_sse_c_key.clone(),
+                        self.base.config.source_sse_c_key_md5.clone(),
+                    )
+                    .await
+                    .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?;
+
+                if object_parts.is_empty()
+                    && e_tag_verify::is_multipart_upload_e_tag(
+                        &e_tag.map(|e_tag| e_tag.to_string()),
+                    )
+                {
+                    error!(
+                        worker_index = self.worker_index,
+                        key = key,
+                        "failed to get object attributes information. \
+                            Please remove --auto-chunksize option and retry."
+                    );
+
+                    self.base.send_stats(SyncError { key }).await;
+
+                    return Err(anyhow!("failed to get object attributes information."));
+                }
+
+                if self.base.config.transfer_config.auto_chunksize
+                    && object_parts[0].size.unwrap() != first_chunk_content_length
+                {
+                    error!(
+                        worker_index = self.worker_index,
+                        key = key,
+                        "object parts(attribute) size does not match content length. \
+                        This is unexpected. Please remove --auto-chunksize option and retry."
+                    );
+
+                    self.base.send_stats(SyncError { key }).await;
+
+                    return Err(anyhow!(
+                        "object parts(attribute) size does not match content length."
+                    ));
+                }
+
+                return Ok(Some(object_parts));
             }
         }
 
@@ -603,17 +870,40 @@ impl ObjectSyncer {
                 .await
                 .context("pipeline::syncer::get_object_parts_if_necessary() failed.")?;
 
-            if object_parts.is_empty() {
-                warn!(
+            if e_tag_verify::is_multipart_upload_e_tag(&e_tag.map(|e_tag| e_tag.to_string())) {
+                // If the object is a multipart upload, and the object parts are empty, it should be a error.
+                if object_parts.is_empty() {
+                    error!(
+                        worker_index = self.worker_index,
+                        key = key,
+                        "failed to get object parts information. \
+                        this is most likely due to the lack of HeadObject support for partNumber parameter. \
+                        Please remove --auto-chunksize option and retry."
+                    );
+
+                    self.base.send_stats(SyncError { key }).await;
+
+                    return Err(anyhow!("failed to get object parts information."));
+                }
+            } else {
+                // Even if the object is not a multipart upload, we need to return the object parts for auto-chunksize.
+                let object_parts = vec![ObjectPartBuilder::default()
+                    .size(first_chunk_content_length)
+                    .build()];
+                return Ok(Some(object_parts));
+            }
+
+            if object_parts[0].size.unwrap() != first_chunk_content_length {
+                error!(
                     worker_index = self.worker_index,
                     key = key,
-                    "failed to get object parts information. e-tag verification may fail. \
-                    this is most likely due to the lack of HeadObject support for partNumber parameter"
+                    "object parts size does not match content length. \
+                    This is unexpected. Please remove --auto-chunksize option and retry."
                 );
 
-                self.base.send_stats(SyncWarning { key }).await;
+                self.base.send_stats(SyncError { key }).await;
 
-                return Ok(None);
+                return Err(anyhow!("object parts size does not match content length."));
             }
 
             Ok(Some(object_parts))
@@ -627,6 +917,7 @@ impl ObjectSyncer {
         key: &str,
         get_object_output: &GetObjectOutput,
         checksum_algorithm: Option<&[ChecksumAlgorithm]>,
+        final_checksum: Option<String>,
     ) -> Result<Option<ObjectChecksum>> {
         let additional_checksum_algorithm = if let Some(algorithm) = checksum_algorithm {
             if algorithm.is_empty()
@@ -649,15 +940,15 @@ impl ObjectSyncer {
             checksum_algorithm
         };
 
-        let additional_checksum_value =
-            get_additional_checksum(get_object_output, additional_checksum_algorithm.clone());
         let object_parts = self
             .get_object_parts_if_necessary(
                 key,
                 get_object_output.version_id(),
                 get_object_output.e_tag(),
+                get_object_output.content_length.unwrap(),
                 checksum_algorithm,
-                is_full_object_checksum(&additional_checksum_value),
+                is_full_object_checksum(&final_checksum),
+                get_object_output.content_range(),
             )
             .await?;
 
@@ -1168,6 +1459,7 @@ mod tests {
             .send(S3syncObject::NotVersioning(
                 Object::builder()
                     .set_key(Some("6byte.dat".to_string()))
+                    .size(1)
                     .build(),
             ))
             .await
@@ -1222,7 +1514,10 @@ mod tests {
 
         sender
             .send(S3syncObject::NotVersioning(
-                Object::builder().set_key(Some("data4".to_string())).build(),
+                Object::builder()
+                    .set_key(Some("data4".to_string()))
+                    .size(1)
+                    .build(),
             ))
             .await
             .unwrap();
