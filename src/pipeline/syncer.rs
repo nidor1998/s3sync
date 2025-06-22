@@ -716,10 +716,14 @@ impl ObjectSyncer {
                 .transfer_config
                 .is_multipart_upload_required(object.size() as u64)
             {
-                return Ok(Some(format!(
-                    "bytes=0-{}",
-                    self.base.config.transfer_config.multipart_chunksize - 1
-                )));
+                let first_chunk_size = if object.size()
+                    < self.base.config.transfer_config.multipart_chunksize as i64
+                {
+                    object.size() as u64
+                } else {
+                    self.base.config.transfer_config.multipart_chunksize
+                };
+                return Ok(Some(format!("bytes=0-{}", first_chunk_size - 1)));
             }
             return Ok(None);
         }
