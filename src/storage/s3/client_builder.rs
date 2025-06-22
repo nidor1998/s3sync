@@ -51,7 +51,8 @@ impl ClientConfig {
     pub async fn create_client(&self) -> Client {
         let config_builder = Builder::from(&self.load_sdk_config().await)
             .force_path_style(self.force_path_style)
-            .request_checksum_calculation(self.request_checksum_calculation);
+            .request_checksum_calculation(self.request_checksum_calculation)
+            .accelerate(self.accelerate);
 
         #[cfg(feature = "legacy_hyper014_feature")]
         if self.https_proxy.is_some() || self.http_proxy.is_some() {
@@ -263,6 +264,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         let client = client_config.create_client().await;
@@ -309,6 +311,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         let client = client_config.create_client().await;
@@ -344,6 +347,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         let client = client_config.create_client().await;
@@ -384,6 +388,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         let client = client_config.create_client().await;
@@ -426,6 +431,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         let _ = client_config.create_client().await;
@@ -454,6 +460,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         let client = client_config.create_client().await;
@@ -494,6 +501,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         client_config.create_client().await;
@@ -522,6 +530,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         client_config.create_client().await;
@@ -550,6 +559,7 @@ mod tests {
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
         };
 
         client_config.create_client().await;

@@ -63,6 +63,8 @@ pub struct Config {
     pub full_object_checksum: bool,
     pub allow_e2e_test_dangerous_simulation: bool,
     pub cancellation_point: Option<String>,
+    pub source_accelerate: bool,
+    pub target_accelerate: bool,
 }
 
 impl Config {
@@ -82,6 +84,7 @@ pub struct ClientConfig {
     pub region: Option<String>,
     pub endpoint_url: Option<String>,
     pub force_path_style: bool,
+    pub accelerate: bool,
     pub retry_config: RetryConfig,
     pub https_proxy: Option<String>,
     pub http_proxy: Option<String>,

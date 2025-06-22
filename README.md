@@ -181,7 +181,7 @@ You can also build from source following the instructions below.
 See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 ### Build
-s3sync requires Rust 1.81 or later.
+s3sync requires Rust 1.82 or later.
 ```bash
 cargo install s3sync
 ```
@@ -245,6 +245,11 @@ You can specify a S3-compatible storage endpoint.
 Warning: If you use a custom endpoint, you may need to specify `--source-force-path-style` or `--target-force-path-style`.
 ```bash
 s3sync --target-endpoint-url https://foo --target-force-path-style /path/to/local s3://bucket-name/prefix 
+```
+
+### [Amazon S3 Transfer Acceleration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html)
+```bash
+s3sync --source-accelerate --target-accelerate s3://bucket-name1/prefix s3://bucket-name2/prefix
 ```
 
 ### Dry run
@@ -430,6 +435,7 @@ For example, on Linux: `ulimit -n 8192`
 
 #### `--max-parallel-uploads`
 The maximum number of parallel uploads/downloads for objects larger than `multipart-threshold`.  
+This feature is implemented by using HTTP `Range` header.  
 Default: 16
 
 #### `--force-retry-count`

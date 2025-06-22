@@ -34,8 +34,8 @@ Example usage
 
 ```Toml
 [dependencies]
-s3sync = "1.13.4"
-tokio = { version = "1.45.1", features = ["full"] }
+s3sync = "1"
+tokio = { version = "1", features = ["full"] }
 ```
 
 ```no_run
