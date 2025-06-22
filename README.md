@@ -9,7 +9,9 @@
 ## Overview
 s3sync is a reliable, very fast, and powerful synchronization tool for S3.  
 It can be used to synchronize local directories with S3 bucket, and also to synchronize S3 to s3 bucket.
-Supports multipart upload, versioning, metadata.
+Supports multipart upload, versioning, metadata.  
+
+This tool is designed solely for object storage data synchronization.
 
 
 ## As a library
@@ -26,6 +28,11 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)  
   Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
   Note: Amazon S3 Express One Zone does not support ETag as verification. But you can use additional checksum algorithm.
+
+- Multiple ways
+  - Local to S3(s3-compatible storage)
+  - S3(s3-compatible storage) to Local
+  - S3 to S3(cross-region, same-region, same-account, cross-account, from-to s3/s3-compatible storage)
 
 - Very fast  
   s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
@@ -75,20 +82,15 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   sys	2m33.711s
   ```
 
-- Multiple ways
-  - Local to S3
-  - S3 to Local
-  - S3 to S3
-
 - Any object size support
   s3sync can handle any object size. From 0 byte to 5TiB.
 
 - Low memory usage  
   Memory usage is low and does not depend on the object size or number of objects.
-  It mainly depends on the number of workers and multipart chunk size.  
-  The default setting uses only about 1.2GB of maximum memory for any object size or number of objects.
+  It mainly depends on the number of workers/max parallel uploads count and multipart chunk size.  
+  The default setting uses about 1.2GB of maximum memory for any object size or number of objects.
 
-- Incremental transfer(Normal transfer)  
+- Incremental transfer (Normal transfer)  
   Transfer only modified objects. If the object modification time is newer than the target object, the object is transferred.
   Incremental transfer can be resumed from the last checkpoint.
   Checking of modified objects is very fast.
