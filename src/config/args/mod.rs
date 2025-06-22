@@ -170,6 +170,10 @@ pub struct CLIArgs {
     #[arg(long, env, value_parser = url::check_scheme)]
     source_endpoint_url: Option<String>,
 
+    /// Use Amazon S3 Transfer Acceleration for the source bucket.
+    #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
+    source_accelerate: bool,
+
     /// force path-style addressing for source endpoint
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE)]
     source_force_path_style: bool,
@@ -197,6 +201,10 @@ pub struct CLIArgs {
     /// target endpoint url
     #[arg(long, env, value_parser = url::check_scheme)]
     target_endpoint_url: Option<String>,
+
+    /// Use Amazon S3 Transfer Acceleration for the target bucket.
+    #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
+    target_accelerate: bool,
 
     /// force path-style addressing for target endpoint
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE)]
@@ -265,6 +273,10 @@ pub struct CLIArgs {
     /// number of workers for synchronization
     #[arg(long, env, default_value_t = DEFAULT_WORKER_SIZE, value_parser = clap::value_parser!(u16).range(1..))]
     worker_size: u16,
+
+    /// maximum number of parallel multipart uploads/downloads
+    #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS, value_parser = clap::value_parser!(u16).range(1..))]
+    max_parallel_uploads: u16,
 
     /// treat warnings as errors(except for the case of etag/checksum mismatch, etc.)
     #[arg(long, env, default_value_t = DEFAULT_WARN_AS_ERROR)]
@@ -426,6 +438,10 @@ pub struct CLIArgs {
     #[arg(long, env, value_parser = checksum_algorithm::parse_checksum_algorithm)]
     additional_checksum_algorithm: Option<String>,
 
+    /// Use full object checksum for verification. CRC64NVME automatically use full object checksum. This option cannot be used with SHA1/SHA256 additional checksum.
+    #[arg(long, env, default_value_t = DEFAULT_FULL_OBJECT_CHECKSUM)]
+    full_object_checksum: bool,
+
     /// enable additional checksum for download
     #[arg(long, env, default_value_t = DEFAULT_ENABLE_ADDITIONAL_CHECKSUM)]
     enable_additional_checksum: bool,
@@ -459,11 +475,6 @@ pub struct CLIArgs {
     #[arg(long, hide = true, default_value_t = false)]
     allow_both_local_storage: bool,
 
-    /// [dangerous] test purpose only
-    #[cfg(feature = "e2e_test_dangerous_simulations")]
-    #[arg(long, hide = true, default_value_t = false)]
-    allow_e2e_test_dangerous_simulation: bool,
-
     /// generate a auto completions script. Valid values: bash, fish, zsh, powershell, elvish.
     #[arg(long, env, value_name = "SHELL", value_parser = clap_complete::shells::Shell::from_str)]
     auto_complete_shell: Option<clap_complete::shells::Shell>,
@@ -480,30 +491,19 @@ pub struct CLIArgs {
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_CONTENT_MD5_HEADER)]
     disable_content_md5_header: bool,
 
-    /// Use full object checksum for verification. CRC64NVME automatically use full object checksum. This option cannot be used with SHA1/SHA256 additional checksum.
-    #[arg(long, env, default_value_t = DEFAULT_FULL_OBJECT_CHECKSUM)]
-    full_object_checksum: bool,
+    /// disable default additional checksum verification in Express One Zone storage class
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM)]
+    disable_express_one_zone_additional_checksum: bool,
+
+    /// [dangerous] test purpose only
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[arg(long, hide = true, default_value_t = false)]
+    allow_e2e_test_dangerous_simulation: bool,
 
     /// [dangerous] test purpose only
     #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true)]
     cancellation_point: Option<String>,
-
-    /// disable default additional checksum verification in Express One Zone storage class
-    #[arg(long, env, default_value_t = DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM)]
-    disable_express_one_zone_additional_checksum: bool,
-
-    /// maximum number of parallel multipart uploads
-    #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS, value_parser = clap::value_parser!(u16).range(1..))]
-    max_parallel_uploads: u16,
-
-    /// Use Amazon S3 Transfer Acceleration for the source bucket.
-    #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
-    source_accelerate: bool,
-
-    /// Use Amazon S3 Transfer Acceleration for the target bucket.
-    #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
-    target_accelerate: bool,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
