@@ -68,6 +68,7 @@ const DEFAULT_DISABLE_CONTENT_MD5_HEADER: bool = false;
 const DEFAULT_FULL_OBJECT_CHECKSUM: bool = false;
 const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS: u16 = 16;
+const DEFAULT_ACCELERATE: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -117,6 +118,10 @@ const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_FULL_OBJECT_CHECKSUM: &str =
     "with --full-object-checksum, target storage must be s3://\n";
 const FULL_OBJECT_CHECKSUM_NOT_SUPPORTED: &str =
     "Only CRC32/CRC32C/CRC64NVME supports full object checksum\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ACCELERATE: &str =
+    "with --source-accelerate, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ACCELERATE: &str =
+    "with --target-accelerate, target storage must be s3://\n";
 
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
@@ -491,6 +496,14 @@ pub struct CLIArgs {
     /// maximum number of parallel multipart uploads
     #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS, value_parser = clap::value_parser!(u16).range(1..))]
     max_parallel_uploads: u16,
+
+    /// Use Amazon S3 Transfer Acceleration for the source bucket.
+    #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
+    source_accelerate: bool,
+
+    /// Use Amazon S3 Transfer Acceleration for the target bucket.
+    #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
+    target_accelerate: bool,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -534,6 +547,7 @@ impl CLIArgs {
         self.check_disable_payload_signing_conflict()?;
         self.check_disable_content_md5_header_conflict()?;
         self.check_full_object_checksum_conflict()?;
+        self.check_accelerate_conflict()?;
 
         Ok(())
     }
@@ -873,6 +887,20 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_accelerate_conflict(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.source_accelerate {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ACCELERATE.to_string());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) && self.target_accelerate {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ACCELERATE.to_string());
+        }
+
+        Ok(())
+    }
+
     fn build_client_configs(
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
@@ -958,6 +986,7 @@ impl CLIArgs {
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: parallel_upload_semaphore.clone(),
+            accelerate: self.source_accelerate,
         });
 
         let target_client_config = target_credential.map(|target_credential| ClientConfig {
@@ -979,6 +1008,7 @@ impl CLIArgs {
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation,
             parallel_upload_semaphore,
+            accelerate: self.target_accelerate,
         });
 
         (source_client_config, target_client_config)
@@ -1204,6 +1234,8 @@ impl TryFrom<CLIArgs> for Config {
             full_object_checksum,
             allow_e2e_test_dangerous_simulation,
             cancellation_point,
+            source_accelerate: value.source_accelerate,
+            target_accelerate: value.target_accelerate,
         })
     }
 }
