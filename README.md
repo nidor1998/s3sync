@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/s3sync.svg)](https://crates.io/crates/s3sync)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![MSRV](https://img.shields.io/badge/msrv-1.82.0-red)
+![MSRV](https://img.shields.io/badge/msrv-1.85.0-red)
 ![CI](https://github.com/nidor1998/s3sync/workflows/CI/badge.svg) [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 [![DeepSource](https://app.deepsource.com/gh/nidor1998/s3sync.svg/?label=active+issues&show_trend=true&token=Q3EjeUmx8Fu-ndXKEG133W-t)](https://app.deepsource.com/gh/nidor1998/s3sync/?ref=repository-badge)
 
@@ -183,7 +183,7 @@ You can also build from source following the instructions below.
 See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 ### Build
-s3sync requires Rust 1.82 or later.
+s3sync requires Rust 1.85 or later.
 ```bash
 cargo install s3sync
 ```

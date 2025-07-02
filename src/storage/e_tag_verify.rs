@@ -123,12 +123,13 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
         buffer.resize_with(chunksize as usize, Default::default);
         let read_result = file.read_exact(buffer.as_mut_slice()).await;
         if read_result.is_err() {
-            return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
-            {
-                Err(anyhow!("Failed to read: {:?}", read_result.unwrap_err()))
-            } else {
-                Ok(UNKNOWN_E_TAG_VALUE.to_string())
-            };
+            if let Err(e) = read_result {
+                if e.kind() != std::io::ErrorKind::UnexpectedEof {
+                    return Err(anyhow!("Failed to read: {:?}", e));
+                } else {
+                    return Ok(UNKNOWN_E_TAG_VALUE.to_string());
+                }
+            }
         }
         read_bytes += read_result?;
 

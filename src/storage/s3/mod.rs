@@ -1013,7 +1013,7 @@ pub fn remove_s3_prefix(key: &str, prefix: &str) -> String {
 }
 
 pub fn generate_full_key(prefix: &str, key: &str) -> String {
-    format!("{}{}", prefix, key)
+    format!("{prefix}{key}")
 }
 
 fn is_express_onezone_storage(bucket: &str) -> bool {

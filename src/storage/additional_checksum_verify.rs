@@ -41,10 +41,9 @@ pub async fn generate_checksum_from_path(
         let mut buffer = Vec::<u8>::with_capacity(chunksize as usize);
         buffer.resize_with(chunksize as usize, Default::default);
         let read_result = file.read_exact(buffer.as_mut_slice()).await;
-        if read_result.is_err() {
-            return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
-            {
-                Err(anyhow!("Failed to read: {:?}", read_result.unwrap_err()))
+        if let Err(e) = read_result {
+            return if e.kind() != std::io::ErrorKind::UnexpectedEof {
+                Err(anyhow!("Failed to read: {:?}", e))
             } else {
                 Ok(UNKNOWN_CHECKSUM_VALUE.to_string())
             };
@@ -91,12 +90,13 @@ pub async fn generate_checksum_from_path_for_check(
         buffer.resize_with(chunksize as usize, Default::default);
         let read_result = file.read_exact(buffer.as_mut_slice()).await;
         if read_result.is_err() {
-            return if read_result.as_ref().unwrap_err().kind() != std::io::ErrorKind::UnexpectedEof
-            {
-                Err(anyhow!("Failed to read: {:?}", read_result.unwrap_err()))
-            } else {
-                Ok(UNKNOWN_CHECKSUM_VALUE.to_string())
-            };
+            if let Err(e) = read_result {
+                if e.kind() != std::io::ErrorKind::UnexpectedEof {
+                    return Err(anyhow!("Failed to read: {:?}", e));
+                } else {
+                    return Ok(UNKNOWN_CHECKSUM_VALUE.to_string());
+                }
+            }
         }
         read_bytes += read_result?;
 
