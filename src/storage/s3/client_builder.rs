@@ -232,6 +232,7 @@ mod tests {
     use super::*;
     use crate::types::{AccessKeys, ClientConfigLocation};
     use aws_smithy_types::checksum_config::RequestChecksumCalculation;
+    use std::sync::Arc;
     use tokio::sync::Semaphore;
     use tracing_subscriber::EnvFilter;
 
