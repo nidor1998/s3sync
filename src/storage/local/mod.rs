@@ -1063,6 +1063,10 @@ impl StorageTrait for LocalStorage {
             content_range = None;
         }
 
+        if self.config.dry_run {
+            need_checksum = false;
+        }
+
         let checksum = if self.config.additional_checksum_algorithm.is_some() && need_checksum {
             Some(
                 generate_checksum_from_path_with_chunksize(
