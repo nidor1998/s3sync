@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - Unreleased
+
+### Changed
+
+- [Breaking change]Disabled proxy support by default. https://github.com/nidor1998/s3sync/issues/78
+- aws-sdk-s3 = "1.96.0"
+- updated dependencies.
+- MSRV = 1.85.0
+
+### Fixed
+
+- Fixed unnecessary etag check in dry-run mode.
+
+
 ## [1.15.0] - 2025-06-22
 
 ### Changed

@@ -178,6 +178,8 @@ This project is licensed under the Apache-2.0 License.
 Download the latest binary from [Releases](https://github.com/nidor1998/s3sync/releases)  
 This binary cannot be run on a glibc version less than or equal to 2.17. (i.e. CentOS 7, etc.)
 
+This binary is built without proxy support for security reasons.
+
 You can also build from source following the instructions below.
 ### Install Rust
 See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
@@ -471,6 +473,9 @@ If you want to use additional checksums for download, specify the option.
 Warning: Even if the object was uploaded with additional checksum, without this option, s3sync does not verify additional checksum.
 
 #### `--https-proxy`
+This option is disabled by default for security reasons.
+To enable this, build with the `--features legacy_hyper014_feature` option.
+
 You can specify the proxy server for https.
 
 Proxy authentication is supported. Like `http(s)://user:password@proxy:port`.
