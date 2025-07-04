@@ -9,6 +9,39 @@ env:
   APP_NAME: s3sync
 
 jobs:
+  release-linux:
+    name: release for linux
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: build and packaging final binary
+        shell: bash
+        run: |
+          BINARY_NAME=$APP_NAME
+          RELEASE_NAME=$APP_NAME-linux-glibc2.28-x86_64
+
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs >./rust_install.sh
+          chmod +x rust_install.sh
+          ./rust_install.sh -y
+          source "$HOME/.cargo/env"
+          rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
+          cargo build --release --target x86_64-unknown-linux-gnu
+
+          cd target/x86_64-unknown-linux-gnu/release
+          tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
+          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+      - name: releasing assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.28-x86_64.tar.gz
+            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.28-x86_64.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   release-arm-linux:
     name: release for arm64 linux
     runs-on: ubuntu-24.04-arm
@@ -39,5 +72,51 @@ jobs:
           files: |
             target/aarch64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.28-aarch64.tar.gz
             target/aarch64-unknown-linux-gnu/release/${{ env.APP_NAME }}-linux-glibc2.28-aarch64.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-others:
+    name: release for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ macos-latest, windows-latest ]
+        include:
+          - os: macos-latest
+            artifact_suffix: macos-aarch64
+            target: aarch64-apple-darwin
+            file_extension: ""
+          - os: windows-latest
+            artifact_suffix: windows-x86_64
+            target: x86_64-pc-windows-msvc
+            file_extension: ".exe"
+
+    steps:
+      - name: install rust toolchain
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: cargo build
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Packaging final binary
+        shell: bash
+        run: |
+          BINARY_NAME=$APP_NAME${{ matrix.file_extension }}
+          RELEASE_NAME=$APP_NAME-${{ matrix.artifact_suffix }}
+
+          cd target/${{ matrix.target }}/release
+
+          tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
+          if [[ ${{ runner.os }} == 'Windows' ]]; then
+            certutil -hashfile $RELEASE_NAME.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
+          else
+            shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+          fi
+      - name: releasing assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            target/${{ matrix.target }}/release/${{ env.APP_NAME }}-${{ matrix.artifact_suffix }}.tar.gz
+            target/${{ matrix.target }}/release/${{ env.APP_NAME }}-${{ matrix.artifact_suffix }}.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
