@@ -137,6 +137,7 @@ pub struct FilterConfig {
     pub check_etag: bool,
     pub check_mtime_and_etag: bool,
     pub check_checksum_algorithm: Option<ChecksumAlgorithm>,
+    pub check_mtime_and_additional_checksum: Option<ChecksumAlgorithm>,
     pub include_regex: Option<Regex>,
     pub exclude_regex: Option<Regex>,
     pub larger_size: Option<u64>,
