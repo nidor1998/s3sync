@@ -167,8 +167,10 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 
 ## Requirements
-- 64-bit Linux (kernel 3.2 or later, glibc 2.17 or later)
-- 64-bit Windows 10 or later
+- x86_64 Linux (kernel 3.2 or later, glibc 2.17 or later)
+- ARM64 Linux (kernel 4.1 or later, glibc 2.17 or later)
+- x86_64 Windows 10 or later
+- ARM64 Windows 11
 - MacOS 11.0 or later
 
 ## Licence

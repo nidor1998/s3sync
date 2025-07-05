@@ -135,6 +135,7 @@ pub struct FilterConfig {
     pub remove_modified_filter: bool,
     pub check_size: bool,
     pub check_etag: bool,
+    pub check_mtime_and_etag: bool,
     pub check_checksum_algorithm: Option<ChecksumAlgorithm>,
     pub include_regex: Option<Regex>,
     pub exclude_regex: Option<Regex>,

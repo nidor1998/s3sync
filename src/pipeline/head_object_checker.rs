@@ -74,8 +74,9 @@ impl HeadObjectChecker {
         if let Ok(target_object) = head_target_object_output {
             let diff_detector = if self.config.filter_config.check_size {
                 SizeDiffDetector::boxed_new()
-            } else if self.config.filter_config.check_etag
-                && (self.config.head_each_target || self.config.transfer_config.auto_chunksize)
+            } else if (self.config.filter_config.check_etag
+                && (self.config.head_each_target || self.config.transfer_config.auto_chunksize))
+                || self.config.filter_config.check_mtime_and_etag
             {
                 ETagDiffDetector::boxed_new(
                     self.config.clone(),
@@ -127,7 +128,9 @@ impl HeadObjectChecker {
     }
 
     fn is_head_object_check_required(&self) -> bool {
-        if self.config.transfer_config.auto_chunksize && self.config.filter_config.check_etag {
+        if (self.config.transfer_config.auto_chunksize && self.config.filter_config.check_etag)
+            || self.config.filter_config.check_mtime_and_etag
+        {
             return true;
         }
 
