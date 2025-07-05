@@ -362,20 +362,24 @@ pub struct CLIArgs {
     remove_modified_filter: bool,
 
     /// use object size for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag"], default_value_t = DEFAULT_CHECK_SIZE)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], default_value_t = DEFAULT_CHECK_SIZE)]
     check_size: bool,
 
     /// use etag for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "check_mtime_and_additional_checksum", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG)]
     check_etag: bool,
 
-    /// use the modification time and ETag for update checking. If the local modification date is newer, check the ETag.
+    /// use the modification time and ETag for update checking. If the source modification date is newer, check the ETag.
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_MTIME_AND_ETAG)]
     check_mtime_and_etag: bool,
 
     /// use additional checksum for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag", "check_mtime_and_etag"], value_parser = checksum_algorithm::parse_checksum_algorithm)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm)]
     check_additional_checksum: Option<String>,
+
+    /// use the modification time and additional checksum for update checking. If the source modification date is newer, check the additional checksum.
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "check_mtime_and_etag", "check_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm)]
+    check_mtime_and_additional_checksum: Option<String>,
 
     /// delete objects that exist in the target but not in the source.
     /// [Warning] Since this can cause data loss, test first with the --dry-run option
@@ -1122,6 +1126,10 @@ impl TryFrom<CLIArgs> for Config {
             .check_additional_checksum
             .map(|algorithm| ChecksumAlgorithm::from(algorithm.as_str()));
 
+        let check_mtime_and_additional_checksum = value
+            .check_mtime_and_additional_checksum
+            .map(|algorithm| ChecksumAlgorithm::from(algorithm.as_str()));
+
         let mut checksum_mode = if value.enable_additional_checksum {
             Some(ChecksumMode::Enabled)
         } else {
@@ -1261,6 +1269,7 @@ impl TryFrom<CLIArgs> for Config {
                 check_etag: value.check_etag,
                 check_mtime_and_etag: value.check_mtime_and_etag,
                 check_checksum_algorithm: check_additional_checksum_algorithm,
+                check_mtime_and_additional_checksum,
                 include_regex,
                 exclude_regex,
                 larger_size: filter_larger_size,

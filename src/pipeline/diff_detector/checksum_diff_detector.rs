@@ -90,25 +90,36 @@ impl ChecksumDiffDetector {
         ))?
         .to_rfc3339();
 
+        let checksum_algorithm = if self.config.filter_config.check_checksum_algorithm.is_some() {
+            self.config.filter_config.check_checksum_algorithm.clone()
+        } else if self
+            .config
+            .filter_config
+            .check_mtime_and_additional_checksum
+            .is_some()
+        {
+            self.config
+                .filter_config
+                .check_mtime_and_additional_checksum
+                .clone()
+        } else {
+            panic!("No checksum algorithm configured for filtering.");
+        };
+
         let source_checksum = types::get_additional_checksum_with_head_object(
             &head_source_object_output,
-            self.config.filter_config.check_checksum_algorithm.clone(),
+            checksum_algorithm.clone(),
         );
         let target_checksum = types::get_additional_checksum_with_head_object(
             head_target_object_output,
-            self.config.filter_config.check_checksum_algorithm.clone(),
+            checksum_algorithm.clone(),
         );
+        let checksum_algorithm = checksum_algorithm.unwrap().to_string();
 
         if source_checksum.is_none() || target_checksum.is_none() {
             warn!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm,
                 source_checksum = source_checksum.unwrap_or_default(),
                 target_checksum = target_checksum.unwrap_or_default(),
                 source_last_modified = source_last_modified,
@@ -126,13 +137,7 @@ impl ChecksumDiffDetector {
         if source_checksum == target_checksum {
             debug!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm,
                 source_checksum = source_checksum.clone().unwrap_or_default(),
                 target_checksum = target_checksum.clone().unwrap_or_default(),
                 source_last_modified = source_last_modified,
@@ -148,13 +153,7 @@ impl ChecksumDiffDetector {
             {
                 warn!(
                     name = FILTER_NAME,
-                    checksum_algorithm = self
-                        .config
-                        .filter_config
-                        .check_checksum_algorithm
-                        .as_ref()
-                        .unwrap()
-                        .to_string(),
+                    checksum_algorithm = checksum_algorithm,
                     source_checksum = source_checksum.unwrap_or_default(),
                     target_checksum = target_checksum,
                     source_last_modified = source_last_modified,
@@ -172,13 +171,7 @@ impl ChecksumDiffDetector {
         } else {
             debug!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm,
                 source_checksum = source_checksum.unwrap_or_default(),
                 target_checksum = target_checksum.unwrap_or_default(),
                 source_last_modified = source_last_modified,
@@ -213,9 +206,25 @@ impl ChecksumDiffDetector {
             )
             .await?;
 
+        let checksum_algorithm = if self.config.filter_config.check_checksum_algorithm.is_some() {
+            self.config.filter_config.check_checksum_algorithm.clone()
+        } else if self
+            .config
+            .filter_config
+            .check_mtime_and_additional_checksum
+            .is_some()
+        {
+            self.config
+                .filter_config
+                .check_mtime_and_additional_checksum
+                .clone()
+        } else {
+            panic!("No checksum algorithm configured for filtering.");
+        };
+
         let target_checksum = types::get_additional_checksum_with_head_object(
             head_target_object_output,
-            self.config.filter_config.check_checksum_algorithm.clone(),
+            checksum_algorithm.clone(),
         );
 
         let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
@@ -244,13 +253,7 @@ impl ChecksumDiffDetector {
 
             warn!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = "",
                 target_checksum = target_checksum.unwrap_or_default(),
                 source_last_modified = source_last_modified,
@@ -284,11 +287,7 @@ impl ChecksumDiffDetector {
         let source_checksum = if multipart_checksum {
             generate_checksum_from_path_for_check(
                 &local_path,
-                self.config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .clone()
-                    .unwrap(),
+                checksum_algorithm.clone().unwrap(),
                 multipart_checksum,
                 target_object_parts
                     .iter()
@@ -301,11 +300,7 @@ impl ChecksumDiffDetector {
             // Use the config chunk size for calculating checksum.
             generate_checksum_from_path_with_chunksize(
                 &local_path,
-                self.config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .clone()
-                    .unwrap(),
+                checksum_algorithm.clone().unwrap(),
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
                 full_object_checksum,
@@ -325,13 +320,7 @@ impl ChecksumDiffDetector {
 
                 warn!(
                     name = FILTER_NAME,
-                    checksum_algorithm = self
-                        .config
-                        .filter_config
-                        .check_checksum_algorithm
-                        .as_ref()
-                        .unwrap()
-                        .to_string(),
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                     source_checksum = source_checksum,
                     target_checksum = target_checksum.clone().unwrap_or_default(),
                     source_last_modified = source_last_modified,
@@ -345,13 +334,7 @@ impl ChecksumDiffDetector {
 
             debug!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = source_checksum,
                 target_checksum = target_checksum.unwrap_or_default(),
                 source_last_modified = source_last_modified,
@@ -365,13 +348,7 @@ impl ChecksumDiffDetector {
         } else {
             debug!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = source_checksum,
                 target_checksum = target_checksum.unwrap_or_default(),
                 source_last_modified = source_last_modified,
@@ -407,9 +384,25 @@ impl ChecksumDiffDetector {
             )
             .await?;
 
+        let checksum_algorithm = if self.config.filter_config.check_checksum_algorithm.is_some() {
+            self.config.filter_config.check_checksum_algorithm.clone()
+        } else if self
+            .config
+            .filter_config
+            .check_mtime_and_additional_checksum
+            .is_some()
+        {
+            self.config
+                .filter_config
+                .check_mtime_and_additional_checksum
+                .clone()
+        } else {
+            panic!("No checksum algorithm configured for filtering.");
+        };
+
         let source_checksum = types::get_additional_checksum_with_head_object(
             &head_source_object_output,
-            self.config.filter_config.check_checksum_algorithm.clone(),
+            checksum_algorithm.clone(),
         );
 
         let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
@@ -431,13 +424,7 @@ impl ChecksumDiffDetector {
         if source_checksum.is_none() {
             warn!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = source_checksum.unwrap_or_default(),
                 target_checksum = "",
                 source_last_modified = source_last_modified,
@@ -473,11 +460,7 @@ impl ChecksumDiffDetector {
         let target_checksum = if multipart_checksum {
             generate_checksum_from_path_for_check(
                 &local_path,
-                self.config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .clone()
-                    .unwrap(),
+                checksum_algorithm.clone().unwrap(),
                 multipart_checksum,
                 source_object_parts
                     .iter()
@@ -490,11 +473,7 @@ impl ChecksumDiffDetector {
             // Use the config chunk size for calculating checksum.
             generate_checksum_from_path_with_chunksize(
                 &local_path,
-                self.config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .clone()
-                    .unwrap(),
+                checksum_algorithm.clone().unwrap(),
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
                 full_object_checksum,
@@ -514,13 +493,7 @@ impl ChecksumDiffDetector {
         if source_checksum.as_ref().unwrap().as_str() == target_checksum {
             debug!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = source_checksum.clone().unwrap_or_default(),
                 target_checksum = target_checksum,
                 source_last_modified = source_last_modified,
@@ -536,13 +509,7 @@ impl ChecksumDiffDetector {
             {
                 warn!(
                     name = FILTER_NAME,
-                    checksum_algorithm = self
-                        .config
-                        .filter_config
-                        .check_checksum_algorithm
-                        .as_ref()
-                        .unwrap()
-                        .to_string(),
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                     source_checksum = source_checksum.unwrap_or_default(),
                     target_checksum = target_checksum,
                     source_last_modified = source_last_modified,
@@ -560,13 +527,7 @@ impl ChecksumDiffDetector {
         } else {
             debug!(
                 name = FILTER_NAME,
-                checksum_algorithm = self
-                    .config
-                    .filter_config
-                    .check_checksum_algorithm
-                    .as_ref()
-                    .unwrap()
-                    .to_string(),
+                checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = source_checksum.unwrap_or_default(),
                 target_checksum = target_checksum,
                 source_last_modified = source_last_modified,

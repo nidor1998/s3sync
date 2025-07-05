@@ -52,7 +52,13 @@ impl HeadObjectChecker {
     }
 
     async fn is_old_object(&self, source_object: &S3syncObject) -> Result<bool> {
-        let checksum_mode = if self.config.filter_config.check_checksum_algorithm.is_some() {
+        let checksum_mode = if self.config.filter_config.check_checksum_algorithm.is_some()
+            || self
+                .config
+                .filter_config
+                .check_mtime_and_additional_checksum
+                .is_some()
+        {
             Some(ChecksumMode::Enabled)
         } else {
             None
@@ -86,7 +92,13 @@ impl HeadObjectChecker {
             } else if self.config.filter_config.check_etag {
                 // ETag has been checked by modified filter
                 AlwaysDifferentDiffDetector::boxed_new()
-            } else if self.config.filter_config.check_checksum_algorithm.is_some() {
+            } else if self.config.filter_config.check_checksum_algorithm.is_some()
+                || self
+                    .config
+                    .filter_config
+                    .check_mtime_and_additional_checksum
+                    .is_some()
+            {
                 ChecksumDiffDetector::boxed_new(
                     self.config.clone(),
                     dyn_clone::clone_box(self.source.as_ref()),
@@ -134,7 +146,13 @@ impl HeadObjectChecker {
             return true;
         }
 
-        if self.config.filter_config.check_checksum_algorithm.is_some() {
+        if self.config.filter_config.check_checksum_algorithm.is_some()
+            || self
+                .config
+                .filter_config
+                .check_mtime_and_additional_checksum
+                .is_some()
+        {
             return true;
         }
 
