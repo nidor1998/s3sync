@@ -51,6 +51,7 @@ const DEFAULT_ENABLE_VERSIONING: bool = false;
 const DEFAULT_REMOVE_MODIFIED_FILTER: bool = false;
 const DEFAULT_CHECK_SIZE: bool = false;
 const DEFAULT_CHECK_ETAG: bool = false;
+const DEFAULT_CHECK_MTIME_AND_ETAG: bool = false;
 const DEFAULT_SYNC_WITH_DELETE: bool = false;
 const DEFAULT_DISABLE_TAGGING: bool = false;
 const DEFAULT_SYNC_LATEST_TAGGING: bool = false;
@@ -103,6 +104,11 @@ const CHECK_ETAG_CONFLICT_SSE_KMS: &str =
     "--check-etag is not supported with --sse aws:kms | aws:kms:dsse \n";
 const CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--check-etag is not supported with express onezone storage class\n";
+
+const CHECK_MTIME_AND_ETAG_CONFLICT_SSE_KMS: &str =
+    "--check-mtime-and-etag is not supported with --sse aws:kms | aws:kms:dsse \n";
+const CHECK_MTIME_AND_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
+    "--check-mtime-and-etag is not supported with express onezone storage class\n";
 
 const SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND: &str = "directory must be specified as a source\n";
 const TARGET_LOCAL_STORAGE_INVALID: &str = "invalid target path\n";
@@ -356,15 +362,19 @@ pub struct CLIArgs {
     remove_modified_filter: bool,
 
     /// use object size for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag"], default_value_t = DEFAULT_CHECK_SIZE)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag"], default_value_t = DEFAULT_CHECK_SIZE)]
     check_size: bool,
 
     /// use etag for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG)]
     check_etag: bool,
 
+    /// use the modification time and ETag for update checking. If the local modification date is newer, check the ETag.
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_MTIME_AND_ETAG)]
+    check_mtime_and_etag: bool,
+
     /// use additional checksum for update checking
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag"], value_parser = checksum_algorithm::parse_checksum_algorithm)]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag", "check_mtime_and_etag"], value_parser = checksum_algorithm::parse_checksum_algorithm)]
     check_additional_checksum: Option<String>,
 
     /// delete objects that exist in the target but not in the source.
@@ -541,6 +551,7 @@ impl CLIArgs {
         self.check_metadata_conflict()?;
         self.check_check_size_conflict()?;
         self.check_check_e_tag_conflict()?;
+        self.check_check_mtime_and_e_tag_conflict()?;
         self.check_ignore_symlinks_conflict()?;
         self.check_no_guess_mime_type_conflict()?;
         self.check_endpoint_url_conflict()?;
@@ -735,7 +746,8 @@ impl CLIArgs {
 
         let source = storage_path::parse_storage_path(&self.source);
 
-        if !self.check_etag && matches!(source, StoragePath::Local(_)) {
+        if !self.check_etag && !self.check_mtime_and_etag && matches!(source, StoragePath::Local(_))
+        {
             return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_AUTO_CHUNKSIZE.to_string());
         }
 
@@ -795,6 +807,33 @@ impl CLIArgs {
         if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
             if is_express_onezone_storage(&bucket) {
                 return Err(CHECK_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
+        }
+
+        Ok(())
+    }
+
+    fn check_check_mtime_and_e_tag_conflict(&self) -> Result<(), String> {
+        if !self.check_mtime_and_etag {
+            return Ok(());
+        }
+
+        if self.sse.is_some() {
+            let sse = ServerSideEncryption::from_str(self.sse.as_ref().unwrap()).unwrap();
+            if sse == ServerSideEncryption::AwsKms || sse == ServerSideEncryption::AwsKmsDsse {
+                return Err(CHECK_MTIME_AND_ETAG_CONFLICT_SSE_KMS.to_string());
+            }
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(CHECK_MTIME_AND_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(CHECK_MTIME_AND_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
             }
         }
 
@@ -1220,6 +1259,7 @@ impl TryFrom<CLIArgs> for Config {
                 remove_modified_filter: value.remove_modified_filter,
                 check_size: value.check_size,
                 check_etag: value.check_etag,
+                check_mtime_and_etag: value.check_mtime_and_etag,
                 check_checksum_algorithm: check_additional_checksum_algorithm,
                 include_regex,
                 exclude_regex,
