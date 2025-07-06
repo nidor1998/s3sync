@@ -125,6 +125,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -237,6 +239,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -349,6 +353,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -461,6 +467,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -564,6 +572,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -676,6 +686,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -799,6 +811,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -925,6 +939,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -1051,6 +1067,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -1172,6 +1190,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -1299,6 +1319,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -1425,6 +1447,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -1551,6 +1575,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
@@ -1677,6 +1703,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -1798,6 +1826,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--multipart-threshold",
