@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] - 2025-07-06
+
+### Changed
+
+- Added `--check-mtime-and-etag` option.
+- Added `--check-mtime-and-additional-checksum` option.
+- Added `--source-request-payer`, `--target-request-payer` options.
+- updated dependencies.
+
+
 ## [1.16.0] - 2025-07-03
 
 ### Changed
