@@ -132,6 +132,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
@@ -162,6 +164,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--remove-modified-filter",
@@ -304,6 +308,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
@@ -338,6 +344,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--remove-modified-filter",
@@ -489,6 +497,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
@@ -526,6 +536,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--remove-modified-filter",
@@ -641,6 +653,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -750,6 +764,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -864,6 +880,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -971,6 +989,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -1076,6 +1096,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
@@ -1189,6 +1211,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
@@ -1303,6 +1327,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -1412,6 +1438,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -1529,6 +1557,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
@@ -1646,6 +1676,8 @@ mod tests {
 
             let args = vec![
                 "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
