@@ -266,6 +266,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         let client = client_config.create_client().await;
@@ -313,6 +314,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         let client = client_config.create_client().await;
@@ -349,6 +351,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         let client = client_config.create_client().await;
@@ -390,6 +393,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         let client = client_config.create_client().await;
@@ -462,6 +466,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         let client = client_config.create_client().await;
@@ -503,6 +508,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         client_config.create_client().await;
@@ -532,6 +538,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         client_config.create_client().await;
@@ -561,6 +568,7 @@ mod tests {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
             accelerate: false,
+            request_payer: None,
         };
 
         client_config.create_client().await;

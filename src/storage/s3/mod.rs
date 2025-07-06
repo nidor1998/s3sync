@@ -18,7 +18,7 @@ use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::{
     BucketVersioningStatus, ChecksumMode, DeleteMarkerEntry, ObjectAttributes, ObjectPart,
-    ObjectVersion, Tagging,
+    ObjectVersion, RequestPayer, Tagging,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
@@ -55,6 +55,7 @@ impl StorageFactory for S3StorageFactory {
         cancellation_token: PipelineCancellationToken,
         stats_sender: Sender<SyncStatistics>,
         client_config: Option<ClientConfig>,
+        request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     ) -> Storage {
@@ -66,6 +67,7 @@ impl StorageFactory for S3StorageFactory {
             Some(Arc::new(
                 client_config.as_ref().unwrap().create_client().await,
             )),
+            request_payer,
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
         )
@@ -80,18 +82,21 @@ struct S3Storage {
     prefix: String,
     cancellation_token: PipelineCancellationToken,
     client: Option<Arc<Client>>,
+    request_payer: Option<RequestPayer>,
     stats_sender: Sender<SyncStatistics>,
     rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
 }
 
 impl S3Storage {
+    #[allow(clippy::too_many_arguments)]
     async fn boxed_new(
         config: Config,
         path: StoragePath,
         cancellation_token: PipelineCancellationToken,
         stats_sender: Sender<SyncStatistics>,
         client: Option<Arc<Client>>,
+        request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     ) -> Storage {
@@ -107,6 +112,7 @@ impl S3Storage {
             prefix,
             cancellation_token,
             client,
+            request_payer,
             stats_sender,
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
@@ -240,6 +246,7 @@ impl S3Storage {
             .as_ref()
             .unwrap()
             .get_object()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id.clone())
@@ -263,6 +270,7 @@ impl S3Storage {
                     .as_ref()
                     .unwrap()
                     .get_object()
+                    .set_request_payer(self.request_payer.clone())
                     .bucket(&self.bucket)
                     .key(generate_full_key(&self.prefix, key))
                     .set_version_id(version_id)
@@ -312,6 +320,7 @@ impl StorageTrait for S3Storage {
                 .as_ref()
                 .unwrap()
                 .list_objects_v2()
+                .set_request_payer(self.request_payer.clone())
                 .bucket(&self.bucket)
                 .prefix(&self.prefix)
                 .set_continuation_token(continuation_token)
@@ -382,6 +391,7 @@ impl StorageTrait for S3Storage {
                 .as_ref()
                 .unwrap()
                 .list_object_versions()
+                .set_request_payer(self.request_payer.clone())
                 .bucket(&self.bucket)
                 .prefix(&self.prefix)
                 .set_key_marker(key_marker)
@@ -452,6 +462,7 @@ impl StorageTrait for S3Storage {
             .as_ref()
             .unwrap()
             .get_object()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id)
@@ -482,6 +493,7 @@ impl StorageTrait for S3Storage {
                 .as_ref()
                 .unwrap()
                 .list_object_versions()
+                .set_request_payer(self.request_payer.clone())
                 .bucket(&self.bucket)
                 .prefix(&key)
                 .set_key_marker(key_marker)
@@ -533,6 +545,7 @@ impl StorageTrait for S3Storage {
             .as_ref()
             .unwrap()
             .get_object_tagging()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id)
@@ -557,6 +570,7 @@ impl StorageTrait for S3Storage {
             .as_ref()
             .unwrap()
             .head_object()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id)
@@ -585,6 +599,7 @@ impl StorageTrait for S3Storage {
             .as_ref()
             .unwrap()
             .head_object()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id)
@@ -613,6 +628,7 @@ impl StorageTrait for S3Storage {
             .as_ref()
             .unwrap()
             .head_object()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
             .set_version_id(version_id.clone())
@@ -643,6 +659,7 @@ impl StorageTrait for S3Storage {
                 .as_ref()
                 .unwrap()
                 .head_object()
+                .set_request_payer(self.request_payer.clone())
                 .bucket(&self.bucket)
                 .key(generate_full_key(&self.prefix, key))
                 .set_version_id(version_id.clone())
@@ -681,6 +698,7 @@ impl StorageTrait for S3Storage {
                 .as_ref()
                 .unwrap()
                 .get_object_attributes()
+                .set_request_payer(self.request_payer.clone())
                 .bucket(&self.bucket)
                 .key(generate_full_key(&self.prefix, key))
                 .set_version_id(version_id.clone())
@@ -807,6 +825,7 @@ impl StorageTrait for S3Storage {
         let mut upload_manager = UploadManager::new(
             self.client.clone().unwrap(),
             self.config.clone(),
+            self.request_payer.clone(),
             self.cancellation_token.clone(),
             self.get_stats_sender(),
             tagging,
@@ -863,6 +882,7 @@ impl StorageTrait for S3Storage {
             .as_ref()
             .unwrap()
             .put_object_tagging()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(&target_key)
             .set_version_id(version_id.clone())
@@ -907,6 +927,7 @@ impl StorageTrait for S3Storage {
             .as_ref()
             .unwrap()
             .delete_object()
+            .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(&target_key)
             .set_version_id(version_id.clone())
@@ -1078,6 +1099,7 @@ mod tests {
             config.source_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -1115,6 +1137,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -1162,6 +1185,7 @@ mod tests {
             config.source_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -1198,6 +1222,7 @@ mod tests {
             config.source_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
     }
@@ -1228,6 +1253,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
+            None,
             None,
             None,
         )

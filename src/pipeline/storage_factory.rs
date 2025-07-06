@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_channel::Sender;
+use aws_sdk_s3::types::RequestPayer;
 use leaky_bucket::RateLimiter;
 
 use crate::config::ClientConfig;
@@ -57,6 +58,7 @@ pub async fn create_storage_pair(
     let source = create_storage(
         config.clone(),
         config.source_client_config.clone(),
+        config.source_client_config.clone().unwrap().request_payer,
         config.source.clone(),
         cancellation_token.clone(),
         stats_sender.clone(),
@@ -67,7 +69,8 @@ pub async fn create_storage_pair(
 
     let target = create_storage(
         config.clone(),
-        config.target_client_config,
+        config.target_client_config.clone(),
+        config.target_client_config.clone().unwrap().request_payer,
         config.target,
         cancellation_token,
         stats_sender.clone(),
@@ -79,9 +82,11 @@ pub async fn create_storage_pair(
     StoragePair { source, target }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn create_storage(
     config: Config,
     client_config: Option<ClientConfig>,
+    request_payer: Option<RequestPayer>,
     storage_path: StoragePath,
     cancellation_token: PipelineCancellationToken,
     stats_sender: Sender<SyncStatistics>,
@@ -99,6 +104,7 @@ async fn create_storage(
         cancellation_token,
         stats_sender,
         client_config,
+        request_payer,
         rate_limit_objects_per_sec,
         rate_limit_bandwidth,
     )

@@ -1,6 +1,7 @@
 use crate::types::{ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath};
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, ServerSideEncryption, StorageClass,
+    ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, RequestPayer, ServerSideEncryption,
+    StorageClass,
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 use chrono::{DateTime, Utc};
@@ -65,6 +66,8 @@ pub struct Config {
     pub cancellation_point: Option<String>,
     pub source_accelerate: bool,
     pub target_accelerate: bool,
+    pub source_request_payer: bool,
+    pub target_request_payer: bool,
 }
 
 impl Config {
@@ -85,6 +88,7 @@ pub struct ClientConfig {
     pub endpoint_url: Option<String>,
     pub force_path_style: bool,
     pub accelerate: bool,
+    pub request_payer: Option<RequestPayer>,
     pub retry_config: RetryConfig,
     pub https_proxy: Option<String>,
     pub http_proxy: Option<String>,
