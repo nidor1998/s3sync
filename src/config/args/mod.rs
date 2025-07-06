@@ -552,6 +552,7 @@ where
 }
 
 impl CLIArgs {
+    // skipcq: RS-R1000
     fn validate_storage_config(&self) -> Result<(), String> {
         self.check_source_local_storage()?;
         self.check_target_local_storage()?;
