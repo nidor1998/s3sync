@@ -10,7 +10,8 @@ use crate::types::{
 };
 use crate::Config;
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, ServerSideEncryption, StorageClass,
+    ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, RequestPayer, ServerSideEncryption,
+    StorageClass,
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 use chrono::{DateTime, Utc};
@@ -70,6 +71,7 @@ const DEFAULT_FULL_OBJECT_CHECKSUM: bool = false;
 const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS: u16 = 16;
 const DEFAULT_ACCELERATE: bool = false;
+const DEFAULT_REQUEST_PAYER: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -128,6 +130,10 @@ const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ACCELERATE: &str =
     "with --source-accelerate, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ACCELERATE: &str =
     "with --target-accelerate, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REQUEST_PAYER: &str =
+    "with --source-request-payer, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REQUEST_PAYER: &str =
+    "with --target-request-payer, target storage must be s3://\n";
 
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
@@ -180,6 +186,10 @@ pub struct CLIArgs {
     #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
     source_accelerate: bool,
 
+    /// Use request payer for the source bucket.
+    #[arg(long, env, default_value_t = DEFAULT_REQUEST_PAYER)]
+    source_request_payer: bool,
+
     /// force path-style addressing for source endpoint
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE)]
     source_force_path_style: bool,
@@ -211,6 +221,10 @@ pub struct CLIArgs {
     /// Use Amazon S3 Transfer Acceleration for the target bucket.
     #[arg(long, env, default_value_t = DEFAULT_ACCELERATE)]
     target_accelerate: bool,
+
+    /// Use request payer for the target bucket.
+    #[arg(long, env, default_value_t = DEFAULT_REQUEST_PAYER)]
+    target_request_payer: bool,
 
     /// force path-style addressing for target endpoint
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE)]
@@ -563,6 +577,7 @@ impl CLIArgs {
         self.check_disable_content_md5_header_conflict()?;
         self.check_full_object_checksum_conflict()?;
         self.check_accelerate_conflict()?;
+        self.check_request_payer_conflict()?;
 
         Ok(())
     }
@@ -944,6 +959,20 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_request_payer_conflict(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.source_request_payer {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REQUEST_PAYER.to_string());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) && self.target_request_payer {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REQUEST_PAYER.to_string());
+        }
+
+        Ok(())
+    }
+
     fn build_client_configs(
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
@@ -1010,6 +1039,12 @@ impl CLIArgs {
         let parallel_upload_semaphore =
             Arc::new(Semaphore::new(self.max_parallel_uploads as usize));
 
+        let source_request_payer = if self.source_request_payer {
+            Some(RequestPayer::Requester)
+        } else {
+            None
+        };
+
         let source_client_config = source_credential.map(|source_credential| ClientConfig {
             client_config_location: ClientConfigLocation {
                 aws_config_file: self.aws_config_file.clone(),
@@ -1030,7 +1065,14 @@ impl CLIArgs {
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: parallel_upload_semaphore.clone(),
             accelerate: self.source_accelerate,
+            request_payer: source_request_payer,
         });
+
+        let target_request_payer = if self.target_request_payer {
+            Some(RequestPayer::Requester)
+        } else {
+            None
+        };
 
         let target_client_config = target_credential.map(|target_credential| ClientConfig {
             client_config_location: ClientConfigLocation {
@@ -1052,6 +1094,7 @@ impl CLIArgs {
             request_checksum_calculation,
             parallel_upload_semaphore,
             accelerate: self.target_accelerate,
+            request_payer: target_request_payer,
         });
 
         (source_client_config, target_client_config)
@@ -1285,6 +1328,8 @@ impl TryFrom<CLIArgs> for Config {
             cancellation_point,
             source_accelerate: value.source_accelerate,
             target_accelerate: value.target_accelerate,
+            source_request_payer: value.source_request_payer,
+            target_request_payer: value.target_request_payer,
         })
     }
 }

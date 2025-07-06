@@ -10,7 +10,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart, ObjectPart,
-    ServerSideEncryption, StorageClass,
+    RequestPayer, ServerSideEncryption, StorageClass,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
@@ -49,6 +49,7 @@ pub struct MutipartEtags {
 pub struct UploadManager {
     client: Arc<Client>,
     config: Config,
+    request_payer: Option<RequestPayer>,
     cancellation_token: PipelineCancellationToken,
     stats_sender: Sender<SyncStatistics>,
     tagging: Option<String>,
@@ -66,6 +67,7 @@ impl UploadManager {
     pub fn new(
         client: Arc<Client>,
         config: Config,
+        request_payer: Option<RequestPayer>,
         cancellation_token: PipelineCancellationToken,
         stats_sender: Sender<SyncStatistics>,
         tagging: Option<String>,
@@ -79,6 +81,7 @@ impl UploadManager {
         UploadManager {
             client,
             config,
+            request_payer,
             cancellation_token,
             stats_sender,
             tagging,
@@ -271,6 +274,7 @@ impl UploadManager {
         let create_multipart_upload_output = self
             .client
             .create_multipart_upload()
+            .set_request_payer(self.request_payer.clone())
             .set_storage_class(storage_class)
             .bucket(bucket)
             .key(key)
@@ -353,7 +357,7 @@ impl UploadManager {
 
     #[rustfmt::skip] // For coverage tool incorrectness
     async fn abort_multipart_upload(&self, bucket: &str, key: &str, upload_id: &str) -> Result<AbortMultipartUploadOutput> {
-        self.client.abort_multipart_upload().bucket(bucket).key(key).upload_id(upload_id).send().await.context("aws_sdk_s3::client::Client abort_multipart_upload() failed.")
+        self.client.abort_multipart_upload().set_request_payer(self.request_payer.clone()).bucket(bucket).key(key).upload_id(upload_id).send().await.context("aws_sdk_s3::client::Client abort_multipart_upload() failed.")
     }
 
     async fn upload_parts_and_complete(
@@ -403,6 +407,7 @@ impl UploadManager {
         let complete_multipart_upload_output = self
             .client
             .complete_multipart_upload()
+            .set_request_payer(self.request_payer.clone())
             .bucket(bucket)
             .key(key)
             .upload_id(upload_id)
@@ -600,6 +605,7 @@ impl UploadManager {
             let multipart_chunksize = self.config.transfer_config.multipart_chunksize;
             let express_onezone_storage = self.express_onezone_storage;
             let disable_content_md5_header = self.config.disable_content_md5_header;
+            let request_payer = self.request_payer.clone();
 
             let mut buffer = Vec::<u8>::with_capacity(multipart_chunksize as usize);
             buffer.resize_with(chunksize, Default::default);
@@ -697,6 +703,7 @@ impl UploadManager {
 
                 let builder = target
                     .upload_part()
+                    .set_request_payer(request_payer)
                     .bucket(&target_bucket)
                     .key(&target_key)
                     .upload_id(target_upload_id.clone())
@@ -882,6 +889,7 @@ impl UploadManager {
             let disable_payload_signing = self.config.disable_payload_signing;
             let express_onezone_storage = self.express_onezone_storage;
             let disable_content_md5_header = self.config.disable_content_md5_header;
+            let request_payer = self.request_payer.clone();
 
             let mut buffer = Vec::<u8>::with_capacity(object_part_chunksize as usize);
             buffer.resize_with(object_part_chunksize as usize, Default::default);
@@ -978,6 +986,7 @@ impl UploadManager {
 
                 let builder = target
                     .upload_part()
+                    .set_request_payer(request_payer)
                     .bucket(&target_bucket)
                     .key(&target_key)
                     .upload_id(target_upload_id.clone())
@@ -1151,6 +1160,7 @@ impl UploadManager {
         let builder = self
             .client
             .put_object()
+            .set_request_payer(self.request_payer.clone())
             .set_storage_class(storage_class)
             .bucket(bucket)
             .key(key)

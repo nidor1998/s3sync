@@ -19,8 +19,8 @@ use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, ServerSideEncryption,
-    StorageClass, Tagging,
+    ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, RequestPayer,
+    ServerSideEncryption, StorageClass, Tagging,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_runtime_api::client::result::SdkError;
@@ -77,6 +77,7 @@ impl StorageFactory for LocalStorageFactory {
         cancellation_token: PipelineCancellationToken,
         stats_sender: Sender<SyncStatistics>,
         _client_config: Option<ClientConfig>,
+        _request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     ) -> Storage {
@@ -1567,6 +1568,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
     }
@@ -1593,6 +1595,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -1630,6 +1633,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
     }
@@ -1656,6 +1660,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -1689,6 +1694,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -1731,6 +1737,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -1763,6 +1770,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -1793,6 +1801,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -1898,6 +1907,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -1948,6 +1958,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -1994,6 +2005,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2044,6 +2056,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2077,6 +2090,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2125,6 +2139,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2297,6 +2312,7 @@ mod tests {
             config.source_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2363,6 +2379,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2433,6 +2450,7 @@ mod tests {
             config.source_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2499,6 +2517,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2569,6 +2588,7 @@ mod tests {
             config.source_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2634,6 +2654,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2674,6 +2695,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2743,6 +2765,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2798,6 +2821,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2820,6 +2844,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2860,6 +2885,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2869,6 +2895,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2912,6 +2939,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -2921,6 +2949,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.source_client_config.clone(),
+            None,
             None,
             None,
         )
@@ -2995,6 +3024,7 @@ mod tests {
             config.target_client_config.clone(),
             None,
             None,
+            None,
         )
         .await;
 
@@ -3024,6 +3054,7 @@ mod tests {
             create_pipeline_cancellation_token(),
             stats_sender,
             config.target_client_config.clone(),
+            None,
             None,
             None,
         )

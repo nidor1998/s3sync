@@ -12,7 +12,7 @@ use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
 use aws_sdk_s3::primitives::ByteStream;
-use aws_sdk_s3::types::{ChecksumMode, ObjectPart, ObjectVersion, Tagging};
+use aws_sdk_s3::types::{ChecksumMode, ObjectPart, ObjectVersion, RequestPayer, Tagging};
 use aws_sdk_s3::Client;
 use aws_smithy_types::body::SdkBody;
 use dyn_clone::DynClone;
@@ -45,12 +45,14 @@ pub struct StoragePair {
 
 #[async_trait]
 pub trait StorageFactory {
+    #[allow(clippy::too_many_arguments)]
     async fn create(
         config: Config,
         path: StoragePath,
         cancellation_token: PipelineCancellationToken,
         stats_sender: Sender<SyncStatistics>,
         client_config: Option<ClientConfig>,
+        request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     ) -> Storage;
