@@ -444,6 +444,12 @@ s3sync requires the following permissions.
 ]
 ```
 
+### Exit codes
+- 0: Exit without error
+- 1: Exit with error
+- 2: Invalid arguments
+- 3: Exit with warning
+
 ### Advanced options
 
 #### `--worker-size`

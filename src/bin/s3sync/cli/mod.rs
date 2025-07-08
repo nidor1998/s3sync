@@ -10,33 +10,52 @@ mod ctrl_c_handler;
 mod indicator;
 mod ui_config;
 
+#[allow(dead_code)]
+const EXIT_CODE_SUCCESS: i32 = 0;
+#[allow(dead_code)]
+const EXIT_CODE_ERROR: i32 = 1;
+#[allow(dead_code)]
+const EXIT_CODE_INVALID_ARGS: i32 = 2;
+const EXIT_CODE_WARNING: i32 = 3;
+
 pub async fn run(config: Config) -> Result<()> {
-    let cancellation_token = create_pipeline_cancellation_token();
+    #[allow(unused_assignments)]
+    let mut has_warning = false;
 
-    ctrl_c_handler::spawn_ctrl_c_handler(cancellation_token.clone());
+    {
+        let cancellation_token = create_pipeline_cancellation_token();
 
-    let start_time = Instant::now();
-    trace!("sync pipeline start.");
+        ctrl_c_handler::spawn_ctrl_c_handler(cancellation_token.clone());
 
-    let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
-    let indicator_join_handle = indicator::show_indicator(
-        pipeline.get_stats_receiver(),
-        ui_config::is_progress_indicator_needed(&config),
-        ui_config::is_show_result_needed(&config),
-        config.dry_run,
-    );
+        let start_time = Instant::now();
+        trace!("sync pipeline start.");
 
-    pipeline.run().await;
-    indicator_join_handle.await?;
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+        let indicator_join_handle = indicator::show_indicator(
+            pipeline.get_stats_receiver(),
+            ui_config::is_progress_indicator_needed(&config),
+            ui_config::is_show_result_needed(&config),
+            config.dry_run,
+        );
 
-    let duration_sec = format!("{:.3}", start_time.elapsed().as_secs_f32());
-    if pipeline.has_error() {
-        error!(duration_sec = duration_sec, "s3sync failed.");
+        pipeline.run().await;
+        indicator_join_handle.await?;
 
-        return Err(anyhow!("s3sync failed."));
+        let duration_sec = format!("{:.3}", start_time.elapsed().as_secs_f32());
+        if pipeline.has_error() {
+            error!(duration_sec = duration_sec, "s3sync failed.");
+
+            return Err(anyhow!("s3sync failed."));
+        }
+
+        has_warning = pipeline.has_warning();
+
+        trace!(duration_sec = duration_sec, "s3sync has been completed.");
     }
 
-    trace!(duration_sec = duration_sec, "s3sync has been completed.");
+    if has_warning {
+        std::process::exit(EXIT_CODE_WARNING);
+    }
 
     Ok(())
 }

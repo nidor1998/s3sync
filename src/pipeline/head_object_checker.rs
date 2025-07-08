@@ -4,7 +4,7 @@ use aws_sdk_s3::types::ChecksumMode;
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
-use tracing::warn;
+use tracing::error;
 
 use crate::pipeline::diff_detector::always_different_diff_detector::AlwaysDifferentDiffDetector;
 use crate::pipeline::diff_detector::checksum_diff_detector::ChecksumDiffDetector;
@@ -14,7 +14,7 @@ use crate::pipeline::diff_detector::standard_diff_detector::StandardDiffDetector
 
 use crate::storage::Storage;
 use crate::types::S3syncObject;
-use crate::types::SyncStatistics::SyncWarning;
+use crate::types::SyncStatistics::SyncError;
 use crate::Config;
 
 pub struct HeadObjectChecker {
@@ -119,7 +119,7 @@ impl HeadObjectChecker {
         }
 
         self.target
-            .send_stats(SyncWarning {
+            .send_stats(SyncError {
                 key: key.to_string(),
             })
             .await;
@@ -130,7 +130,7 @@ impl HeadObjectChecker {
             .unwrap()
             .to_string();
         let source = head_target_object_output.as_ref().err().unwrap().source();
-        warn!(
+        error!(
             worker_index = self.worker_index,
             error = error,
             source = source,
@@ -216,6 +216,8 @@ mod tests {
     use crate::types::token::create_pipeline_cancellation_token;
     use aws_sdk_s3::types::Object;
     use aws_smithy_runtime_api::http::{Response, StatusCode};
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 
     use super::*;
@@ -297,8 +299,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { target, source } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         let head_object_checker = HeadObjectChecker::new(
             config.clone(),
@@ -339,8 +346,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { target, source } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         let head_object_checker = HeadObjectChecker::new(
             config.clone(),
@@ -374,8 +386,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { target, source } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         let head_object_checker = HeadObjectChecker::new(
             config.clone(),

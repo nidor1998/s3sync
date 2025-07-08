@@ -1,6 +1,3 @@
-use std::path::PathBuf;
-use std::sync::Arc;
-
 use anyhow::{anyhow, Result};
 use async_channel::Sender;
 use async_trait::async_trait;
@@ -23,6 +20,9 @@ use futures_util::stream::TryStreamExt;
 use http_body_util::{BodyExt, StreamBody};
 use hyper::body::Frame;
 use leaky_bucket::RateLimiter;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tokio::io::{AsyncRead, BufReader};
 use tokio_util::io::ReaderStream;
 
@@ -58,6 +58,7 @@ pub trait StorageFactory {
         request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+        has_warning: Arc<AtomicBool>,
     ) -> Storage;
 }
 
@@ -166,6 +167,8 @@ pub trait StorageTrait: DynClone {
     fn get_local_path(&self) -> PathBuf;
     fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>>;
     fn generate_full_key_with_bucket(&self, key: &str, version_id: Option<String>) -> String;
+    fn has_warning(&self) -> bool;
+    fn set_warning(&self);
 }
 
 #[rustfmt::skip] // For coverage tool incorrectness

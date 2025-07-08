@@ -1,9 +1,3 @@
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::Arc;
-
 use anyhow::{anyhow, Context, Result};
 use async_channel::Sender;
 use async_trait::async_trait;
@@ -23,6 +17,12 @@ use aws_sdk_s3::types::{
 use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tracing::{debug, info, trace};
 
 use crate::config::ClientConfig;
@@ -58,6 +58,7 @@ impl StorageFactory for S3StorageFactory {
         request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+        has_warning: Arc<AtomicBool>,
     ) -> Storage {
         S3Storage::boxed_new(
             config,
@@ -70,6 +71,7 @@ impl StorageFactory for S3StorageFactory {
             request_payer,
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
+            has_warning,
         )
         .await
     }
@@ -86,6 +88,7 @@ struct S3Storage {
     stats_sender: Sender<SyncStatistics>,
     rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+    has_warning: Arc<AtomicBool>,
 }
 
 impl S3Storage {
@@ -99,6 +102,7 @@ impl S3Storage {
         request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+        has_warning: Arc<AtomicBool>,
     ) -> Storage {
         let (bucket, prefix) = if let StoragePath::S3 { bucket, prefix } = path {
             (bucket, prefix)
@@ -116,6 +120,7 @@ impl S3Storage {
             stats_sender,
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
+            has_warning,
         };
 
         Box::new(storage)
@@ -837,6 +842,7 @@ impl StorageTrait for S3Storage {
             source_key.to_string(),
             source_size,
             source_additional_checksum,
+            self.has_warning.clone(),
         );
 
         self.exec_rate_limit_objects_per_sec().await;
@@ -1041,6 +1047,15 @@ impl StorageTrait for S3Storage {
         }
         format!("{}/{}", &self.bucket, generate_full_key(&self.prefix, key))
     }
+
+    fn has_warning(&self) -> bool {
+        self.has_warning.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn set_warning(&self) {
+        self.has_warning
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
 }
 
 pub fn remove_s3_prefix(key: &str, prefix: &str) -> String {
@@ -1114,6 +1129,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1154,6 +1170,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1200,6 +1217,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1237,6 +1255,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
     }
@@ -1270,6 +1289,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 

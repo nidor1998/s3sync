@@ -17,6 +17,7 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{engine::general_purpose, Engine as _};
 use chrono::SecondsFormat;
 use futures::stream::{FuturesUnordered, StreamExt};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::io::AsyncReadExt;
 use tokio::task;
@@ -61,6 +62,7 @@ pub struct UploadManager {
     source_key: String,
     source_total_size: u64,
     source_additional_checksum: Option<String>,
+    has_warning: Arc<AtomicBool>,
 }
 
 impl UploadManager {
@@ -78,6 +80,7 @@ impl UploadManager {
         source_key: String,
         source_total_size: u64,
         source_additional_checksum: Option<String>,
+        has_warning: Arc<AtomicBool>,
     ) -> Self {
         UploadManager {
             client,
@@ -93,6 +96,7 @@ impl UploadManager {
             source_key,
             source_total_size,
             source_additional_checksum,
+            has_warning,
         }
     }
 
@@ -520,6 +524,7 @@ impl UploadManager {
                         key: key.to_string(),
                     })
                     .await;
+                    self.has_warning.store(true, Ordering::SeqCst);
 
                     let source_e_tag = source_e_tag.clone().unwrap();
                     let target_e_tag = target_e_tag.clone().unwrap();
@@ -1495,6 +1500,7 @@ impl UploadManager {
                 key: key.to_string(),
             })
             .await;
+            self.has_warning.store(true, Ordering::SeqCst);
 
             warn!(
                 key = &key,
@@ -1530,6 +1536,7 @@ impl UploadManager {
                         key: key.to_string(),
                     })
                     .await;
+                    self.has_warning.store(true, Ordering::SeqCst);
 
                     let message = if source_remote_storage
                         && is_multipart_upload_e_tag(source_e_tag)
