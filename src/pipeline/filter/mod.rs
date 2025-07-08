@@ -99,6 +99,8 @@ mod tests {
     use crate::Config;
     use async_channel::Receiver;
     use aws_sdk_s3::types::Object;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 
     use super::*;
@@ -220,6 +222,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -233,6 +236,7 @@ mod tests {
                 receiver: Some(receiver),
                 sender: Some(sender),
                 cancellation_token,
+                has_warning: Arc::new(AtomicBool::new(false)),
             },
             next_stage_receiver,
         )

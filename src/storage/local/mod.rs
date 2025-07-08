@@ -1,9 +1,3 @@
-use std::error::Error;
-use std::io;
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::sync::{Arc, Mutex};
-
 use anyhow::{anyhow, Context, Result};
 use async_channel::Sender;
 use async_trait::async_trait;
@@ -31,6 +25,12 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use futures_util::stream::FuturesUnordered;
 use futures_util::StreamExt;
 use leaky_bucket::RateLimiter;
+use std::error::Error;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::task;
@@ -80,6 +80,7 @@ impl StorageFactory for LocalStorageFactory {
         _request_payer: Option<RequestPayer>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+        has_warning: Arc<AtomicBool>,
     ) -> Storage {
         LocalStorage::create(
             config,
@@ -88,6 +89,7 @@ impl StorageFactory for LocalStorageFactory {
             stats_sender,
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
+            has_warning,
         )
         .await
     }
@@ -101,6 +103,7 @@ struct LocalStorage {
     stats_sender: Sender<SyncStatistics>,
     rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+    has_warning: Arc<AtomicBool>,
 }
 
 impl LocalStorage {
@@ -111,6 +114,7 @@ impl LocalStorage {
         stats_sender: Sender<SyncStatistics>,
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+        has_warning: Arc<AtomicBool>,
     ) -> Storage {
         let local_path = if let StoragePath::Local(local_path) = path {
             local_path
@@ -125,6 +129,7 @@ impl LocalStorage {
             stats_sender,
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
+            has_warning,
         };
 
         Box::new(storage)
@@ -143,6 +148,7 @@ impl LocalStorage {
                 key: path.to_string(),
             })
             .await;
+            self.set_warning();
 
             let path = entry.path().to_str().unwrap();
             let error = e.to_string();
@@ -287,6 +293,7 @@ impl LocalStorage {
                         );
 
                         self.send_stats(SyncWarning { key: key.clone() }).await;
+                        self.set_warning();
                     }
                 } else {
                     let source_e_tag = source_e_tag.clone().unwrap();
@@ -310,6 +317,7 @@ impl LocalStorage {
             );
 
             self.send_stats(SyncWarning { key: key.clone() }).await;
+            self.set_warning();
         }
 
         // Since aws-sdk-s3 1.69.0, the checksum mode is always enabled,
@@ -371,6 +379,7 @@ impl LocalStorage {
                 );
 
                 self.send_stats(SyncWarning { key }).await;
+                self.set_warning();
             } else {
                 trace!(
                     key = &key,
@@ -918,6 +927,7 @@ impl StorageTrait for LocalStorage {
                     key: path.to_string(),
                 })
                 .await;
+                self.set_warning();
 
                 let error = e.to_string();
                 warn!(path = path, error = error, "failed to list local files.");
@@ -1190,6 +1200,7 @@ impl StorageTrait for LocalStorage {
                 key: key.to_string(),
             })
             .await;
+            self.set_warning();
 
             let error = e.to_string();
             let source = e.source();
@@ -1363,6 +1374,13 @@ impl StorageTrait for LocalStorage {
 
     fn generate_full_key_with_bucket(&self, _: &str, _: Option<String>) -> String {
         unimplemented!()
+    }
+    fn has_warning(&self) -> bool {
+        self.has_warning.load(Ordering::SeqCst)
+    }
+
+    fn set_warning(&self) {
+        self.has_warning.store(true, Ordering::SeqCst);
     }
 }
 
@@ -1574,6 +1592,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
     }
@@ -1603,6 +1622,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1639,6 +1659,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
     }
@@ -1668,6 +1689,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1702,6 +1724,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1743,6 +1766,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1776,6 +1800,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1809,6 +1834,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1915,6 +1941,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -1966,6 +1993,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2015,6 +2043,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2064,6 +2093,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2100,6 +2130,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2149,6 +2180,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2320,6 +2352,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2389,6 +2422,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2458,6 +2492,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2527,6 +2562,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2596,6 +2632,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2662,6 +2699,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2706,6 +2744,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2775,6 +2814,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2832,6 +2872,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2857,6 +2898,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2896,6 +2938,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2908,6 +2951,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2950,6 +2994,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -2962,6 +3007,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -3035,6 +3081,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 
@@ -3067,6 +3114,7 @@ mod tests {
             None,
             None,
             None,
+            Arc::new(AtomicBool::new(false)),
         )
         .await;
 

@@ -114,6 +114,7 @@ impl ObjectSyncer {
                             key: key.to_string(),
                         })
                         .await;
+                    self.base.set_warning();
 
                     warn!(
                         worker_index = self.worker_index,
@@ -140,6 +141,7 @@ impl ObjectSyncer {
                             key: key.to_string(),
                         })
                         .await;
+                    self.base.set_warning();
                     warn!(
                         worker_index = self.worker_index,
                         key = key,
@@ -161,6 +163,7 @@ impl ObjectSyncer {
                             key: key.to_string(),
                         })
                         .await;
+                    self.base.set_warning();
                     warn!(
                         worker_index = self.worker_index,
                         key = key,
@@ -513,6 +516,7 @@ impl ObjectSyncer {
                 key: key.to_string(),
             })
             .await;
+        self.base.set_warning();
 
         if is_cancelled_error(&e) {
             warn!(
@@ -716,6 +720,7 @@ impl ObjectSyncer {
                     key: object.key().to_string(),
                 })
                 .await;
+            self.base.set_warning();
 
             return None;
         }
@@ -1189,6 +1194,8 @@ mod tests {
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
     use aws_smithy_runtime_api::http::{Response, StatusCode};
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 
     use super::*;
@@ -1290,8 +1297,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, stats_receiver) = async_channel::unbounded();
 
-        let StoragePair { source, target } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
 
         sender
@@ -1314,6 +1326,7 @@ mod tests {
                 Some(receiver),
                 None,
                 cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
             ),
             0,
         )
@@ -1344,8 +1357,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, stats_receiver) = async_channel::unbounded();
 
-        let StoragePair { source, target } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
         let (next_sender, _next_receiver) = async_channel::bounded::<S3syncObject>(1000);
 
@@ -1369,6 +1387,7 @@ mod tests {
                 Some(receiver),
                 Some(next_sender),
                 cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
             ),
             0,
         )
@@ -1413,8 +1432,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { source, target } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
         let (next_sender, _next_receiver) = async_channel::bounded::<S3syncObject>(1000);
 
@@ -1438,6 +1462,7 @@ mod tests {
                 Some(receiver),
                 Some(next_sender),
                 cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
             ),
             0,
         )
@@ -1478,8 +1503,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { source, target } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
 
         sender
@@ -1501,6 +1531,7 @@ mod tests {
                 Some(receiver),
                 None,
                 cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
             ),
             0,
         )
@@ -1535,8 +1566,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { source, target } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
 
         sender
@@ -1558,6 +1594,7 @@ mod tests {
                 Some(receiver),
                 None,
                 cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
             ),
             0,
         )
@@ -1592,8 +1629,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { source, target } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
         let (_, receiver) = async_channel::bounded::<S3syncObject>(1000);
 
         cancellation_token.cancel();
@@ -1606,6 +1648,7 @@ mod tests {
                 Some(receiver),
                 None,
                 cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
             ),
             0,
         )

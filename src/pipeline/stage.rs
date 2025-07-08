@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use async_channel::{Receiver, Sender};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crate::storage::Storage;
 use crate::types::token::PipelineCancellationToken;
@@ -13,6 +15,7 @@ pub struct Stage {
     pub receiver: Option<Receiver<S3syncObject>>,
     pub sender: Option<Sender<S3syncObject>>,
     pub cancellation_token: PipelineCancellationToken,
+    pub has_warning: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +32,7 @@ impl Stage {
         receiver: Option<Receiver<S3syncObject>>,
         sender: Option<Sender<S3syncObject>>,
         cancellation_token: PipelineCancellationToken,
+        has_warning: Arc<AtomicBool>,
     ) -> Self {
         Self {
             config,
@@ -37,6 +41,7 @@ impl Stage {
             receiver,
             sender,
             cancellation_token,
+            has_warning,
         }
     }
 
@@ -72,5 +77,9 @@ impl Stage {
             .get_stats_sender()
             .send(stats)
             .await;
+    }
+
+    pub fn set_warning(&self) {
+        self.has_warning.store(true, Ordering::SeqCst);
     }
 }

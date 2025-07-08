@@ -132,6 +132,8 @@ impl ChecksumDiffDetector {
             );
 
             self.target.send_stats(SyncWarning { key }).await;
+            self.target.set_warning();
+
             return Ok(false);
         }
 
@@ -166,6 +168,7 @@ impl ChecksumDiffDetector {
                 );
 
                 self.target.send_stats(SyncWarning { key }).await;
+                self.target.set_warning();
             }
 
             return Ok(false);
@@ -252,6 +255,7 @@ impl ChecksumDiffDetector {
                     key: key.to_string(),
                 })
                 .await;
+            self.target.set_warning();
 
             warn!(
                 name = FILTER_NAME,
@@ -319,6 +323,7 @@ impl ChecksumDiffDetector {
                         key: key.to_string(),
                     })
                     .await;
+                self.target.set_warning();
 
                 warn!(
                     name = FILTER_NAME,
@@ -439,6 +444,7 @@ impl ChecksumDiffDetector {
             );
 
             self.target.send_stats(SyncWarning { key }).await;
+            self.target.set_warning();
 
             return Ok(false);
         }
@@ -524,6 +530,7 @@ impl ChecksumDiffDetector {
                 );
 
                 self.target.send_stats(SyncWarning { key }).await;
+                self.target.set_warning();
             }
 
             return Ok(false);
@@ -555,6 +562,8 @@ mod tests {
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::ChecksumAlgorithm;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
 
     use super::*;
@@ -578,8 +587,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { target, source } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         let diff_detector = ChecksumDiffDetector {
             config: config.clone(),
@@ -620,8 +634,13 @@ mod tests {
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let StoragePair { target, source } =
-            create_storage_pair(config.clone(), cancellation_token.clone(), stats_sender).await;
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         let diff_detector = ChecksumDiffDetector {
             config: config.clone(),

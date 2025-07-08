@@ -46,17 +46,20 @@ pub struct Pipeline {
     cancellation_token: PipelineCancellationToken,
     stats_receiver: Receiver<SyncStatistics>,
     has_error: Arc<AtomicBool>,
+    has_warning: Arc<AtomicBool>,
     errors: Arc<Mutex<VecDeque<Error>>>,
     ready: bool,
 }
 
 impl Pipeline {
     pub async fn new(config: Config, cancellation_token: PipelineCancellationToken) -> Self {
+        let has_warning = Arc::new(AtomicBool::new(false));
         let (stats_sender, stats_receiver) = async_channel::unbounded();
         let StoragePair { source, target } = storage_factory::create_storage_pair(
             config.clone(),
             cancellation_token.clone(),
             stats_sender,
+            has_warning.clone(),
         )
         .await;
 
@@ -86,6 +89,7 @@ impl Pipeline {
             cancellation_token,
             stats_receiver,
             has_error: Arc::new(AtomicBool::new(false)),
+            has_warning,
             errors: Arc::new(Mutex::new(VecDeque::<Error>::new())),
             ready: true,
         }
@@ -208,7 +212,7 @@ impl Pipeline {
     }
 
     fn list_source(&self) -> Receiver<S3syncObject> {
-        let (stage, next_stage_receiver) = self.create_spsc_stage(None);
+        let (stage, next_stage_receiver) = self.create_spsc_stage(None, self.has_warning.clone());
         let object_lister = ObjectLister::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
@@ -228,7 +232,7 @@ impl Pipeline {
     }
 
     fn list_target(&self) -> Receiver<S3syncObject> {
-        let (stage, next_stage_receiver) = self.create_spsc_stage(None);
+        let (stage, next_stage_receiver) = self.create_spsc_stage(None, self.has_warning.clone());
         let object_lister = ObjectLister::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
@@ -256,7 +260,8 @@ impl Pipeline {
             return objects_list;
         }
 
-        let (stage, next_stage_receiver) = self.create_spsc_stage(Some(objects_list));
+        let (stage, next_stage_receiver) =
+            self.create_spsc_stage(Some(objects_list), self.has_warning.clone());
         let key_aggregator = KeyAggregator::new(stage);
 
         let has_error = self.has_error.clone();
@@ -278,7 +283,8 @@ impl Pipeline {
         let mut previous_stage_receiver = objects_list;
 
         if self.config.filter_config.before_time.is_some() {
-            let (stage, new_receiver) = self.create_spsc_stage(Some(previous_stage_receiver));
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::MtimeBeforeFilter::new(stage, None)));
             trace!("MtimeBeforeFilter has been started.");
@@ -287,7 +293,8 @@ impl Pipeline {
         }
 
         if self.config.filter_config.after_time.is_some() {
-            let (stage, new_receiver) = self.create_spsc_stage(Some(previous_stage_receiver));
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::MtimeAfterFilter::new(stage, None)));
             trace!("MtimeAfterFilter has been started.");
@@ -296,7 +303,8 @@ impl Pipeline {
         }
 
         if self.config.filter_config.smaller_size.is_some() {
-            let (stage, new_receiver) = self.create_spsc_stage(Some(previous_stage_receiver));
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::SmallerSizeFilter::new(stage, None)));
             trace!("SmallerSizeFilter has been started.");
@@ -305,7 +313,8 @@ impl Pipeline {
         }
 
         if self.config.filter_config.larger_size.is_some() {
-            let (stage, new_receiver) = self.create_spsc_stage(Some(previous_stage_receiver));
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::LargerSizeFilter::new(stage, None)));
             trace!("LargerSizeFilter has been started.");
@@ -314,7 +323,8 @@ impl Pipeline {
         }
 
         if self.config.filter_config.include_regex.is_some() {
-            let (stage, new_receiver) = self.create_spsc_stage(Some(previous_stage_receiver));
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(IncludeRegexFilter::new(stage, None)));
             trace!("IncludeRegexFilter has been started.");
@@ -323,7 +333,8 @@ impl Pipeline {
         }
 
         if self.config.filter_config.exclude_regex.is_some() {
-            let (stage, new_receiver) = self.create_spsc_stage(Some(previous_stage_receiver));
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(ExcludeRegexFilter::new(stage, None)));
             trace!("ExcludeRegexFilter has been started.");
@@ -332,7 +343,8 @@ impl Pipeline {
         }
 
         if !self.config.enable_versioning && !self.config.filter_config.remove_modified_filter {
-            let (stage, new_receiver) = self.create_spsc_stage(Some(previous_stage_receiver));
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
             self.spawn_filter(Box::new(filter::TargetModifiedFilter::new(
                 stage,
                 self.target_key_map.clone(),
@@ -365,7 +377,11 @@ impl Pipeline {
             async_channel::bounded::<S3syncObject>(CHANNEL_CAPACITY);
 
         for worker_index in 0..(self.config.worker_size) {
-            let stage = self.create_mpmc_stage(sender.clone(), target_objects.clone());
+            let stage = self.create_mpmc_stage(
+                sender.clone(),
+                target_objects.clone(),
+                self.has_warning.clone(),
+            );
             let object_syncer = ObjectSyncer::new(stage, worker_index);
             let has_error = self.has_error.clone();
             let error_list = self.errors.clone();
@@ -388,9 +404,9 @@ impl Pipeline {
         &self,
         target_objects: Receiver<S3syncObject>,
     ) -> Receiver<S3syncObject> {
-        let (stage, new_receiver) = self.create_spsc_stage(Some(target_objects));
+        let (stage, new_receiver) =
+            self.create_spsc_stage(Some(target_objects), self.has_warning.clone());
         let packer = ObjectVersionsPacker::new(stage);
-
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
         tokio::spawn(async move {
@@ -421,7 +437,7 @@ impl Pipeline {
     }
 
     fn list_diff(&self) -> Receiver<S3syncObject> {
-        let (stage, next_stage_receiver) = self.create_spsc_stage(None);
+        let (stage, next_stage_receiver) = self.create_spsc_stage(None, self.has_warning.clone());
         let diff_lister = DiffLister::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
@@ -449,7 +465,11 @@ impl Pipeline {
             async_channel::bounded::<S3syncObject>(CHANNEL_CAPACITY);
 
         for worker_index in 0..(self.config.worker_size) {
-            let stage = self.create_mpmc_stage(sender.clone(), target_objects.clone());
+            let stage = self.create_mpmc_stage(
+                sender.clone(),
+                target_objects.clone(),
+                self.has_warning.clone(),
+            );
             let object_deleter = ObjectDeleter::new(stage, worker_index);
             let has_error = self.has_error.clone();
             let error_list = self.errors.clone();
@@ -471,6 +491,7 @@ impl Pipeline {
     fn create_spsc_stage(
         &self,
         previous_stage_receiver: Option<Receiver<S3syncObject>>,
+        has_warning: Arc<AtomicBool>,
     ) -> (Stage, Receiver<S3syncObject>) {
         let (sender, next_stage_receiver) =
             async_channel::bounded::<S3syncObject>(CHANNEL_CAPACITY);
@@ -481,6 +502,7 @@ impl Pipeline {
             previous_stage_receiver,
             Some(sender),
             self.cancellation_token.clone(),
+            has_warning,
         );
 
         (stage, next_stage_receiver)
@@ -490,6 +512,7 @@ impl Pipeline {
         &self,
         sender: Sender<S3syncObject>,
         receiver: Receiver<S3syncObject>,
+        has_warning: Arc<AtomicBool>,
     ) -> Stage {
         Stage::new(
             self.config.clone(),
@@ -498,6 +521,7 @@ impl Pipeline {
             Some(receiver),
             Some(sender),
             self.cancellation_token.clone(),
+            has_warning,
         )
     }
 
@@ -525,6 +549,10 @@ impl Pipeline {
 
     pub fn has_error(&self) -> bool {
         self.has_error.load(Ordering::SeqCst)
+    }
+
+    pub fn has_warning(&self) -> bool {
+        self.has_warning.load(Ordering::SeqCst)
     }
 
     pub fn get_errors_and_consume(&self) -> Option<Vec<Error>> {

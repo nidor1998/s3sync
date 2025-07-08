@@ -1,8 +1,8 @@
-use std::sync::Arc;
-
 use async_channel::Sender;
 use aws_sdk_s3::types::RequestPayer;
 use leaky_bucket::RateLimiter;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 use crate::config::ClientConfig;
 use crate::storage::local::LocalStorageFactory;
@@ -19,6 +19,7 @@ pub async fn create_storage_pair(
     config: Config,
     cancellation_token: PipelineCancellationToken,
     stats_sender: Sender<SyncStatistics>,
+    has_warning: Arc<AtomicBool>,
 ) -> StoragePair {
     let rate_limit_objects_per_sec = if config.rate_limit_objects.is_some() {
         let rate_limit_value = config.rate_limit_objects.unwrap();
@@ -64,6 +65,7 @@ pub async fn create_storage_pair(
         stats_sender.clone(),
         rate_limit_objects_per_sec.clone(),
         rate_limit_bandwidth.clone(),
+        has_warning.clone(),
     )
     .await;
 
@@ -76,6 +78,7 @@ pub async fn create_storage_pair(
         stats_sender.clone(),
         rate_limit_objects_per_sec.clone(),
         rate_limit_bandwidth.clone(),
+        has_warning.clone(),
     )
     .await;
 
@@ -92,6 +95,7 @@ async fn create_storage(
     stats_sender: Sender<SyncStatistics>,
     rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
+    has_warning: Arc<AtomicBool>,
 ) -> Storage {
     let factory_fn = match storage_path {
         StoragePath::S3 { .. } => S3StorageFactory::create,
@@ -107,6 +111,7 @@ async fn create_storage(
         request_payer,
         rate_limit_objects_per_sec,
         rate_limit_bandwidth,
+        has_warning,
     )
     .await
 }
@@ -139,7 +144,13 @@ mod tests {
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
 
-        create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
+        create_storage_pair(
+            config,
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -158,8 +169,13 @@ mod tests {
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let storage_pair =
-            create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
+        let storage_pair = create_storage_pair(
+            config,
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         assert!(storage_pair.source.get_client().is_none());
     }
@@ -180,8 +196,13 @@ mod tests {
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let storage_pair =
-            create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
+        let storage_pair = create_storage_pair(
+            config,
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         assert!(storage_pair.target.get_client().is_none());
     }
@@ -206,8 +227,13 @@ mod tests {
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
 
-        let storage_pair =
-            create_storage_pair(config, create_pipeline_cancellation_token(), stats_sender).await;
+        let storage_pair = create_storage_pair(
+            config,
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
 
         assert!(storage_pair.target.get_client().is_none());
     }

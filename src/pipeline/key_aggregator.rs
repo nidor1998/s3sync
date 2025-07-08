@@ -72,9 +72,6 @@ fn build_object_key_entry(object: &S3syncObject) -> ObjectEntry {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use std::sync::Mutex;
-
     use crate::config::args::parse_from_args;
     use crate::pipeline::key_aggregator::{build_object_key_entry, insert_key, KeyAggregator};
     use crate::pipeline::stage::Stage;
@@ -83,6 +80,9 @@ mod tests {
     use crate::Config;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
+    use std::collections::HashMap;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::{Arc, Mutex};
     use tracing_subscriber::EnvFilter;
 
     #[test]
@@ -168,6 +168,7 @@ mod tests {
             receiver: Some(previous_stage_receiver),
             sender: Some(sender),
             cancellation_token,
+            has_warning: Arc::new(AtomicBool::new(false)),
         };
 
         let key_aggregator = KeyAggregator { base };
@@ -218,6 +219,7 @@ mod tests {
             receiver: Some(previous_stage_receiver),
             sender: Some(sender),
             cancellation_token,
+            has_warning: Arc::new(AtomicBool::new(false)),
         };
 
         let key_aggregator = KeyAggregator { base };
@@ -260,6 +262,7 @@ mod tests {
             receiver: Some(previous_stage_receiver),
             sender: Some(sender),
             cancellation_token,
+            has_warning: Arc::new(AtomicBool::new(false)),
         };
 
         let key_aggregator = KeyAggregator { base };
@@ -310,6 +313,7 @@ mod tests {
             receiver: Some(previous_stage_receiver),
             sender: Some(sender),
             cancellation_token: cancellation_token.clone(),
+            has_warning: Arc::new(AtomicBool::new(false)),
         };
 
         let key_aggregator = KeyAggregator { base };
