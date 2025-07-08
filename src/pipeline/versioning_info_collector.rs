@@ -114,6 +114,7 @@ impl VersioningInfoCollector {
                     object.key().unwrap(),
                     Some(target_version_id),
                     None,
+                    None,
                     self.config.target_sse_c.clone(),
                     self.config.target_sse_c_key.clone(),
                     self.config.target_sse_c_key_md5.clone(),

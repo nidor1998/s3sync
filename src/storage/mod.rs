@@ -4,6 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use async_channel::Sender;
 use async_trait::async_trait;
+use aws_sdk_s3::operation::copy_object::CopyObjectOutput;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
@@ -11,6 +12,8 @@ use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
+use aws_sdk_s3::operation::upload_part::UploadPartOutput;
+use aws_sdk_s3::operation::upload_part_copy::UploadPartCopyOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::{ChecksumMode, ObjectPart, ObjectVersion, RequestPayer, Tagging};
 use aws_sdk_s3::Client;
@@ -58,6 +61,7 @@ pub trait StorageFactory {
     ) -> Storage;
 }
 
+#[allow(clippy::too_many_arguments)]
 #[async_trait]
 pub trait StorageTrait: DynClone {
     fn is_local_storage(&self) -> bool;
@@ -96,6 +100,7 @@ pub trait StorageTrait: DynClone {
         key: &str,
         version_id: Option<String>,
         checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
@@ -160,6 +165,7 @@ pub trait StorageTrait: DynClone {
     async fn send_stats(&self, stats: SyncStatistics);
     fn get_local_path(&self) -> PathBuf;
     fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>>;
+    fn generate_full_key_with_bucket(&self, key: &str, version_id: Option<String>) -> String;
 }
 
 #[rustfmt::skip] // For coverage tool incorrectness
@@ -220,6 +226,224 @@ pub fn get_range_from_content_range(get_object_output: &GetObjectOutput) -> Opti
     }
 
     None
+}
+
+pub fn convert_head_to_get_object_output(head_object_output: HeadObjectOutput) -> GetObjectOutput {
+    GetObjectOutput::builder()
+        .set_accept_ranges(head_object_output.accept_ranges().map(|s| s.to_string()))
+        .set_body(Some(ByteStream::from(vec![])))
+        .set_bucket_key_enabled(head_object_output.bucket_key_enabled())
+        .set_cache_control(head_object_output.cache_control().map(|s| s.to_string()))
+        .set_checksum_crc32(head_object_output.checksum_crc32().map(|s| s.to_string()))
+        .set_checksum_crc32_c(head_object_output.checksum_crc32_c().map(|s| s.to_string()))
+        .set_checksum_crc64_nvme(
+            head_object_output
+                .checksum_crc64_nvme()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha1(head_object_output.checksum_sha1().map(|s| s.to_string()))
+        .set_checksum_sha256(head_object_output.checksum_sha256().map(|s| s.to_string()))
+        .set_checksum_type(head_object_output.checksum_type().cloned())
+        .set_content_disposition(
+            head_object_output
+                .content_disposition()
+                .map(|s| s.to_string()),
+        )
+        .set_content_encoding(head_object_output.content_encoding().map(|s| s.to_string()))
+        .set_content_language(head_object_output.content_language().map(|s| s.to_string()))
+        .set_content_length(head_object_output.content_length())
+        .set_content_range(head_object_output.content_range().map(|s| s.to_string()))
+        .set_content_type(head_object_output.content_type().map(|s| s.to_string()))
+        .set_delete_marker(head_object_output.delete_marker())
+        .set_e_tag(head_object_output.e_tag().map(|s| s.to_string()))
+        .set_expiration(head_object_output.expiration().map(|s| s.to_string()))
+        .set_expires_string(head_object_output.expires_string().map(|s| s.to_string()))
+        .set_last_modified(head_object_output.last_modified().cloned())
+        .set_metadata(head_object_output.metadata().cloned())
+        .set_missing_meta(head_object_output.missing_meta())
+        .set_object_lock_legal_hold_status(
+            head_object_output.object_lock_legal_hold_status().cloned(),
+        )
+        .set_object_lock_mode(head_object_output.object_lock_mode().cloned())
+        .set_object_lock_retain_until_date(
+            head_object_output.object_lock_retain_until_date().cloned(),
+        )
+        .set_parts_count(head_object_output.parts_count())
+        .set_replication_status(head_object_output.replication_status().cloned())
+        .set_request_charged(head_object_output.request_charged().cloned())
+        .set_restore(head_object_output.restore().map(|s| s.to_string()))
+        .set_server_side_encryption(head_object_output.server_side_encryption().cloned())
+        .set_sse_customer_algorithm(
+            head_object_output
+                .sse_customer_algorithm()
+                .map(|s| s.to_string()),
+        )
+        .set_sse_customer_key_md5(
+            head_object_output
+                .sse_customer_key_md5()
+                .map(|s| s.to_string()),
+        )
+        .set_ssekms_key_id(head_object_output.ssekms_key_id().map(|s| s.to_string()))
+        .set_storage_class(head_object_output.storage_class().cloned())
+        .set_tag_count(head_object_output.tag_count())
+        .set_version_id(head_object_output.version_id().map(|s| s.to_string()))
+        .set_website_redirect_location(
+            head_object_output
+                .website_redirect_location()
+                .map(|s| s.to_string()),
+        )
+        .build()
+}
+
+pub fn convert_copy_to_put_object_output(
+    copy_object_output: CopyObjectOutput,
+    size: i64,
+) -> PutObjectOutput {
+    PutObjectOutput::builder()
+        .set_bucket_key_enabled(copy_object_output.bucket_key_enabled())
+        .set_checksum_crc32(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_crc32()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_crc32_c(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_crc32_c()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_crc64_nvme(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_crc64_nvme()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha1(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_sha1()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha256(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_sha256()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_type(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_type()
+                .cloned(),
+        )
+        .set_e_tag(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .e_tag()
+                .map(|s| s.to_string()),
+        )
+        .set_expiration(
+            copy_object_output
+                .clone()
+                .expiration()
+                .map(|s| s.to_string()),
+        )
+        .set_request_charged(copy_object_output.request_charged().cloned())
+        .set_server_side_encryption(copy_object_output.server_side_encryption().cloned())
+        .set_size(Some(size))
+        .set_sse_customer_algorithm(
+            copy_object_output
+                .sse_customer_algorithm()
+                .map(|s| s.to_string()),
+        )
+        .set_sse_customer_key_md5(
+            copy_object_output
+                .sse_customer_key_md5()
+                .map(|s| s.to_string()),
+        )
+        .set_ssekms_encryption_context(
+            copy_object_output
+                .ssekms_encryption_context()
+                .map(|s| s.to_string()),
+        )
+        .set_ssekms_key_id(copy_object_output.ssekms_key_id().map(|s| s.to_string()))
+        .set_version_id(copy_object_output.version_id().map(|s| s.to_string()))
+        .build()
+}
+
+pub fn convert_copy_to_upload_part_output(
+    upload_part_copy_output: UploadPartCopyOutput,
+) -> UploadPartOutput {
+    UploadPartOutput::builder()
+        .set_server_side_encryption(upload_part_copy_output.server_side_encryption().cloned())
+        .set_e_tag(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .e_tag()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_crc32(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_crc32()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_crc32_c(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_crc32_c()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_crc64_nvme(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_crc64_nvme()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha1(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_sha1()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha256(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_sha256()
+                .map(|s| s.to_string()),
+        )
+        .set_sse_customer_algorithm(
+            upload_part_copy_output
+                .sse_customer_algorithm()
+                .map(|s| s.to_string()),
+        )
+        .set_sse_customer_key_md5(
+            upload_part_copy_output
+                .sse_customer_key_md5()
+                .map(|s| s.to_string()),
+        )
+        .set_ssekms_key_id(
+            upload_part_copy_output
+                .ssekms_key_id()
+                .map(|s| s.to_string()),
+        )
+        .set_bucket_key_enabled(upload_part_copy_output.bucket_key_enabled())
+        .set_request_charged(upload_part_copy_output.request_charged().cloned())
+        .build()
 }
 
 #[derive(Clone)]

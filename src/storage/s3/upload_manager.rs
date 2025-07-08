@@ -9,8 +9,8 @@ use aws_sdk_s3::operation::put_object::PutObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart, ObjectPart,
-    RequestPayer, ServerSideEncryption, StorageClass,
+    ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart, MetadataDirective,
+    ObjectPart, RequestPayer, ServerSideEncryption, StorageClass,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
@@ -27,6 +27,7 @@ use crate::config::Config;
 use crate::storage;
 use crate::storage::e_tag_verify::{generate_e_tag_hash, is_multipart_upload_e_tag};
 use crate::storage::{
+    convert_copy_to_put_object_output, convert_copy_to_upload_part_output,
     convert_to_buf_byte_stream_with_callback, get_range_from_content_range,
     parse_range_header_string, Storage,
 };
@@ -564,6 +565,9 @@ impl UploadManager {
         let first_chunk_size = get_object_output_first_chunk.content_length().unwrap();
         let config_chunksize = self.config.transfer_config.multipart_chunksize as usize;
         let source_total_size = self.source_total_size as usize;
+        let source_version_id = get_object_output_first_chunk
+            .version_id()
+            .map(|v| v.to_string());
 
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
@@ -576,9 +580,16 @@ impl UploadManager {
 
             let source = dyn_clone::clone_box(&*(self.source));
             let source_key = self.source_key.clone();
+            let copy_source = if self.config.server_side_copy {
+                self.source
+                    .generate_full_key_with_bucket(source_key.as_ref(), source_version_id.clone())
+            } else {
+                "".to_string()
+            };
             let source_version_id = shared_source_version_id.clone();
             let source_sse_c = self.config.source_sse_c.clone();
             let source_sse_c_key = self.config.source_sse_c_key.clone();
+            let source_sse_c_key_string = self.config.source_sse_c_key.clone().key.clone();
             let source_sse_c_key_md5 = self.config.source_sse_c_key_md5.clone();
 
             let target = dyn_clone::clone_box(&*(self.client));
@@ -606,12 +617,20 @@ impl UploadManager {
             let express_onezone_storage = self.express_onezone_storage;
             let disable_content_md5_header = self.config.disable_content_md5_header;
             let request_payer = self.request_payer.clone();
+            let server_side_copy = self.config.server_side_copy;
 
-            let mut buffer = Vec::<u8>::with_capacity(multipart_chunksize as usize);
-            buffer.resize_with(chunksize, Default::default);
+            let stats_sender = self.stats_sender.clone();
+
+            let mut buffer = if !server_side_copy {
+                let mut buffer = Vec::<u8>::with_capacity(multipart_chunksize as usize);
+                buffer.resize_with(chunksize, Default::default);
+                buffer
+            } else {
+                Vec::new() // For server-side copy, we do not need to read the body.
+            };
 
             // For the first part, we read the data from the supplied body.
-            if part_number == 1 {
+            if part_number == 1 && !server_side_copy {
                 body.read_exact(buffer.as_mut_slice())
                     .await
                     .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
@@ -638,112 +657,153 @@ impl UploadManager {
                 let upload_size;
                 // If the part number is greater than 1, we need to get the object from the source storage.
                 if part_number > 1 {
-                    let get_object_output = source
-                        .get_object(
-                            &source_key,
-                            source_version_id,
-                            additional_checksum_mode,
-                            Some(range.clone()),
-                            source_sse_c,
-                            source_sse_c_key,
-                            source_sse_c_key_md5,
+                    if !server_side_copy {
+                        let get_object_output = source
+                            .get_object(
+                                &source_key,
+                                source_version_id,
+                                additional_checksum_mode,
+                                Some(range.clone()),
+                                source_sse_c.clone(),
+                                source_sse_c_key,
+                                source_sse_c_key_md5.clone(),
+                            )
+                            .await
+                            .context("source.get_object() failed.")?;
+                        upload_size = get_object_output.content_length().unwrap();
+
+                        if get_object_output.content_range().is_none() {
+                            error!("get_object() returned no content range. This is unexpected.");
+                            return Err(anyhow!(
+                                "get_object() returned no content range. This is unexpected. key={}.",
+                                &target_key
+                            ));
+                        }
+                        let (request_start, request_end) = parse_range_header_string(&range)
+                            .context("failed to parse request range header")?;
+                        let (response_start, response_end) =
+                            get_range_from_content_range(&get_object_output)
+                                .context("get_object() returned no content range")?;
+                        if (request_start != response_start) || (request_end != response_end) {
+                            return Err(anyhow!(
+                                "get_object() returned unexpected content range. \
+                                expected: {}-{}, actual: {}-{}",
+                                request_start,
+                                request_end,
+                                response_start,
+                                response_end,
+                            ));
+                        }
+
+                        let mut body = convert_to_buf_byte_stream_with_callback(
+                            get_object_output.body.into_async_read(),
+                            source.get_stats_sender().clone(),
+                            source.get_rate_limit_bandwidth(),
+                            None,
+                            None,
                         )
-                        .await
-                        .context("source.get_object() failed.")?;
-                    upload_size = get_object_output.content_length().unwrap();
+                        .into_async_read();
 
-                    if get_object_output.content_range().is_none() {
-                        error!("get_object() returned no content range. This is unexpected.");
-                        return Err(anyhow!(
-                            "get_object() returned no content range. This is unexpected. key={}.",
-                            &target_key
-                        ));
+                        body.read_exact(buffer.as_mut_slice())
+                            .await
+                            .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                    } else {
+                        upload_size = chunksize as i64;
                     }
-                    let (request_start, request_end) = parse_range_header_string(&range)
-                        .context("failed to parse request range header")?;
-                    let (response_start, response_end) =
-                        get_range_from_content_range(&get_object_output)
-                            .context("get_object() returned no content range")?;
-                    if (request_start != response_start) || (request_end != response_end) {
-                        return Err(anyhow!(
-                            "get_object() returned unexpected content range. \
-                            expected: {}-{}, actual: {}-{}",
-                            request_start,
-                            request_end,
-                            response_start,
-                            response_end,
-                        ));
-                    }
-
-                    let mut body = convert_to_buf_byte_stream_with_callback(
-                        get_object_output.body.into_async_read(),
-                        source.get_stats_sender().clone(),
-                        source.get_rate_limit_bandwidth(),
-                        None,
-                        None,
-                    )
-                    .into_async_read();
-
-                    body.read_exact(buffer.as_mut_slice())
-                        .await
-                        .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
                 } else {
                     upload_size = first_chunk_size;
                 }
 
                 let md5_digest;
-                let md5_digest_base64 = if !express_onezone_storage && !disable_content_md5_header {
-                    let md5_digest_raw = md5::compute(&buffer);
-                    md5_digest = Some(md5_digest_raw);
-                    Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                let md5_digest_base64 =
+                    if !express_onezone_storage && !disable_content_md5_header && !server_side_copy
+                    {
+                        let md5_digest_raw = md5::compute(&buffer);
+                        md5_digest = Some(md5_digest_raw);
+                        Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                    } else {
+                        md5_digest = None;
+                        None
+                    };
+
+                let upload_part_output;
+                if !server_side_copy {
+                    let builder = target
+                        .upload_part()
+                        .set_request_payer(request_payer)
+                        .bucket(&target_bucket)
+                        .key(&target_key)
+                        .upload_id(target_upload_id.clone())
+                        .part_number(part_number)
+                        .set_content_md5(md5_digest_base64)
+                        .content_length(chunksize as i64)
+                        .set_checksum_algorithm(additional_checksum_algorithm)
+                        .set_sse_customer_algorithm(target_sse_c)
+                        .set_sse_customer_key(target_sse_c_key)
+                        .set_sse_customer_key_md5(target_sse_c_key_md5)
+                        .body(ByteStream::from(buffer));
+
+                    upload_part_output = if disable_payload_signing {
+                        builder
+                            .customize()
+                            .disable_payload_signing()
+                            .send()
+                            .await
+                            .context("aws_sdk_s3::client::Client upload_part() failed.")?
+                    } else {
+                        builder
+                            .send()
+                            .await
+                            .context("aws_sdk_s3::client::Client upload_part() failed.")?
+                    };
+
+                    debug!(
+                        key = &target_key,
+                        part_number = part_number,
+                        "upload_part() complete",
+                    );
+
+                    trace!(key = &target_key, "{upload_part_output:?}");
+
+                    if md5_digest.is_some() {
+                        let mut locked_multipart_etags = multipart_etags.lock().unwrap();
+                        locked_multipart_etags.push(MutipartEtags {
+                            digest: md5_digest.as_ref().unwrap().as_slice().to_vec(),
+                            part_number,
+                        });
+                    }
                 } else {
-                    md5_digest = None;
-                    None
-                };
-
-                let builder = target
-                    .upload_part()
-                    .set_request_payer(request_payer)
-                    .bucket(&target_bucket)
-                    .key(&target_key)
-                    .upload_id(target_upload_id.clone())
-                    .part_number(part_number)
-                    .set_content_md5(md5_digest_base64)
-                    .content_length(chunksize as i64)
-                    .set_checksum_algorithm(additional_checksum_algorithm)
-                    .set_sse_customer_algorithm(target_sse_c)
-                    .set_sse_customer_key(target_sse_c_key)
-                    .set_sse_customer_key_md5(target_sse_c_key_md5)
-                    .body(ByteStream::from(buffer));
-
-                let upload_part_output = if disable_payload_signing {
-                    builder
-                        .customize()
-                        .disable_payload_signing()
+                    let upload_part_copy_output = target
+                        .upload_part_copy()
+                        .copy_source(copy_source)
+                        .set_request_payer(request_payer)
+                        .set_copy_source_range(Some(range))
+                        .bucket(&target_bucket)
+                        .key(&target_key)
+                        .upload_id(target_upload_id.clone())
+                        .part_number(part_number)
+                        .set_copy_source_sse_customer_algorithm(source_sse_c)
+                        .set_copy_source_sse_customer_key(source_sse_c_key_string)
+                        .set_copy_source_sse_customer_key_md5(source_sse_c_key_md5)
+                        .set_sse_customer_algorithm(target_sse_c)
+                        .set_sse_customer_key(target_sse_c_key)
+                        .set_sse_customer_key_md5(target_sse_c_key_md5)
                         .send()
-                        .await
-                        .context("aws_sdk_s3::client::Client upload_part() failed.")?
-                } else {
-                    builder
-                        .send()
-                        .await
-                        .context("aws_sdk_s3::client::Client upload_part() failed.")?
-                };
+                        .await?;
 
-                debug!(
-                    key = &target_key,
-                    part_number = part_number,
-                    "upload_part() complete",
-                );
+                    debug!(
+                        key = &target_key,
+                        part_number = part_number,
+                        "upload_part_copy() complete",
+                    );
 
-                trace!(key = &target_key, "{upload_part_output:?}");
+                    trace!(key = &target_key, "{upload_part_copy_output:?}");
 
-                if md5_digest.is_some() {
-                    let mut locked_multipart_etags = multipart_etags.lock().unwrap();
-                    locked_multipart_etags.push(MutipartEtags {
-                        digest: md5_digest.as_ref().unwrap().as_slice().to_vec(),
-                        part_number,
-                    });
+                    let _ =
+                        stats_sender.send_blocking(SyncStatistics::SyncBytes(upload_size as u64));
+
+                    upload_part_output =
+                        convert_copy_to_upload_part_output(upload_part_copy_output);
                 }
 
                 let mut upload_size_vec = total_upload_size.lock().unwrap();
@@ -844,6 +904,10 @@ impl UploadManager {
         let shared_upload_parts = Arc::new(Mutex::new(Vec::new()));
         let shared_total_upload_size = Arc::new(Mutex::new(Vec::new()));
 
+        let source_version_id = get_object_output_first_chunk
+            .version_id()
+            .map(|v| v.to_string());
+
         let first_chunk_size = get_object_output_first_chunk.content_length().unwrap();
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
@@ -858,9 +922,16 @@ impl UploadManager {
 
             let source = dyn_clone::clone_box(&*(self.source));
             let source_key = self.source_key.clone();
+            let copy_source = if self.config.server_side_copy {
+                self.source
+                    .generate_full_key_with_bucket(source_key.as_ref(), source_version_id.clone())
+            } else {
+                "".to_string()
+            };
             let source_version_id = shared_source_version_id.clone();
             let source_sse_c = self.config.source_sse_c.clone();
             let source_sse_c_key = self.config.source_sse_c_key.clone();
+            let source_sse_c_key_string = self.config.source_sse_c_key.clone().key.clone();
             let source_sse_c_key_md5 = self.config.source_sse_c_key_md5.clone();
 
             let target = dyn_clone::clone_box(&*(self.client));
@@ -890,12 +961,20 @@ impl UploadManager {
             let express_onezone_storage = self.express_onezone_storage;
             let disable_content_md5_header = self.config.disable_content_md5_header;
             let request_payer = self.request_payer.clone();
+            let server_side_copy = self.config.server_side_copy;
 
-            let mut buffer = Vec::<u8>::with_capacity(object_part_chunksize as usize);
-            buffer.resize_with(object_part_chunksize as usize, Default::default);
+            let stats_sender = self.stats_sender.clone();
+
+            let mut buffer = if !server_side_copy {
+                let mut buffer = Vec::<u8>::with_capacity(object_part_chunksize as usize);
+                buffer.resize_with(object_part_chunksize as usize, Default::default);
+                buffer
+            } else {
+                Vec::new() // For server-side copy, we do not need to read the body.
+            };
 
             // For the first part, we read the data from the supplied body.
-            if part_number == 1 {
+            if part_number == 1 && !server_side_copy {
                 body.read_exact(buffer.as_mut_slice())
                     .await
                     .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
@@ -922,111 +1001,152 @@ impl UploadManager {
                 let upload_size;
                 // If the part number is greater than 1, we need to get the object from the source storage.
                 if part_number > 1 {
-                    let get_object_output = source
-                        .get_object(
-                            &source_key,
-                            source_version_id,
-                            additional_checksum_mode,
-                            Some(range.clone()),
-                            source_sse_c,
-                            source_sse_c_key,
-                            source_sse_c_key_md5,
+                    if !server_side_copy {
+                        let get_object_output = source
+                            .get_object(
+                                &source_key,
+                                source_version_id,
+                                additional_checksum_mode,
+                                Some(range.clone()),
+                                source_sse_c.clone(),
+                                source_sse_c_key.clone(),
+                                source_sse_c_key_md5.clone(),
+                            )
+                            .await
+                            .context("source.get_object() failed.")?;
+                        upload_size = get_object_output.content_length().unwrap();
+
+                        if get_object_output.content_range().is_none() {
+                            error!("get_object() - auto-chunksize returned no content range. This is unexpected.");
+                            return Err(anyhow!(
+                                "get_object() returned no content range. This is unexpected. key={}.",
+                                &target_key
+                            ));
+                        }
+                        let (request_start, request_end) = parse_range_header_string(&range)
+                            .context("failed to parse request range header")?;
+                        let (response_start, response_end) =
+                            get_range_from_content_range(&get_object_output)
+                                .context("get_object() returned no content range")?;
+                        if (request_start != response_start) || (request_end != response_end) {
+                            return Err(anyhow!(
+                                "get_object() - auto-chunksize returned unexpected content range. \
+                                expected: {}-{}, actual: {}-{}",
+                                request_start,
+                                request_end,
+                                response_start,
+                                response_end,
+                            ));
+                        }
+
+                        let mut body = convert_to_buf_byte_stream_with_callback(
+                            get_object_output.body.into_async_read(),
+                            source.get_stats_sender().clone(),
+                            source.get_rate_limit_bandwidth(),
+                            None,
+                            None,
                         )
-                        .await
-                        .context("source.get_object() failed.")?;
-                    upload_size = get_object_output.content_length().unwrap();
-
-                    if get_object_output.content_range().is_none() {
-                        error!("get_object() - auto-chunksize returned no content range. This is unexpected.");
-                        return Err(anyhow!(
-                            "get_object() returned no content range. This is unexpected. key={}.",
-                            &target_key
-                        ));
+                        .into_async_read();
+                        body.read_exact(buffer.as_mut_slice())
+                            .await
+                            .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                    } else {
+                        upload_size = object_part_chunksize;
                     }
-                    let (request_start, request_end) = parse_range_header_string(&range)
-                        .context("failed to parse request range header")?;
-                    let (response_start, response_end) =
-                        get_range_from_content_range(&get_object_output)
-                            .context("get_object() returned no content range")?;
-                    if (request_start != response_start) || (request_end != response_end) {
-                        return Err(anyhow!(
-                            "get_object() - auto-chunksize returned unexpected content range. \
-                            expected: {}-{}, actual: {}-{}",
-                            request_start,
-                            request_end,
-                            response_start,
-                            response_end,
-                        ));
-                    }
-
-                    let mut body = convert_to_buf_byte_stream_with_callback(
-                        get_object_output.body.into_async_read(),
-                        source.get_stats_sender().clone(),
-                        source.get_rate_limit_bandwidth(),
-                        None,
-                        None,
-                    )
-                    .into_async_read();
-                    body.read_exact(buffer.as_mut_slice())
-                        .await
-                        .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
                 } else {
                     upload_size = first_chunk_size;
                 }
 
                 let md5_digest;
-                let md5_digest_base64 = if !express_onezone_storage && !disable_content_md5_header {
-                    let md5_digest_raw = md5::compute(&buffer);
-                    md5_digest = Some(md5_digest_raw);
-                    Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                let md5_digest_base64 =
+                    if !express_onezone_storage && !disable_content_md5_header && !server_side_copy
+                    {
+                        let md5_digest_raw = md5::compute(&buffer);
+                        md5_digest = Some(md5_digest_raw);
+                        Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                    } else {
+                        md5_digest = None;
+                        None
+                    };
+
+                let upload_part_output;
+                if !server_side_copy {
+                    let builder = target
+                        .upload_part()
+                        .set_request_payer(request_payer)
+                        .bucket(&target_bucket)
+                        .key(&target_key)
+                        .upload_id(target_upload_id.clone())
+                        .part_number(part_number)
+                        .set_content_md5(md5_digest_base64)
+                        .content_length(object_part_chunksize)
+                        .set_checksum_algorithm(additional_checksum_algorithm)
+                        .set_sse_customer_algorithm(target_sse_c)
+                        .set_sse_customer_key(target_sse_c_key)
+                        .set_sse_customer_key_md5(target_sse_c_key_md5)
+                        .body(ByteStream::from(buffer));
+
+                    upload_part_output = if disable_payload_signing {
+                        builder
+                            .customize()
+                            .disable_payload_signing()
+                            .send()
+                            .await
+                            .context("aws_sdk_s3::client::Client upload_part() failed.")?
+                    } else {
+                        builder
+                            .send()
+                            .await
+                            .context("aws_sdk_s3::client::Client upload_part() failed.")?
+                    };
+
+                    debug!(
+                        key = &target_key,
+                        part_number = part_number,
+                        "upload_part() complete",
+                    );
+
+                    trace!(key = &target_key, "{upload_part_output:?}");
+
+                    if md5_digest.is_some() {
+                        let mut locked_multipart_etags = multipart_etags.lock().unwrap();
+                        locked_multipart_etags.push(MutipartEtags {
+                            digest: md5_digest.as_ref().unwrap().as_slice().to_vec(),
+                            part_number,
+                        });
+                    }
                 } else {
-                    md5_digest = None;
-                    None
-                };
-
-                let builder = target
-                    .upload_part()
-                    .set_request_payer(request_payer)
-                    .bucket(&target_bucket)
-                    .key(&target_key)
-                    .upload_id(target_upload_id.clone())
-                    .part_number(part_number)
-                    .set_content_md5(md5_digest_base64)
-                    .content_length(object_part_chunksize)
-                    .set_checksum_algorithm(additional_checksum_algorithm)
-                    .set_sse_customer_algorithm(target_sse_c)
-                    .set_sse_customer_key(target_sse_c_key)
-                    .set_sse_customer_key_md5(target_sse_c_key_md5)
-                    .body(ByteStream::from(buffer));
-
-                let upload_part_output = if disable_payload_signing {
-                    builder
-                        .customize()
-                        .disable_payload_signing()
+                    let upload_part_copy_output = target
+                        .upload_part_copy()
+                        .copy_source(copy_source)
+                        .set_request_payer(request_payer)
+                        .set_copy_source_range(Some(range))
+                        .bucket(&target_bucket)
+                        .key(&target_key)
+                        .upload_id(target_upload_id.clone())
+                        .part_number(part_number)
+                        .set_copy_source_sse_customer_algorithm(source_sse_c)
+                        .set_copy_source_sse_customer_key(source_sse_c_key_string)
+                        .set_copy_source_sse_customer_key_md5(source_sse_c_key_md5)
+                        .set_sse_customer_algorithm(target_sse_c)
+                        .set_sse_customer_key(target_sse_c_key)
+                        .set_sse_customer_key_md5(target_sse_c_key_md5)
                         .send()
-                        .await
-                        .context("aws_sdk_s3::client::Client upload_part() failed.")?
-                } else {
-                    builder
-                        .send()
-                        .await
-                        .context("aws_sdk_s3::client::Client upload_part() failed.")?
-                };
+                        .await?;
 
-                debug!(
-                    key = &target_key,
-                    part_number = part_number,
-                    "upload_part() complete",
-                );
+                    debug!(
+                        key = &target_key,
+                        part_number = part_number,
+                        "upload_part_copy() complete",
+                    );
 
-                trace!(key = &target_key, "{upload_part_output:?}");
+                    trace!(key = &target_key, "{upload_part_copy_output:?}");
 
-                if md5_digest.is_some() {
-                    let mut locked_multipart_etags = multipart_etags.lock().unwrap();
-                    locked_multipart_etags.push(MutipartEtags {
-                        digest: md5_digest.as_ref().unwrap().as_slice().to_vec(),
-                        part_number,
-                    });
+                    let _ =
+                        stats_sender.send_blocking(SyncStatistics::SyncBytes(upload_size as u64));
+
+                    upload_part_output =
+                        convert_copy_to_upload_part_output(upload_part_copy_output);
                 }
 
                 let mut locked_upload_parts = upload_parts.lock().unwrap();
@@ -1125,29 +1245,35 @@ impl UploadManager {
         let source_local_storage = source_e_tag.is_none();
         let source_checksum = self.source_additional_checksum.clone();
         let source_storage_class = get_object_output.storage_class().cloned();
+        let source_version_id = get_object_output.version_id().map(|v| v.to_string());
 
-        let mut body = get_object_output.body.into_async_read();
-        get_object_output.body = ByteStream::from_static(b"");
+        let buffer = if !self.config.server_side_copy {
+            let mut body = get_object_output.body.into_async_read();
+            get_object_output.body = ByteStream::from_static(b"");
 
-        // When created from an SdkBody, care must be taken to ensure retriability.
-        // An SdkBody is retryable when constructed from in-memory data or when using SdkBody::retryable.
-        let mut buffer = Vec::<u8>::with_capacity(self.source_total_size as usize);
-        buffer.resize_with(self.source_total_size as usize, Default::default);
-        body.read_exact(buffer.as_mut_slice())
-            .await
-            .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+            let mut buffer = Vec::<u8>::with_capacity(self.source_total_size as usize);
+            buffer.resize_with(self.source_total_size as usize, Default::default);
+            body.read_exact(buffer.as_mut_slice())
+                .await
+                .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+            buffer
+        } else {
+            Vec::new() // For server-side copy, we do not need to read the body.
+        };
 
-        let md5_digest_base64 =
-            if !self.express_onezone_storage && !self.config.disable_content_md5_header {
-                let md5_digest = md5::compute(&buffer);
+        let md5_digest_base64 = if !self.express_onezone_storage
+            && !self.config.disable_content_md5_header
+            && !self.config.server_side_copy
+        {
+            let md5_digest = md5::compute(&buffer);
 
-                self.concatnated_md5_hash
-                    .append(&mut md5_digest.as_slice().to_vec());
+            self.concatnated_md5_hash
+                .append(&mut md5_digest.as_slice().to_vec());
 
-                Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
-            } else {
-                None
-            };
+            Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
+        } else {
+            None
+        };
 
         let buffer_stream = ByteStream::from(buffer);
 
@@ -1157,83 +1283,161 @@ impl UploadManager {
             Some(self.config.storage_class.as_ref().unwrap().clone())
         };
 
-        let builder = self
-            .client
-            .put_object()
-            .set_request_payer(self.request_payer.clone())
-            .set_storage_class(storage_class)
-            .bucket(bucket)
-            .key(key)
-            .content_length(self.source_total_size as i64)
-            .body(buffer_stream)
-            .set_metadata(get_object_output.metadata().cloned())
-            .set_tagging(self.tagging.clone())
-            .set_content_md5(md5_digest_base64)
-            .set_content_type(if self.config.content_type.is_none() {
-                get_object_output
-                    .content_type()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.content_type.clone()
-            })
-            .set_content_encoding(if self.config.content_encoding.is_none() {
-                get_object_output
-                    .content_encoding()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.content_encoding.clone()
-            })
-            .set_cache_control(if self.config.cache_control.is_none() {
-                get_object_output
-                    .cache_control()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.cache_control.clone()
-            })
-            .set_content_disposition(if self.config.content_disposition.is_none() {
-                get_object_output
-                    .content_disposition()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.content_disposition.clone()
-            })
-            .set_content_language(if self.config.content_language.is_none() {
-                get_object_output
-                    .content_language()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.content_language.clone()
-            })
-            .set_expires(if self.config.expires.is_none() {
-                get_object_output.expires_string().map(|expires_string| {
-                    DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
+        let put_object_output = if self.config.server_side_copy {
+            let copy_source = self
+                .source
+                .generate_full_key_with_bucket(self.source_key.as_ref(), source_version_id.clone());
+            let copy_object_output = self
+                .client
+                .copy_object()
+                .copy_source(copy_source)
+                .set_request_payer(self.request_payer.clone())
+                .set_storage_class(storage_class)
+                .bucket(bucket)
+                .key(key)
+                .metadata_directive(MetadataDirective::Replace)
+                .set_metadata(get_object_output.metadata().cloned())
+                .set_tagging(self.tagging.clone())
+                .set_content_type(if self.config.content_type.is_none() {
+                    get_object_output
+                        .content_type()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_type.clone()
                 })
-            } else {
-                Some(DateTime::from_str(
-                    &self.config.expires.unwrap().to_rfc3339(),
-                    DateTimeFormat::DateTimeWithOffset,
-                )?)
-            })
-            .set_server_side_encryption(self.config.sse.clone())
-            .set_ssekms_key_id(self.config.sse_kms_key_id.clone().id.clone())
-            .set_sse_customer_algorithm(self.config.target_sse_c.clone())
-            .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
-            .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
-            .set_acl(self.config.canned_acl.clone())
-            .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned());
+                .set_content_encoding(if self.config.content_encoding.is_none() {
+                    get_object_output
+                        .content_encoding()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_encoding.clone()
+                })
+                .set_cache_control(if self.config.cache_control.is_none() {
+                    get_object_output
+                        .cache_control()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.cache_control.clone()
+                })
+                .set_content_disposition(if self.config.content_disposition.is_none() {
+                    get_object_output
+                        .content_disposition()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_disposition.clone()
+                })
+                .set_content_language(if self.config.content_language.is_none() {
+                    get_object_output
+                        .content_language()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_language.clone()
+                })
+                .set_expires(if self.config.expires.is_none() {
+                    get_object_output.expires_string().map(|expires_string| {
+                        DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
+                    })
+                } else {
+                    Some(DateTime::from_str(
+                        &self.config.expires.unwrap().to_rfc3339(),
+                        DateTimeFormat::DateTimeWithOffset,
+                    )?)
+                })
+                .set_server_side_encryption(self.config.sse.clone())
+                .set_ssekms_key_id(self.config.sse_kms_key_id.clone().id.clone())
+                .set_sse_customer_algorithm(self.config.target_sse_c.clone())
+                .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
+                .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
+                .set_copy_source_sse_customer_algorithm(self.config.source_sse_c.clone())
+                .set_copy_source_sse_customer_key(self.config.source_sse_c_key.clone().key.clone())
+                .set_copy_source_sse_customer_key_md5(self.config.source_sse_c_key_md5.clone())
+                .set_acl(self.config.canned_acl.clone())
+                .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
+                .send()
+                .await?;
 
-        let put_object_output = if self.config.disable_payload_signing {
-            builder
-                .customize()
-                .disable_payload_signing()
-                .send()
-                .await
-                .context("aws_sdk_s3::client::Client put_object() failed.")?
+            convert_copy_to_put_object_output(copy_object_output, self.source_total_size as i64)
         } else {
-            builder
-                .send()
-                .await
-                .context("aws_sdk_s3::client::Client put_object() failed.")?
+            let builder = self
+                .client
+                .put_object()
+                .set_request_payer(self.request_payer.clone())
+                .set_storage_class(storage_class.clone())
+                .bucket(bucket)
+                .key(key)
+                .content_length(self.source_total_size as i64)
+                .body(buffer_stream)
+                .set_metadata(get_object_output.metadata().cloned())
+                .set_tagging(self.tagging.clone())
+                .set_content_md5(md5_digest_base64)
+                .set_content_type(if self.config.content_type.is_none() {
+                    get_object_output
+                        .content_type()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_type.clone()
+                })
+                .set_content_encoding(if self.config.content_encoding.is_none() {
+                    get_object_output
+                        .content_encoding()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_encoding.clone()
+                })
+                .set_cache_control(if self.config.cache_control.is_none() {
+                    get_object_output
+                        .cache_control()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.cache_control.clone()
+                })
+                .set_content_disposition(if self.config.content_disposition.is_none() {
+                    get_object_output
+                        .content_disposition()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_disposition.clone()
+                })
+                .set_content_language(if self.config.content_language.is_none() {
+                    get_object_output
+                        .content_language()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.content_language.clone()
+                })
+                .set_expires(if self.config.expires.is_none() {
+                    get_object_output.expires_string().map(|expires_string| {
+                        DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
+                    })
+                } else {
+                    Some(DateTime::from_str(
+                        &self.config.expires.unwrap().to_rfc3339(),
+                        DateTimeFormat::DateTimeWithOffset,
+                    )?)
+                })
+                .set_server_side_encryption(self.config.sse.clone())
+                .set_ssekms_key_id(self.config.sse_kms_key_id.clone().id.clone())
+                .set_sse_customer_algorithm(self.config.target_sse_c.clone())
+                .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
+                .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
+                .set_acl(self.config.canned_acl.clone())
+                .set_checksum_algorithm(
+                    self.config.additional_checksum_algorithm.as_ref().cloned(),
+                );
+
+            if self.config.disable_payload_signing {
+                builder
+                    .customize()
+                    .disable_payload_signing()
+                    .send()
+                    .await
+                    .context("aws_sdk_s3::client::Client put_object() failed.")?
+            } else {
+                builder
+                    .send()
+                    .await
+                    .context("aws_sdk_s3::client::Client put_object() failed.")?
+            }
         };
 
         let source_e_tag = if source_local_storage {
