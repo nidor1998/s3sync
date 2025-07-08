@@ -1177,6 +1177,7 @@ impl StorageTrait for LocalStorage {
         key: &str,
         _version_id: Option<String>,
         _checksum_mode: Option<ChecksumMode>,
+        _range: Option<String>,
         _sse_c: Option<String>,
         _sse_c_key: SseCustomerKey,
         _sse_c_key_md5: Option<String>,
@@ -1358,6 +1359,10 @@ impl StorageTrait for LocalStorage {
 
     fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>> {
         self.rate_limit_bandwidth.clone()
+    }
+
+    fn generate_full_key_with_bucket(&self, _: &str, _: Option<String>) -> String {
+        unimplemented!()
     }
 }
 
@@ -2666,6 +2671,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
                 SseCustomerKey { key: None },
                 None,
             )
@@ -2706,6 +2712,7 @@ mod tests {
         let head_object_output = storage
             .head_object(
                 "source/dir1/no_data",
+                None,
                 None,
                 None,
                 None,
@@ -2774,6 +2781,7 @@ mod tests {
         let head_object_output = storage
             .head_object(
                 "denied_dir5/data",
+                None,
                 None,
                 None,
                 None,

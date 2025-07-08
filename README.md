@@ -111,6 +111,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
   ```
 
+  with `--check-mtime-and-etag` option, s3sync checks the modification time and ETag of the source and target objects. It is useful if you want to transfer only modified objects based on the modification time and ETag.
+
 - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based incremental transfer  
   If you use Amazon S3 with additional checksum, you can use `--check-additional-checksum` option.  
   This option compares the checksum of the both source and target objects and transfer only modified objects.It costs extra API calls per object.  
@@ -123,6 +125,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   2024-06-15T01:06:30.086455Z DEBUG object filtered. Checksums are same. name="HeadObjectChecker" checksum_algorithm="SHA256" source_checksum="MyTyVYvNthXQp4fOwy/IzuKgFGIzIHpP1DiTfjZoV0Q=-2" target_checksum="MyTyVYvNthXQp4fOwy/IzuKgFGIzIHpP1DiTfjZoV0Q=-2" source_last_modified="2024-06-15T01:01:48.690+00:00" target_last_modified="2024-06-15T01:02:27+00:00" source_size=12582912 target_size=12582912 key="dir1/data3.dat"
   0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
   ```
+  
+  with `--check-mtime-and-additional-checksum` option, s3sync checks the modification time and additional checksum of the source and target objects. It is useful if you want to transfer only modified objects based on the modification time and additional checksum.
 
 - Amazon S3 Express One Zone support  
   s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).  
@@ -138,6 +142,11 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   with `--full-object-checksum`, s3sync can use full object checksum(CRC32/CRC32C/CRC64NVME) for each object.
 
   For more information, see  [Checking object integrity in Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
+
+- Server-side copy support  
+  If you transfer S3 to S3(same-region), server-side copy is good choice.
+  Server-side copy is very fast and does not transfer data over the network.
+  If you transfer S3 to S3(cross-region or different object storage), you cannot use server-side copy.
 
 - Versioning support  
   All versions of the object can be synchronized.(Except intermediate delete markers)
@@ -224,6 +233,11 @@ s3sync s3://bucket-name/prefix /path/to/local
 ### S3 to S3
 ```bash
 s3sync s3://bucket-name1/prefix s3://bucket-name2/prefix
+```
+
+### S3 to S3(server-side copy, works only in same-region)
+```bash
+s3sync --server-side-copy s3://bucket-name1/prefix s3://bucket-name2/prefix
 ```
 
 ### Access key and secret access key directly

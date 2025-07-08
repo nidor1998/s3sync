@@ -181,6 +181,77 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_with_prefix_server_side_copy() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        const TEST_PREFIX: &str = "mydir";
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET2.to_string(), "").await;
+            assert_eq!(object_list.len(), 5);
+
+            for object in object_list {
+                let key_set = HashSet::from([
+                    format!("{}/dir2/data2", TEST_PREFIX),
+                    format!("{}/dir5/data3", TEST_PREFIX),
+                    format!("{}/data1", TEST_PREFIX),
+                    format!("{}/dir21/data1", TEST_PREFIX),
+                    format!("{}/dir1/data1", TEST_PREFIX),
+                ]);
+
+                assert!(key_set.get(object.key.as_ref().unwrap()).is_some())
+            }
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_with_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -213,6 +284,64 @@ mod tests {
                 "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
+                "--dry-run",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET2.to_string(), "").await;
+            assert_eq!(object_list.len(), 0);
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_server_side_copy_dry_run() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
                 "--dry-run",
                 &source_bucket_url,
                 &target_bucket_url,
@@ -618,6 +747,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_sever_side_copy_metadata_test() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            helper
+                .put_object_with_metadata(
+                    &BUCKET1.to_string(),
+                    "data1",
+                    "./test_data/e2e_test/case1/data1",
+                )
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            helper
+                .verify_test_object_metadata(&BUCKET2.to_string(), "data1", None)
+                .await;
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_attribute_test_disable_tagging() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -717,6 +908,127 @@ mod tests {
                 "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            helper
+                .verify_test_object_metadata(&BUCKET2.to_string(), "data1", None)
+                .await;
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_metadata_test_with_multipart_upload_server_side_copy() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            TestHelper::create_large_file();
+
+            helper
+                .put_object_with_metadata(&BUCKET1.to_string(), "data1", LARGE_FILE_PATH)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            helper
+                .verify_test_object_metadata(&BUCKET2.to_string(), "data1", None)
+                .await;
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_metadata_test_with_multipart_upload_server_side_copy_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            TestHelper::create_large_file();
+
+            helper
+                .put_object_with_metadata(&BUCKET1.to_string(), "data1", LARGE_FILE_PATH)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
+                "--auto-chunksize",
                 &source_bucket_url,
                 &target_bucket_url,
             ];
@@ -2332,6 +2644,7 @@ mod tests {
     #[tokio::test]
     async fn s3_to_s3_with_sse_c() {
         TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
         let helper = TestHelper::new().await;
@@ -2379,6 +2692,136 @@ mod tests {
                 "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
+                "--source-sse-c",
+                "AES256",
+                "--source-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--source-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_2,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_2_MD5,
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--source-sse-c",
+                "AES256",
+                "--source-sse-c-key",
+                TEST_SSE_C_KEY_2,
+                "--source-sse-c-key-md5",
+                TEST_SSE_C_KEY_2_MD5,
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                0
+            );
+
+            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+
+            for entry in dir_entry_list {
+                let path = entry
+                    .path()
+                    .to_string_lossy()
+                    .replace(TEMP_DOWNLOAD_DIR, "");
+
+                assert!(TestHelper::verify_file_md5_digest(
+                    &format!("./test_data/e2e_test/case1/{}", &path),
+                    &TestHelper::md5_digest(&entry.path().to_string_lossy()),
+                ));
+            }
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_sse_c_server_side_copy() {
+        TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
                 "--source-sse-c",
                 "AES256",
                 "--source-sse-c-key",
@@ -2515,6 +2958,129 @@ mod tests {
                 "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
+                "--source-sse-c",
+                "AES256",
+                "--source-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--source-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_2,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_2_MD5,
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--source-sse-c",
+                "AES256",
+                "--source-sse-c-key",
+                TEST_SSE_C_KEY_2,
+                "--source-sse-c-key-md5",
+                TEST_SSE_C_KEY_2_MD5,
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_sse_c_multipart_upload_server_side_copy() {
+        TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            TestHelper::create_large_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                0
+            );
+        }
+
+        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
                 "--source-sse-c",
                 "AES256",
                 "--source-sse-c-key",

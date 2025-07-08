@@ -57,6 +57,7 @@ const DEFAULT_SYNC_WITH_DELETE: bool = false;
 const DEFAULT_DISABLE_TAGGING: bool = false;
 const DEFAULT_SYNC_LATEST_TAGGING: bool = false;
 const DEFAULT_NO_GUESS_MIME_TYPE: bool = false;
+const DEFAULT_SERVER_SIDE_COPY: bool = false;
 const DEFAULT_DISABLE_MULTIPART_VERIFY: bool = false;
 const DEFAULT_DISABLE_ETAG_VERIFY: bool = false;
 const DEFAULT_ENABLE_ADDITIONAL_CHECKSUM: bool = false;
@@ -134,6 +135,10 @@ const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REQUEST_PAYER: &str =
     "with --source-request-payer, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REQUEST_PAYER: &str =
     "with --target-request-payer, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_SERVER_SIDE_COPY: &str =
+    "with --server-side-copy, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_SERVER_SIDE_COPY: &str =
+    "with --server-side-copy, target storage must be s3://\n";
 
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
@@ -450,6 +455,10 @@ pub struct CLIArgs {
     #[arg(long, env, value_parser = canned_acl::parse_canned_acl)]
     acl: Option<String>,
 
+    /// use server-side copy. This option is only available both source and target are S3 storage. It cannot work with between different object storages or regions.
+    #[arg(long, env, default_value_t = DEFAULT_SERVER_SIDE_COPY)]
+    server_side_copy: bool,
+
     /// do not try to guess the mime type of local file
     #[arg(long, env, default_value_t = DEFAULT_NO_GUESS_MIME_TYPE)]
     no_guess_mime_type: bool,
@@ -579,6 +588,7 @@ impl CLIArgs {
         self.check_full_object_checksum_conflict()?;
         self.check_accelerate_conflict()?;
         self.check_request_payer_conflict()?;
+        self.check_server_side_copy_conflict()?;
 
         Ok(())
     }
@@ -974,6 +984,20 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_server_side_copy_conflict(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.server_side_copy {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_SERVER_SIDE_COPY.to_string());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) && self.server_side_copy {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_SERVER_SIDE_COPY.to_string());
+        }
+
+        Ok(())
+    }
+
     fn build_client_configs(
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
@@ -1272,6 +1296,7 @@ impl TryFrom<CLIArgs> for Config {
             sync_with_delete: value.delete,
             disable_tagging: value.disable_tagging,
             sync_latest_tagging: value.sync_latest_tagging,
+            server_side_copy: value.server_side_copy,
             no_guess_mime_type: value.no_guess_mime_type,
             disable_multipart_verify: value.disable_multipart_verify,
             disable_etag_verify: value.disable_etag_verify,

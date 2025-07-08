@@ -28,6 +28,7 @@ pub struct Config {
     pub sync_with_delete: bool,
     pub disable_tagging: bool,
     pub sync_latest_tagging: bool,
+    pub server_side_copy: bool,
     pub no_guess_mime_type: bool,
     pub disable_multipart_verify: bool,
     pub disable_etag_verify: bool,

@@ -561,6 +561,7 @@ impl StorageTrait for S3Storage {
         key: &str,
         version_id: Option<String>,
         checksum_mode: Option<ChecksumMode>,
+        range: Option<String>,
         sse_c: Option<String>,
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
@@ -573,6 +574,7 @@ impl StorageTrait for S3Storage {
             .set_request_payer(self.request_payer.clone())
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
+            .set_range(range)
             .set_version_id(version_id)
             .set_checksum_mode(checksum_mode)
             .set_sse_customer_algorithm(sse_c)
@@ -1026,6 +1028,18 @@ impl StorageTrait for S3Storage {
 
     fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>> {
         self.rate_limit_bandwidth.clone()
+    }
+
+    fn generate_full_key_with_bucket(&self, key: &str, version_id: Option<String>) -> String {
+        if version_id.is_some() {
+            return format!(
+                "{}/{}?versionId={}",
+                &self.bucket,
+                generate_full_key(&self.prefix, key),
+                version_id.unwrap()
+            );
+        }
+        format!("{}/{}", &self.bucket, generate_full_key(&self.prefix, key))
     }
 }
 

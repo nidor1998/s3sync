@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.17.0"
+version = "1.18.0"
 edition = "2021"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "very fast, and powerful synchronization command line tool for S3."
@@ -16,7 +16,7 @@ categories = ["command-line-utilities", "filesystem"]
 [dependencies]
 anyhow = { version = "1.0.98" }
 async-trait = "0.1.88"
-async-channel = "2.4.0"
+async-channel = "2.5.0"
 aws-config = { version = "1.8.1", features = ["behavior-version-latest"] }
 aws-runtime = "1.5.7"
 aws-sdk-s3 = "1.96.0"

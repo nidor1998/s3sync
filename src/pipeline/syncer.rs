@@ -3,7 +3,10 @@ use std::ops::Add;
 
 use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
-use crate::storage::{e_tag_verify, get_range_from_content_range, parse_range_header_string};
+use crate::storage::{
+    convert_head_to_get_object_output, e_tag_verify, get_range_from_content_range,
+    parse_range_header_string,
+};
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
 use crate::types::{
@@ -311,8 +314,26 @@ impl ObjectSyncer {
             range = range.as_deref(),
             "first chunk range for the object",
         );
-        let get_object_output = self
-            .get_object(
+        let get_object_output = if self.base.config.server_side_copy {
+            // If server-side copy is enabled, we can use head_object to get the object attributes.
+            let head_object_result = self
+                .base
+                .source
+                .as_ref()
+                .unwrap()
+                .head_object(
+                    key,
+                    object.version_id().map(|version_id| version_id.to_string()),
+                    self.base.config.additional_checksum_mode.clone(),
+                    range.clone(),
+                    self.base.config.source_sse_c.clone(),
+                    self.base.config.source_sse_c_key.clone(),
+                    self.base.config.source_sse_c_key_md5.clone(),
+                )
+                .await?;
+            Ok(convert_head_to_get_object_output(head_object_result))
+        } else {
+            self.get_object(
                 key,
                 object.version_id().map(|version_id| version_id.to_string()),
                 self.base.config.additional_checksum_mode.clone(),
@@ -321,7 +342,8 @@ impl ObjectSyncer {
                 self.base.config.source_sse_c_key.clone(),
                 self.base.config.source_sse_c_key_md5.clone(),
             )
-            .await;
+            .await
+        };
 
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
@@ -673,6 +695,7 @@ impl ObjectSyncer {
                 object.key(),
                 object.version_id().map(|version_id| version_id.to_string()),
                 self.base.config.additional_checksum_mode.clone(),
+                None,
                 self.base.config.source_sse_c.clone(),
                 self.base.config.source_sse_c_key.clone(),
                 self.base.config.source_sse_c_key_md5.clone(),
