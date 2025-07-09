@@ -1238,6 +1238,7 @@ impl UploadManager {
         Ok(parts)
     }
 
+    // skipcq: RS-R1000
     async fn singlepart_upload(
         &mut self,
         bucket: &str,

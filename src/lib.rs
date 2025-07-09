@@ -87,6 +87,11 @@ async fn main() {
     println!("An error has occurred.\n\n");
     println!("{:?}", pipeline.get_errors_and_consume().unwrap()[0]);
   }
+
+  // If there is a warning in the pipeline, you can check it.
+  if pipeline.has_warning() {
+    println!("A warning has occurred.\n\n");
+  }
 }
 ```
 

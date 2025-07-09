@@ -1,4 +1,4 @@
-FROM rust:latest as builder
+FROM rust:latest AS builder
 WORKDIR /s3sync
 COPY . ./
 RUN cargo build --release
