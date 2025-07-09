@@ -27,7 +27,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.    
   Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)  
   Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
-  Note: Amazon S3 Express One Zone does not support ETag as verification. But you can use additional checksum algorithm.
+  Note: Amazon S3 Express One Zone does not support ETag as verification. But s3sync uses additional checksum algorithm for verification by default(CRC64NVME).
 
 - Multiple ways
   - Local to S3(s3-compatible storage)
@@ -82,7 +82,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   sys	2m33.711s
   ```
 
-- Any object size support
+- Any object size support  
   s3sync can handle any object size. From 0 byte to 5TiB.
 
 - Low memory usage  
@@ -128,7 +128,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   
   with `--check-mtime-and-additional-checksum` option, s3sync checks the modification time and additional checksum of the source and target objects. It is useful if you want to transfer only modified objects based on the modification time and additional checksum.
 
-- Amazon S3 Express One Zone support  
+- Amazon S3 Express One Zone(Directory bucket) support  
   s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).  
   AWS CLI does not support `aws s3 sync` with Amazon S3 Express One Zone. see [AWS S3 sync operations do not work with S3 directory buckets (S3 Express One Zone)](https://github.com/aws/aws-cli/issues/8470).
 
@@ -143,8 +143,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
   For more information, see  [Checking object integrity in Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/checking-object-integrity.html).
 
-- Server-side copy support  
-  If you transfer S3 to S3(same-region), server-side copy is good choice.
+- Server-side copy(CopyObject/UploadPartCopy) support  
+  If you transfer S3 to S3(same-region), server-side copy is a good choice.
   Server-side copy is very fast and does not transfer data over the network.
   If you transfer S3 to S3(cross-region or different object storage), you cannot use server-side copy.
 
@@ -444,7 +444,7 @@ s3sync requires the following permissions.
 ]
 ```
 
-### Exit codes
+### CLI process exit codes
 - 0: Exit without error
 - 1: Exit with error
 - 2: Invalid arguments
