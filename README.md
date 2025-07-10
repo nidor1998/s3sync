@@ -568,210 +568,210 @@ $ s3sync -h
 Usage: s3sync [OPTIONS] [SOURCE] [TARGET]
 
 Arguments:
-[SOURCE]  s3://<BUCKET_NAME>[/prefix] or local path [env: SOURCE=]
-[TARGET]  s3://<BUCKET_NAME>[/prefix] or local path [env: TARGET=]
+  [SOURCE]  s3://<BUCKET_NAME>[/prefix] or local path [env: SOURCE=]
+  [TARGET]  s3://<BUCKET_NAME>[/prefix] or local path [env: TARGET=]
 
 Options:
--v, --verbose...  Increase logging verbosity
--q, --quiet...    Decrease logging verbosity
--h, --help        Print help
--V, --version     Print version
+  -v, --verbose...  Increase logging verbosity
+  -q, --quiet...    Decrease logging verbosity
+  -h, --help        Print help
+  -V, --version     Print version
 
 General:
---dry-run           A simulation mode. no actions will be performed [env: DRY_RUN=]
---server-side-copy  use server-side copy. This option is only available both source and target are S3 storage. It cannot work with between different object storages or regions [env: SERVER_SIDE_COPY=]
+      --dry-run           A simulation mode. no actions will be performed [env: DRY_RUN=]
+      --server-side-copy  use server-side copy. This option is only available both source and target are S3 storage. It cannot work with between different object storages or regions [env: SERVER_SIDE_COPY=]
 
 AWS Configuration:
---aws-config-file <FILE>
-location of the file that the AWS CLI uses to store configuration profiles [env: AWS_CONFIG_FILE=]
---aws-shared-credentials-file <FILE>
-location of the file that the AWS CLI uses to store access keys [env: AWS_SHARED_CREDENTIALS_FILE=]
---source-profile <SOURCE_PROFILE>
-source AWS CLI profile [env: SOURCE_PROFILE=]
---source-access-key <SOURCE_ACCESS_KEY>
-source access key [env: SOURCE_ACCESS_KEY=]
---source-secret-access-key <SOURCE_SECRET_ACCESS_KEY>
-source secret access key [env: SOURCE_SECRET_ACCESS_KEY=]
---source-session-token <SOURCE_SESSION_TOKEN>
-source session token [env: SOURCE_SESSION_TOKEN=]
---target-profile <TARGET_PROFILE>
-target AWS CLI profile [env: TARGET_PROFILE=]
---target-access-key <TARGET_ACCESS_KEY>
-target access key [env: TARGET_ACCESS_KEY=]
---target-secret-access-key <TARGET_SECRET_ACCESS_KEY>
-target secret access key [env: TARGET_SECRET_ACCESS_KEY=]
---target-session-token <TARGET_SESSION_TOKEN>
-target session token [env: TARGET_SESSION_TOKEN=]
+      --aws-config-file <FILE>
+          location of the file that the AWS CLI uses to store configuration profiles [env: AWS_CONFIG_FILE=]
+      --aws-shared-credentials-file <FILE>
+          location of the file that the AWS CLI uses to store access keys [env: AWS_SHARED_CREDENTIALS_FILE=]
+      --source-profile <SOURCE_PROFILE>
+          source AWS CLI profile [env: SOURCE_PROFILE=]
+      --source-access-key <SOURCE_ACCESS_KEY>
+          source access key [env: SOURCE_ACCESS_KEY=]
+      --source-secret-access-key <SOURCE_SECRET_ACCESS_KEY>
+          source secret access key [env: SOURCE_SECRET_ACCESS_KEY=]
+      --source-session-token <SOURCE_SESSION_TOKEN>
+          source session token [env: SOURCE_SESSION_TOKEN=]
+      --target-profile <TARGET_PROFILE>
+          target AWS CLI profile [env: TARGET_PROFILE=]
+      --target-access-key <TARGET_ACCESS_KEY>
+          target access key [env: TARGET_ACCESS_KEY=]
+      --target-secret-access-key <TARGET_SECRET_ACCESS_KEY>
+          target secret access key [env: TARGET_SECRET_ACCESS_KEY=]
+      --target-session-token <TARGET_SESSION_TOKEN>
+          target session token [env: TARGET_SESSION_TOKEN=]
 
 Source Options:
---source-region <SOURCE_REGION>
-source region [env: SOURCE_REGION=]
---source-endpoint-url <SOURCE_ENDPOINT_URL>
-source endpoint url [env: SOURCE_ENDPOINT_URL=]
---source-accelerate
-Use Amazon S3 Transfer Acceleration for the source bucket [env: SOURCE_ACCELERATE=]
---source-request-payer
-Use request payer for the source bucket [env: SOURCE_REQUEST_PAYER=]
---source-force-path-style
-force path-style addressing for source endpoint [env: SOURCE_FORCE_PATH_STYLE=]
+      --source-region <SOURCE_REGION>
+          source region [env: SOURCE_REGION=]
+      --source-endpoint-url <SOURCE_ENDPOINT_URL>
+          source endpoint url [env: SOURCE_ENDPOINT_URL=]
+      --source-accelerate
+          Use Amazon S3 Transfer Acceleration for the source bucket [env: SOURCE_ACCELERATE=]
+      --source-request-payer
+          Use request payer for the source bucket [env: SOURCE_REQUEST_PAYER=]
+      --source-force-path-style
+          force path-style addressing for source endpoint [env: SOURCE_FORCE_PATH_STYLE=]
 
 Target Options:
---target-region <TARGET_REGION>
-target region [env: TARGET_REGION=]
---target-endpoint-url <TARGET_ENDPOINT_URL>
-target endpoint url [env: TARGET_ENDPOINT_URL=]
---target-accelerate
-Use Amazon S3 Transfer Acceleration for the target bucket [env: TARGET_ACCELERATE=]
---target-request-payer
-Use request payer for the target bucket [env: TARGET_REQUEST_PAYER=]
---target-force-path-style
-force path-style addressing for target endpoint [env: TARGET_FORCE_PATH_STYLE=]
---storage-class <STORAGE_CLASS>
-type of storage to use for the target object. valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE [env: STORAGE_CLASS=]
+      --target-region <TARGET_REGION>
+          target region [env: TARGET_REGION=]
+      --target-endpoint-url <TARGET_ENDPOINT_URL>
+          target endpoint url [env: TARGET_ENDPOINT_URL=]
+      --target-accelerate
+          Use Amazon S3 Transfer Acceleration for the target bucket [env: TARGET_ACCELERATE=]
+      --target-request-payer
+          Use request payer for the target bucket [env: TARGET_REQUEST_PAYER=]
+      --target-force-path-style
+          force path-style addressing for target endpoint [env: TARGET_FORCE_PATH_STYLE=]
+      --storage-class <STORAGE_CLASS>
+          type of storage to use for the target object. valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE [env: STORAGE_CLASS=]
 
 Filtering:
---filter-mtime-before <FILTER_MTIME_BEFORE>
-sync only objects older than given time (RFC3339 datetime such as 2023-02-19T12:00:00Z) [env: FILTER_MTIME_BEFORE=]
---filter-mtime-after <FILTER_MTIME_AFTER>
-sync only objects newer than OR EQUAL TO given time (RFC3339 datetime such as 2023-02-19T12:00:00Z) [env: FILTER_MTIME_AFTER=]
---filter-include-regex <FILTER_INCLUDE_REGEX>
-sync only objects that match given regular expression [env: FILTER_INCLUDE_REGEX=]
---filter-exclude-regex <FILTER_EXCLUDE_REGEX>
-do not sync objects that match given regular expression [env: FILTER_EXCLUDE_REGEX=]
---filter-smaller-size <FILTER_SMALLER_SIZE>
-sync only objects smaller than given size, Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_SMALLER_SIZE=]
---filter-larger-size <FILTER_LARGER_SIZE>
-sync only objects larger than OR EQUAL TO given size, Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_LARGER_SIZE=]
---remove-modified-filter
-do not check(ListObjectsV2) for modification in the target storage [env: REMOVE_MODIFIED_FILTER=]
---check-size
-use object size for update checking [env: CHECK_SIZE=]
---check-etag
-use etag for update checking [env: CHECK_ETAG=]
---check-mtime-and-etag
-use the modification time and ETag for update checking. If the source modification date is newer, check the ETag [env: CHECK_MTIME_AND_ETAG=]
---check-additional-checksum <CHECK_ADDITIONAL_CHECKSUM>
-use additional checksum for update checking [env: CHECK_ADDITIONAL_CHECKSUM=]
---check-mtime-and-additional-checksum <CHECK_MTIME_AND_ADDITIONAL_CHECKSUM>
-use the modification time and additional checksum for update checking. If the source modification date is newer, check the additional checksum [env: CHECK_MTIME_AND_ADDITIONAL_CHECKSUM=]
+      --filter-mtime-before <FILTER_MTIME_BEFORE>
+          sync only objects older than given time (RFC3339 datetime such as 2023-02-19T12:00:00Z) [env: FILTER_MTIME_BEFORE=]
+      --filter-mtime-after <FILTER_MTIME_AFTER>
+          sync only objects newer than OR EQUAL TO given time (RFC3339 datetime such as 2023-02-19T12:00:00Z) [env: FILTER_MTIME_AFTER=]
+      --filter-include-regex <FILTER_INCLUDE_REGEX>
+          sync only objects that match given regular expression [env: FILTER_INCLUDE_REGEX=]
+      --filter-exclude-regex <FILTER_EXCLUDE_REGEX>
+          do not sync objects that match given regular expression [env: FILTER_EXCLUDE_REGEX=]
+      --filter-smaller-size <FILTER_SMALLER_SIZE>
+          sync only objects smaller than given size, Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_SMALLER_SIZE=]
+      --filter-larger-size <FILTER_LARGER_SIZE>
+          sync only objects larger than OR EQUAL TO given size, Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_LARGER_SIZE=]
+      --remove-modified-filter
+          do not check(ListObjectsV2) for modification in the target storage [env: REMOVE_MODIFIED_FILTER=]
+      --check-size
+          use object size for update checking [env: CHECK_SIZE=]
+      --check-etag
+          use etag for update checking [env: CHECK_ETAG=]
+      --check-mtime-and-etag
+          use the modification time and ETag for update checking. If the source modification date is newer, check the ETag [env: CHECK_MTIME_AND_ETAG=]
+      --check-additional-checksum <CHECK_ADDITIONAL_CHECKSUM>
+          use additional checksum for update checking [env: CHECK_ADDITIONAL_CHECKSUM=]
+      --check-mtime-and-additional-checksum <CHECK_MTIME_AND_ADDITIONAL_CHECKSUM>
+          use the modification time and additional checksum for update checking. If the source modification date is newer, check the additional checksum [env: CHECK_MTIME_AND_ADDITIONAL_CHECKSUM=]
 
 Verification:
---additional-checksum-algorithm <ADDITIONAL_CHECKSUM_ALGORITHM>
-additional checksum algorithm for upload [env: ADDITIONAL_CHECKSUM_ALGORITHM=]
---full-object-checksum
-Use full object checksum for verification. CRC64NVME automatically use full object checksum. This option cannot be used with SHA1/SHA256 additional checksum [env: FULL_OBJECT_CHECKSUM=]
---enable-additional-checksum
-enable additional checksum for download [env: ENABLE_ADDITIONAL_CHECKSUM=]
---disable-multipart-verify
-disable multipart upload verification with ETag/additional checksum [env: DISABLE_MULTIPART_VERIFY=]
---disable-etag-verify
-disable etag verification [env: DISABLE_ETAG_VERIFY=]
+      --additional-checksum-algorithm <ADDITIONAL_CHECKSUM_ALGORITHM>
+          additional checksum algorithm for upload [env: ADDITIONAL_CHECKSUM_ALGORITHM=]
+      --full-object-checksum
+          Use full object checksum for verification. CRC64NVME automatically use full object checksum. This option cannot be used with SHA1/SHA256 additional checksum [env: FULL_OBJECT_CHECKSUM=]
+      --enable-additional-checksum
+          enable additional checksum for download [env: ENABLE_ADDITIONAL_CHECKSUM=]
+      --disable-multipart-verify
+          disable multipart upload verification with ETag/additional checksum [env: DISABLE_MULTIPART_VERIFY=]
+      --disable-etag-verify
+          disable etag verification [env: DISABLE_ETAG_VERIFY=]
 
 Performance:
---worker-size <WORKER_SIZE>
-number of workers for synchronization [env: WORKER_SIZE=] [default: 16]
---max-parallel-uploads <MAX_PARALLEL_UPLOADS>
-maximum number of parallel multipart uploads/downloads [env: MAX_PARALLEL_UPLOADS=] [default: 16]
---rate-limit-objects <RATE_LIMIT_OBJECTS>
-rate limit objects per second [env: RATE_LIMIT_OBJECTS=]
---rate-limit-bandwidth <RATE_LIMIT_BANDWIDTH>
-rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB [env: RATE_LIMIT_BANDWIDTH=]
+      --worker-size <WORKER_SIZE>
+          number of workers for synchronization [env: WORKER_SIZE=] [default: 16]
+      --max-parallel-uploads <MAX_PARALLEL_UPLOADS>
+          maximum number of parallel multipart uploads/downloads [env: MAX_PARALLEL_UPLOADS=] [default: 16]
+      --rate-limit-objects <RATE_LIMIT_OBJECTS>
+          rate limit objects per second [env: RATE_LIMIT_OBJECTS=]
+      --rate-limit-bandwidth <RATE_LIMIT_BANDWIDTH>
+          rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB [env: RATE_LIMIT_BANDWIDTH=]
 
 Multipart Settings:
---multipart-threshold <MULTIPART_THRESHOLD>
-object size threshold that s3sync uses for multipart upload, Allow suffixes: MB, MiB, GB, GiB. the larger the size, the larger the memory usage [env: MULTIPART_THRESHOLD=] [default: 8MiB]
---multipart-chunksize <MULTIPART_CHUNKSIZE>
-chunk size that s3sync uses for multipart upload of individual files, Allow suffixes: MB, MiB, GB, GiB. the larger the size, the larger the memory usage [env: MULTIPART_CHUNKSIZE=] [default: 8MiB]
---auto-chunksize
-automatically adjusts a chunk size to match the source or target. It takes extra HEAD requests(1 API call per part) [env: AUTO_CHUNKSIZE=]
+      --multipart-threshold <MULTIPART_THRESHOLD>
+          object size threshold that s3sync uses for multipart upload, Allow suffixes: MB, MiB, GB, GiB. the larger the size, the larger the memory usage [env: MULTIPART_THRESHOLD=] [default: 8MiB]
+      --multipart-chunksize <MULTIPART_CHUNKSIZE>
+          chunk size that s3sync uses for multipart upload of individual files, Allow suffixes: MB, MiB, GB, GiB. the larger the size, the larger the memory usage [env: MULTIPART_CHUNKSIZE=] [default: 8MiB]
+      --auto-chunksize
+          automatically adjusts a chunk size to match the source or target. It takes extra HEAD requests(1 API call per part) [env: AUTO_CHUNKSIZE=]
 
 Metadata/Headers:
---cache-control <CACHE_CONTROL>
-Cache-Control HTTP header to set on the target object [env: CACHE_CONTROL=]
---content-disposition <CONTENT_DISPOSITION>
-Content-Disposition HTTP header to set on the target object [env: CONTENT_DISPOSITION=]
---content-encoding <CONTENT_ENCODING>
-Content-Encoding HTTP header to set on the target object [env: CONTENT_ENCODING=]
---content-language <CONTENT_LANGUAGE>
-Content-Language HTTP header to set on the target object [env: CONTENT_LANGUAGE=]
---content-type <CONTENT_TYPE>
-Content-Type HTTP header to set on the target object [env: CONTENT_TYPE=]
---expires <EXPIRES>
-Expires HTTP header to set on the target object(RFC3339 datetime such as 2023-02-19T12:00:00Z) [env: EXPIRES=]
---metadata <METADATA>
-metadata to set on the target object. e.g. --metadata "key1=value1,key2=value2" [env: METADATA=]
---website-redirect <WEBSITE_REDIRECT>
-x-amz-website-redirect-location header to set on the target object [env: WEBSITE_REDIRECT=]
+      --cache-control <CACHE_CONTROL>
+          Cache-Control HTTP header to set on the target object [env: CACHE_CONTROL=]
+      --content-disposition <CONTENT_DISPOSITION>
+          Content-Disposition HTTP header to set on the target object [env: CONTENT_DISPOSITION=]
+      --content-encoding <CONTENT_ENCODING>
+          Content-Encoding HTTP header to set on the target object [env: CONTENT_ENCODING=]
+      --content-language <CONTENT_LANGUAGE>
+          Content-Language HTTP header to set on the target object [env: CONTENT_LANGUAGE=]
+      --content-type <CONTENT_TYPE>
+          Content-Type HTTP header to set on the target object [env: CONTENT_TYPE=]
+      --expires <EXPIRES>
+          Expires HTTP header to set on the target object(RFC3339 datetime such as 2023-02-19T12:00:00Z) [env: EXPIRES=]
+      --metadata <METADATA>
+          metadata to set on the target object. e.g. --metadata "key1=value1,key2=value2" [env: METADATA=]
+      --website-redirect <WEBSITE_REDIRECT>
+          x-amz-website-redirect-location header to set on the target object [env: WEBSITE_REDIRECT=]
 
 Tagging:
---tagging <TAGGING>    tagging to set on the target object. e.g. --tagging "key1=value1&key2=value2". must be encoded as UTF-8 then URLEncoded URL query parameters without tag name duplicates [env: TAGGING=]
---disable-tagging      do not copy tagging [env: DISABLE_TAGGING=]
---sync-latest-tagging  copy the latest tagging from the source if necessary. If this option is enabled, the --remove-modified-filter and --head-each-target options are automatically enabled [env: SYNC_LATEST_TAGGING=]
+      --tagging <TAGGING>    tagging to set on the target object. e.g. --tagging "key1=value1&key2=value2". must be encoded as UTF-8 then URLEncoded URL query parameters without tag name duplicates [env: TAGGING=]
+      --disable-tagging      do not copy tagging [env: DISABLE_TAGGING=]
+      --sync-latest-tagging  copy the latest tagging from the source if necessary. If this option is enabled, the --remove-modified-filter and --head-each-target options are automatically enabled [env: SYNC_LATEST_TAGGING=]
 
 Encryption:
---sse <SSE>
-server-side encryption. valid choices: AES256 | aws:kms | aws:kms:dsse [env: SSE=]
---sse-kms-key-id <SSE_KMS_KEY_ID>
-SSE KMS ID key [env: SSE_KMS_KEY_ID=]
---source-sse-c <SOURCE_SSE_C>
-source SSE-C algorithm. valid choices: AES256 [env: SOURCE_SSE_C=]
---source-sse-c-key <SOURCE_SSE_C_KEY>
-source SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: SOURCE_SSE_C_KEY=]
---source-sse-c-key-md5 <SOURCE_SSE_C_KEY_MD5>
-source base64 encoded MD5 digest of source_sse_c_key [env: SOURCE_SSE_C_KEY_MD5=]
---target-sse-c <TARGET_SSE_C>
-target SSE-C algorithm. valid choices: AES256 [env: TARGET_SSE_C=]
---target-sse-c-key <TARGET_SSE_C_KEY>
-target SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: TARGET_SSE_C_KEY=]
---target-sse-c-key-md5 <TARGET_SSE_C_KEY_MD5>
-target base64 encoded MD5 digest of source-sse-c-key [env: TARGET_SSE_C_KEY_MD5=]
+      --sse <SSE>
+          server-side encryption. valid choices: AES256 | aws:kms | aws:kms:dsse [env: SSE=]
+      --sse-kms-key-id <SSE_KMS_KEY_ID>
+          SSE KMS ID key [env: SSE_KMS_KEY_ID=]
+      --source-sse-c <SOURCE_SSE_C>
+          source SSE-C algorithm. valid choices: AES256 [env: SOURCE_SSE_C=]
+      --source-sse-c-key <SOURCE_SSE_C_KEY>
+          source SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: SOURCE_SSE_C_KEY=]
+      --source-sse-c-key-md5 <SOURCE_SSE_C_KEY_MD5>
+          source base64 encoded MD5 digest of source_sse_c_key [env: SOURCE_SSE_C_KEY_MD5=]
+      --target-sse-c <TARGET_SSE_C>
+          target SSE-C algorithm. valid choices: AES256 [env: TARGET_SSE_C=]
+      --target-sse-c-key <TARGET_SSE_C_KEY>
+          target SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: TARGET_SSE_C_KEY=]
+      --target-sse-c-key-md5 <TARGET_SSE_C_KEY_MD5>
+          target base64 encoded MD5 digest of source-sse-c-key [env: TARGET_SSE_C_KEY_MD5=]
 
 Tracing/Logging:
---json-tracing           show trace as json format [env: JSON_TRACING=]
---aws-sdk-tracing        enable aws sdk tracing [env: AWS_SDK_TRACING=]
---span-events-tracing    show span event tracing [env: SPAN_EVENTS_TRACING=]
---disable-color-tracing  disable ANSI terminal colors [env: DISABLE_COLOR_TRACING=]
+      --json-tracing           show trace as json format [env: JSON_TRACING=]
+      --aws-sdk-tracing        enable aws sdk tracing [env: AWS_SDK_TRACING=]
+      --span-events-tracing    show span event tracing [env: SPAN_EVENTS_TRACING=]
+      --disable-color-tracing  disable ANSI terminal colors [env: DISABLE_COLOR_TRACING=]
 
 Retry Options:
---aws-max-attempts <max_attempts>
-maximum retry attempts that s3sync retry handler use [env: AWS_MAX_ATTEMPTS=] [default: 10]
---initial-backoff-milliseconds <initial_backoff>
-a multiplier value used when calculating backoff times as part of an exponential backoff with jitter strategy [env: INITIAL_BACKOFF_MILLISECONDS=] [default: 100]
---force-retry-count <FORCE_RETRY_COUNT>
-maximum force retry attempts that s3sync retry handler use [env: FORCE_RETRY_COUNT=] [default: 5]
---force-retry-interval-milliseconds <force_retry_interval>
-sleep interval (milliseconds) between s3sync force retries on error [env: FORCE_RETRY_INTERVAL_MILLISECONDS=] [default: 1000]
+      --aws-max-attempts <max_attempts>
+          maximum retry attempts that s3sync retry handler use [env: AWS_MAX_ATTEMPTS=] [default: 10]
+      --initial-backoff-milliseconds <initial_backoff>
+          a multiplier value used when calculating backoff times as part of an exponential backoff with jitter strategy [env: INITIAL_BACKOFF_MILLISECONDS=] [default: 100]
+      --force-retry-count <FORCE_RETRY_COUNT>
+          maximum force retry attempts that s3sync retry handler use [env: FORCE_RETRY_COUNT=] [default: 5]
+      --force-retry-interval-milliseconds <force_retry_interval>
+          sleep interval (milliseconds) between s3sync force retries on error [env: FORCE_RETRY_INTERVAL_MILLISECONDS=] [default: 1000]
 
 Advanced:
---warn-as-error
-treat warnings as errors(except for the case of etag/checksum mismatch, etc.) [env: WARN_AS_ERROR=]
---ignore-symlinks
-ignore symbolic links [env: IGNORE_SYMLINKS=]
---head-each-target
-HeadObject is used to check whether an object has been modified in the target storage it reduces the possibility of race condition issue [env: HEAD_EACH_TARGET=]
---enable-versioning
-sync all version objects in the source storage to the target versioning storage [env: ENABLE_VERSIONING=]
---acl <ACL>
-ACL for the objects valid choices: private | public-read | public-read-write | authenticated-read | aws-exec-read | bucket-owner-read | bucket-owner-full-control [env: ACL=]
---no-guess-mime-type
-do not try to guess the mime type of local file [env: NO_GUESS_MIME_TYPE=]
---max-keys <MAX_KEYS>
-maximum number of objects returned in a single list object request [env: MAX_KEYS=] [default: 1000]
---put-last-modified-metadata
-put last modified of the source to metadata [env: PUT_LAST_MODIFIED_METADATA=]
---auto-complete-shell <SHELL>
-generate a auto completions script. Valid values: bash, fish, zsh, powershell, elvish [env: AUTO_COMPLETE_SHELL=]
---disable-stalled-stream-protection
-disable stalled stream protection [env: DISABLE_STALLED_STREAM_PROTECTION=]
---disable-payload-signing
-disable payload signing for object uploads [env: DISABLE_PAYLOAD_SIGNING=]
---disable-content-md5-header
-disable Content-MD5 header for object uploads. It disables the ETag verification for the uploaded object [env: DISABLE_CONTENT_MD5_HEADER=]
---disable-express-one-zone-additional-checksum
-disable default additional checksum verification in Express One Zone storage class [env: DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM=]
+      --warn-as-error
+          treat warnings as errors(except for the case of etag/checksum mismatch, etc.) [env: WARN_AS_ERROR=]
+      --ignore-symlinks
+          ignore symbolic links [env: IGNORE_SYMLINKS=]
+      --head-each-target
+          HeadObject is used to check whether an object has been modified in the target storage it reduces the possibility of race condition issue [env: HEAD_EACH_TARGET=]
+      --enable-versioning
+          sync all version objects in the source storage to the target versioning storage [env: ENABLE_VERSIONING=]
+      --acl <ACL>
+          ACL for the objects valid choices: private | public-read | public-read-write | authenticated-read | aws-exec-read | bucket-owner-read | bucket-owner-full-control [env: ACL=]
+      --no-guess-mime-type
+          do not try to guess the mime type of local file [env: NO_GUESS_MIME_TYPE=]
+      --max-keys <MAX_KEYS>
+          maximum number of objects returned in a single list object request [env: MAX_KEYS=] [default: 1000]
+      --put-last-modified-metadata
+          put last modified of the source to metadata [env: PUT_LAST_MODIFIED_METADATA=]
+      --auto-complete-shell <SHELL>
+          generate a auto completions script. Valid values: bash, fish, zsh, powershell, elvish [env: AUTO_COMPLETE_SHELL=]
+      --disable-stalled-stream-protection
+          disable stalled stream protection [env: DISABLE_STALLED_STREAM_PROTECTION=]
+      --disable-payload-signing
+          disable payload signing for object uploads [env: DISABLE_PAYLOAD_SIGNING=]
+      --disable-content-md5-header
+          disable Content-MD5 header for object uploads. It disables the ETag verification for the uploaded object [env: DISABLE_CONTENT_MD5_HEADER=]
+      --disable-express-one-zone-additional-checksum
+          disable default additional checksum verification in Express One Zone storage class [env: DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM=]
 
 Dangerous:
---delete  delete objects that exist in the target but not in the source. [Warning] Since this can cause data loss, test first with the --dry-run option [env: DELETE=]
+      --delete  delete objects that exist in the target but not in the source. [Warning] Since this can cause data loss, test first with the --dry-run option [env: DELETE=]
 $
 ```
 
