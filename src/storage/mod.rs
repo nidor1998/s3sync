@@ -167,7 +167,6 @@ pub trait StorageTrait: DynClone {
     fn get_local_path(&self) -> PathBuf;
     fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>>;
     fn generate_full_key_with_bucket(&self, key: &str, version_id: Option<String>) -> String;
-    fn has_warning(&self) -> bool;
     fn set_warning(&self);
 }
 

@@ -1372,11 +1372,9 @@ impl StorageTrait for LocalStorage {
         self.rate_limit_bandwidth.clone()
     }
 
+    #[cfg(not(tarpaulin_include))]
     fn generate_full_key_with_bucket(&self, _: &str, _: Option<String>) -> String {
         unimplemented!()
-    }
-    fn has_warning(&self) -> bool {
-        self.has_warning.load(Ordering::SeqCst)
     }
 
     fn set_warning(&self) {

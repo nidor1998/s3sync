@@ -352,6 +352,10 @@ pub struct CLIArgs {
     #[arg(long, env, conflicts_with_all = ["disable_tagging", "sync_latest_tagging"], value_parser = tagging::parse_tagging)]
     tagging: Option<String>,
 
+    /// x-amz-website-redirect-location header to set on the target object.
+    #[arg(long, env)]
+    website_redirect: Option<String>,
+
     /// sync only objects older than given time (RFC3339 datetime such as 2023-02-19T12:00:00Z)
     #[arg(long, env)]
     filter_mtime_before: Option<DateTime<Utc>>,
@@ -790,6 +794,7 @@ impl CLIArgs {
             && self.content_encoding.is_none()
             && self.content_language.is_none()
             && self.content_type.is_none()
+            && self.website_redirect.is_none()
             && self.expires.is_none()
             && self.tagging.is_none()
             && !self.put_last_modified_metadata
@@ -1329,6 +1334,7 @@ impl TryFrom<CLIArgs> for Config {
             content_type: value.content_type,
             expires: value.expires,
             metadata,
+            website_redirect: value.website_redirect,
             tagging,
             filter_config: FilterConfig {
                 before_time: value.filter_mtime_before,

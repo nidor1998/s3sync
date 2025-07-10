@@ -29,6 +29,8 @@ s3sync library has many features that are not documented. You can refer to the s
 
 You can refer to the source code bin/cli to implement your own synchronization tool.
 
+NOTE: s3sync library is assumed to be used like a way that you use s3sync CLI.
+
 Example usage
 =============
 

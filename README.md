@@ -29,6 +29,16 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
   Note: Amazon S3 Express One Zone does not support ETag as verification. But s3sync uses additional checksum algorithm for verification by default(CRC64NVME).
 
+- Easy to use  
+  s3sync is designed to be easy to use.  
+  s3sync has many options, but the default settings are reasonable for most cases and you just need to specify the source and target.
+
+  For example, In the IAM role environment, you can use the following command to synchronize a local directory with an S3 bucket.
+
+  ```bash
+  s3sync /path/to/local s3://bucket-name/prefix
+  ```
+  
 - Multiple ways
   - Local to S3(s3-compatible storage)
   - S3(s3-compatible storage) to Local
@@ -371,6 +381,8 @@ If `--enable-versioning` is specified, s3sync adds user-defined metadata to the 
 If you transfer to existing bucket, because of the lack of user-defined metadata, s3sync will transfer all versions of the object.  
 Generally, you should use `--enable-versioning` when you transfer to a new bucket.
 
+With `--filter-mtime-before` and `--filter-mtime-after` options, you can get snapshots of the objects at a specific period.
+
 Intermediate delete markers are not synchronized. Latest version delete markers are synchronized.
 
 user-defined metadata: `s3sync_origin_version_id`, `s3sync_origin_last_modified`
@@ -384,6 +396,11 @@ The following metadata of the S3 object is synchronized.
 - Content-Language
 - Expires
 - User-defined metadata
+
+### Website redirect location support
+If the source object has `x-amz-website-redirect-location` metadata, s3sync copies it to the target object.
+
+And, you can specify `--website-redirect-location` option to set the redirect location for the target object.
 
 ### SSE support
 The following SSE is supported.

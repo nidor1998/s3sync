@@ -54,4 +54,5 @@ mod target_sse_c;
 mod tracing;
 mod transfer;
 mod warn_as_error;
+mod website_redirect;
 mod worker_size;

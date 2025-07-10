@@ -1048,10 +1048,6 @@ impl StorageTrait for S3Storage {
         format!("{}/{}", &self.bucket, generate_full_key(&self.prefix, key))
     }
 
-    fn has_warning(&self) -> bool {
-        self.has_warning.load(std::sync::atomic::Ordering::SeqCst)
-    }
-
     fn set_warning(&self) {
         self.has_warning
             .store(true, std::sync::atomic::Ordering::SeqCst);

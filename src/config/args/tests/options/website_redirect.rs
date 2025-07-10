@@ -18,11 +18,11 @@ mod tests {
 
         let config = build_config_from_args(args).unwrap();
 
-        assert!(!config.server_side_copy);
+        assert!(config.website_redirect.is_none());
     }
 
     #[test]
-    fn with_custom_value_sever_side_copy() {
+    fn with_custom_value() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -31,45 +31,29 @@ mod tests {
             "source_profile",
             "--target-profile",
             "target_profile",
-            "--server-side-copy",
+            "--website-redirect",
+            "/redirect",
             "s3://source-bucket/source_key",
             "s3://target-bucket/target_key",
         ];
 
         let config = build_config_from_args(args).unwrap();
 
-        assert!(config.server_side_copy);
+        assert_eq!(config.website_redirect.unwrap().as_str(), "/redirect");
     }
 
     #[test]
-    fn with_custom_value_with_source_error() {
-        init_dummy_tracing_subscriber();
-
-        let args = vec![
-            "s3sync",
-            "--target-profile",
-            "target_profile",
-            "--server-side-copy",
-            "./test_data/source/",
-            "s3://target-bucket/target_key",
-        ];
-
-        let config = build_config_from_args(args);
-
-        assert!(config.is_err());
-    }
-
-    #[test]
-    fn with_custom_value_with_target_error() {
+    fn with_custom_value_error() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
             "s3sync",
             "--source-profile",
             "source_profile",
-            "--server-side-copy",
+            "--website-redirect",
+            "/redirect",
             "s3://source-bucket/source_key",
-            "/xyz/test/",
+            "./test_data/source/",
         ];
 
         let config = build_config_from_args(args);
