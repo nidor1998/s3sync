@@ -27,6 +27,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.    
   Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)  
   Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
+  If you want to get evidence of the integrity check, you can use `-vv` option to output the verification information.
+
   Note: Amazon S3 Express One Zone does not support ETag as verification. But s3sync uses additional checksum algorithm for verification by default(CRC64NVME).
 
 - Easy to use  
