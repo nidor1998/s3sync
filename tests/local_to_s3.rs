@@ -4455,4 +4455,84 @@ mod tests {
             .delete_bucket_with_cascade(&BUCKET1.to_string())
             .await;
     }
+
+    #[tokio::test]
+    async fn local_to_s3_with_website_redirect() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--website-redirect",
+                "/redirect",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                0
+            );
+
+            let object = helper.get_object(&BUCKET1.to_string(), "data1", None).await;
+            assert_eq!(
+                object.website_redirect_location,
+                Some("/redirect".to_string())
+            );
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_multipart_upload_website_redirect() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+
+            helper
+                .sync_large_test_data_with_website_redirect(&target_bucket_url, "/redirect")
+                .await;
+
+            let object = helper
+                .head_object(&BUCKET1.to_string(), "large_file", None)
+                .await;
+            assert_eq!(
+                object.website_redirect_location,
+                Some("/redirect".to_string())
+            );
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
 }

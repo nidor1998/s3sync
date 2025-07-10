@@ -10,7 +10,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart, MetadataDirective,
-    ObjectPart, RequestPayer, ServerSideEncryption, StorageClass,
+    ObjectPart, RequestPayer, ServerSideEncryption, StorageClass, TaggingDirective,
 };
 use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
@@ -285,6 +285,13 @@ impl UploadManager {
             .key(key)
             .set_metadata(get_object_output_first_chunk.metadata().cloned())
             .set_tagging(self.tagging.clone())
+            .set_website_redirect_location(if self.config.website_redirect.is_none() {
+                get_object_output_first_chunk
+                    .website_redirect_location()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.website_redirect.clone()
+            })
             .set_content_type(if self.config.content_type.is_none() {
                 get_object_output_first_chunk
                     .content_type()
@@ -1302,8 +1309,16 @@ impl UploadManager {
                 .bucket(bucket)
                 .key(key)
                 .metadata_directive(MetadataDirective::Replace)
+                .tagging_directive(TaggingDirective::Replace)
                 .set_metadata(get_object_output.metadata().cloned())
                 .set_tagging(self.tagging.clone())
+                .set_website_redirect_location(if self.config.website_redirect.is_none() {
+                    get_object_output
+                        .website_redirect_location()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.website_redirect.clone()
+                })
                 .set_content_type(if self.config.content_type.is_none() {
                     get_object_output
                         .content_type()
@@ -1375,6 +1390,13 @@ impl UploadManager {
                 .body(buffer_stream)
                 .set_metadata(get_object_output.metadata().cloned())
                 .set_tagging(self.tagging.clone())
+                .set_website_redirect_location(if self.config.website_redirect.is_none() {
+                    get_object_output
+                        .website_redirect_location()
+                        .map(|value| value.to_string())
+                } else {
+                    self.config.website_redirect.clone()
+                })
                 .set_content_md5(md5_digest_base64)
                 .set_content_type(if self.config.content_type.is_none() {
                     get_object_output

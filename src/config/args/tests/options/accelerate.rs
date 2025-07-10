@@ -92,10 +92,10 @@ mod tests {
 
         let args = vec![
             "s3sync",
-            "--source-profile",
-            "source_profile",
+            "--target-profile",
+            "target_profile",
             "--source-accelerate",
-            "/xyz/test/",
+            "./test_data/source/",
             "s3://target-bucket/target_key",
         ];
 

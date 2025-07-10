@@ -71,20 +71,20 @@ pub const TEST_8MIB_FILE_KEY: &str = "8mib_file";
 
 pub const TEST_RANDOM_DATA_FILE_KEY: &str = "random_data";
 
-const TEST_CONTENT_DISPOSITION: &str = "attachment; filename=\"filename.jpg\"";
-const TEST_CONTENT_ENCODING: &str = "deflate";
-const TEST_CONTENT_LANGUAGE: &str = "en-US,en-CA";
-const TEST_CACHE_CONTROL: &str = "s-maxage=1604800";
-const TEST_CONTENT_TYPE: &str = "application/vnd.ms-excel";
-const TEST_TAGGING: &str = "tag1=tag_value1&tag2=tag_value2";
-const TEST_METADATA_STRING: &str = "key1=value1,key2=value2";
+pub const TEST_CONTENT_DISPOSITION: &str = "attachment; filename=\"filename.jpg\"";
+pub const TEST_CONTENT_ENCODING: &str = "deflate";
+pub const TEST_CONTENT_LANGUAGE: &str = "en-US,en-CA";
+pub const TEST_CACHE_CONTROL: &str = "s-maxage=1604800";
+pub const TEST_CONTENT_TYPE: &str = "application/vnd.ms-excel";
+pub const TEST_TAGGING: &str = "tag1=tag_value1&tag2=tag_value2";
+pub const TEST_METADATA_STRING: &str = "key1=value1,key2=value2";
 pub static TEST_METADATA: Lazy<HashMap<String, String>> = Lazy::new(|| {
     HashMap::from([
         ("key1".to_string(), "value1".to_string()),
         ("key2".to_string(), "value2".to_string()),
     ])
 });
-const TEST_EXPIRES: &str = "2055-05-20T00:00:00.000Z";
+pub const TEST_EXPIRES: &str = "2055-05-20T00:00:00.000Z";
 
 pub static BUCKET1: Lazy<String> = Lazy::new(|| format!("bucket1-{}", Uuid::new_v4()));
 pub static BUCKET2: Lazy<String> = Lazy::new(|| format!("bucket2-{}", Uuid::new_v4()));
@@ -751,6 +751,31 @@ impl TestHelper {
         assert_eq!(object_list.len(), 5);
     }
 
+    pub async fn sync_test_data_with_website_redirect(
+        &self,
+        target_bucket_url: &str,
+        redirect: &str,
+    ) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--website-redirect",
+            redirect,
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+
+        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
     pub async fn sync_directory_bucket_test_data(&self, target_bucket_url: &str) {
         let args = vec![
             "s3sync",
@@ -914,6 +939,30 @@ impl TestHelper {
             "s3sync",
             "--target-profile",
             "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_website_redirect(
+        &self,
+        target_bucket_url: &str,
+        redirect: &str,
+    ) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--website-redirect",
+            redirect,
             LARGE_FILE_DIR,
             target_bucket_url,
         ];

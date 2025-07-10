@@ -55,6 +55,7 @@ pub struct Config {
     pub content_type: Option<String>,
     pub expires: Option<DateTime<Utc>>,
     pub metadata: Option<HashMap<String, String>>,
+    pub website_redirect: Option<String>,
     pub tagging: Option<String>,
     pub filter_config: FilterConfig,
     pub put_last_modified_metadata: bool,
