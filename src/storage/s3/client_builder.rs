@@ -351,7 +351,7 @@ mod tests {
         assert!(timeout_config.operation_attempt_timeout().is_none());
         assert!(timeout_config.connect_timeout().is_some());
         assert!(timeout_config.read_timeout().is_none());
-        assert_eq!(timeout_config.has_timeouts(), true);
+        assert!(timeout_config.has_timeouts());
 
         // AWS SDK have default connect timeout
         assert_eq!(
