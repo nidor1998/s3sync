@@ -4,9 +4,11 @@ use aws_config::{BehaviorVersion, ConfigLoader};
 use aws_runtime::env_config::file::{EnvConfigFileKind, EnvConfigFiles};
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::Client;
+use std::time::Duration;
 
 use crate::config::ClientConfig;
 use aws_smithy_runtime_api::client::stalled_stream_protection::StalledStreamProtectionConfig;
+use aws_smithy_types::timeout::TimeoutConfig;
 use aws_types::region::Region;
 use aws_types::SdkConfig;
 use cfg_if::cfg_if;
@@ -49,10 +51,14 @@ cfg_if! {
 
 impl ClientConfig {
     pub async fn create_client(&self) -> Client {
-        let config_builder = Builder::from(&self.load_sdk_config().await)
+        let mut config_builder = Builder::from(&self.load_sdk_config().await)
             .force_path_style(self.force_path_style)
             .request_checksum_calculation(self.request_checksum_calculation)
             .accelerate(self.accelerate);
+
+        if let Some(timeout_config) = self.build_timeout_config() {
+            config_builder = config_builder.timeout_config(timeout_config);
+        }
 
         #[cfg(feature = "legacy_hyper014_feature")]
         if self.https_proxy.is_some() || self.http_proxy.is_some() {
@@ -193,6 +199,62 @@ impl ClientConfig {
                 self.retry_config.initial_backoff_milliseconds,
             ))
     }
+
+    fn build_timeout_config(&self) -> Option<TimeoutConfig> {
+        // TimeoutConfig is optional, but setting each timeout to None does not cause the SDK to use default timeouts.
+        let operation_timeout = self
+            .cli_timeout_config
+            .operation_timeout_milliseconds
+            .map(Duration::from_millis);
+        let operation_attempt_timeout = self
+            .cli_timeout_config
+            .operation_attempt_timeout_milliseconds
+            .map(Duration::from_millis);
+        let connect_timeout = self
+            .cli_timeout_config
+            .connect_timeout_milliseconds
+            .map(Duration::from_millis);
+        let read_timeout = self
+            .cli_timeout_config
+            .read_timeout_milliseconds
+            .map(Duration::from_millis);
+
+        if operation_timeout.is_none()
+            && operation_attempt_timeout.is_none()
+            && connect_timeout.is_none()
+            && read_timeout.is_none()
+        {
+            return None;
+        }
+
+        let mut builder = TimeoutConfig::builder();
+
+        builder = if let Some(operation_timeout) = operation_timeout {
+            builder.operation_timeout(operation_timeout)
+        } else {
+            builder
+        };
+
+        builder = if let Some(operation_attempt_timeout) = operation_attempt_timeout {
+            builder.operation_attempt_timeout(operation_attempt_timeout)
+        } else {
+            builder
+        };
+
+        builder = if let Some(connect_timeout) = connect_timeout {
+            builder.connect_timeout(connect_timeout)
+        } else {
+            builder
+        };
+
+        builder = if let Some(read_timeout) = read_timeout {
+            builder.read_timeout(read_timeout)
+        } else {
+            builder
+        };
+
+        Some(builder.build())
+    }
 }
 
 #[cfg(feature = "legacy_hyper014_feature")]
@@ -259,6 +321,12 @@ mod tests {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
             },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
+            },
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
@@ -276,6 +344,19 @@ mod tests {
         assert_eq!(
             retry_config.initial_backoff(),
             std::time::Duration::from_millis(100)
+        );
+
+        let timeout_config = client.config().timeout_config().unwrap();
+        assert!(timeout_config.operation_timeout().is_none());
+        assert!(timeout_config.operation_attempt_timeout().is_none());
+        assert!(timeout_config.connect_timeout().is_some());
+        assert!(timeout_config.read_timeout().is_none());
+        assert_eq!(timeout_config.has_timeouts(), true);
+
+        // AWS SDK have default connect timeout
+        assert_eq!(
+            timeout_config.connect_timeout(),
+            Some(Duration::from_millis(3100))
         );
 
         assert_eq!(
@@ -307,6 +388,12 @@ mod tests {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
             },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: Some(1000),
+                operation_attempt_timeout_milliseconds: Some(2000),
+                connect_timeout_milliseconds: Some(3000),
+                read_timeout_milliseconds: Some(4000),
+            },
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
@@ -325,6 +412,25 @@ mod tests {
             retry_config.initial_backoff(),
             std::time::Duration::from_millis(100)
         );
+
+        let timeout_config = client.config().timeout_config().unwrap();
+        assert_eq!(
+            timeout_config.operation_timeout(),
+            Some(Duration::from_millis(1000))
+        );
+        assert_eq!(
+            timeout_config.operation_attempt_timeout(),
+            Some(Duration::from_millis(2000))
+        );
+        assert_eq!(
+            timeout_config.connect_timeout(),
+            Some(Duration::from_millis(3000))
+        );
+        assert_eq!(
+            timeout_config.read_timeout(),
+            Some(Duration::from_millis(4000))
+        );
+        assert!(timeout_config.has_timeouts());
     }
 
     #[tokio::test]
@@ -343,6 +449,12 @@ mod tests {
             retry_config: crate::config::RetryConfig {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
             },
             https_proxy: None,
             http_proxy: None,
@@ -385,6 +497,12 @@ mod tests {
             retry_config: crate::config::RetryConfig {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
             },
             https_proxy: None,
             http_proxy: None,
@@ -430,6 +548,12 @@ mod tests {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
             },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
+            },
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: false,
@@ -459,6 +583,12 @@ mod tests {
             retry_config: crate::config::RetryConfig {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
             },
             https_proxy: None,
             http_proxy: None,
@@ -502,6 +632,12 @@ mod tests {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
             },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
+            },
             https_proxy: None,
             http_proxy: None,
             no_verify_ssl: true,
@@ -532,6 +668,12 @@ mod tests {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
             },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
+            },
             https_proxy: Some("https://localhost:8080".to_string()),
             http_proxy: Some("http://localhost:8080".to_string()),
             no_verify_ssl: false,
@@ -561,6 +703,12 @@ mod tests {
             retry_config: crate::config::RetryConfig {
                 aws_max_attempts: 10,
                 initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
             },
             https_proxy: Some("https://user:password@localhost:8080".to_string()),
             http_proxy: Some("http://user:password@localhost:8080".to_string()),

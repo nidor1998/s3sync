@@ -1057,6 +1057,10 @@ fn is_force_retryable_error(e: &Error) -> bool {
         return is_force_sdk_retryable_error(error);
     }
 
+    if e.downcast_ref::<S3syncError>().is_some() {
+        return true;
+    }
+
     false
 }
 
@@ -1253,6 +1257,10 @@ mod tests {
         )));
 
         assert!(!is_force_retryable_error(&anyhow!("error")));
+
+        assert!(is_force_retryable_error(&anyhow!(
+            S3syncError::DownloadForceRetryableError
+        )));
     }
 
     #[test]

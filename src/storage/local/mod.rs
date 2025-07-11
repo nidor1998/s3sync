@@ -480,7 +480,12 @@ impl LocalStorage {
 
         let mut chunked_remaining: u64 = 0;
         loop {
-            let buffer = buf_reader.fill_buf().await?;
+            let result = buf_reader.fill_buf().await;
+            if let Err(e) = result {
+                warn!(key = &key, "Failed to read data from the body: {e:?}");
+                return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+            }
+            let buffer = result.unwrap();
             if buffer.is_empty() {
                 break;
             }
@@ -643,7 +648,13 @@ impl LocalStorage {
         let mut buf_reader = BufReader::new(byte_stream.into_async_read());
         let mut read_data_size = 0;
         loop {
-            let tmp_buffer = buf_reader.fill_buf().await?;
+            let result = buf_reader.fill_buf().await;
+            if let Err(e) = result {
+                warn!(key = &key, "Failed to read data from the body: {e:?}");
+                return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+            }
+            let tmp_buffer = result.unwrap();
+
             if tmp_buffer.is_empty() {
                 if read_data_size != first_chunk_content_length {
                     return Err(anyhow!("Invalid first chunk data size. Expected: {first_chunk_content_length}, Actual: {read_data_size}"));
@@ -764,7 +775,16 @@ impl LocalStorage {
                     let mut buf_reader = BufReader::new(body);
                     let mut read_data_size = 0;
                     loop {
-                        let tmp_buffer = buf_reader.fill_buf().await?;
+                        let result = buf_reader.fill_buf().await;
+                        if let Err(e) = result {
+                            warn!(
+                                key = &source_key,
+                                "Failed to read data from the body: {e:?}"
+                            );
+                            return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+                        }
+                        let tmp_buffer = result.unwrap();
+
                         if tmp_buffer.is_empty() {
                             if read_data_size != chunk_content_length {
                                 return Err(anyhow!("Invalid chunk data size. Expected: {chunk_content_length}, Actual: {read_data_size}"));

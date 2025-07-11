@@ -92,6 +92,7 @@ pub struct ClientConfig {
     pub accelerate: bool,
     pub request_payer: Option<RequestPayer>,
     pub retry_config: RetryConfig,
+    pub cli_timeout_config: CLITimeoutConfig,
     pub https_proxy: Option<String>,
     pub http_proxy: Option<String>,
     pub no_verify_ssl: bool,
@@ -104,6 +105,14 @@ pub struct ClientConfig {
 pub struct RetryConfig {
     pub aws_max_attempts: u32,
     pub initial_backoff_milliseconds: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct CLITimeoutConfig {
+    pub operation_timeout_milliseconds: Option<u64>,
+    pub operation_attempt_timeout_milliseconds: Option<u64>,
+    pub connect_timeout_milliseconds: Option<u64>,
+    pub read_timeout_milliseconds: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy)]

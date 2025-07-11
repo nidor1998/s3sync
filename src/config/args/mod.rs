@@ -3,7 +3,8 @@ use crate::config::args::value_parser::{
     tagging, url,
 };
 use crate::config::{
-    ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig, TransferConfig,
+    CLITimeoutConfig, ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig,
+    TransferConfig,
 };
 use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
@@ -477,6 +478,46 @@ pub struct CLIArgs {
     /// sleep interval (milliseconds) between s3sync force retries on error
     #[arg(long, env, default_value_t = DEFAULT_FORCE_RETRY_INTERVAL_MILLISECONDS, value_name = "force_retry_interval", help_heading = "Retry Options")]
     force_retry_interval_milliseconds: u64,
+
+    /// operation timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation.
+    /// The default has no timeout.
+    #[arg(
+        long,
+        env,
+        value_name = "operation_timeout",
+        help_heading = "Timeout Options"
+    )]
+    operation_timeout_milliseconds: Option<u64>,
+
+    /// operation attempt timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation.
+    /// The default has no timeout.
+    #[arg(
+        long,
+        env,
+        value_name = "operation_attempt_timeout",
+        help_heading = "Timeout Options"
+    )]
+    operation_attempt_timeout_milliseconds: Option<u64>,
+
+    /// connect timeout (milliseconds).
+    /// The default has AWS SDK default timeout (Currently 3100 milliseconds).
+    #[arg(
+        long,
+        env,
+        value_name = "connect_timeout",
+        help_heading = "Timeout Options"
+    )]
+    connect_timeout_milliseconds: Option<u64>,
+
+    /// read timeout (milliseconds).
+    /// The default has no timeout.
+    #[arg(
+        long,
+        env,
+        value_name = "read_timeout",
+        help_heading = "Timeout Options"
+    )]
+    read_timeout_milliseconds: Option<u64>,
 
     /// treat warnings as errors(except for the case of etag/checksum mismatch, etc.)
     #[arg(long, env, default_value_t = DEFAULT_WARN_AS_ERROR, help_heading = "Advanced")]
@@ -1098,6 +1139,12 @@ impl CLIArgs {
                 aws_max_attempts: self.aws_max_attempts,
                 initial_backoff_milliseconds: self.initial_backoff_milliseconds,
             },
+            cli_timeout_config: CLITimeoutConfig {
+                operation_timeout_milliseconds: self.operation_timeout_milliseconds,
+                operation_attempt_timeout_milliseconds: self.operation_attempt_timeout_milliseconds,
+                connect_timeout_milliseconds: self.connect_timeout_milliseconds,
+                read_timeout_milliseconds: self.read_timeout_milliseconds,
+            },
             https_proxy: https_proxy.clone(),
             http_proxy: http_proxy.clone(),
             no_verify_ssl,
@@ -1126,6 +1173,12 @@ impl CLIArgs {
             retry_config: RetryConfig {
                 aws_max_attempts: self.aws_max_attempts,
                 initial_backoff_milliseconds: self.initial_backoff_milliseconds,
+            },
+            cli_timeout_config: CLITimeoutConfig {
+                operation_timeout_milliseconds: self.operation_timeout_milliseconds,
+                operation_attempt_timeout_milliseconds: self.operation_attempt_timeout_milliseconds,
+                connect_timeout_milliseconds: self.connect_timeout_milliseconds,
+                read_timeout_milliseconds: self.read_timeout_milliseconds,
             },
             https_proxy,
             http_proxy,
