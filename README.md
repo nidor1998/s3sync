@@ -11,7 +11,7 @@ s3sync is a reliable, very fast, and powerful synchronization tool for S3.
 It can be used to synchronize local directories with S3 bucket, and also to synchronize S3 to s3 bucket.
 Supports multipart upload, versioning, metadata.  
 
-This tool is designed solely for object storage data synchronization.
+This tool is designed solely for object storage(S3/S3 compatible) data synchronization.
 
 
 ## As a library

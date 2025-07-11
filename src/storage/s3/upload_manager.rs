@@ -643,9 +643,15 @@ impl UploadManager {
 
             // For the first part, we read the data from the supplied body.
             if part_number == 1 && !server_side_copy {
-                body.read_exact(buffer.as_mut_slice())
-                    .await
-                    .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                let result = body.read_exact(buffer.as_mut_slice()).await;
+                if let Err(e) = result {
+                    warn!(
+                        key = &source_key,
+                        part_number = part_number,
+                        "Failed to read data from the body: {e:?}"
+                    );
+                    return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+                }
             }
 
             let permit = self
@@ -716,9 +722,15 @@ impl UploadManager {
                         )
                         .into_async_read();
 
-                        body.read_exact(buffer.as_mut_slice())
-                            .await
-                            .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                        let result = body.read_exact(buffer.as_mut_slice()).await;
+                        if let Err(e) = result {
+                            warn!(
+                                key = &source_key,
+                                part_number = part_number,
+                                "Failed to read data from the body: {e:?}"
+                            );
+                            return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+                        }
                     } else {
                         upload_size = chunksize as i64;
                     }
@@ -987,9 +999,15 @@ impl UploadManager {
 
             // For the first part, we read the data from the supplied body.
             if part_number == 1 && !server_side_copy {
-                body.read_exact(buffer.as_mut_slice())
-                    .await
-                    .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+                let result = body.read_exact(buffer.as_mut_slice()).await;
+                if let Err(e) = result {
+                    warn!(
+                        key = &source_key,
+                        part_number = part_number,
+                        "Failed to read data from the body: {e:?}"
+                    );
+                    return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+                }
             }
 
             let permit = self
@@ -1059,9 +1077,16 @@ impl UploadManager {
                             None,
                         )
                         .into_async_read();
-                        body.read_exact(buffer.as_mut_slice())
-                            .await
-                            .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+
+                        let result = body.read_exact(buffer.as_mut_slice()).await;
+                        if let Err(e) = result {
+                            warn!(
+                                key = &source_key,
+                                part_number = part_number,
+                                "Failed to read data from the body: {e:?}"
+                            );
+                            return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+                        }
                     } else {
                         upload_size = object_part_chunksize;
                     }
@@ -1266,9 +1291,13 @@ impl UploadManager {
 
             let mut buffer = Vec::<u8>::with_capacity(self.source_total_size as usize);
             buffer.resize_with(self.source_total_size as usize, Default::default);
-            body.read_exact(buffer.as_mut_slice())
-                .await
-                .context("async_read_ext::AsyncReadExt read_exact() failed.")?;
+
+            let result = body.read_exact(buffer.as_mut_slice()).await;
+            if let Err(e) = result {
+                warn!(key = &key, "Failed to read data from the body: {e:?}");
+                return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+            }
+
             buffer
         } else {
             Vec::new() // For server-side copy, we do not need to read the body.

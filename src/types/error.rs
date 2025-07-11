@@ -6,4 +6,6 @@ pub enum S3syncError {
     DirectoryTraversalError,
     #[error("cancelled")]
     Cancelled,
+    #[error("an error occurred while downloading an object")]
+    DownloadForceRetryableError,
 }
