@@ -750,6 +750,16 @@ Retry Options:
       --force-retry-interval-milliseconds <force_retry_interval>
           sleep interval (milliseconds) between s3sync force retries on error [env: FORCE_RETRY_INTERVAL_MILLISECONDS=] [default: 1000]
 
+Timeout Options:
+      --operation-timeout-milliseconds <operation_timeout>
+          operation timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation. The default has no timeout [env: OPERATION_TIMEOUT_MILLISECONDS=]
+      --operation-attempt-timeout-milliseconds <operation_attempt_timeout>
+          operation attempt timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation. The default has no timeout [env: OPERATION_ATTEMPT_TIMEOUT_MILLISECONDS=]
+      --connect-timeout-milliseconds <connect_timeout>
+          connect timeout (milliseconds). The default has AWS SDK default timeout (Currently 3100 milliseconds) [env: CONNECT_TIMEOUT_MILLISECONDS=]
+      --read-timeout-milliseconds <read_timeout>
+          read timeout (milliseconds). The default has no timeout [env: READ_TIMEOUT_MILLISECONDS=]
+
 Advanced:
       --warn-as-error
           treat warnings as errors(except for the case of etag/checksum mismatch, etc.) [env: WARN_AS_ERROR=]
