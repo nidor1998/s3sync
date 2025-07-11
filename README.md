@@ -27,8 +27,16 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.    
   Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)  
   Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
-  If you want to get evidence of the integrity check, you can use `-vv` option to output the verification information.
-
+  If you want to get evidence of the integrity check, you can use `-vvv` option to output the verification information.
+  ```bash
+  $ s3sync -vvv --additional-checksum-algorithm SHA256 ./30 s3://xxxxx |rg '(verified|sync completed)'
+  2025-07-11T00:48:43.946290Z TRACE e_tag verified. key="30/30Mib.dat" source_e_tag="\"a81230a7666d413e511f9c2c2523947a-4\"" target_e_tag="\"a81230a7666d413e511f9c2c2523947a-4\""
+  2025-07-11T00:48:43.946298Z TRACE additional checksum verified. key="30/30Mib.dat" additional_checksum_algorithm="SHA256" target_checksum="5NrHBc0Z1wNCbADRDy8mJaIvc53oxncCrw/Fa48VhxY=-4" source_checksum="5NrHBc0Z1wNCbADRDy8mJaIvc53oxncCrw/Fa48VhxY=-4"
+  2025-07-11T00:48:43.946319Z  INFO sync completed. key="30Mib.dat" source_version_id="" source_last_modified="2025-06-17T06:19:54.483+00:00" target_key="30/30Mib.dat" size=31457280
+  30.00 MiB | 22.47 MiB/sec,  transferred   1 objects | 0 objects/sec,  etag verified 1 objects,  checksum verified 1 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 1 second
+  $
+  ```
+  
   Note: Amazon S3 Express One Zone does not support ETag as verification. But s3sync uses additional checksum algorithm for verification by default(CRC64NVME).
 
 - Easy to use  
