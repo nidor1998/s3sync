@@ -690,10 +690,14 @@ impl CLIArgs {
     }
 
     fn check_versioning_option_conflict(&self) -> Result<(), String> {
+        if !self.enable_versioning {
+            return Ok(());
+        }
+
         let source = storage_path::parse_storage_path(&self.source);
         let target = storage_path::parse_storage_path(&self.target);
 
-        if self.enable_versioning && !storage_path::is_both_storage_s3(&source, &target) {
+        if !storage_path::is_both_storage_s3(&source, &target) {
             return Err(LOCAL_STORAGE_SPECIFIED.to_string());
         }
 
