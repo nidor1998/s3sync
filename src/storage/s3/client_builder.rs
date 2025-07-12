@@ -482,6 +482,119 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_client_from_custom_timeout() {
+        init_dummy_tracing_subscriber();
+
+        let client_config = ClientConfig {
+            client_config_location: ClientConfigLocation {
+                aws_config_file: Some("./test_data/test_config/config".into()),
+                aws_shared_credentials_file: Some("./test_data/test_config/credentials".into()),
+            },
+            credential: crate::types::S3Credentials::Profile("aws".to_string()),
+            region: Some("my-region".to_string()),
+            endpoint_url: Some("https://my.endpoint.local".to_string()),
+            force_path_style: false,
+            retry_config: crate::config::RetryConfig {
+                aws_max_attempts: 10,
+                initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: Some(1000),
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
+            },
+            https_proxy: None,
+            http_proxy: None,
+            no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
+            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
+            request_payer: None,
+        };
+
+        let client = client_config.create_client().await;
+
+        let retry_config = client.config().retry_config().unwrap();
+        assert_eq!(retry_config.max_attempts(), 10);
+        assert_eq!(
+            retry_config.initial_backoff(),
+            std::time::Duration::from_millis(100)
+        );
+
+        let timeout_config = client.config().timeout_config().unwrap();
+        assert_eq!(
+            timeout_config.operation_timeout(),
+            Some(Duration::from_millis(1000))
+        );
+        assert!(timeout_config.operation_attempt_timeout().is_none());
+        assert!(timeout_config.connect_timeout().is_some());
+        assert!(timeout_config.read_timeout().is_none());
+        assert!(timeout_config.has_timeouts());
+
+        assert_eq!(
+            client.config().region().unwrap().to_string(),
+            "my-region".to_string()
+        );
+    }
+
+    #[tokio::test]
+    async fn create_client_from_custom_timeout_case2() {
+        init_dummy_tracing_subscriber();
+
+        let client_config = ClientConfig {
+            client_config_location: ClientConfigLocation {
+                aws_config_file: Some("./test_data/test_config/config".into()),
+                aws_shared_credentials_file: Some("./test_data/test_config/credentials".into()),
+            },
+            credential: crate::types::S3Credentials::Profile("aws".to_string()),
+            region: Some("my-region".to_string()),
+            endpoint_url: Some("https://my.endpoint.local".to_string()),
+            force_path_style: false,
+            retry_config: crate::config::RetryConfig {
+                aws_max_attempts: 10,
+                initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: Some(1000),
+                read_timeout_milliseconds: None,
+            },
+            https_proxy: None,
+            http_proxy: None,
+            no_verify_ssl: false,
+            disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
+            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
+            request_payer: None,
+        };
+
+        let client = client_config.create_client().await;
+
+        let retry_config = client.config().retry_config().unwrap();
+        assert_eq!(retry_config.max_attempts(), 10);
+        assert_eq!(
+            retry_config.initial_backoff(),
+            std::time::Duration::from_millis(100)
+        );
+
+        let timeout_config = client.config().timeout_config().unwrap();
+        assert!(timeout_config.connect_timeout().is_some());
+        assert!(timeout_config.operation_attempt_timeout().is_none());
+        assert!(timeout_config.connect_timeout().is_some());
+        assert!(timeout_config.read_timeout().is_none());
+        assert!(timeout_config.has_timeouts());
+
+        assert_eq!(
+            client.config().region().unwrap().to_string(),
+            "my-region".to_string()
+        );
+    }
+
+    #[tokio::test]
     async fn create_client_from_default_profile() {
         init_dummy_tracing_subscriber();
 
