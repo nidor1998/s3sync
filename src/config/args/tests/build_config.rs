@@ -517,6 +517,50 @@ mod tests {
     }
 
     #[test]
+    fn build_from_source_express_onezone() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "s3://bucket--x-s3",
+            "./test_data/target",
+        ];
+        let _ = build_config_from_args(args).unwrap();
+    }
+
+    #[test]
+    fn build_from_target_express_onezone() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "target_profile",
+            "./test_data/source",
+            "s3://bucket--x-s3",
+        ];
+        let _ = build_config_from_args(args).unwrap();
+    }
+
+    #[test]
+    fn build_from_both_express_onezone() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "s3://bucket1--x-s3",
+            "s3://bucket2--x-s3",
+        ];
+        let _ = build_config_from_args(args).unwrap();
+    }
+
+    #[test]
     #[cfg(target_family = "windows")]
     fn build_from_local_end_with_back_slash() {
         init_dummy_tracing_subscriber();
@@ -584,7 +628,6 @@ mod tests {
         // skipcq: RS-W1021
         assert!(false, "no error occurred");
     }
-
     #[test]
     #[cfg(target_family = "unix")]
     fn build_from_invalid_denied_target() {
