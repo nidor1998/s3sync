@@ -78,6 +78,8 @@ const DEFAULT_REQUEST_PAYER: bool = false;
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
     "with --enable-versioning/--sync-latest-tagging, both storage must be s3://\n";
+const VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
+    "--enable-versioning is not supported with express onezone storage class\n";
 const LOCAL_STORAGE_SPECIFIED_WITH_STORAGE_CLASS: &str =
     "with --storage-class, target storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_SSE: &str =
@@ -693,6 +695,18 @@ impl CLIArgs {
 
         if self.enable_versioning && !storage_path::is_both_storage_s3(&source, &target) {
             return Err(LOCAL_STORAGE_SPECIFIED.to_string());
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
         }
 
         Ok(())
