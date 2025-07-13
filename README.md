@@ -178,7 +178,15 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   All metadata of the object can be synchronized. For example, `Content-Type`, `Content-Encoding`, `Cache-Control`, user-defined metadata, etc.
 
 - Flexible filtering  
-  Regular expression, `ContentLength`, `LastModified`.
+  Key name Regular expression, `ContentLength`, `LastModified`.
+
+- User-defined metadata-based regular expression filtering  
+  You can filter objects based on user-defined metadata.  
+  For example, `--filter-include-metadata-regex 'key1=(value1|xxx),key2=value2'`, `--filter-exclude-metadata-regex 'key1=(value1|xxx),key2=value2'`
+
+- Tag-based regular expression filtering  
+  You can filter objects based on tags.  
+  For example, `--filter-include-tag-regex 'key1=(value1|xxx)&key2=value2'`, `--filter-exclude-tag-regex 'key1=(value1|xxx)&key2=value2'`
 
 - Rate limiting by objects, bandwidth  
   For example, you can limit the number of objects transferred per second to 1,000, and the bandwidth to 100MB/sec.
