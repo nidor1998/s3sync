@@ -99,6 +99,10 @@ mod tests {
             check_mtime_and_additional_checksum: None,
             include_regex: None,
             exclude_regex: None,
+            include_metadata_regex: None,
+            exclude_metadata_regex: None,
+            include_tag_regex: None,
+            exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
         };
@@ -135,6 +139,10 @@ mod tests {
             check_mtime_and_additional_checksum: None,
             include_regex: None,
             exclude_regex: None,
+            include_metadata_regex: None,
+            exclude_metadata_regex: None,
+            include_tag_regex: None,
+            exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
         };
@@ -170,6 +178,10 @@ mod tests {
             check_mtime_and_additional_checksum: None,
             include_regex: None,
             exclude_regex: None,
+            include_metadata_regex: None,
+            exclude_metadata_regex: None,
+            include_tag_regex: None,
+            exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
         };

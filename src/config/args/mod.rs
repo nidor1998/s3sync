@@ -45,6 +45,8 @@ const DEFAULT_DISABLE_COLOR_TRACING: bool = false;
 const DEFAULT_MULTIPART_THRESHOLD: &str = "8MiB";
 const DEFAULT_MULTIPART_CHUNKSIZE: &str = "8MiB";
 const DEFAULT_AUTO_CHUNKSIZE: bool = false;
+const DEFAULT_NO_SYNC_SYSTEM_METADATA: bool = false;
+const DEFAULT_NO_SYNC_USER_DEFINED_METADATA: bool = false;
 const DEFAULT_WARN_AS_ERROR: bool = false;
 const DEFAULT_IGNORE_SYMLINKS: bool = false;
 const DEFAULT_FORCE_PATH_STYLE: bool = false;
@@ -142,6 +144,25 @@ const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_SERVER_SIDE_COPY: &str =
     "with --server-side-copy, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_SERVER_SIDE_COPY: &str =
     "with --server-side-copy, target storage must be s3://\n";
+
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_INCLUDE_METADATA_REGEX: &str =
+    "with --filter-include-metadata-regex, source storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_EXCLUDE_METADATA_REGEX: &str =
+    "with --filter-exclude-metadata-regex, source storage must be s3://\n";
+
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_INCLUDE_TAG_REGEX: &str =
+    "with --filter-include-tag-regex, source storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_EXCLUDE_TAG_REGEX: &str =
+    "with --filter-exclude-tag-regex, source storage must be s3://\n";
+
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_SYSTEM_METADATA: &str =
+    "with --no-sync-system-metadata, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_SYSTEM_METADATA: &str =
+    "with --no-sync-system-metadata, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_USER_DEFINED_METADATA: &str =
+    "with --no-sync-user-defined-metadata, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_USER_DEFINED_METADATA: &str =
+    "with --no-sync-user-defined-metadata, target storage must be s3://\n";
 
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
@@ -293,6 +314,26 @@ pub struct CLIArgs {
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], default_value_t = DEFAULT_CHECK_SIZE, help_heading = "Filtering")]
     check_size: bool,
 
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
+    long_help=r#"sync only objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
+Example: "key1=(value1|value2),key2=value2"#)]
+    filter_include_metadata_regex: Option<String>,
+
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
+    long_help=r#"do not sync objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
+Example: "key1=(value1|value2),key2=value2"#)]
+    filter_exclude_metadata_regex: Option<String>,
+
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
+    long_help=r#"sync only objects that have tag matching a given regular expression. keys must be sorted in alphabetical order, and '&' separated. This filter is applied after all other filters.
+Example: "key1=(value1|value2)&key2=value2"."#)]
+    filter_include_tag_regex: Option<String>,
+
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
+    long_help=r#"do not sync objects that have tag matching a given regular expression. keys must be sorted in alphabetical order, and '&' separated. This filter is applied after all other filters.
+Example: "key1=(value1|value2)&key2=value2"."#)]
+    filter_exclude_tag_regex: Option<String>,
+
     /// use etag for update checking
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "check_mtime_and_additional_checksum", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG, help_heading = "Filtering")]
     check_etag: bool,
@@ -390,6 +431,15 @@ pub struct CLIArgs {
     /// x-amz-website-redirect-location header to set on the target object.
     #[arg(long, env, help_heading = "Metadata/Headers")]
     website_redirect: Option<String>,
+
+    #[arg(long, env, default_value_t =  DEFAULT_NO_SYNC_SYSTEM_METADATA, help_heading = "Metadata/Headers",
+    long_help= r#"do not sync system metadata
+ System metadata: content-disposition, content-encoding, content-language, content-type, cache-control, expires, website-redirect"#)]
+    no_sync_system_metadata: bool,
+
+    /// do not sync user-defined metadata.
+    #[arg(long, env, default_value_t =  DEFAULT_NO_SYNC_USER_DEFINED_METADATA, help_heading = "Metadata/Headers")]
+    no_sync_user_defined_metadata: bool,
 
     /// tagging to set on the target object. e.g. --tagging "key1=value1&key2=value2". must be encoded as UTF-8 then URLEncoded URL query parameters without tag name duplicates.
     #[arg(long, env, conflicts_with_all = ["disable_tagging", "sync_latest_tagging"], value_parser = tagging::parse_tagging, help_heading = "Tagging")]
@@ -646,6 +696,12 @@ impl CLIArgs {
         self.check_accelerate_conflict()?;
         self.check_request_payer_conflict()?;
         self.check_server_side_copy_conflict()?;
+        self.check_filter_include_metadata_regex()?;
+        self.check_filter_exclude_metadata_regex()?;
+        self.check_filter_include_tag_regex()?;
+        self.check_filter_exclude_tag_regex()?;
+        self.check_server_no_sync_system_metadata()?;
+        self.check_server_no_sync_user_defined_metadata()?;
 
         Ok(())
     }
@@ -1072,6 +1128,78 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_filter_include_metadata_regex(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.filter_include_metadata_regex.is_some() {
+            return Err(
+                SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_INCLUDE_METADATA_REGEX.to_string(),
+            );
+        }
+
+        Ok(())
+    }
+
+    fn check_filter_exclude_metadata_regex(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.filter_exclude_metadata_regex.is_some() {
+            return Err(
+                SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_EXCLUDE_METADATA_REGEX.to_string(),
+            );
+        }
+
+        Ok(())
+    }
+
+    fn check_filter_include_tag_regex(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.filter_include_tag_regex.is_some() {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_INCLUDE_TAG_REGEX.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_filter_exclude_tag_regex(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.filter_exclude_tag_regex.is_some() {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_EXCLUDE_TAG_REGEX.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_server_no_sync_system_metadata(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.no_sync_system_metadata {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_SYSTEM_METADATA.to_string());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) && self.no_sync_system_metadata {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_SYSTEM_METADATA.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_server_no_sync_user_defined_metadata(&self) -> Result<(), String> {
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) && self.no_sync_user_defined_metadata {
+            return Err(
+                SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_USER_DEFINED_METADATA.to_string(),
+            );
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) && self.no_sync_user_defined_metadata {
+            return Err(
+                TARGET_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_USER_DEFINED_METADATA.to_string(),
+            );
+        }
+
+        Ok(())
+    }
+
     fn build_client_configs(
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
@@ -1268,6 +1396,19 @@ impl TryFrom<CLIArgs> for Config {
             .filter_exclude_regex
             .map(|regex| Regex::new(&regex).unwrap());
 
+        let include_metadata_regex = value
+            .filter_include_metadata_regex
+            .map(|regex| Regex::new(&regex).unwrap());
+        let exclude_metadata_regex = value
+            .filter_exclude_metadata_regex
+            .map(|regex| Regex::new(&regex).unwrap());
+        let include_tag_regex = value
+            .filter_include_tag_regex
+            .map(|regex| Regex::new(&regex).unwrap());
+        let exclude_tag_regex = value
+            .filter_exclude_tag_regex
+            .map(|regex| Regex::new(&regex).unwrap());
+
         let rate_limit_bandwidth = value
             .rate_limit_bandwidth
             .map(|bandwidth| human_bytes::parse_human_bandwidth(&bandwidth).unwrap());
@@ -1416,6 +1557,8 @@ impl TryFrom<CLIArgs> for Config {
             expires: value.expires,
             metadata,
             website_redirect: value.website_redirect,
+            no_sync_system_metadata: value.no_sync_system_metadata,
+            no_sync_user_defined_metadata: value.no_sync_user_defined_metadata,
             tagging,
             filter_config: FilterConfig {
                 before_time: value.filter_mtime_before,
@@ -1428,6 +1571,10 @@ impl TryFrom<CLIArgs> for Config {
                 check_mtime_and_additional_checksum,
                 include_regex,
                 exclude_regex,
+                include_metadata_regex,
+                exclude_metadata_regex,
+                include_tag_regex,
+                exclude_tag_regex,
                 larger_size: filter_larger_size,
                 smaller_size: filter_smaller_size,
             },

@@ -160,6 +160,14 @@ impl UploadManager {
     }
 
     fn modify_metadata(&self, mut get_object_output: GetObjectOutput) -> GetObjectOutput {
+        if self.config.no_sync_system_metadata {
+            get_object_output = Self::clear_system_meta_data(get_object_output);
+        }
+
+        if self.config.no_sync_user_defined_metadata {
+            get_object_output.metadata = None
+        }
+
         if self.config.metadata.is_some() {
             get_object_output.metadata = Some(self.config.metadata.as_ref().unwrap().clone());
         }
@@ -197,6 +205,18 @@ impl UploadManager {
             last_modified,
         );
         get_object_output.metadata = Some(metadata);
+
+        get_object_output
+    }
+
+    fn clear_system_meta_data(mut get_object_output: GetObjectOutput) -> GetObjectOutput {
+        get_object_output.content_disposition = None;
+        get_object_output.content_encoding = None;
+        get_object_output.content_language = None;
+        get_object_output.content_type = None;
+        get_object_output.cache_control = None;
+        get_object_output.expires_string = None;
+        get_object_output.website_redirect_location = None;
 
         get_object_output
     }
