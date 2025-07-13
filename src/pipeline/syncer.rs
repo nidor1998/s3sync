@@ -10,8 +10,9 @@ use crate::storage::{
 use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
 use crate::types::{
-    get_additional_checksum, get_additional_checksum_with_head_object, is_full_object_checksum,
-    ObjectChecksum, S3syncObject, SseCustomerKey, MINIMUM_CHUNKSIZE,
+    format_metadata, format_tags, get_additional_checksum,
+    get_additional_checksum_with_head_object, is_full_object_checksum, ObjectChecksum,
+    S3syncObject, SseCustomerKey, MINIMUM_CHUNKSIZE,
 };
 use anyhow::{anyhow, Context, Error, Result};
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
@@ -31,6 +32,12 @@ use aws_smithy_types::body::SdkBody;
 use tracing::{debug, error, info, trace, warn};
 
 use super::stage::Stage;
+
+const INCLUDE_METADATA_REGEX_FILTER_NAME: &str = "include_metadata_regex_filter";
+const EXCLUDE_METADATA_REGEX_FILTER_NAME: &str = "exclude_metadata_regex_filter";
+
+const INCLUDE_TAG_REGEX_FILTER_NAME: &str = "include_tag_regex_filter";
+const EXCLUDE_TAG_REGEX_FILTER_NAME: &str = "exclude_tag_regex_filter";
 
 pub struct ObjectSyncer {
     worker_index: u16,
@@ -392,6 +399,20 @@ impl ObjectSyncer {
                     }
                 }
 
+                // Metadata filtering
+                if !self
+                    .decide_sync_target_by_include_metadata_regex(key, get_object_output.metadata())
+                    .await
+                {
+                    return Ok(());
+                }
+                if !self
+                    .decide_sync_target_by_exclude_metadata_regex(key, get_object_output.metadata())
+                    .await
+                {
+                    return Ok(());
+                }
+
                 // If multipart upload is required, the first chunk does not contain the final checksum.
                 // So, we need to get the final checksum from the head object.
                 let final_checksum = self
@@ -403,13 +424,45 @@ impl ObjectSyncer {
                     )
                     .await;
 
+                // Tagging filtering
+                let mut get_object_tagging_output = None;
+                let get_object_output_tagging;
+                if self.base.config.filter_config.include_tag_regex.is_some()
+                    || self.base.config.filter_config.exclude_tag_regex.is_some()
+                {
+                    let tagging;
+                    get_object_tagging_output =
+                        self.get_object_tagging(key, &get_object_output).await?;
+                    if get_object_tagging_output.is_some() {
+                        get_object_output_tagging = get_object_tagging_output.clone().unwrap();
+                        tagging = Some(get_object_output_tagging.tag_set());
+                    } else {
+                        tagging = None
+                    }
+
+                    if !self
+                        .decide_sync_target_by_include_tag_regex(key, tagging)
+                        .await
+                    {
+                        return Ok(());
+                    }
+                    if !self
+                        .decide_sync_target_by_exclude_tag_regex(key, tagging)
+                        .await
+                    {
+                        return Ok(());
+                    }
+                }
+
                 let tagging = if self.base.config.disable_tagging {
                     None
                 } else if self.base.config.tagging.is_some() {
                     self.base.config.tagging.clone()
                 } else {
-                    let get_object_tagging_output =
-                        self.get_object_tagging(key, &get_object_output).await?;
+                    if get_object_tagging_output.is_none() {
+                        get_object_tagging_output =
+                            self.get_object_tagging(key, &get_object_output).await?;
+                    }
                     if get_object_tagging_output.is_some() {
                         trace!(
                             worker_index = self.worker_index,
@@ -1017,6 +1070,190 @@ impl ObjectSyncer {
             );
             self.base.cancellation_token.cancel();
         }
+    }
+
+    async fn decide_sync_target_by_include_metadata_regex(
+        &self,
+        key: &str,
+        metadata: Option<&HashMap<String, String>>,
+    ) -> bool {
+        if self
+            .base
+            .config
+            .filter_config
+            .include_metadata_regex
+            .is_none()
+        {
+            return true;
+        }
+
+        if metadata.is_none() {
+            return false;
+        }
+
+        let formatted = format_metadata(metadata.as_ref().unwrap());
+        let is_match = self
+            .base
+            .config
+            .filter_config
+            .include_metadata_regex
+            .as_ref()
+            .unwrap()
+            .is_match(&formatted);
+
+        debug!(
+            name = INCLUDE_METADATA_REGEX_FILTER_NAME,
+            worker_index = self.worker_index,
+            key = key,
+            metadata = formatted,
+            is_match = is_match,
+            "decide_sync_target_by_include_metadata_regex() called."
+        );
+
+        if !is_match {
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+        }
+
+        is_match
+    }
+
+    async fn decide_sync_target_by_exclude_metadata_regex(
+        &self,
+        key: &str,
+        metadata: Option<&HashMap<String, String>>,
+    ) -> bool {
+        if self
+            .base
+            .config
+            .filter_config
+            .exclude_metadata_regex
+            .is_none()
+        {
+            return true;
+        }
+
+        if metadata.is_none() {
+            return true;
+        }
+
+        let formatted = format_metadata(metadata.as_ref().unwrap());
+        let is_match = self
+            .base
+            .config
+            .filter_config
+            .exclude_metadata_regex
+            .as_ref()
+            .unwrap()
+            .is_match(&formatted);
+
+        debug!(
+            name = EXCLUDE_METADATA_REGEX_FILTER_NAME,
+            worker_index = self.worker_index,
+            key = key,
+            metadata = formatted,
+            is_match = is_match,
+            "decide_sync_target_by_exclude_metadata_regex() called."
+        );
+
+        if is_match {
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+        }
+
+        !is_match
+    }
+
+    async fn decide_sync_target_by_include_tag_regex(
+        &self,
+        key: &str,
+        tags: Option<&[Tag]>,
+    ) -> bool {
+        if self.base.config.filter_config.include_tag_regex.is_none() {
+            return true;
+        }
+
+        if tags.is_none() {
+            return false;
+        }
+
+        let formatted = format_tags(tags.unwrap());
+        let is_match = self
+            .base
+            .config
+            .filter_config
+            .include_tag_regex
+            .as_ref()
+            .unwrap()
+            .is_match(&formatted);
+
+        debug!(
+            name = INCLUDE_TAG_REGEX_FILTER_NAME,
+            worker_index = self.worker_index,
+            key = key,
+            metadata = formatted,
+            is_match = is_match,
+            "decide_sync_target_by_include_tag_regex() called."
+        );
+
+        if !is_match {
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+        }
+
+        is_match
+    }
+
+    async fn decide_sync_target_by_exclude_tag_regex(
+        &self,
+        key: &str,
+        tags: Option<&[Tag]>,
+    ) -> bool {
+        if self.base.config.filter_config.exclude_tag_regex.is_none() {
+            return true;
+        }
+
+        if tags.is_none() {
+            return true;
+        }
+
+        let formatted = format_tags(tags.unwrap());
+        let is_match = self
+            .base
+            .config
+            .filter_config
+            .exclude_tag_regex
+            .as_ref()
+            .unwrap()
+            .is_match(&formatted);
+
+        debug!(
+            name = EXCLUDE_TAG_REGEX_FILTER_NAME,
+            worker_index = self.worker_index,
+            key = key,
+            metadata = formatted,
+            is_match = is_match,
+            "decide_sync_target_by_exclude_tag_regex() called."
+        );
+
+        if is_match {
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+        }
+
+        !is_match
     }
 }
 

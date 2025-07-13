@@ -8,7 +8,7 @@ use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumType, DeleteMarkerEntry, Object, ObjectPart, ObjectVersion,
+    ChecksumAlgorithm, ChecksumType, DeleteMarkerEntry, Object, ObjectPart, ObjectVersion, Tag,
 };
 use sha1::{Digest, Sha1};
 use zeroize_derive::{Zeroize, ZeroizeOnDrop};
@@ -78,6 +78,38 @@ pub fn unpack_object_versions(object: &S3syncObject) -> ObjectVersions {
             panic!("not PackedVersions")
         }
     }
+}
+
+pub fn format_metadata(metadata: &HashMap<String, String>) -> String {
+    let mut sorted_keys: Vec<&String> = metadata.keys().collect();
+    sorted_keys.sort();
+
+    sorted_keys
+        .iter()
+        .map(|key| {
+            let value = urlencoding::encode(&metadata[*key]).to_string();
+            format!("{key}={value}")
+        })
+        .collect::<Vec<String>>()
+        .join(",")
+}
+
+pub fn format_tags(tags: &[Tag]) -> String {
+    let mut tags = tags
+        .iter()
+        .map(|tag| (tag.key(), tag.value()))
+        .collect::<Vec<_>>();
+
+    tags.sort_by(|a, b| a.0.cmp(b.0));
+
+    tags.iter()
+        .map(|(key, value)| {
+            let escaped_key = urlencoding::encode(key).to_string();
+            let encoded_value = urlencoding::encode(value).to_string();
+            format!("{escaped_key}={encoded_value}")
+        })
+        .collect::<Vec<String>>()
+        .join("&")
 }
 
 impl S3syncObject {
@@ -805,6 +837,56 @@ mod tests {
 
         let debug_string = format!("{:?}", secret);
         assert!(debug_string.contains("redacted"))
+    }
+
+    #[test]
+    fn test_format_metadata() {
+        let metadata = HashMap::from([
+            ("key3".to_string(), "value3".to_string()),
+            ("key1".to_string(), "value1".to_string()),
+            ("abc".to_string(), "☃".to_string()),
+            ("xyz_abc".to_string(), "value_xyz".to_string()),
+            ("key_comma".to_string(), "value,comma".to_string()),
+            ("key2".to_string(), "value2".to_string()),
+        ]);
+
+        let formatted = format_metadata(&metadata);
+        assert_eq!(
+            formatted,
+            "abc=%E2%98%83,key1=value1,key2=value2,key3=value3,key_comma=value%2Ccomma,xyz_abc=value_xyz"
+        );
+    }
+
+    #[test]
+    fn test_format_tags() {
+        let tags = vec![
+            Tag::builder().key("key3").value("value3").build().unwrap(),
+            Tag::builder().key("key1").value("value1").build().unwrap(),
+            Tag::builder().key("abc").value("☃").build().unwrap(),
+            Tag::builder().key("☃").value("value").build().unwrap(),
+            Tag::builder()
+                .key("xyz_abc")
+                .value("value_xyz")
+                .build()
+                .unwrap(),
+            Tag::builder()
+                .key("key_comma")
+                .value("value,comma")
+                .build()
+                .unwrap(),
+            Tag::builder()
+                .key("key_and")
+                .value("value&and")
+                .build()
+                .unwrap(),
+            Tag::builder().key("key2").value("value2").build().unwrap(),
+        ];
+
+        let formatted = format_tags(tags.as_slice());
+        assert_eq!(
+            formatted,
+            "abc=%E2%98%83&key1=value1&key2=value2&key3=value3&key_and=value%26and&key_comma=value%2Ccomma&xyz_abc=value_xyz&%E2%98%83=value"
+        );
     }
 
     fn init_dummy_tracing_subscriber() {
