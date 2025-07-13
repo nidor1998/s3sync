@@ -316,12 +316,12 @@ pub struct CLIArgs {
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
     long_help=r#"sync only objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
-Example: "key1=(value1|value2),key2=value2"#)]
+Example: "key1=(value1|value2),key2=value2"."#)]
     filter_include_metadata_regex: Option<String>,
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
     long_help=r#"do not sync objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
-Example: "key1=(value1|value2),key2=value2"#)]
+Example: "key1=(value1|value2),key2=value2"."#)]
     filter_exclude_metadata_regex: Option<String>,
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",

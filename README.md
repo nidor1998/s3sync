@@ -590,7 +590,7 @@ Arguments:
 Options:
   -v, --verbose...  Increase logging verbosity
   -q, --quiet...    Decrease logging verbosity
-  -h, --help        Print help
+  -h, --help        Print help (see more with '--help')
   -V, --version     Print version
 
 General:
@@ -662,6 +662,18 @@ Filtering:
           do not check(ListObjectsV2) for modification in the target storage [env: REMOVE_MODIFIED_FILTER=]
       --check-size
           use object size for update checking [env: CHECK_SIZE=]
+      --filter-include-metadata-regex <FILTER_INCLUDE_METADATA_REGEX>
+          sync only objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
+          Example: "key1=(value1|value2),key2=value2". [env: FILTER_INCLUDE_METADATA_REGEX=]
+      --filter-exclude-metadata-regex <FILTER_EXCLUDE_METADATA_REGEX>
+          do not sync objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
+          Example: "key1=(value1|value2),key2=value2". [env: FILTER_EXCLUDE_METADATA_REGEX=]
+      --filter-include-tag-regex <FILTER_INCLUDE_TAG_REGEX>
+          sync only objects that have tag matching a given regular expression. keys must be sorted in alphabetical order, and '&' separated. This filter is applied after all other filters.
+          Example: "key1=(value1|value2)&key2=value2". [env: FILTER_INCLUDE_TAG_REGEX=]
+      --filter-exclude-tag-regex <FILTER_EXCLUDE_TAG_REGEX>
+          do not sync objects that have tag matching a given regular expression. keys must be sorted in alphabetical order, and '&' separated. This filter is applied after all other filters.
+          Example: "key1=(value1|value2)&key2=value2". [env: FILTER_EXCLUDE_TAG_REGEX=]
       --check-etag
           use etag for update checking [env: CHECK_ETAG=]
       --check-mtime-and-etag
@@ -718,6 +730,11 @@ Metadata/Headers:
           metadata to set on the target object. e.g. --metadata "key1=value1,key2=value2" [env: METADATA=]
       --website-redirect <WEBSITE_REDIRECT>
           x-amz-website-redirect-location header to set on the target object [env: WEBSITE_REDIRECT=]
+      --no-sync-system-metadata
+          do not sync system metadata
+           System metadata: content-disposition, content-encoding, content-language, content-type, cache-control, expires, website-redirect [env: NO_SYNC_SYSTEM_METADATA=]
+      --no-sync-user-defined-metadata
+          do not sync user-defined metadata [env: NO_SYNC_USER_DEFINED_METADATA=]
 
 Tagging:
       --tagging <TAGGING>    tagging to set on the target object. e.g. --tagging "key1=value1&key2=value2". must be encoded as UTF-8 then URLEncoded URL query parameters without tag name duplicates [env: TAGGING=]
