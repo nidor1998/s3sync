@@ -442,6 +442,7 @@ impl TestHelper {
             .content_type(TEST_CONTENT_TYPE)
             .set_metadata(Some(TEST_METADATA.clone()))
             .expires(DateTime::from_str(TEST_EXPIRES, DateTimeFormat::DateTime).unwrap())
+            .website_redirect_location("/xxx")
             .tagging(TEST_TAGGING)
             .body(stream)
             .send()
@@ -617,6 +618,118 @@ impl TestHelper {
             head_object_output.metadata().unwrap(),
             &TEST_METADATA.clone()
         );
+        assert_eq!(
+            head_object_output.expires_string.unwrap(),
+            DateTime::from_str(TEST_EXPIRES, DateTimeFormat::DateTime)
+                .unwrap()
+                .fmt(DateTimeFormat::HttpDate)
+                .unwrap()
+                .to_string()
+        );
+
+        let get_object_tagging_output = self
+            .get_object_tagging(bucket, key, version_id.clone())
+            .await;
+
+        let tag_set = get_object_tagging_output.tag_set();
+        let tag_map = TestHelper::tag_set_to_map(tag_set);
+        let expected_tag_map = HashMap::from([
+            ("tag1".to_string(), "tag_value1".to_string()),
+            ("tag2".to_string(), "tag_value2".to_string()),
+        ]);
+
+        assert_eq!(tag_map, expected_tag_map);
+
+        true
+    }
+
+    pub async fn verify_test_object_no_system_metadata(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+    ) -> bool {
+        let head_object_output = self
+            .client
+            .head_object()
+            .bucket(bucket)
+            .key(key)
+            .set_version_id(version_id.clone())
+            .send()
+            .await
+            .unwrap();
+
+        assert!(head_object_output.cache_control().is_none());
+        assert!(head_object_output.content_disposition().is_none());
+        assert!(head_object_output.content_encoding().is_none());
+        assert!(head_object_output.content_language().is_none());
+        assert!(head_object_output.expires_string.is_none());
+        assert!(head_object_output.website_redirect_location().is_none());
+
+        // S3 does set content-type to application/octet-stream
+        assert_eq!(
+            head_object_output.content_type().unwrap(),
+            "application/octet-stream"
+        );
+
+        assert_eq!(
+            head_object_output.metadata().unwrap(),
+            &TEST_METADATA.clone()
+        );
+
+        let get_object_tagging_output = self
+            .get_object_tagging(bucket, key, version_id.clone())
+            .await;
+
+        let tag_set = get_object_tagging_output.tag_set();
+        let tag_map = TestHelper::tag_set_to_map(tag_set);
+        let expected_tag_map = HashMap::from([
+            ("tag1".to_string(), "tag_value1".to_string()),
+            ("tag2".to_string(), "tag_value2".to_string()),
+        ]);
+
+        assert_eq!(tag_map, expected_tag_map);
+
+        true
+    }
+
+    pub async fn verify_test_object_no_user_defined_metadata(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+    ) -> bool {
+        let head_object_output = self
+            .client
+            .head_object()
+            .bucket(bucket)
+            .key(key)
+            .set_version_id(version_id.clone())
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(
+            head_object_output.cache_control().unwrap(),
+            TEST_CACHE_CONTROL
+        );
+        assert_eq!(
+            head_object_output.content_disposition().unwrap(),
+            TEST_CONTENT_DISPOSITION
+        );
+        assert_eq!(
+            head_object_output.content_encoding().unwrap(),
+            TEST_CONTENT_ENCODING
+        );
+        assert_eq!(
+            head_object_output.content_language().unwrap(),
+            TEST_CONTENT_LANGUAGE
+        );
+        assert_eq!(
+            head_object_output.content_type().unwrap(),
+            TEST_CONTENT_TYPE
+        );
+        assert!(head_object_output.metadata().unwrap().is_empty());
         assert_eq!(
             head_object_output.expires_string.unwrap(),
             DateTime::from_str(TEST_EXPIRES, DateTimeFormat::DateTime)
