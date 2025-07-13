@@ -296,6 +296,7 @@ impl ObjectSyncer {
         Ok(())
     }
 
+    // skipcq: RS-R1000
     async fn sync_or_delete_object(&self, object: S3syncObject) -> Result<()> {
         let key = object.key();
 
