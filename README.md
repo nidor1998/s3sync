@@ -182,11 +182,15 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - User-defined metadata-based regular expression filtering  
   You can filter objects based on user-defined metadata.  
-  For example, `--filter-include-metadata-regex 'key1=(value1|xxx),key2=value2'`, `--filter-exclude-metadata-regex 'key1=(value1|xxx),key2=value2'`
+  Example: `--filter-include-metadata-regex 'key1=(value1|xxx),key2=value2'`, `--filter-exclude-metadata-regex 'key1=(value1|xxx),key2=value2'`
+
+  Note: When using this option, Additional API calls may be required to get the metadata of each object.
 
 - Tag-based regular expression filtering  
   You can filter objects based on tags.  
-  For example, `--filter-include-tag-regex 'key1=(value1|xxx)&key2=value2'`, `--filter-exclude-tag-regex 'key1=(value1|xxx)&key2=value2'`
+  Example: `--filter-include-tag-regex 'key1=(value1|xxx)&key2=value2'`, `--filter-exclude-tag-regex 'key1=(value1|xxx)&key2=value2'`
+
+  Note: When using this option, Additional API calls are required to get the tags of each object.
 
 - Rate limiting by objects, bandwidth  
   For example, you can limit the number of objects transferred per second to 1,000, and the bandwidth to 100MB/sec.
