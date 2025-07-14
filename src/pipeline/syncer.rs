@@ -1089,6 +1089,18 @@ impl ObjectSyncer {
         }
 
         if metadata.is_none() {
+            debug!(
+                name = INCLUDE_METADATA_REGEX_FILTER_NAME,
+                worker_index = self.worker_index,
+                key = key,
+                "metadata = None",
+            );
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+
             return false;
         }
 
@@ -1138,6 +1150,13 @@ impl ObjectSyncer {
         }
 
         if metadata.is_none() {
+            debug!(
+                name = EXCLUDE_METADATA_REGEX_FILTER_NAME,
+                worker_index = self.worker_index,
+                key = key,
+                "metadata = None",
+            );
+
             return true;
         }
 
@@ -1181,6 +1200,18 @@ impl ObjectSyncer {
         }
 
         if tags.is_none() {
+            debug!(
+                name = INCLUDE_TAG_REGEX_FILTER_NAME,
+                worker_index = self.worker_index,
+                key = key,
+                "tags = None",
+            );
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+
             return false;
         }
 
@@ -1224,6 +1255,13 @@ impl ObjectSyncer {
         }
 
         if tags.is_none() {
+            debug!(
+                name = EXCLUDE_TAG_REGEX_FILTER_NAME,
+                worker_index = self.worker_index,
+                key = key,
+                "tags = None",
+            );
+
             return true;
         }
 
