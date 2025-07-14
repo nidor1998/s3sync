@@ -381,11 +381,11 @@ This option cannot be used with SHA1/SHA256 additional checksum."#)]
     #[arg(long, env, default_value_t = DEFAULT_ENABLE_ADDITIONAL_CHECKSUM, help_heading = "Verification")]
     enable_additional_checksum: bool,
 
-    /// Disable multipart upload verification with ETag/additional checksum
+    /// Disable multipart upload verification with ETag/additional checksum.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_MULTIPART_VERIFY, help_heading = "Verification")]
     disable_multipart_verify: bool,
 
-    /// Disable etag verification
+    /// Disable etag verification.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_ETAG_VERIFY, help_heading = "Verification")]
     disable_etag_verify: bool,
 
