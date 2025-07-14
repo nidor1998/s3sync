@@ -179,43 +179,44 @@ pub struct CLIArgs {
     #[arg(env, help = "s3://<BUCKET_NAME>[/prefix] or local path", value_parser = storage_path::check_storage_path, default_value_if("auto_complete_shell", ArgPredicate::IsPresent, "s3://ignored"), required = false)]
     target: String,
 
-    /// A simulation mode. no actions will be performed
+    /// A simulation mode. No actions will be performed.
     #[arg(long, env, default_value_t = DEFAULT_DRY_RUN, help_heading = "General")]
     dry_run: bool,
 
-    /// use server-side copy. This option is only available both source and target are S3 storage. It cannot work with between different object storages or regions.
-    #[arg(long, env, default_value_t = DEFAULT_SERVER_SIDE_COPY, help_heading = "General")]
+    #[arg(long, env, default_value_t = DEFAULT_SERVER_SIDE_COPY, help_heading = "General",
+    long_help = r#"Use server-side copy. This option is only available both source and target are S3 storage.
+It cannot work with between different object storages or regions."#)]
     server_side_copy: bool,
 
-    /// location of the file that the AWS CLI uses to store configuration profiles
+    /// Location of the file that the AWS CLI uses to store configuration profiles
     #[arg(long, env, value_name = "FILE", help_heading = "AWS Configuration")]
     aws_config_file: Option<PathBuf>,
 
-    /// location of the file that the AWS CLI uses to store access keys
+    /// Location of the file that the AWS CLI uses to store access keys
     #[arg(long, env, value_name = "FILE", help_heading = "AWS Configuration")]
     aws_shared_credentials_file: Option<PathBuf>,
 
-    /// source AWS CLI profile
+    /// Source AWS CLI profile
     #[arg(long, env, conflicts_with_all = ["source_access_key", "source_secret_access_key", "source_session_token"], help_heading = "AWS Configuration")]
     source_profile: Option<String>,
 
-    /// source access key
+    /// Source access key
     #[arg(long, env, conflicts_with_all = ["source_profile"], requires = "source_secret_access_key", help_heading = "AWS Configuration")]
     source_access_key: Option<String>,
 
-    /// source secret access key
+    /// Source secret access key
     #[arg(long, env, conflicts_with_all = ["source_profile"], requires = "source_access_key", help_heading = "AWS Configuration")]
     source_secret_access_key: Option<String>,
 
-    /// source session token
+    /// Source session token
     #[arg(long, env, conflicts_with_all = ["source_profile"], requires = "source_access_key", help_heading = "AWS Configuration")]
     source_session_token: Option<String>,
 
-    /// source region
+    /// Source region
     #[arg(long, env, value_parser = NonEmptyStringValueParser::new(), help_heading = "Source Options")]
     source_region: Option<String>,
 
-    /// source endpoint url
+    /// Source endpoint url
     #[arg(long, env, value_parser = url::check_scheme, help_heading = "Source Options")]
     source_endpoint_url: Option<String>,
 
@@ -227,31 +228,31 @@ pub struct CLIArgs {
     #[arg(long, env, default_value_t = DEFAULT_REQUEST_PAYER, help_heading = "Source Options")]
     source_request_payer: bool,
 
-    /// force path-style addressing for source endpoint
+    /// Force path-style addressing for source endpoint.
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE, help_heading = "Source Options")]
     source_force_path_style: bool,
 
-    /// target AWS CLI profile
+    /// Target AWS CLI profile
     #[arg(long, env, conflicts_with_all = ["target_access_key", "target_secret_access_key", "target_session_token"], help_heading = "AWS Configuration")]
     target_profile: Option<String>,
 
-    /// target access key
+    /// Target access key
     #[arg(long, env, conflicts_with_all = ["target_profile"], requires = "target_secret_access_key", help_heading = "AWS Configuration")]
     target_access_key: Option<String>,
 
-    /// target secret access key
+    /// Target secret access key
     #[arg(long, env, conflicts_with_all = ["target_profile"], requires = "target_access_key", help_heading = "AWS Configuration")]
     target_secret_access_key: Option<String>,
 
-    /// target session token
+    /// Target session token
     #[arg(long, env, conflicts_with_all = ["target_profile"], requires = "target_access_key", help_heading = "AWS Configuration")]
     target_session_token: Option<String>,
 
-    /// target region
+    /// Target region
     #[arg(long, env, value_parser = NonEmptyStringValueParser::new(), help_heading = "Target Options")]
     target_region: Option<String>,
 
-    /// target endpoint url
+    /// Target endpoint url
     #[arg(long, env, value_parser = url::check_scheme, help_heading = "Target Options")]
     target_endpoint_url: Option<String>,
 
@@ -263,141 +264,162 @@ pub struct CLIArgs {
     #[arg(long, env, default_value_t = DEFAULT_REQUEST_PAYER,help_heading = "Target Options")]
     target_request_payer: bool,
 
-    /// force path-style addressing for target endpoint
+    /// Force path-style addressing for target endpoint.
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE, help_heading = "Target Options")]
     target_force_path_style: bool,
 
-    /// type of storage to use for the target object.
-    /// valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER | DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE
-    #[arg(long, env, value_parser = storage_class::parse_storage_class, help_heading = "Target Options")]
+    #[arg(long, env, value_parser = storage_class::parse_storage_class, help_heading = "Target Options",
+    long_help = r#"Type of storage to use for the target object.
+Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER |
+               DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE"#)]
     storage_class: Option<String>,
 
-    /// proxy server to use for HTTPS
+    /// Proxy server to use for HTTPS
     #[cfg(feature = "legacy_hyper014_feature")]
     #[arg(long, env, value_parser = url::check_scheme, help_heading = "Proxy Settings")]
     https_proxy: Option<String>,
 
-    /// proxy server to use for HTTP
+    /// Proxy server to use for HTTP
     #[cfg(feature = "legacy_hyper014_feature")]
     #[arg(long, env, value_parser = url::check_scheme_and_no_authority_exist, help_heading = "Proxy Settings")]
     http_proxy: Option<String>,
 
-    /// sync only objects older than given time (RFC3339 datetime such as 2023-02-19T12:00:00Z)
-    #[arg(long, env, help_heading = "Filtering")]
+    #[arg(long, env, help_heading = "Filtering", long_help = r#"Sync only objects older than given time (RFC3339 datetime).
+Example: 2023-02-19T12:00:00Z)"#)]
     filter_mtime_before: Option<DateTime<Utc>>,
 
-    /// sync only objects newer than OR EQUAL TO given time (RFC3339 datetime such as 2023-02-19T12:00:00Z)
-    #[arg(long, env, help_heading = "Filtering")]
+    #[arg(long, env, help_heading = "Filtering", long_help = r#"Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
+Example: 2023-02-19T12:00:00Z)"#)]
     filter_mtime_after: Option<DateTime<Utc>>,
 
-    /// sync only objects that match given regular expression
+    /// Sync only objects that match a given regular expression.
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering")]
     filter_include_regex: Option<String>,
 
-    /// do not sync objects that match given regular expression
+    /// Do not sync objects that match a given regular expression.
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering")]
     filter_exclude_regex: Option<String>,
 
-    /// sync only objects smaller than given size, Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB
-    #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering")]
+    #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects smaller than given size.
+Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
     filter_smaller_size: Option<String>,
 
-    /// sync only objects larger than OR EQUAL TO given size, Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB
-    #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering")]
+    #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects larger than OR EQUAL TO given size.
+Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
+
     filter_larger_size: Option<String>,
 
-    /// do not check(ListObjectsV2) for modification in the target storage
+    /// Do not check(ListObjectsV2) for modification in the target storage.
     #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_REMOVE_MODIFIED_FILTER, help_heading = "Filtering")]
     remove_modified_filter: bool,
 
-    /// use object size for update checking
+    /// Use object size for update checking.
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], default_value_t = DEFAULT_CHECK_SIZE, help_heading = "Filtering")]
     check_size: bool,
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
-    long_help=r#"sync only objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
-Example: "key1=(value1|value2),key2=value2"."#)]
+    long_help=r#"Sync only objects that have metadata matching a given regular expression.
+Keys(lowercase) must be sorted in alphabetical order, and comma separated.
+This filter is applied after all other filters(except tag filters).
+
+Example: "key1=(value1|value2),key2=value2""#)]
     filter_include_metadata_regex: Option<String>,
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
-    long_help=r#"do not sync objects that have metadata matching a given regular expression. keys(lowercase) must be sorted in alphabetical order, and comma separated. This filter is applied after all other filters(except tag filters).
-Example: "key1=(value1|value2),key2=value2"."#)]
+    long_help=r#"Do not sync objects that have metadata matching a given regular expression.
+Keys(lowercase) must be sorted in alphabetical order, and comma separated.
+This filter is applied after all other filters(except tag filters).
+
+Example: "key1=(value1|value2),key2=value2""#)]
     filter_exclude_metadata_regex: Option<String>,
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
-    long_help=r#"sync only objects that have tag matching a given regular expression. keys must be sorted in alphabetical order, and '&' separated. This filter is applied after all other filters.
-Example: "key1=(value1|value2)&key2=value2"."#)]
+    long_help=r#"Sync only objects that have tag matching a given regular expression.
+Keys must be sorted in alphabetical order, and '&' separated.
+This filter is applied after all other filters.
+
+Example: "key1=(value1|value2)&key2=value2""#)]
     filter_include_tag_regex: Option<String>,
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
-    long_help=r#"do not sync objects that have tag matching a given regular expression. keys must be sorted in alphabetical order, and '&' separated. This filter is applied after all other filters.
-Example: "key1=(value1|value2)&key2=value2"."#)]
+    long_help=r#"Do not sync objects that have tag matching a given regular expression.
+Keys must be sorted in alphabetical order, and '&' separated.
+This filter is applied after all other filters.
+
+Example: "key1=(value1|value2)&key2=value2""#)]
     filter_exclude_tag_regex: Option<String>,
 
-    /// use etag for update checking
+    /// Use etag for update checking.
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "check_mtime_and_additional_checksum", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG, help_heading = "Filtering")]
     check_etag: bool,
 
-    /// use the modification time and ETag for update checking. If the source modification date is newer, check the ETag.
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_MTIME_AND_ETAG, help_heading = "Filtering")]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_MTIME_AND_ETAG, help_heading = "Filtering",
+    long_help=r#"Use the modification time and ETag for update checking.
+If the source modification date is newer, check the ETag.
+"#)]
     check_mtime_and_etag: bool,
 
-    /// use additional checksum for update checking
+    /// Use additional checksum for update checking.
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Filtering")]
     check_additional_checksum: Option<String>,
 
-    /// use the modification time and additional checksum for update checking. If the source modification date is newer, check the additional checksum.
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "check_mtime_and_etag", "check_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Filtering")]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "check_mtime_and_etag", "check_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Filtering",
+    long_help=r#"Use the modification time and additional checksum for update checking.
+If the source modification date is newer, check the additional checksum.
+"#)]
     check_mtime_and_additional_checksum: Option<String>,
 
-    /// additional checksum algorithm for upload
+    /// Additional checksum algorithm for upload
     #[arg(long, env, value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Verification")]
     additional_checksum_algorithm: Option<String>,
 
-    /// Use full object checksum for verification. CRC64NVME automatically use full object checksum. This option cannot be used with SHA1/SHA256 additional checksum.
-    #[arg(long, env, default_value_t = DEFAULT_FULL_OBJECT_CHECKSUM, help_heading = "Verification")]
+    #[arg(long, env, default_value_t = DEFAULT_FULL_OBJECT_CHECKSUM, help_heading = "Verification", long_help=r#"Use full object checksum for verification. CRC64NVME automatically use full object checksum.
+This option cannot be used with SHA1/SHA256 additional checksum."#)]
     full_object_checksum: bool,
 
-    /// enable additional checksum for download
+    /// Enable additional checksum for download
     #[arg(long, env, default_value_t = DEFAULT_ENABLE_ADDITIONAL_CHECKSUM, help_heading = "Verification")]
     enable_additional_checksum: bool,
 
-    /// disable multipart upload verification with ETag/additional checksum
+    /// Disable multipart upload verification with ETag/additional checksum
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_MULTIPART_VERIFY, help_heading = "Verification")]
     disable_multipart_verify: bool,
 
-    /// disable etag verification
+    /// Disable etag verification
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_ETAG_VERIFY, help_heading = "Verification")]
     disable_etag_verify: bool,
 
-    /// number of workers for synchronization
+    /// Number of workers for synchronization
     #[arg(long, env, default_value_t = DEFAULT_WORKER_SIZE, value_parser = clap::value_parser!(u16).range(1..), help_heading = "Performance")]
     worker_size: u16,
 
-    /// maximum number of parallel multipart uploads/downloads
+    /// Maximum number of parallel multipart uploads/downloads
     #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS, value_parser = clap::value_parser!(u16).range(1..), help_heading = "Performance")]
     max_parallel_uploads: u16,
 
-    /// rate limit objects per second
+    /// Rate limit objects per second
     #[arg(long, env,  value_parser = clap::value_parser!(u32).range(10..), help_heading = "Performance")]
     rate_limit_objects: Option<u32>,
 
-    /// rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB
+    /// Rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB
     #[arg(long, env, value_parser = human_bytes::check_human_bandwidth, help_heading = "Performance")]
     rate_limit_bandwidth: Option<String>,
 
-    /// object size threshold that s3sync uses for multipart upload, Allow suffixes: MB, MiB, GB, GiB.
-    /// the larger the size, the larger the memory usage.
-    #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_THRESHOLD, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings")]
+    #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_THRESHOLD, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings",
+    long_help=r#"Object size threshold that s3sync uses for multipart upload
+Allow suffixes: MB, MiB, GB, GiB.
+The larger the size, the larger the memory usage."#)]
     multipart_threshold: String,
 
-    /// chunk size that s3sync uses for multipart upload of individual files, Allow suffixes: MB, MiB, GB, GiB.
-    /// the larger the size, the larger the memory usage.
-    #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_CHUNKSIZE, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings")]
+    #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_CHUNKSIZE, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings",
+    long_help=r#"Chunk size that s3sync uses for multipart upload of individual files
+Allow suffixes: MB, MiB, GB, GiB.
+The larger the size, the larger the memory usage."#)]
     multipart_chunksize: String,
 
-    /// automatically adjusts a chunk size to match the source or target. It takes extra HEAD requests(1 API call per part).
-    #[arg(long, env, conflicts_with_all = ["multipart_threshold", "multipart_chunksize"], default_value_t = DEFAULT_AUTO_CHUNKSIZE, help_heading = "Multipart Settings")]
+    #[arg(long, env, conflicts_with_all = ["multipart_threshold", "multipart_chunksize"], default_value_t = DEFAULT_AUTO_CHUNKSIZE, help_heading = "Multipart Settings",
+    long_help=r#"Automatically adjusts a chunk size to match the source or target.
+It takes extra HEAD requests(1 API call per part)."#)]
     auto_chunksize: bool,
 
     /// Cache-Control HTTP header to set on the target object
@@ -420,40 +442,51 @@ Example: "key1=(value1|value2)&key2=value2"."#)]
     #[arg(long, env, help_heading = "Metadata/Headers")]
     content_type: Option<String>,
 
-    /// Expires HTTP header to set on the target object(RFC3339 datetime such as 2023-02-19T12:00:00Z)
-    #[arg(long, env, help_heading = "Metadata/Headers")]
+    #[arg(long, env, help_heading = "Metadata/Headers", long_help=r#"Expires HTTP header to set on the target object(RFC3339 datetime)
+Example: 2023-02-19T12:00:00Z"#)]
     expires: Option<DateTime<Utc>>,
 
-    /// metadata to set on the target object. e.g. --metadata "key1=value1,key2=value2".
-    #[arg(long, env, value_parser = metadata::check_metadata, help_heading = "Metadata/Headers")]
+    #[arg(long, env, value_parser = metadata::check_metadata, help_heading = "Metadata/Headers", long_help=r#"Metadata to set on the target object
+Example: key1=value1,key2=value2"#)]
     metadata: Option<String>,
 
-    /// x-amz-website-redirect-location header to set on the target object.
+    /// x-amz-website-redirect-location header to set on the target object
     #[arg(long, env, help_heading = "Metadata/Headers")]
     website_redirect: Option<String>,
 
     #[arg(long, env, default_value_t =  DEFAULT_NO_SYNC_SYSTEM_METADATA, help_heading = "Metadata/Headers",
-    long_help= r#"do not sync system metadata
- System metadata: content-disposition, content-encoding, content-language, content-type, cache-control, expires, website-redirect"#)]
+    long_help= r#"Do not sync system metadata
+System metadata: content-disposition, content-encoding, content-language, content-type,
+                 cache-control, expires, website-redirect"#)]
     no_sync_system_metadata: bool,
 
-    /// do not sync user-defined metadata.
+    /// Do not sync user-defined metadata.
     #[arg(long, env, default_value_t =  DEFAULT_NO_SYNC_USER_DEFINED_METADATA, help_heading = "Metadata/Headers")]
     no_sync_user_defined_metadata: bool,
 
-    /// tagging to set on the target object. e.g. --tagging "key1=value1&key2=value2". must be encoded as UTF-8 then URLEncoded URL query parameters without tag name duplicates.
-    #[arg(long, env, conflicts_with_all = ["disable_tagging", "sync_latest_tagging"], value_parser = tagging::parse_tagging, help_heading = "Tagging")]
+    #[arg(long, env, conflicts_with_all = ["disable_tagging", "sync_latest_tagging"], value_parser = tagging::parse_tagging, help_heading = "Tagging",
+    long_help=r#"Tagging to set on the target object.
+Key/value must be encoded as UTF-8 then URLEncoded URL query parameters without tag name duplicates.
+
+Example: key1=value1&key2=value2"#)]
     tagging: Option<String>,
 
-    /// do not copy tagging.
+    /// Do not copy tagging.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_TAGGING, help_heading = "Tagging")]
     disable_tagging: bool,
 
-    /// copy the latest tagging from the source if necessary. If this option is enabled, the --remove-modified-filter and --head-each-target options are automatically enabled.
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "disable_tagging"], default_value_t = DEFAULT_SYNC_LATEST_TAGGING, help_heading = "Tagging")]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "disable_tagging"], default_value_t = DEFAULT_SYNC_LATEST_TAGGING, help_heading = "Tagging",
+    long_help=r#"Copy the latest tagging from the source if necessary.
+If this option is enabled, the --remove-modified-filter and
+--head-each-target options are automatically enabled."#)]
     sync_latest_tagging: bool,
 
-    /// server-side encryption. valid choices: AES256 | aws:kms | aws:kms:dsse
+    #[arg(long, env, conflicts_with_all = ["delete", "head_each_target", "remove_modified_filter"], default_value_t = DEFAULT_ENABLE_VERSIONING, help_heading = "Versioning",
+    long_help=r#"Sync all version objects in the source storage to the target versioning storage.
+ "#)]
+    enable_versioning: bool,
+
+    /// Server-side encryption. Valid choices: AES256 | aws:kms | aws:kms:dsse
     #[arg(long, env, value_parser = sse::parse_sse, help_heading = "Encryption")]
     sse: Option<String>,
 
@@ -461,11 +494,11 @@ Example: "key1=(value1|value2)&key2=value2"."#)]
     #[arg(long, env, help_heading = "Encryption")]
     sse_kms_key_id: Option<String>,
 
-    /// source SSE-C algorithm. valid choices: AES256
+    /// Source SSE-C algorithm. Valid choices: AES256
     #[arg(long, env, conflicts_with_all = ["sse", "sse_kms_key_id"], requires = "source_sse_c_key", value_parser = sse::parse_sse_c, help_heading = "Encryption")]
     source_sse_c: Option<String>,
 
-    /// source SSE-C customer-provided encryption key(256bit key. must be base64 encoded)
+    /// Source SSE-C customer-provided encryption key(256bit key. must be base64 encoded)
     #[arg(
         long,
         env,
@@ -474,15 +507,15 @@ Example: "key1=(value1|value2)&key2=value2"."#)]
     )]
     source_sse_c_key: Option<String>,
 
-    /// source base64 encoded MD5 digest of source_sse_c_key
+    /// Source base64 encoded MD5 digest of source_sse_c_key
     #[arg(long, env, requires = "source_sse_c", help_heading = "Encryption")]
     source_sse_c_key_md5: Option<String>,
 
-    /// target SSE-C algorithm. valid choices: AES256
+    /// Target SSE-C algorithm. Valid choices: AES256
     #[arg(long, env, conflicts_with_all = ["sse", "sse_kms_key_id"], requires = "target_sse_c_key", value_parser = sse::parse_sse_c, help_heading = "Encryption")]
     target_sse_c: Option<String>,
 
-    /// target SSE-C customer-provided encryption key(256bit key. must be base64 encoded)
+    /// Target SSE-C customer-provided encryption key(256bit key. must be base64 encoded)
     #[arg(
         long,
         env,
@@ -491,160 +524,164 @@ Example: "key1=(value1|value2)&key2=value2"."#)]
     )]
     target_sse_c_key: Option<String>,
 
-    /// target base64 encoded MD5 digest of source-sse-c-key
+    /// Target base64 encoded MD5 digest of target-sse-c-key
     #[arg(long, env, requires = "target_sse_c", help_heading = "Encryption")]
     target_sse_c_key_md5: Option<String>,
 
-    /// trace verbosity(-v: show info, -vv: show debug, -vvv show trace)
+    /// Trace verbosity(-v: show info, -vv: show debug, -vvv show trace)
     #[clap(flatten)]
     verbosity: Verbosity<WarnLevel>,
 
-    /// show trace as json format
+    /// Show trace as json format.
     #[arg(long, env, default_value_t = DEFAULT_JSON_TRACING, help_heading = "Tracing/Logging")]
     json_tracing: bool,
 
-    /// enable aws sdk tracing
+    /// Enable aws sdk tracing.
     #[arg(long, env, default_value_t = DEFAULT_AWS_SDK_TRACING, help_heading = "Tracing/Logging")]
     aws_sdk_tracing: bool,
 
-    /// show span event tracing
+    /// Show span event tracing.
     #[arg(long, env, default_value_t = DEFAULT_SPAN_EVENTS_TRACING, help_heading = "Tracing/Logging")]
     span_events_tracing: bool,
 
-    /// disable ANSI terminal colors
+    /// Disable ANSI terminal colors.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_COLOR_TRACING, help_heading = "Tracing/Logging")]
     disable_color_tracing: bool,
 
-    /// maximum retry attempts that s3sync retry handler use
+    /// Maximum retry attempts that s3sync retry handler use
     #[arg(long, env, default_value_t = DEFAULT_AWS_MAX_ATTEMPTS, value_name = "max_attempts", help_heading = "Retry Options")]
     aws_max_attempts: u32,
 
-    /// a multiplier value used when calculating backoff times as part of an exponential backoff with jitter strategy.
-    #[arg(long, env, default_value_t = DEFAULT_INITIAL_BACKOFF_MILLISECONDS, value_name = "initial_backoff", help_heading = "Retry Options")]
+    #[arg(long, env, default_value_t = DEFAULT_INITIAL_BACKOFF_MILLISECONDS, value_name = "initial_backoff", help_heading = "Retry Options",
+    long_help=r#"A multiplier value used when calculating backoff times as part of an exponential backoff with jitter strategy.
+"#)]
     initial_backoff_milliseconds: u64,
 
-    /// maximum force retry attempts that s3sync retry handler use
+    /// Maximum force retry attempts that s3sync retry handler use
     #[arg(long, env, default_value_t = DEFAULT_FORCE_RETRY_COUNT, help_heading = "Retry Options")]
     force_retry_count: u32,
 
-    /// sleep interval (milliseconds) between s3sync force retries on error
-    #[arg(long, env, default_value_t = DEFAULT_FORCE_RETRY_INTERVAL_MILLISECONDS, value_name = "force_retry_interval", help_heading = "Retry Options")]
+    #[arg(long, env, default_value_t = DEFAULT_FORCE_RETRY_INTERVAL_MILLISECONDS, value_name = "force_retry_interval", help_heading = "Retry Options",
+    long_help=r#"Sleep interval (milliseconds) between s3sync force retries on error.
+"#)]
     force_retry_interval_milliseconds: u64,
 
-    /// operation timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation.
-    /// The default has no timeout.
     #[arg(
         long,
         env,
         value_name = "operation_timeout",
-        help_heading = "Timeout Options"
+        help_heading = "Timeout Options",
+        long_help = r#"Operation timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation.
+The default has no timeout."#
     )]
     operation_timeout_milliseconds: Option<u64>,
 
-    /// operation attempt timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation.
-    /// The default has no timeout.
     #[arg(
         long,
         env,
         value_name = "operation_attempt_timeout",
-        help_heading = "Timeout Options"
+        help_heading = "Timeout Options",
+        long_help = r#"Operation attempt timeout (milliseconds). For details, see the AWS SDK for Rust TimeoutConfig documentation.
+The default has no timeout."#
     )]
     operation_attempt_timeout_milliseconds: Option<u64>,
 
-    /// connect timeout (milliseconds).
-    /// The default has AWS SDK default timeout (Currently 3100 milliseconds).
+    ///
+    ///
     #[arg(
         long,
         env,
         value_name = "connect_timeout",
-        help_heading = "Timeout Options"
+        help_heading = "Timeout Options",
+        long_help = r#"Connect timeout (milliseconds).The default has AWS SDK default timeout (Currently 3100 milliseconds).
+"#
     )]
     connect_timeout_milliseconds: Option<u64>,
 
-    /// read timeout (milliseconds).
-    /// The default has no timeout.
     #[arg(
         long,
         env,
         value_name = "read_timeout",
-        help_heading = "Timeout Options"
+        help_heading = "Timeout Options",
+        long_help = r#"Read timeout (milliseconds). The default has no timeout."#
     )]
     read_timeout_milliseconds: Option<u64>,
 
-    /// treat warnings as errors(except for the case of etag/checksum mismatch, etc.)
+    /// Treat warnings as errors(except for the case of etag/checksum mismatch, etc.).
     #[arg(long, env, default_value_t = DEFAULT_WARN_AS_ERROR, help_heading = "Advanced")]
     warn_as_error: bool,
 
-    /// ignore symbolic links
+    /// Ignore symbolic links.
     #[arg(long, env, default_value_t = DEFAULT_IGNORE_SYMLINKS, help_heading = "Advanced")]
     ignore_symlinks: bool,
 
-    /// HeadObject is used to check whether an object has been modified in the target storage
-    /// it reduces the possibility of race condition issue
-    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_HEAD_EACH_TARGET, help_heading = "Advanced")]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_HEAD_EACH_TARGET, help_heading = "Advanced",
+    long_help=r#"HeadObject is used to check whether an object has been modified in the target storage.
+It reduces the possibility of race condition issue"#)]
     head_each_target: bool,
 
-    /// sync all version objects in the source storage to the target versioning storage
-    #[arg(long, env, conflicts_with_all = ["delete", "head_each_target", "remove_modified_filter"], default_value_t = DEFAULT_ENABLE_VERSIONING, help_heading = "Advanced")]
-    enable_versioning: bool,
-
-    /// ACL for the objects
-    /// valid choices: private | public-read | public-read-write | authenticated-read | aws-exec-read | bucket-owner-read | bucket-owner-full-control
-    #[arg(long, env, value_parser = canned_acl::parse_canned_acl, help_heading = "Advanced")]
+    #[arg(long, env, value_parser = canned_acl::parse_canned_acl, help_heading = "Advanced",
+    long_help=r#"ACL for the objects
+Valid choices: private | public-read | public-read-write | authenticated-read | aws-exec-read |
+               bucket-owner-read | bucket-owner-full-control"#)]
     acl: Option<String>,
 
-    /// do not try to guess the mime type of local file
+    /// Do not try to guess the mime type of local file.
     #[arg(long, env, default_value_t = DEFAULT_NO_GUESS_MIME_TYPE, help_heading = "Advanced")]
     no_guess_mime_type: bool,
 
-    /// maximum number of objects returned in a single list object request
+    /// Maximum number of objects returned in a single list object request
     #[arg(long, env, default_value_t = DEFAULT_MAX_KEYS, value_parser = clap::value_parser!(i32).range(1..=32767), help_heading = "Advanced")]
     max_keys: i32,
 
-    /// put last modified of the source to metadata
+    /// Put last modified of the source to metadata.
     #[arg(long, env, default_value_t = DEFAULT_PUT_LAST_MODIFIED_METADATA, help_heading = "Advanced")]
     put_last_modified_metadata: bool,
 
-    /// generate a auto completions script. Valid values: bash, fish, zsh, powershell, elvish.
-    #[arg(long, env, value_name = "SHELL", value_parser = clap_complete::shells::Shell::from_str, help_heading = "Advanced")]
+    #[arg(long, env, value_name = "SHELL", value_parser = clap_complete::shells::Shell::from_str, help_heading = "Advanced",
+    long_help=r#"Generate a auto completions script.
+Valid choices: bash, fish, zsh, powershell, elvish."#)]
     auto_complete_shell: Option<clap_complete::shells::Shell>,
 
-    /// disable stalled stream protection
+    /// Disable stalled stream protection.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_STALLED_STREAM_PROTECTION, help_heading = "Advanced")]
     disable_stalled_stream_protection: bool,
 
-    /// disable payload signing for object uploads
+    /// Disable payload signing for object uploads.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_PAYLOAD_SIGNING, help_heading = "Advanced")]
     disable_payload_signing: bool,
 
-    /// disable Content-MD5 header for object uploads. It disables the ETag verification for the uploaded object.
-    #[arg(long, env, default_value_t = DEFAULT_DISABLE_CONTENT_MD5_HEADER, help_heading = "Advanced")]
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_CONTENT_MD5_HEADER, help_heading = "Advanced",
+    long_help=r#"Disable Content-MD5 header for object uploads. It disables the ETag verification for the uploaded object.
+"#)]
     disable_content_md5_header: bool,
 
-    /// disable default additional checksum verification in Express One Zone storage class
-    #[arg(long, env, default_value_t = DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM, help_heading = "Advanced")]
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM, help_heading = "Advanced",
+    long_help=r#"Disable default additional checksum verification in Express One Zone storage class.
+ "#)]
     disable_express_one_zone_additional_checksum: bool,
 
-    /// delete objects that exist in the target but not in the source.
-    /// [Warning] Since this can cause data loss, test first with the --dry-run option
-    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_SYNC_WITH_DELETE, help_heading = "Dangerous")]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_SYNC_WITH_DELETE, help_heading = "Dangerous",
+    long_help=r#"Delete objects that exist in the target but not in the source.
+ [Warning] Since this can cause data loss, test first with the --dry-run option
+ "#)]
     delete: bool,
 
-    /// unit test purpose only
+    /// Unit test purpose only
     #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
     allow_both_local_storage: bool,
 
-    /// [dangerous] disable to verify SSL certificates.
+    /// [dangerous] Disable to verify SSL certificates.
     #[cfg(feature = "legacy_hyper014_feature")]
     #[arg(long, env, conflicts_with_all = ["https_proxy", "http_proxy"], default_value_t = DEFAULT_NO_VERIFY_SSL, help_heading = "Dangerous")]
     no_verify_ssl: bool,
 
-    /// [dangerous] test purpose only
+    /// [dangerous] Test purpose only
     #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
     allow_e2e_test_dangerous_simulation: bool,
 
-    /// [dangerous] test purpose only
+    /// [dangerous] Test purpose only
     #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true, help_heading = "Dangerous")]
     cancellation_point: Option<String>,
