@@ -284,12 +284,22 @@ Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTEL
     #[arg(long, env, value_parser = url::check_scheme_and_no_authority_exist, help_heading = "Proxy Settings")]
     http_proxy: Option<String>,
 
-    #[arg(long, env, help_heading = "Filtering", long_help = r#"Sync only objects older than given time (RFC3339 datetime).
-Example: 2023-02-19T12:00:00Z)"#)]
+    #[arg(
+        long,
+        env,
+        help_heading = "Filtering",
+        long_help = r#"Sync only objects older than given time (RFC3339 datetime).
+Example: 2023-02-19T12:00:00Z)"#
+    )]
     filter_mtime_before: Option<DateTime<Utc>>,
 
-    #[arg(long, env, help_heading = "Filtering", long_help = r#"Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
-Example: 2023-02-19T12:00:00Z)"#)]
+    #[arg(
+        long,
+        env,
+        help_heading = "Filtering",
+        long_help = r#"Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
+Example: 2023-02-19T12:00:00Z)"#
+    )]
     filter_mtime_after: Option<DateTime<Utc>>,
 
     /// Sync only objects that match a given regular expression.
@@ -306,7 +316,6 @@ Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
 
     #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects larger than OR EQUAL TO given size.
 Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
-
     filter_larger_size: Option<String>,
 
     /// Do not check(ListObjectsV2) for modification in the target storage.
@@ -442,8 +451,13 @@ It takes extra HEAD requests(1 API call per part)."#)]
     #[arg(long, env, help_heading = "Metadata/Headers")]
     content_type: Option<String>,
 
-    #[arg(long, env, help_heading = "Metadata/Headers", long_help=r#"Expires HTTP header to set on the target object(RFC3339 datetime)
-Example: 2023-02-19T12:00:00Z"#)]
+    #[arg(
+        long,
+        env,
+        help_heading = "Metadata/Headers",
+        long_help = r#"Expires HTTP header to set on the target object(RFC3339 datetime)
+Example: 2023-02-19T12:00:00Z"#
+    )]
     expires: Option<DateTime<Utc>>,
 
     #[arg(long, env, value_parser = metadata::check_metadata, help_heading = "Metadata/Headers", long_help=r#"Metadata to set on the target object
@@ -586,8 +600,6 @@ The default has no timeout."#
     )]
     operation_attempt_timeout_milliseconds: Option<u64>,
 
-    ///
-    ///
     #[arg(
         long,
         env,
