@@ -1601,12 +1601,17 @@ impl TestHelper {
     pub fn modify_case3_large_file() {
         std::fs::create_dir_all(LARGE_FILE_DIR_CASE3).unwrap();
 
+        std::thread::sleep(time::Duration::from_secs(2));
+
         let data = vec![1_u8; LARGE_FILE_SIZE];
         std::fs::write(LARGE_FILE_PATH_CASE3, data.as_slice()).unwrap();
     }
 
     pub fn update_case3_large_file_mtime() {
         let path = Path::new(LARGE_FILE_PATH_CASE3);
+
+        std::thread::sleep(time::Duration::from_secs(2));
+
         let now = FileTime::now();
         set_file_mtime(path, now).unwrap();
     }
