@@ -178,7 +178,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   All metadata of the object can be synchronized. For example, `Content-Type`, `Content-Encoding`, `Cache-Control`, user-defined metadata, etc.
 
 - Flexible filtering  
-  Key name Regular expression, `ContentLength`, `LastModified`.
+  Key name, `ContentType` Regular expression, `ContentLength`, `LastModified`.
 
 - User-defined metadata-based regular expression filtering  
   You can filter objects based on user-defined metadata.  
@@ -212,7 +212,9 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - ARM64 Linux (kernel 4.1 or later, glibc 2.17 or later)
 - x86_64 Windows 10 or later
 - ARM64 Windows 11
-- MacOS 11.0 or later
+- macOS 11.0 or later
+
+All features are tested on the above platforms.
 
 ## Licence
 This project is licensed under the Apache-2.0 License.
@@ -669,6 +671,18 @@ Filtering:
       --filter-larger-size <FILTER_LARGER_SIZE>
           Sync only objects larger than OR EQUAL TO given size.
           Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_LARGER_SIZE=]
+      --filter-include-content-type-regex <FILTER_INCLUDE_CONTENT_TYPE_REGEX>
+          Sync only objects that have Content-Type matching a given regular expression.
+          If the source is local storage, Content-Type is guessed by the file extension,
+          Unless --no-guess-mime-type is specified.
+          It may take an extra API call to get Content-Type of the object.
+           [env: FILTER_INCLUDE_CONTENT_TYPE_REGEX=]
+      --filter-exclude-content-type-regex <FILTER_EXCLUDE_CONTENT_TYPE_REGEX>
+          Do not sync objects that have Content-Type matching a given regular expression.
+          If the source is local storage, Content-Type is guessed by the file extension,
+          Unless --no-guess-mime-type is specified.
+          It may take an extra API call to get Content-Type of the object.
+           [env: FILTER_EXCLUDE_CONTENT_TYPE_REGEX=]
       --remove-modified-filter
           Do not check(ListObjectsV2) for modification in the target storage [env: REMOVE_MODIFIED_FILTER=]
       --check-size
@@ -677,24 +691,28 @@ Filtering:
           Sync only objects that have metadata matching a given regular expression.
           Keys(lowercase) must be sorted in alphabetical order, and comma separated.
           This filter is applied after all other filters(except tag filters).
+          It may take an extra API call to get metadata of the object.
 
           Example: "key1=(value1|value2),key2=value2" [env: FILTER_INCLUDE_METADATA_REGEX=]
       --filter-exclude-metadata-regex <FILTER_EXCLUDE_METADATA_REGEX>
           Do not sync objects that have metadata matching a given regular expression.
           Keys(lowercase) must be sorted in alphabetical order, and comma separated.
           This filter is applied after all other filters(except tag filters).
+          It may take an extra API call to get metadata of the object.
 
           Example: "key1=(value1|value2),key2=value2" [env: FILTER_EXCLUDE_METADATA_REGEX=]
       --filter-include-tag-regex <FILTER_INCLUDE_TAG_REGEX>
           Sync only objects that have tag matching a given regular expression.
           Keys must be sorted in alphabetical order, and '&' separated.
           This filter is applied after all other filters.
+          It takes an extra API call to get tags of the object.
 
           Example: "key1=(value1|value2)&key2=value2" [env: FILTER_INCLUDE_TAG_REGEX=]
       --filter-exclude-tag-regex <FILTER_EXCLUDE_TAG_REGEX>
           Do not sync objects that have tag matching a given regular expression.
           Keys must be sorted in alphabetical order, and '&' separated.
           This filter is applied after all other filters.
+          It takes an extra API call to get tags of the object.
 
           Example: "key1=(value1|value2)&key2=value2" [env: FILTER_EXCLUDE_TAG_REGEX=]
       --check-etag

@@ -157,6 +157,8 @@ pub struct FilterConfig {
     pub check_mtime_and_additional_checksum: Option<ChecksumAlgorithm>,
     pub include_regex: Option<Regex>,
     pub exclude_regex: Option<Regex>,
+    pub include_content_type_regex: Option<Regex>,
+    pub exclude_content_type_regex: Option<Regex>,
     pub include_metadata_regex: Option<Regex>,
     pub exclude_metadata_regex: Option<Regex>,
     pub include_tag_regex: Option<Regex>,
