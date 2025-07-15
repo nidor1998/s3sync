@@ -33,6 +33,8 @@ use tracing::{debug, error, info, trace, warn};
 
 use super::stage::Stage;
 
+const INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME: &str = "include_content_type_regex_filter";
+const EXCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME: &str = "exclude_content_type_regex_filter";
 const INCLUDE_METADATA_REGEX_FILTER_NAME: &str = "include_metadata_regex_filter";
 const EXCLUDE_METADATA_REGEX_FILTER_NAME: &str = "exclude_metadata_regex_filter";
 
@@ -398,6 +400,26 @@ impl ObjectSyncer {
                             response_end,
                         ));
                     }
+                }
+
+                // Content-Type filtering
+                if !self
+                    .decide_sync_target_by_include_content_type_regex(
+                        key,
+                        get_object_output.content_type(),
+                    )
+                    .await
+                {
+                    return Ok(());
+                }
+                if !self
+                    .decide_sync_target_by_exclude_content_type_regex(
+                        key,
+                        get_object_output.content_type(),
+                    )
+                    .await
+                {
+                    return Ok(());
                 }
 
                 // Metadata filtering
@@ -1282,6 +1304,121 @@ impl ObjectSyncer {
             metadata = formatted,
             is_match = is_match,
             "decide_sync_target_by_exclude_tag_regex() called."
+        );
+
+        if is_match {
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+        }
+
+        !is_match
+    }
+
+    async fn decide_sync_target_by_include_content_type_regex(
+        &self,
+        key: &str,
+        content_type: Option<&str>,
+    ) -> bool {
+        if self
+            .base
+            .config
+            .filter_config
+            .include_content_type_regex
+            .is_none()
+        {
+            return true;
+        }
+
+        if content_type.is_none() {
+            debug!(
+                name = INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
+                worker_index = self.worker_index,
+                key = key,
+                "Content-Type = None",
+            );
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+
+            return false;
+        }
+
+        let is_match = self
+            .base
+            .config
+            .filter_config
+            .include_content_type_regex
+            .as_ref()
+            .unwrap()
+            .is_match(content_type.unwrap());
+
+        debug!(
+            name = INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
+            worker_index = self.worker_index,
+            key = key,
+            content_type = content_type.unwrap(),
+            is_match = is_match,
+            "decide_sync_target_by_include_content_type_regex() called."
+        );
+
+        if !is_match {
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+        }
+
+        is_match
+    }
+
+    async fn decide_sync_target_by_exclude_content_type_regex(
+        &self,
+        key: &str,
+        content_type: Option<&str>,
+    ) -> bool {
+        if self
+            .base
+            .config
+            .filter_config
+            .exclude_content_type_regex
+            .is_none()
+        {
+            return true;
+        }
+
+        if content_type.is_none() {
+            debug!(
+                name = EXCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
+                worker_index = self.worker_index,
+                key = key,
+                "Content-Type = None",
+            );
+
+            return true;
+        }
+
+        let is_match = self
+            .base
+            .config
+            .filter_config
+            .exclude_content_type_regex
+            .as_ref()
+            .unwrap()
+            .is_match(content_type.unwrap());
+
+        debug!(
+            name = EXCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
+            worker_index = self.worker_index,
+            key = key,
+            content_type = content_type.unwrap(),
+            is_match = is_match,
+            "decide_sync_target_by_exclude_content_type_regex() called."
         );
 
         if is_match {

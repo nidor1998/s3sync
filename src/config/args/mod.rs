@@ -318,6 +318,22 @@ Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
 Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
     filter_larger_size: Option<String>,
 
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
+    long_help = r#"Sync only objects that have Content-Type matching a given regular expression.
+If the source is local storage, Content-Type is guessed by the file extension,
+Unless --no-guess-mime-type is specified.
+It may take an extra API call to get Content-Type of the object.
+"#)]
+    filter_include_content_type_regex: Option<String>,
+
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
+    long_help=r#"Do not sync objects that have Content-Type matching a given regular expression.
+If the source is local storage, Content-Type is guessed by the file extension,
+Unless --no-guess-mime-type is specified.
+It may take an extra API call to get Content-Type of the object.
+"#)]
+    filter_exclude_content_type_regex: Option<String>,
+
     /// Do not check(ListObjectsV2) for modification in the target storage.
     #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_REMOVE_MODIFIED_FILTER, help_heading = "Filtering")]
     remove_modified_filter: bool,
@@ -330,6 +346,7 @@ Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
     long_help=r#"Sync only objects that have metadata matching a given regular expression.
 Keys(lowercase) must be sorted in alphabetical order, and comma separated.
 This filter is applied after all other filters(except tag filters).
+It may take an extra API call to get metadata of the object.
 
 Example: "key1=(value1|value2),key2=value2""#)]
     filter_include_metadata_regex: Option<String>,
@@ -338,6 +355,7 @@ Example: "key1=(value1|value2),key2=value2""#)]
     long_help=r#"Do not sync objects that have metadata matching a given regular expression.
 Keys(lowercase) must be sorted in alphabetical order, and comma separated.
 This filter is applied after all other filters(except tag filters).
+It may take an extra API call to get metadata of the object.
 
 Example: "key1=(value1|value2),key2=value2""#)]
     filter_exclude_metadata_regex: Option<String>,
@@ -346,6 +364,7 @@ Example: "key1=(value1|value2),key2=value2""#)]
     long_help=r#"Sync only objects that have tag matching a given regular expression.
 Keys must be sorted in alphabetical order, and '&' separated.
 This filter is applied after all other filters.
+It takes an extra API call to get tags of the object.
 
 Example: "key1=(value1|value2)&key2=value2""#)]
     filter_include_tag_regex: Option<String>,
@@ -354,6 +373,7 @@ Example: "key1=(value1|value2)&key2=value2""#)]
     long_help=r#"Do not sync objects that have tag matching a given regular expression.
 Keys must be sorted in alphabetical order, and '&' separated.
 This filter is applied after all other filters.
+It takes an extra API call to get tags of the object.
 
 Example: "key1=(value1|value2)&key2=value2""#)]
     filter_exclude_tag_regex: Option<String>,
@@ -1444,6 +1464,12 @@ impl TryFrom<CLIArgs> for Config {
         let exclude_regex = value
             .filter_exclude_regex
             .map(|regex| Regex::new(&regex).unwrap());
+        let include_content_type_regex = value
+            .filter_include_content_type_regex
+            .map(|regex| Regex::new(&regex).unwrap());
+        let exclude_content_type_regex = value
+            .filter_exclude_content_type_regex
+            .map(|regex| Regex::new(&regex).unwrap());
 
         let include_metadata_regex = value
             .filter_include_metadata_regex
@@ -1620,6 +1646,8 @@ impl TryFrom<CLIArgs> for Config {
                 check_mtime_and_additional_checksum,
                 include_regex,
                 exclude_regex,
+                include_content_type_regex,
+                exclude_content_type_regex,
                 include_metadata_regex,
                 exclude_metadata_regex,
                 include_tag_regex,

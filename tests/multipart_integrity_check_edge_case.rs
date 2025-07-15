@@ -43,7 +43,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn integrity_check_edge_case() {
+    async fn integrity_check_edge_case1() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
@@ -66,6 +66,39 @@ mod tests {
             test_upload_1m().await;
             test_upload_1m_sha256().await;
             test_upload_1m_crc64nvme().await;
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
+        ))
+        .await;
+    }
+
+    #[tokio::test]
+    async fn integrity_check_edge_case2() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+        helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+        {
             test_multipart_upload_8mb().await;
             test_multipart_upload_8mb_sha256().await;
             test_multipart_upload_8mb_crc64nvme().await;
