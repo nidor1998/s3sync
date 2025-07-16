@@ -15,7 +15,7 @@ impl ObjectLister {
     pub async fn list_source(&self, max_keys: i32) -> Result<()> {
         trace!("list source objects has started.");
 
-        if self.base.config.enable_versioning {
+        if self.base.config.enable_versioning || self.base.config.point_in_time.is_some() {
             self.base
                 .source
                 .as_ref()

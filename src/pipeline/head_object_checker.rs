@@ -39,14 +39,22 @@ impl HeadObjectChecker {
             return Ok(true);
         }
 
-        if self.check_target_local_storage_allow_overwrite() {
+        if self.config.filter_config.check_checksum_algorithm.is_none()
+            && self.check_target_local_storage_allow_overwrite()
+        {
             return Ok(true);
         }
 
         match &source_object {
             S3syncObject::NotVersioning(_) => self.is_old_object(source_object).await,
-            _ => {
+            S3syncObject::Versioning(_) => {
+                if self.config.point_in_time.is_some() {
+                    return self.is_old_object(source_object).await;
+                }
                 panic!("versioning object has been detected.")
+            }
+            _ => {
+                panic!("unexpected object has been detected.")
             }
         }
     }

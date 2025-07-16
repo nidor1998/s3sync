@@ -35,6 +35,16 @@ impl VersioningInfoCollector {
     ) -> Result<ObjectVersions> {
         let source_object_versions = types::unpack_object_versions(source_packed_object_versions);
 
+        // If point-in-time is set, we do not need to check the target storage.
+        if self.config.point_in_time.is_some() {
+            let mut object_versions_to_sync = ObjectVersions::new();
+            for source_object in source_object_versions {
+                object_versions_to_sync.push(source_object);
+            }
+
+            return Ok(object_versions_to_sync);
+        }
+
         let key = source_packed_object_versions.key();
         let target_object_versions = self
             .target

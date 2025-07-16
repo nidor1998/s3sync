@@ -163,6 +163,11 @@ const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_USER_DEFINED_METADATA: &str =
     "with --no-sync-user-defined-metadata, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_USER_DEFINED_METADATA: &str =
     "with --no-sync-user-defined-metadata, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_POINT_IN_TIME: &str =
+    "with --point-in-time, source storage must be s3://\n";
+const POINT_IN_TIME_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
+    "--point-in-time is not supported with express onezone storage class\n";
+const POINT_IN_TIME_VALUE_INVALID: &str = "--point-in-time value is later than current time\n";
 
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
@@ -520,6 +525,19 @@ If this option is enabled, the --remove-modified-filter and
  "#)]
     enable_versioning: bool,
 
+    #[arg(
+        long,
+        env,
+        conflicts_with_all = ["delete", "enable_versioning", "check_etag", "check_mtime_and_etag", "check_size"],
+        help_heading = "Versioning",
+        long_help = r#"Sync only objects at a specific point in time (RFC3339 datetime).
+The source storage must be a versioning enabled S3 bucket.
+By default, the target storage's objects will always be overwritten with the source's objects.
+
+Example: 2025-07-16T12:00:00Z)"#
+    )]
+    point_in_time: Option<DateTime<Utc>>,
+
     /// Server-side encryption. Valid choices: AES256 | aws:kms | aws:kms:dsse
     #[arg(long, env, value_parser = sse::parse_sse, help_heading = "Encryption")]
     sse: Option<String>,
@@ -765,12 +783,13 @@ impl CLIArgs {
         self.check_accelerate_conflict()?;
         self.check_request_payer_conflict()?;
         self.check_server_side_copy_conflict()?;
-        self.check_filter_include_metadata_regex()?;
-        self.check_filter_exclude_metadata_regex()?;
-        self.check_filter_include_tag_regex()?;
-        self.check_filter_exclude_tag_regex()?;
-        self.check_server_no_sync_system_metadata()?;
-        self.check_server_no_sync_user_defined_metadata()?;
+        self.check_filter_include_metadata_regex_conflict()?;
+        self.check_filter_exclude_metadata_regex_conflict()?;
+        self.check_filter_include_tag_regex_conflict()?;
+        self.check_filter_exclude_tag_regex_conflict()?;
+        self.check_server_no_sync_system_metadata_conflict()?;
+        self.check_server_no_sync_user_defined_metadata_conflict()?;
+        self.check_point_in_time_conflict()?;
 
         Ok(())
     }
@@ -1197,7 +1216,7 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_filter_include_metadata_regex(&self) -> Result<(), String> {
+    fn check_filter_include_metadata_regex_conflict(&self) -> Result<(), String> {
         let source = storage_path::parse_storage_path(&self.source);
         if matches!(source, StoragePath::Local(_)) && self.filter_include_metadata_regex.is_some() {
             return Err(
@@ -1208,7 +1227,7 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_filter_exclude_metadata_regex(&self) -> Result<(), String> {
+    fn check_filter_exclude_metadata_regex_conflict(&self) -> Result<(), String> {
         let source = storage_path::parse_storage_path(&self.source);
         if matches!(source, StoragePath::Local(_)) && self.filter_exclude_metadata_regex.is_some() {
             return Err(
@@ -1219,7 +1238,7 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_filter_include_tag_regex(&self) -> Result<(), String> {
+    fn check_filter_include_tag_regex_conflict(&self) -> Result<(), String> {
         let source = storage_path::parse_storage_path(&self.source);
         if matches!(source, StoragePath::Local(_)) && self.filter_include_tag_regex.is_some() {
             return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_INCLUDE_TAG_REGEX.to_string());
@@ -1228,7 +1247,7 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_filter_exclude_tag_regex(&self) -> Result<(), String> {
+    fn check_filter_exclude_tag_regex_conflict(&self) -> Result<(), String> {
         let source = storage_path::parse_storage_path(&self.source);
         if matches!(source, StoragePath::Local(_)) && self.filter_exclude_tag_regex.is_some() {
             return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_FILTER_EXCLUDE_TAG_REGEX.to_string());
@@ -1237,7 +1256,7 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_server_no_sync_system_metadata(&self) -> Result<(), String> {
+    fn check_server_no_sync_system_metadata_conflict(&self) -> Result<(), String> {
         let source = storage_path::parse_storage_path(&self.source);
         if matches!(source, StoragePath::Local(_)) && self.no_sync_system_metadata {
             return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_SYSTEM_METADATA.to_string());
@@ -1251,7 +1270,7 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_server_no_sync_user_defined_metadata(&self) -> Result<(), String> {
+    fn check_server_no_sync_user_defined_metadata_conflict(&self) -> Result<(), String> {
         let source = storage_path::parse_storage_path(&self.source);
         if matches!(source, StoragePath::Local(_)) && self.no_sync_user_defined_metadata {
             return Err(
@@ -1264,6 +1283,28 @@ impl CLIArgs {
             return Err(
                 TARGET_LOCAL_STORAGE_SPECIFIED_WITH_NO_SYNC_USER_DEFINED_METADATA.to_string(),
             );
+        }
+
+        Ok(())
+    }
+    fn check_point_in_time_conflict(&self) -> Result<(), String> {
+        if self.point_in_time.is_none() {
+            return Ok(());
+        }
+
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_POINT_IN_TIME.to_string());
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(POINT_IN_TIME_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
+        }
+
+        if Utc::now() < self.point_in_time.unwrap() {
+            return Err(POINT_IN_TIME_VALUE_INVALID.to_string());
         }
 
         Ok(())
@@ -1570,6 +1611,14 @@ impl TryFrom<CLIArgs> for Config {
             cancellation_point = value.cancellation_point
         }
 
+        // If point-in-time is specified, we need to remove the modified filter.
+        // Because target objects may need to be modified.
+        let remove_modified_filter = if value.point_in_time.is_some() {
+            true
+        } else {
+            value.remove_modified_filter
+        };
+
         Ok(Config {
             source: storage_path::parse_storage_path(&value.source),
             target: storage_path::parse_storage_path(&value.target),
@@ -1603,6 +1652,7 @@ impl TryFrom<CLIArgs> for Config {
             disable_multipart_verify: value.disable_multipart_verify,
             disable_etag_verify: value.disable_etag_verify,
             enable_versioning: value.enable_versioning,
+            point_in_time: value.point_in_time,
             storage_class,
             sse,
             sse_kms_key_id: SseKmsKeyId {
@@ -1638,7 +1688,7 @@ impl TryFrom<CLIArgs> for Config {
             filter_config: FilterConfig {
                 before_time: value.filter_mtime_before,
                 after_time: value.filter_mtime_after,
-                remove_modified_filter: value.remove_modified_filter,
+                remove_modified_filter,
                 check_size: value.check_size,
                 check_etag: value.check_etag,
                 check_mtime_and_etag: value.check_mtime_and_etag,

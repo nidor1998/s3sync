@@ -33,6 +33,7 @@ pub struct Config {
     pub disable_multipart_verify: bool,
     pub disable_etag_verify: bool,
     pub enable_versioning: bool,
+    pub point_in_time: Option<DateTime<Utc>>,
     pub storage_class: Option<StorageClass>,
     pub sse: Option<ServerSideEncryption>,
     pub sse_kms_key_id: SseKmsKeyId,
