@@ -339,14 +339,6 @@ It may take an extra API call to get Content-Type of the object.
 "#)]
     filter_exclude_content_type_regex: Option<String>,
 
-    /// Do not check(ListObjectsV2) for modification in the target storage.
-    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_REMOVE_MODIFIED_FILTER, help_heading = "Filtering")]
-    remove_modified_filter: bool,
-
-    /// Use object size for update checking.
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], default_value_t = DEFAULT_CHECK_SIZE, help_heading = "Filtering")]
-    check_size: bool,
-
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
     long_help=r#"Sync only objects that have metadata matching a given regular expression.
 Keys(lowercase) must be sorted in alphabetical order, and comma separated.
@@ -383,21 +375,29 @@ It takes an extra API call to get tags of the object.
 Example: "key1=(value1|value2)&key2=value2""#)]
     filter_exclude_tag_regex: Option<String>,
 
+    /// Do not update checking(ListObjectsV2) for modification in the target storage.
+    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_REMOVE_MODIFIED_FILTER, help_heading = "Update Checking")]
+    remove_modified_filter: bool,
+
+    /// Use object size for update checking.
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], default_value_t = DEFAULT_CHECK_SIZE, help_heading = "Update Checking")]
+    check_size: bool,
+
     /// Use etag for update checking.
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "check_mtime_and_additional_checksum", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG, help_heading = "Filtering")]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "check_mtime_and_additional_checksum", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG, help_heading = "Update Checking",)]
     check_etag: bool,
 
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_MTIME_AND_ETAG, help_heading = "Filtering",
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_MTIME_AND_ETAG, help_heading = "Update Checking",
     long_help=r#"Use the modification time and ETag for update checking.
 If the source modification date is newer, check the ETag.
 "#)]
     check_mtime_and_etag: bool,
 
     /// Use additional checksum for update checking.
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Filtering")]
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Update Checking")]
     check_additional_checksum: Option<String>,
 
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "check_mtime_and_etag", "check_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Filtering",
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "remove_modified_filter", "check_size", "check_etag", "check_mtime_and_etag", "check_additional_checksum"], value_parser = checksum_algorithm::parse_checksum_algorithm, help_heading = "Update Checking",
     long_help=r#"Use the modification time and additional checksum for update checking.
 If the source modification date is newer, check the additional checksum.
 "#)]
@@ -528,7 +528,7 @@ If this option is enabled, the --remove-modified-filter and
     #[arg(
         long,
         env,
-        conflicts_with_all = ["delete", "head_each_target", "enable_versioning", "check_etag", "check_mtime_and_etag", "check_size"],
+        conflicts_with_all = ["delete", "head_each_target", "enable_versioning", "check_etag", "check_mtime_and_etag", "check_size", "check_mtime_and_additional_checksum"],
         help_heading = "Versioning",
         long_help = r#"Sync only objects at a specific point in time (RFC3339 datetime).
 The source storage must be a versioning enabled S3 bucket.
