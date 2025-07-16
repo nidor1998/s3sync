@@ -1425,7 +1425,9 @@ impl UploadManager {
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .send()
                 .await?;
-
+            let _ = self
+                .stats_sender
+                .send_blocking(SyncStatistics::SyncBytes(self.source_total_size));
             convert_copy_to_put_object_output(copy_object_output, self.source_total_size as i64)
         } else {
             let builder = self
