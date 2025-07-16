@@ -32,7 +32,12 @@ impl DiffDetectionStrategy for ChecksumDiffDetector {
     ) -> anyhow::Result<bool> {
         let key = source_object.key();
         if !self.source.is_local_storage() && !self.target.is_local_storage() {
-            self.are_different_checksums(key, target_object).await
+            self.are_different_checksums(
+                key,
+                source_object.version_id().map(|v| v.to_string()),
+                target_object,
+            )
+            .await
         } else if self.source.is_local_storage() && !self.target.is_local_storage() {
             self.is_source_local_checksum_different_from_target_s3(key, target_object)
                 .await
@@ -57,13 +62,14 @@ impl ChecksumDiffDetector {
     async fn are_different_checksums(
         &self,
         key: &str,
+        source_version_id: Option<String>,
         head_target_object_output: &HeadObjectOutput,
     ) -> anyhow::Result<bool> {
         let head_source_object_output = self
             .source
             .head_object(
                 key,
-                None,
+                source_version_id,
                 Some(ChecksumMode::Enabled),
                 None,
                 self.config.source_sse_c.clone(),

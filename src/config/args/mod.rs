@@ -528,7 +528,7 @@ If this option is enabled, the --remove-modified-filter and
     #[arg(
         long,
         env,
-        conflicts_with_all = ["delete", "enable_versioning", "check_etag", "check_mtime_and_etag", "check_size"],
+        conflicts_with_all = ["delete", "head_each_target", "enable_versioning", "check_etag", "check_mtime_and_etag", "check_size"],
         help_heading = "Versioning",
         long_help = r#"Sync only objects at a specific point in time (RFC3339 datetime).
 The source storage must be a versioning enabled S3 bucket.
