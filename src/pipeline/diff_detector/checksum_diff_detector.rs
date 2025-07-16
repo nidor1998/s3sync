@@ -42,8 +42,12 @@ impl DiffDetectionStrategy for ChecksumDiffDetector {
             self.is_source_local_checksum_different_from_target_s3(key, target_object)
                 .await
         } else if !self.source.is_local_storage() && self.target.is_local_storage() {
-            self.is_target_local_checksum_different_from_source_s3(key, target_object)
-                .await
+            self.is_target_local_checksum_different_from_source_s3(
+                key,
+                source_object.version_id().map(|v| v.to_string()),
+                target_object,
+            )
+            .await
         } else {
             panic!("source and target are both local storage.")
         }
@@ -69,7 +73,7 @@ impl ChecksumDiffDetector {
             .source
             .head_object(
                 key,
-                source_version_id,
+                source_version_id.clone(),
                 Some(ChecksumMode::Enabled),
                 None,
                 self.config.source_sse_c.clone(),
@@ -134,6 +138,8 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
+                source_version_id = source_version_id.unwrap_or_default(),
+                target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                 "object filtered. Checksum not found."
             );
 
@@ -154,6 +160,8 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
+                source_version_id = source_version_id.clone().unwrap_or_default(),
+                target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                 "object filtered. Checksums are same."
             );
 
@@ -170,6 +178,8 @@ impl ChecksumDiffDetector {
                     source_size = head_source_object_output.content_length().unwrap(),
                     target_size = head_target_object_output.content_length().unwrap(),
                     key = key,
+                    source_version_id = source_version_id.clone().unwrap_or_default(),
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                     "Checksums are same but sizes are different."
                 );
 
@@ -189,6 +199,8 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
+                source_version_id = source_version_id.clone().unwrap_or_default(),
+                target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                 "Checksums are different or not found."
             );
         }
@@ -379,6 +391,7 @@ impl ChecksumDiffDetector {
     async fn is_target_local_checksum_different_from_source_s3(
         &self,
         key: &str,
+        source_version_id: Option<String>,
         head_target_object_output: &HeadObjectOutput,
     ) -> anyhow::Result<bool> {
         let local_path = fs_util::key_to_file_path(self.target.get_local_path(), key);
@@ -389,7 +402,7 @@ impl ChecksumDiffDetector {
             .source
             .head_object(
                 &key,
-                None,
+                source_version_id.clone(),
                 Some(ChecksumMode::Enabled),
                 None,
                 self.config.source_sse_c.clone(),
@@ -446,6 +459,7 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
+                source_version_id = source_version_id.unwrap_or_default(),
                 "object filtered. Source checksum not found."
             );
 
@@ -460,7 +474,7 @@ impl ChecksumDiffDetector {
             self.source
                 .get_object_parts_attributes(
                     &key,
-                    None,
+                    source_version_id.clone(),
                     self.config.max_keys,
                     self.config.source_sse_c.clone(),
                     self.config.source_sse_c_key.clone(),
@@ -516,6 +530,7 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
+                source_version_id = source_version_id.clone().unwrap_or_default(),
                 "object filtered. Checksums are same."
             );
 
@@ -532,6 +547,7 @@ impl ChecksumDiffDetector {
                     source_size = head_source_object_output.content_length().unwrap(),
                     target_size = head_target_object_output.content_length().unwrap(),
                     key = key,
+                    source_version_id = source_version_id.unwrap_or_default(),
                     "Checksums are same but sizes are different."
                 );
 
@@ -551,6 +567,7 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
+                source_version_id = source_version_id.unwrap_or_default(),
                 "Checksums are different or not found."
             );
         }
