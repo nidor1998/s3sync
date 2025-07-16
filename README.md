@@ -411,6 +411,23 @@ Intermediate delete markers are not synchronized. Latest version delete markers 
 
 user-defined metadata: `s3sync_origin_version_id`, `s3sync_origin_last_modified`
 
+### Versioning and point-in-time recovery
+s3sync supports point-in-time recovery of objects.
+
+You can use `--point-in-time` option to enable point-in-time synchronization.
+
+For example, if you want to synchronize objects at `2025-07-16T06:37:59Z`, you can use the following command:
+
+S3 to S3(In same region):
+```bash
+s3sync --server-side-copy --point-in-time 2025-07-16T06:37:59Z s3://source_bucket s3://target_bucket
+```
+
+S3 to Local:
+```bash
+s3sync --point-in-time 2025-07-16T06:37:59Z s3://source_bucket /path/to/local
+```
+
 ### Metadata support
 The following metadata of the S3 object is synchronized.
 - Content-Type
@@ -683,10 +700,6 @@ Filtering:
           Unless --no-guess-mime-type is specified.
           It may take an extra API call to get Content-Type of the object.
            [env: FILTER_EXCLUDE_CONTENT_TYPE_REGEX=]
-      --remove-modified-filter
-          Do not check(ListObjectsV2) for modification in the target storage [env: REMOVE_MODIFIED_FILTER=]
-      --check-size
-          Use object size for update checking [env: CHECK_SIZE=]
       --filter-include-metadata-regex <FILTER_INCLUDE_METADATA_REGEX>
           Sync only objects that have metadata matching a given regular expression.
           Keys(lowercase) must be sorted in alphabetical order, and comma separated.
@@ -715,6 +728,12 @@ Filtering:
           It takes an extra API call to get tags of the object.
 
           Example: "key1=(value1|value2)&key2=value2" [env: FILTER_EXCLUDE_TAG_REGEX=]
+
+Update Checking:
+      --remove-modified-filter
+          Do not update checking(ListObjectsV2) for modification in the target storage [env: REMOVE_MODIFIED_FILTER=]
+      --check-size
+          Use object size for update checking [env: CHECK_SIZE=]
       --check-etag
           Use etag for update checking [env: CHECK_ETAG=]
       --check-mtime-and-etag
@@ -801,8 +820,13 @@ Tagging:
                              --head-each-target options are automatically enabled. [env: SYNC_LATEST_TAGGING=]
 
 Versioning:
-      --enable-versioning  Sync all version objects in the source storage to the target versioning storage.
-                             [env: ENABLE_VERSIONING=]
+      --enable-versioning              Sync all version objects in the source storage to the target versioning storage.
+                                         [env: ENABLE_VERSIONING=]
+      --point-in-time <POINT_IN_TIME>  Sync only objects at a specific point in time (RFC3339 datetime).
+                                       The source storage must be a versioning enabled S3 bucket.
+                                       By default, the target storage's objects will always be overwritten with the source's objects.
+
+                                       Example: 2025-07-16T12:00:00Z) [env: POINT_IN_TIME=]
 
 Encryption:
       --sse <SSE>
