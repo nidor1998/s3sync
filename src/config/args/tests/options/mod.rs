@@ -47,6 +47,7 @@ mod no_guess_mime_type;
 mod no_sync_system_metadata;
 mod no_sync_user_defined_metadata;
 mod no_verify_ssl;
+mod point_in_time;
 mod put_last_modified_metadata;
 mod rate_limit_objects;
 mod remove_modified_filter;

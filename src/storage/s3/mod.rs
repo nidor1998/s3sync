@@ -132,7 +132,8 @@ impl S3Storage {
         s3sync_object_map: &mut HashMap<String, Vec<S3syncObject>>,
     ) {
         for delete_marker in delete_marker_entries {
-            if !delete_marker.is_latest().unwrap() {
+            // If point-in-time is set, Intermediate delete markers will be needed.
+            if self.config.point_in_time.is_none() && !delete_marker.is_latest().unwrap() {
                 continue;
             }
 

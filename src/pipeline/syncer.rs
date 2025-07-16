@@ -95,11 +95,12 @@ impl ObjectSyncer {
         }
 
         for _ in 0..=self.base.config.force_retry_config.force_retry_count {
-            let result = if self.base.config.enable_versioning {
-                self.sync_object_versions(object.clone()).await
-            } else {
-                self.sync_object(object.clone()).await
-            };
+            let result =
+                if self.base.config.enable_versioning || self.base.config.point_in_time.is_some() {
+                    self.sync_object_versions(object.clone()).await
+                } else {
+                    self.sync_object(object.clone()).await
+                };
 
             if self.base.cancellation_token.is_cancelled() {
                 info!(
@@ -292,7 +293,12 @@ impl ObjectSyncer {
             .await?;
 
         for object in objects_to_sync {
-            self.sync_or_delete_object(object).await?;
+            if self.base.config.enable_versioning {
+                self.sync_or_delete_object(object).await?;
+            } else {
+                // If point-in-time is enabled, head_object_checker may be used.
+                self.sync_object(object).await?;
+            }
         }
 
         Ok(())

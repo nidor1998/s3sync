@@ -13,6 +13,7 @@ use crate::pipeline::filter::{ExcludeRegexFilter, IncludeRegexFilter, ObjectFilt
 use crate::pipeline::key_aggregator::KeyAggregator;
 use crate::pipeline::lister::ObjectLister;
 use crate::pipeline::packer::ObjectVersionsPacker;
+use crate::pipeline::packer_point_in_time::ObjectPointInTimePacker;
 use crate::pipeline::stage::Stage;
 use crate::pipeline::syncer::ObjectSyncer;
 use crate::pipeline::terminator::Terminator;
@@ -31,6 +32,7 @@ mod head_object_checker;
 mod key_aggregator;
 mod lister;
 mod packer;
+mod packer_point_in_time;
 mod stage;
 mod storage_factory;
 mod syncer;
@@ -132,6 +134,16 @@ impl Pipeline {
             return false;
         }
 
+        if self.config.point_in_time.is_some() && !self.is_source_bucket_versioning_enabled().await
+        {
+            self.print_and_store_error(
+                None,
+                "--point-in-time option requires versioning enabled on the source bucket.",
+            );
+
+            return false;
+        }
+
         true
     }
 
@@ -163,6 +175,20 @@ impl Pipeline {
         false
     }
 
+    async fn is_source_bucket_versioning_enabled(&self) -> bool {
+        let source_versioning_enabled = self.source.is_versioning_enabled().await;
+        if let Err(e) = source_versioning_enabled {
+            self.print_and_store_error(
+                Some(e),
+                "failed to check versioning status of source bucket.",
+            );
+
+            return false;
+        }
+
+        source_versioning_enabled.unwrap()
+    }
+
     fn is_listing_target_required(&self) -> bool {
         is_listing_target_required(
             self.config.enable_versioning,
@@ -189,6 +215,12 @@ impl Pipeline {
                     self.pack_object_versions(self.filter_objects(self.list_source())),
                 ),
             )
+            .await
+            .unwrap();
+        } else if self.config.point_in_time.is_some() {
+            self.terminate(self.sync_objects(
+                self.pack_objects_at_point_in_time(self.filter_objects(self.list_source())),
+            ))
             .await
             .unwrap();
         } else {
@@ -415,6 +447,33 @@ impl Pipeline {
                 Ok(_) => {}
                 Err(e) => {
                     log_error(has_error, error_list, e, "pack objects failed.");
+                }
+            }
+        });
+
+        new_receiver
+    }
+
+    fn pack_objects_at_point_in_time(
+        &self,
+        target_objects: Receiver<S3syncObject>,
+    ) -> Receiver<S3syncObject> {
+        let (stage, new_receiver) =
+            self.create_spsc_stage(Some(target_objects), self.has_warning.clone());
+        let packer = ObjectPointInTimePacker::new(stage);
+        let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
+        tokio::spawn(async move {
+            let result = packer.pack().await;
+            match result {
+                Ok(_) => {}
+                Err(e) => {
+                    log_error(
+                        has_error,
+                        error_list,
+                        e,
+                        "object point-in-time packer failed.",
+                    );
                 }
             }
         });
