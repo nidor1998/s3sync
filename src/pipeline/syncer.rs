@@ -1498,6 +1498,7 @@ impl ObjectSyncer {
         !is_match
     }
 
+    // skipcq: RS-W1031
     async fn check_metadata_sync_status(
         &self,
         key: &str,
@@ -1798,6 +1799,7 @@ impl ObjectSyncer {
         Ok(())
     }
 
+    // skipcq: RS-W1070
     async fn check_tagging_sync_status(
         &self,
         key: &str,
