@@ -78,6 +78,17 @@ pub const TEST_CACHE_CONTROL: &str = "s-maxage=1604800";
 pub const TEST_CONTENT_TYPE: &str = "application/vnd.ms-excel";
 pub const TEST_TAGGING: &str = "tag1=tag_value1&tag2=tag_value2";
 pub const TEST_METADATA_STRING: &str = "key1=value1,key2=value2";
+pub const TEST_WEBSITE_REDIRECT: &str = "/redirect";
+
+pub const TEST_CONTENT_DISPOSITION2: &str = "attachment; filename=\"filename2.jpg\"";
+pub const TEST_CONTENT_ENCODING2: &str = "gzip";
+pub const TEST_CONTENT_LANGUAGE2: &str = "en-US,en-GB";
+pub const TEST_CACHE_CONTROL2: &str = "s-maxage=1704800";
+pub const TEST_CONTENT_TYPE2: &str = "application/excel";
+pub const TEST_TAGGING2: &str = "tag1=tag_value1&tag2=tag_valueNew";
+pub const TEST_METADATA_STRING2: &str = "key1=value1,key2=value2,key3=value3";
+pub const TEST_WEBSITE_REDIRECT2: &str = "/redirect2";
+
 pub static TEST_METADATA: Lazy<HashMap<String, String>> = Lazy::new(|| {
     HashMap::from([
         ("key1".to_string(), "value1".to_string()),
@@ -85,6 +96,7 @@ pub static TEST_METADATA: Lazy<HashMap<String, String>> = Lazy::new(|| {
     ])
 });
 pub const TEST_EXPIRES: &str = "2055-05-20T00:00:00.000Z";
+pub const TEST_EXPIRES2: &str = "2055-04-20T00:00:00.000Z";
 
 pub static BUCKET1: Lazy<String> = Lazy::new(|| format!("bucket1-{}", Uuid::new_v4()));
 pub static BUCKET2: Lazy<String> = Lazy::new(|| format!("bucket2-{}", Uuid::new_v4()));
@@ -1766,6 +1778,16 @@ impl TestHelper {
             .with_env_filter(
                 EnvFilter::try_from_default_env()
                     .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
+            .try_init();
+    }
+
+    pub fn init_tracing_subscriber_for_report() {
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("s3sync=info"))
                     .unwrap(),
             )
             .try_init();
