@@ -283,6 +283,7 @@ impl ChecksumDiffDetector {
                     .lock()
                     .unwrap()
                     .increment_checksum_mismatch();
+                self.target.set_warning();
             }
         }
 
@@ -534,6 +535,7 @@ impl ChecksumDiffDetector {
                     .lock()
                     .unwrap()
                     .increment_checksum_mismatch();
+                self.target.set_warning();
             }
         }
 
@@ -791,6 +793,7 @@ impl ChecksumDiffDetector {
                     .lock()
                     .unwrap()
                     .increment_checksum_mismatch();
+                self.target.set_warning();
             }
         }
 

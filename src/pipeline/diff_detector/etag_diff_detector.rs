@@ -288,6 +288,7 @@ impl ETagDiffDetector {
                     .lock()
                     .unwrap()
                     .increment_etag_mismatch();
+                self.target.set_warning();
             }
         }
 
@@ -513,6 +514,7 @@ impl ETagDiffDetector {
                     .lock()
                     .unwrap()
                     .increment_etag_mismatch();
+                self.target.set_warning();
             }
         }
 
@@ -738,6 +740,7 @@ impl ETagDiffDetector {
                     .lock()
                     .unwrap()
                     .increment_etag_mismatch();
+                self.target.set_warning();
             }
         }
 

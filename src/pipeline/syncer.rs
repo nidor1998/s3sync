@@ -1794,6 +1794,7 @@ impl ObjectSyncer {
                 .lock()
                 .unwrap()
                 .increment_metadata_mismatch();
+            self.base.set_warning();
         }
 
         Ok(())
@@ -1864,6 +1865,7 @@ impl ObjectSyncer {
                 .lock()
                 .unwrap()
                 .increment_tagging_mismatch();
+            self.base.set_warning();
         }
 
         Ok(())
