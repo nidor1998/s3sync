@@ -66,7 +66,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output,)
+                .is_different(&source_object, &head_object_output)
                 .await
                 .unwrap(),
             false
@@ -93,7 +93,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output,)
+                .is_different(&source_object, &head_object_output)
                 .await
                 .unwrap(),
             true
