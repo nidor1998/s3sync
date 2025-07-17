@@ -192,6 +192,67 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
   Note: When using this option, Additional API calls are required to get the tags of each object.
 
+- Sync statistics report  
+  s3sync can check and report the synchronization status at any time.  
+  It only checks the synchronization status without transferring any objects.
+  For example, If you want to know all the objects transferred by awscli have been transferred correctly(checksum based), the following command will show the report.
+  ```bash
+  aws s3 sync test_data s3://xxxx/
+  s3sync --check-additional-checksum CRC64NVME --json-tracing --report-sync-status test_data s3://xxxx/ |tail -2 |jq
+  ```
+  
+  The following is an example of the report (the last two lines of the above command).
+
+  <details>
+  <summary>Click to expand to view report </summary>
+  
+  ```json
+  {
+    "timestamp": "2025-07-17T22:41:51.457601Z",
+    "level": "INFO",
+    "fields": {
+      "name": "SYNC_STATUS",
+      "type": "CHECKSUM",
+      "status": "MATCHES",
+      "key": "dir7/data4.dat",
+      "checksum_algorithm": "CRC64NVME",
+      "source_checksum": "YE4jTLSB/cA=",
+      "target_checksum": "YE4jTLSB/cA=",
+      "source_version_id": "",
+      "target_version_id": "",
+      "source_last_modified": "2025-06-14T03:52:21.843+00:00",
+      "target_last_modified": "2025-07-17T22:40:51+00:00",
+      "source_size": 22020096,
+      "target_size": 22020096
+    }
+  }
+  {
+    "timestamp": "2025-07-17T22:41:51.473349Z",
+    "level": "INFO",
+    "fields": {
+      "name": "REPORT_SUMMARY",
+      "number_of_objects": 40,
+      "etag_matches": 0,
+      "checksum_matches": 40,
+      "metadata_matches": 0,
+      "tagging_matches": 0,
+      "not_found": 0,
+      "etag_mismatch": 0,
+      "checksum_mismatch": 0,
+      "metadata_mismatch": 0,
+      "tagging_mismatch": 0,
+      "etag_unknown": 0,
+      "checksum_unknown": 0
+    }
+  }
+  ```
+  
+  </details>
+
+  You can check the synchronization status of the object's tagging and metadata with `--report-metadata-sync-status` and `--report-tagging-sync-status` option.
+
+  Note: For reporting, s3sync has special process exit code. `0` if all objects are synchronized correctly. `3` if some objects are not synchronized correctly.
+
 - Rate limiting by objects, bandwidth  
   For example, you can limit the number of objects transferred per second to 1,000, and the bandwidth to 100MB/sec.
 
@@ -674,10 +735,10 @@ Target Options:
 Filtering:
       --filter-mtime-before <FILTER_MTIME_BEFORE>
           Sync only objects older than given time (RFC3339 datetime).
-          Example: 2023-02-19T12:00:00Z [env: FILTER_MTIME_BEFORE=]
+          Example: 2023-02-19T12:00:00Z) [env: FILTER_MTIME_BEFORE=]
       --filter-mtime-after <FILTER_MTIME_AFTER>
           Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
-          Example: 2023-02-19T12:00:00Z [env: FILTER_MTIME_AFTER=]
+          Example: 2023-02-19T12:00:00Z) [env: FILTER_MTIME_AFTER=]
       --filter-include-regex <FILTER_INCLUDE_REGEX>
           Sync only objects that match a given regular expression [env: FILTER_INCLUDE_REGEX=]
       --filter-exclude-regex <FILTER_EXCLUDE_REGEX>
@@ -826,7 +887,7 @@ Versioning:
                                        The source storage must be a versioning enabled S3 bucket.
                                        By default, the target storage's objects will always be overwritten with the source's objects.
 
-                                       Example: 2025-07-16T12:00:00Z [env: POINT_IN_TIME=]
+                                       Example: 2025-07-16T12:00:00Z) [env: POINT_IN_TIME=]
 
 Encryption:
       --sse <SSE>
@@ -845,6 +906,15 @@ Encryption:
           Target SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: TARGET_SSE_C_KEY=]
       --target-sse-c-key-md5 <TARGET_SSE_C_KEY_MD5>
           Target base64 encoded MD5 digest of target-sse-c-key [env: TARGET_SSE_C_KEY_MD5=]
+
+Reporting:
+      --report-sync-status           Report sync status to the target storage.
+                                     Default verification is for etag. For additional checksum, use --check-additional-checksum.
+                                     For more precise control, use with --auto-chunksize. [env: REPORT_SYNC_STATUS=]
+      --report-metadata-sync-status  Report metadata sync status to the target storage.
+                                     It must be used with --report-sync-status. [env: REPORT_METADATA_SYNC_STATUS=]
+      --report-tagging-sync-status   Report tagging sync status to the target storage.
+                                     It must be used with --report-sync-status. [env: REPORT_TAGGING_SYNC_STATUS=]
 
 Tracing/Logging:
       --json-tracing           Show trace as json format [env: JSON_TRACING=]
