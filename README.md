@@ -674,10 +674,10 @@ Target Options:
 Filtering:
       --filter-mtime-before <FILTER_MTIME_BEFORE>
           Sync only objects older than given time (RFC3339 datetime).
-          Example: 2023-02-19T12:00:00Z) [env: FILTER_MTIME_BEFORE=]
+          Example: 2023-02-19T12:00:00Z [env: FILTER_MTIME_BEFORE=]
       --filter-mtime-after <FILTER_MTIME_AFTER>
           Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
-          Example: 2023-02-19T12:00:00Z) [env: FILTER_MTIME_AFTER=]
+          Example: 2023-02-19T12:00:00Z [env: FILTER_MTIME_AFTER=]
       --filter-include-regex <FILTER_INCLUDE_REGEX>
           Sync only objects that match a given regular expression [env: FILTER_INCLUDE_REGEX=]
       --filter-exclude-regex <FILTER_EXCLUDE_REGEX>
@@ -826,7 +826,7 @@ Versioning:
                                        The source storage must be a versioning enabled S3 bucket.
                                        By default, the target storage's objects will always be overwritten with the source's objects.
 
-                                       Example: 2025-07-16T12:00:00Z) [env: POINT_IN_TIME=]
+                                       Example: 2025-07-16T12:00:00Z [env: POINT_IN_TIME=]
 
 Encryption:
       --sse <SSE>
