@@ -4,7 +4,8 @@ use aws_sdk_s3::types::ChecksumMode;
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
-use tracing::error;
+use std::sync::{Arc, Mutex};
+use tracing::{error, info};
 
 use crate::pipeline::diff_detector::always_different_diff_detector::AlwaysDifferentDiffDetector;
 use crate::pipeline::diff_detector::checksum_diff_detector::ChecksumDiffDetector;
@@ -13,8 +14,11 @@ use crate::pipeline::diff_detector::size_diff_detector::SizeDiffDetector;
 use crate::pipeline::diff_detector::standard_diff_detector::StandardDiffDetector;
 
 use crate::storage::Storage;
-use crate::types::S3syncObject;
 use crate::types::SyncStatistics::SyncError;
+use crate::types::{
+    S3syncObject, SyncReportStats, SYNC_REPORT_EXISTENCE_TYPE, SYNC_REPORT_RECORD_NAME,
+    SYNC_STATUS_NOT_FOUND,
+};
 use crate::Config;
 
 pub struct HeadObjectChecker {
@@ -22,27 +26,37 @@ pub struct HeadObjectChecker {
     config: Config,
     source: Storage,
     target: Storage,
+    sync_report_stats: Arc<Mutex<SyncReportStats>>,
 }
 
 impl HeadObjectChecker {
-    pub fn new(config: Config, source: Storage, target: Storage, worker_index: u16) -> Self {
+    pub fn new(
+        config: Config,
+        source: Storage,
+        target: Storage,
+        worker_index: u16,
+        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    ) -> Self {
         Self {
             config,
             source,
             target,
             worker_index,
+            sync_report_stats,
         }
     }
 
     pub(crate) async fn is_sync_required(&self, source_object: &S3syncObject) -> Result<bool> {
-        if !self.is_head_object_check_required() {
-            return Ok(true);
-        }
+        if !self.config.report_sync_status {
+            if !self.is_head_object_check_required() {
+                return Ok(true);
+            }
 
-        if self.config.filter_config.check_checksum_algorithm.is_none()
-            && self.check_target_local_storage_allow_overwrite()
-        {
-            return Ok(true);
+            if self.config.filter_config.check_checksum_algorithm.is_none()
+                && self.check_target_local_storage_allow_overwrite()
+            {
+                return Ok(true);
+            }
         }
 
         match &source_object {
@@ -97,6 +111,7 @@ impl HeadObjectChecker {
                     self.config.clone(),
                     dyn_clone::clone_box(self.source.as_ref()),
                     dyn_clone::clone_box(self.target.as_ref()),
+                    self.sync_report_stats.clone(),
                 )
             } else if self.config.filter_config.check_etag {
                 // ETag has been checked by modified filter
@@ -112,6 +127,7 @@ impl HeadObjectChecker {
                     self.config.clone(),
                     dyn_clone::clone_box(self.source.as_ref()),
                     dyn_clone::clone_box(self.target.as_ref()),
+                    self.sync_report_stats.clone(),
                 )
             } else {
                 StandardDiffDetector::boxed_new()
@@ -123,6 +139,21 @@ impl HeadObjectChecker {
         }
 
         if is_head_object_not_found_error(head_target_object_output.as_ref().err().unwrap()) {
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_EXISTENCE_TYPE,
+                    status = SYNC_STATUS_NOT_FOUND,
+                    key = key,
+                    source_version_id = source_object.version_id().unwrap_or(""),
+                    source_e_tag = source_object.e_tag().unwrap_or(""),
+                    source_last_modified = source_object.last_modified().to_string(),
+                    source_size = source_object.size(),
+                );
+
+                self.sync_report_stats.lock().unwrap().increment_not_found();
+            }
+
             return Ok(true);
         }
 
@@ -320,6 +351,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             1,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let source_object =
@@ -367,6 +399,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             1,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let source_object =
@@ -407,6 +440,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             1,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let source_object =

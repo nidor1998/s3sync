@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::ops::Add;
-
 use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
 use crate::storage::{
@@ -12,7 +9,14 @@ use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip
 use crate::types::{
     format_metadata, format_tags, get_additional_checksum,
     get_additional_checksum_with_head_object, is_full_object_checksum, ObjectChecksum,
-    S3syncObject, SseCustomerKey, MINIMUM_CHUNKSIZE,
+    S3syncObject, SseCustomerKey, SyncReportStats, METADATA_SYNC_REPORT_LOG_NAME,
+    MINIMUM_CHUNKSIZE, S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY,
+    S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, SYNC_REPORT_CACHE_CONTROL_METADATA_KEY,
+    SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY, SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY,
+    SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY, SYNC_REPORT_CONTENT_TYPE_METADATA_KEY,
+    SYNC_REPORT_EXPIRES_METADATA_KEY, SYNC_REPORT_METADATA_TYPE, SYNC_REPORT_TAGGING_TYPE,
+    SYNC_REPORT_USER_DEFINED_METADATA_KEY, SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY,
+    SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, TAGGING_SYNC_REPORT_LOG_NAME,
 };
 use anyhow::{anyhow, Context, Error, Result};
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
@@ -29,6 +33,9 @@ use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Taggin
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
+use std::collections::HashMap;
+use std::ops::Add;
+use std::sync::{Arc, Mutex};
 use tracing::{debug, error, info, trace, warn};
 
 use super::stage::Stage;
@@ -44,11 +51,20 @@ const EXCLUDE_TAG_REGEX_FILTER_NAME: &str = "exclude_tag_regex_filter";
 pub struct ObjectSyncer {
     worker_index: u16,
     base: Stage,
+    sync_report_stats: Arc<Mutex<SyncReportStats>>,
 }
 
 impl ObjectSyncer {
-    pub fn new(base: Stage, worker_index: u16) -> Self {
-        Self { worker_index, base }
+    pub fn new(
+        base: Stage,
+        worker_index: u16,
+        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    ) -> Self {
+        Self {
+            worker_index,
+            base,
+            sync_report_stats,
+        }
     }
 
     pub async fn sync(&self) -> Result<()> {
@@ -245,10 +261,31 @@ impl ObjectSyncer {
             dyn_clone::clone_box(&*(*self.base.source.as_ref().unwrap())),
             dyn_clone::clone_box(&*(*self.base.target.as_ref().unwrap())),
             self.worker_index,
+            self.get_sync_report_stats(),
         );
 
-        if head_object_checker.is_sync_required(&object).await? {
-            return self.sync_or_delete_object(object).await;
+        if self.base.config.report_sync_status {
+            self.get_sync_report_stats()
+                .lock()
+                .unwrap()
+                .increment_number_of_objects();
+        }
+
+        if self.base.config.report_sync_status
+            && !self.base.config.report_metadata_sync_status
+            && !self.base.config.report_tagging_sync_status
+        {
+            head_object_checker.is_sync_required(&object).await?;
+            return Ok(());
+        } else {
+            let sync_required = head_object_checker
+                .is_sync_required(&object)
+                .await
+                .context("pipeline::syncer::sync_object() failed.")?;
+            // Even if the object is not required to sync, we need to check tagging and metadata if report_sync_status is enabled.
+            if sync_required || self.base.config.report_sync_status {
+                return self.sync_or_delete_object(object).await;
+            }
         }
 
         if self.base.config.sync_latest_tagging && self.sync_tagging(key).await? {
@@ -442,45 +479,57 @@ impl ObjectSyncer {
                     return Ok(());
                 }
 
-                // If multipart upload is required, the first chunk does not contain the final checksum.
-                // So, we need to get the final checksum from the head object.
-                let final_checksum = self
-                    .get_final_checksum(
-                        &get_object_output,
-                        range,
-                        object.clone(),
-                        object.checksum_algorithm(),
-                    )
-                    .await;
+                if self.base.config.report_metadata_sync_status {
+                    self.check_metadata_sync_status(key, &get_object_output)
+                        .await?;
+                    if !self.base.config.report_tagging_sync_status {
+                        return Ok(());
+                    }
+                }
 
-                // Tagging filtering
                 let mut get_object_tagging_output = None;
                 let get_object_output_tagging;
+                let source_tagging;
                 if self.base.config.filter_config.include_tag_regex.is_some()
                     || self.base.config.filter_config.exclude_tag_regex.is_some()
+                    || self.base.config.report_tagging_sync_status
                 {
-                    let tagging;
                     get_object_tagging_output =
                         self.get_object_tagging(key, &get_object_output).await?;
                     if get_object_tagging_output.is_some() {
                         get_object_output_tagging = get_object_tagging_output.clone().unwrap();
-                        tagging = Some(get_object_output_tagging.tag_set());
+                        source_tagging = Some(get_object_output_tagging.tag_set());
                     } else {
-                        tagging = None
+                        source_tagging = None
                     }
 
-                    if !self
-                        .decide_sync_target_by_include_tag_regex(key, tagging)
-                        .await
+                    // Tagging filtering
+                    if self.base.config.filter_config.include_tag_regex.is_some()
+                        || self.base.config.filter_config.exclude_tag_regex.is_some()
                     {
-                        return Ok(());
+                        if !self
+                            .decide_sync_target_by_include_tag_regex(key, source_tagging)
+                            .await
+                        {
+                            return Ok(());
+                        }
+                        if !self
+                            .decide_sync_target_by_exclude_tag_regex(key, source_tagging)
+                            .await
+                        {
+                            return Ok(());
+                        }
                     }
-                    if !self
-                        .decide_sync_target_by_exclude_tag_regex(key, tagging)
-                        .await
-                    {
-                        return Ok(());
-                    }
+                } else {
+                    source_tagging = None;
+                }
+
+                if self.base.config.report_tagging_sync_status {
+                    self.check_tagging_sync_status(key, object.version_id(), source_tagging)
+                        .await?;
+
+                    // If report_tagging_sync_status is enabled, we don't need to sync the object.
+                    return Ok(());
                 }
 
                 let tagging = if self.base.config.disable_tagging {
@@ -504,6 +553,17 @@ impl ObjectSyncer {
                         None
                     }
                 };
+
+                // If multipart upload is required, the first chunk does not contain the final checksum.
+                // So, we need to get the final checksum from the head object.
+                let final_checksum = self
+                    .get_final_checksum(
+                        &get_object_output,
+                        range,
+                        object.clone(),
+                        object.checksum_algorithm(),
+                    )
+                    .await;
 
                 let object_checksum = self
                     .build_object_checksum(
@@ -1437,6 +1497,380 @@ impl ObjectSyncer {
 
         !is_match
     }
+
+    async fn check_metadata_sync_status(
+        &self,
+        key: &str,
+        source_get_object_output: &GetObjectOutput,
+    ) -> Result<()> {
+        let target_head_object_output = self
+            .base
+            .target
+            .as_ref()
+            .unwrap()
+            .head_object(
+                key,
+                None,
+                None,
+                None,
+                self.base.config.target_sse_c.clone(),
+                self.base.config.target_sse_c_key.clone(),
+                self.base.config.target_sse_c_key_md5.clone(),
+            )
+            .await;
+        if let Err(e) = target_head_object_output {
+            // This is a report mode, so we do not return an error if the target object is not found.
+            if is_not_found_error(&e) {
+                return Ok(());
+            }
+            return Err(e);
+        }
+
+        let target_head_object_output = target_head_object_output.unwrap();
+        let mut mismatched_metadata = false;
+
+        let source_content_disposition = source_get_object_output.content_disposition();
+        let target_content_disposition = target_head_object_output.content_disposition();
+        if source_content_disposition == target_content_disposition {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_disposition = source_content_disposition.unwrap_or_default(),
+                target_content_disposition = target_content_disposition.unwrap_or_default(),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_disposition = source_content_disposition.unwrap_or_default(),
+                target_content_disposition = target_content_disposition.unwrap_or_default(),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        let source_content_encoding = source_get_object_output.content_encoding();
+        let target_content_encoding = target_head_object_output.content_encoding();
+        if source_content_encoding == target_content_encoding {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_encoding = source_content_encoding.unwrap_or_default(),
+                target_content_encoding = target_content_encoding.unwrap_or_default(),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_encoding = source_content_encoding.unwrap_or_default(),
+                target_content_encoding = target_content_encoding.unwrap_or_default(),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        let source_content_language = source_get_object_output.content_language();
+        let target_content_language = target_head_object_output.content_language();
+        if source_content_language == target_content_language {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_language = source_content_language.unwrap_or_default(),
+                target_content_language = target_content_language.unwrap_or_default(),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_language = source_content_language.unwrap_or_default(),
+                target_content_language = target_content_language.unwrap_or_default(),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        let source_content_type = source_get_object_output.content_type();
+        let target_content_type = target_head_object_output.content_type();
+        if source_content_type == target_content_type {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_TYPE_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_type = source_content_type.unwrap_or_default(),
+                target_content_type = target_content_type.unwrap_or_default(),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CONTENT_TYPE_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_content_type = source_content_type.unwrap_or_default(),
+                target_content_type = target_content_type.unwrap_or_default(),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        let source_cache_control = source_get_object_output.cache_control();
+        let target_cache_control = target_head_object_output.cache_control();
+        if source_cache_control == target_cache_control {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CACHE_CONTROL_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_cache_control = source_cache_control.unwrap_or_default(),
+                target_cache_control = target_cache_control.unwrap_or_default(),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_CACHE_CONTROL_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_cache_control = source_cache_control.unwrap_or_default(),
+                target_cache_control = target_cache_control.unwrap_or_default(),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        let source_expires = source_get_object_output.expires_string();
+        let target_expires = target_head_object_output.expires_string();
+        if source_expires == target_expires {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_EXPIRES_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_expires = source_expires.map(|expires| expires.to_string()).unwrap_or_default(),
+                target_expires = target_expires.map(|expires| expires.to_string()).unwrap_or_default(),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_EXPIRES_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_expires = source_expires.map(|expires| expires.to_string()).unwrap_or_default(),
+                target_expires = target_expires.map(|expires| expires.to_string()).unwrap_or_default(),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        let source_website_redirect = source_get_object_output.website_redirect_location();
+        let target_website_redirect = target_head_object_output.website_redirect_location();
+        if source_website_redirect == target_website_redirect {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_website_redirect = source_website_redirect.unwrap_or_default(),
+                target_website_redirect = target_website_redirect.unwrap_or_default(),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_website_redirect = source_website_redirect.unwrap_or_default(),
+                target_website_redirect = target_website_redirect.unwrap_or_default(),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        let mut source_metadata = source_get_object_output
+            .metadata()
+            .unwrap_or(&HashMap::new())
+            .clone();
+        let mut target_metadata = target_head_object_output
+            .metadata()
+            .unwrap_or(&HashMap::new())
+            .clone();
+
+        // Remove s3sync origin metadata keys
+        source_metadata.remove(S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY);
+        source_metadata.remove(S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY);
+        target_metadata.remove(S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY);
+        target_metadata.remove(S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY);
+
+        if source_metadata == target_metadata {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_USER_DEFINED_METADATA_KEY,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_metadata = format_metadata(&source_metadata),
+                target_metadata = format_metadata(&target_metadata),
+            );
+        } else {
+            info!(
+                name = METADATA_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_METADATA_TYPE,
+                metadata_name = SYNC_REPORT_USER_DEFINED_METADATA_KEY,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_get_object_output.version_id().unwrap_or_default(),
+                target_version_id = target_head_object_output.version_id().unwrap_or_default(),
+                source_metadata = format_metadata(&source_metadata),
+                target_metadata = format_metadata(&target_metadata),
+            );
+
+            mismatched_metadata = true;
+        }
+
+        if !mismatched_metadata {
+            self.sync_report_stats
+                .lock()
+                .unwrap()
+                .increment_metadata_matches();
+        } else {
+            self.sync_report_stats
+                .lock()
+                .unwrap()
+                .increment_metadata_mismatch();
+            self.base.set_warning();
+        }
+
+        Ok(())
+    }
+
+    async fn check_tagging_sync_status(
+        &self,
+        key: &str,
+        source_version_id: Option<&str>,
+        source_tagging: Option<&[Tag]>,
+    ) -> Result<()> {
+        let target_get_object_tagging_output_result = self
+            .base
+            .target
+            .as_ref()
+            .unwrap()
+            .get_object_tagging(key, None)
+            .await;
+        if let Err(e) = target_get_object_tagging_output_result {
+            // This is a report mode, so we do not return an error if the target object is not found.
+            if is_not_found_error(&e) {
+                return Ok(());
+            }
+            return Err(e);
+        }
+
+        let target_tagging;
+
+        let target_get_object_tagging_output;
+        if target_get_object_tagging_output_result.is_ok() {
+            target_get_object_tagging_output =
+                target_get_object_tagging_output_result.unwrap().clone();
+            target_tagging = Some(target_get_object_tagging_output.tag_set());
+        } else {
+            target_tagging = None
+        }
+
+        let source_tagging_string = format_tags(source_tagging.unwrap_or_default());
+        let target_tagging_string = format_tags(target_tagging.unwrap_or_default());
+
+        if source_tagging_string == target_tagging_string {
+            info!(
+                name = TAGGING_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_TAGGING_TYPE,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = source_version_id.unwrap_or_default(),
+                target_version_id = "",
+                source_tagging = source_tagging_string,
+                target_tagging = target_tagging_string,
+            );
+            self.sync_report_stats
+                .lock()
+                .unwrap()
+                .increment_tagging_matches();
+        } else {
+            info!(
+                name = TAGGING_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_TAGGING_TYPE,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = source_version_id.unwrap_or_default(),
+                target_version_id = "",
+                source_tagging = source_tagging_string,
+                target_tagging = target_tagging_string,
+            );
+            self.sync_report_stats
+                .lock()
+                .unwrap()
+                .increment_tagging_mismatch();
+            self.base.set_warning();
+        }
+
+        Ok(())
+    }
+    pub fn get_sync_report_stats(&self) -> Arc<Mutex<SyncReportStats>> {
+        self.sync_report_stats.clone()
+    }
 }
 
 fn is_force_retryable_error(e: &Error) -> bool {
@@ -1495,6 +1929,13 @@ fn is_not_found_error(result: &Error) -> bool {
         result.downcast_ref::<SdkError<GetObjectError, Response<SdkBody>>>()
     {
         if e.err().is_no_such_key() {
+            return true;
+        }
+    }
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>()
+    {
+        if e.err().is_not_found() {
             return true;
         }
     }
@@ -1613,10 +2054,14 @@ mod tests {
     use crate::storage::StoragePair;
     use crate::types::token::create_pipeline_cancellation_token;
     use crate::Config;
+    use aws_sdk_s3::operation::head_object::HeadObjectError;
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
     use aws_sdk_s3::primitives::DateTime;
+    use aws_sdk_s3::types::error::NotFound;
     use aws_sdk_s3::types::Object;
     use aws_smithy_runtime_api::http::{Response, StatusCode};
+    use aws_smithy_types::body::SdkBody;
+
     use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
     use tracing_subscriber::EnvFilter;
@@ -1756,6 +2201,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         )
         .sync()
         .await;
@@ -1817,6 +2263,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         )
         .sync()
         .await;
@@ -1892,6 +2339,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         )
         .sync()
         .await;
@@ -1961,6 +2409,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         )
         .sync()
         .await;
@@ -2024,6 +2473,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         )
         .sync()
         .await;
@@ -2078,6 +2528,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
+            Arc::new(Mutex::new(SyncReportStats::default())),
         )
         .sync()
         .await;
@@ -2091,6 +2542,10 @@ mod tests {
 
         assert!(is_not_found_error(&anyhow!(
             build_get_object_no_such_key_error()
+        )));
+
+        assert!(is_not_found_error(&anyhow!(
+            build_head_object_not_found_error()
         )));
 
         assert!(is_not_found_error(&anyhow!(
@@ -2294,6 +2749,13 @@ mod tests {
         let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(get_object_error, response)
+    }
+
+    fn build_head_object_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
+        let not_found_error = NotFound::builder().build();
+        let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(HeadObjectError::NotFound(not_found_error), response)
     }
 
     fn build_get_object_access_denied_error() -> SdkError<GetObjectError, Response<SdkBody>> {

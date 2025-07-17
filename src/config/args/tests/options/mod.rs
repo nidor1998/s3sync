@@ -51,6 +51,8 @@ mod point_in_time;
 mod put_last_modified_metadata;
 mod rate_limit_objects;
 mod remove_modified_filter;
+mod report_metadata_sync_status;
+mod report_tagging_sync_status;
 mod request_payer;
 mod server_side_copy;
 mod source_sse_c;
