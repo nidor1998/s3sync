@@ -1794,7 +1794,6 @@ impl ObjectSyncer {
                 .lock()
                 .unwrap()
                 .increment_metadata_mismatch();
-            self.base.set_warning();
         }
 
         Ok(())
@@ -1822,7 +1821,6 @@ impl ObjectSyncer {
         }
 
         let target_tagging;
-
         let target_get_object_tagging_output;
         if target_get_object_tagging_output_result.is_ok() {
             // skipcq: RS-W1070
@@ -1866,7 +1864,6 @@ impl ObjectSyncer {
                 .lock()
                 .unwrap()
                 .increment_tagging_mismatch();
-            self.base.set_warning();
         }
 
         Ok(())
