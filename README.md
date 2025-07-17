@@ -253,6 +253,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
   Note: For reporting, s3sync has special process exit code. `0` if all objects are synchronized correctly. `3` if some objects are not synchronized correctly.
 
+  Note: It needs additional API calls to get the metadata, checksum, and tags of each object.
+
 - Rate limiting by objects, bandwidth  
   For example, you can limit the number of objects transferred per second to 1,000, and the bandwidth to 100MB/sec.
 
