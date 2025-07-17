@@ -4,7 +4,8 @@ use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::ChecksumMode;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::{debug, warn};
+use std::sync::{Arc, Mutex};
+use tracing::{debug, info, warn};
 
 use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
 use crate::storage::additional_checksum_verify::{
@@ -13,7 +14,10 @@ use crate::storage::additional_checksum_verify::{
 use crate::storage::local::fs_util;
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncWarning;
-use crate::types::{is_full_object_checksum, S3syncObject};
+use crate::types::{
+    is_full_object_checksum, S3syncObject, SyncReportStats, SYNC_REPORT_CHECKSUM_TYPE,
+    SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN,
+};
 use crate::{types, Config};
 
 const FILTER_NAME: &str = "ChecksumDiffDetector";
@@ -21,6 +25,7 @@ pub struct ChecksumDiffDetector {
     config: Config,
     source: Storage,
     target: Storage,
+    sync_report_stats: Arc<Mutex<SyncReportStats>>,
 }
 
 #[async_trait]
@@ -55,11 +60,17 @@ impl DiffDetectionStrategy for ChecksumDiffDetector {
 }
 
 impl ChecksumDiffDetector {
-    pub fn boxed_new(config: Config, source: Storage, target: Storage) -> DiffDetector {
+    pub fn boxed_new(
+        config: Config,
+        source: Storage,
+        target: Storage,
+        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    ) -> DiffDetector {
         Box::new(ChecksumDiffDetector {
             config,
             source,
             target,
+            sync_report_stats,
         })
     }
 
@@ -131,17 +142,41 @@ impl ChecksumDiffDetector {
             warn!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm,
-                source_checksum = source_checksum.unwrap_or_default(),
-                target_checksum = target_checksum.unwrap_or_default(),
+                source_checksum = source_checksum.clone().unwrap_or_default(),
+                target_checksum = target_checksum.clone().unwrap_or_default(),
                 source_last_modified = source_last_modified,
                 target_last_modified = target_last_modified,
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                source_version_id = source_version_id.unwrap_or_default(),
+                source_version_id = source_version_id.clone().unwrap_or_default(),
                 target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                 "object filtered. Checksum not found."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_UNKNOWN,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm,
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = target_checksum.clone().unwrap_or_default(),
+                    source_version_id = source_version_id.unwrap_or_default(),
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                    "Unknown. Checksum not found."
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_unknown();
+            }
 
             self.target.send_stats(SyncWarning { key }).await;
             self.target.set_warning();
@@ -164,6 +199,29 @@ impl ChecksumDiffDetector {
                 target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                 "object filtered. Checksums are same."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_MATCHES,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm,
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = target_checksum.clone().unwrap_or_default(),
+                    source_version_id = source_version_id.clone().unwrap_or_default(),
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = source_version_id.clone().unwrap_or_default(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_matches();
+            }
 
             if head_source_object_output.content_length().unwrap()
                 != head_target_object_output.content_length().unwrap()
@@ -192,8 +250,8 @@ impl ChecksumDiffDetector {
             debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm,
-                source_checksum = source_checksum.unwrap_or_default(),
-                target_checksum = target_checksum.unwrap_or_default(),
+                source_checksum = source_checksum.clone().unwrap_or_default(),
+                target_checksum = target_checksum.clone().unwrap_or_default(),
                 source_last_modified = source_last_modified,
                 target_last_modified = target_last_modified,
                 source_size = head_source_object_output.content_length().unwrap(),
@@ -203,6 +261,29 @@ impl ChecksumDiffDetector {
                 target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                 "Checksums are different or not found."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_MISMATCH,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm,
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = target_checksum.clone().unwrap_or_default(),
+                    source_version_id = source_version_id.clone().unwrap_or_default(),
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_mismatch();
+            }
         }
 
         Ok(true)
@@ -279,7 +360,7 @@ impl ChecksumDiffDetector {
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = "",
-                target_checksum = target_checksum.unwrap_or_default(),
+                target_checksum = target_checksum.clone().unwrap_or_default(),
                 source_last_modified = source_last_modified,
                 target_last_modified = target_last_modified,
                 source_size = head_source_object_output.content_length().unwrap(),
@@ -287,6 +368,30 @@ impl ChecksumDiffDetector {
                 key = key,
                 "object filtered. Target checksum not found."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_UNKNOWN,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
+                    source_checksum = "",
+                    target_checksum = target_checksum.clone().unwrap_or_default(),
+                    source_version_id = "",
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                    "Unknown. Target checksum not found."
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_unknown();
+            }
 
             return Ok(false);
         }
@@ -360,8 +465,8 @@ impl ChecksumDiffDetector {
             debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
-                source_checksum = source_checksum,
-                target_checksum = target_checksum.unwrap_or_default(),
+                source_checksum = source_checksum.clone(),
+                target_checksum = target_checksum.clone().unwrap_or_default(),
                 source_last_modified = source_last_modified,
                 target_last_modified = target_last_modified,
                 source_size = head_source_object_output.content_length().unwrap(),
@@ -369,13 +474,37 @@ impl ChecksumDiffDetector {
                 key = key,
                 "object filtered. Checksums are same."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_MATCHES,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
+                    source_checksum = source_checksum.clone(),
+                    target_checksum = target_checksum.clone().unwrap_or_default(),
+                    source_version_id = "",
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_matches();
+            }
+
             return Ok(false);
         } else {
             debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
                 source_checksum = source_checksum,
-                target_checksum = target_checksum.unwrap_or_default(),
+                target_checksum = target_checksum.clone().unwrap_or_default(),
                 source_last_modified = source_last_modified,
                 target_last_modified = target_last_modified,
                 source_size = head_source_object_output.content_length().unwrap(),
@@ -383,6 +512,29 @@ impl ChecksumDiffDetector {
                 key = key,
                 "Checksums are different."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_MISMATCH,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
+                    source_checksum = source_checksum.clone(),
+                    target_checksum = target_checksum.clone().unwrap_or_default(),
+                    source_version_id = "",
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_mismatch();
+            }
         }
 
         Ok(true)
@@ -452,16 +604,40 @@ impl ChecksumDiffDetector {
             warn!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
-                source_checksum = source_checksum.unwrap_or_default(),
+                source_checksum = source_checksum.clone().unwrap_or_default(),
                 target_checksum = "",
                 source_last_modified = source_last_modified,
                 target_last_modified = target_last_modified,
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                source_version_id = source_version_id.unwrap_or_default(),
+                source_version_id = source_version_id.clone().unwrap_or_default(),
                 "object filtered. Source checksum not found."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_UNKNOWN,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = "",
+                    source_version_id = source_version_id.unwrap_or_default(),
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                    "Unknown. Source checksum not found."
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_unknown();
+            }
 
             self.target.send_stats(SyncWarning { key }).await;
             self.target.set_warning();
@@ -534,6 +710,29 @@ impl ChecksumDiffDetector {
                 "object filtered. Checksums are same."
             );
 
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_MATCHES,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = target_checksum,
+                    source_version_id = source_version_id.clone().unwrap_or_default(),
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_matches();
+            }
+
             if head_source_object_output.content_length().unwrap()
                 != head_target_object_output.content_length().unwrap()
             {
@@ -560,16 +759,39 @@ impl ChecksumDiffDetector {
             debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
-                source_checksum = source_checksum.unwrap_or_default(),
+                source_checksum = source_checksum.clone().unwrap_or_default(),
                 target_checksum = target_checksum,
                 source_last_modified = source_last_modified,
                 target_last_modified = target_last_modified,
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                source_version_id = source_version_id.unwrap_or_default(),
+                source_version_id = source_version_id.clone().unwrap_or_default(),
                 "Checksums are different or not found."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_CHECKSUM_TYPE,
+                    status = SYNC_STATUS_MISMATCH,
+                    key = key,
+                    checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
+                    source_checksum = source_checksum.clone().unwrap_or_default(),
+                    target_checksum = target_checksum,
+                    source_version_id = source_version_id.unwrap_or_default(),
+                    target_version_id = head_target_object_output.version_id().unwrap_or_default(),
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_checksum_mismatch();
+            }
         }
 
         Ok(true)
@@ -622,6 +844,7 @@ mod tests {
             config: config.clone(),
             source: dyn_clone::clone_box(&*(source)),
             target: dyn_clone::clone_box(&*(target)),
+            sync_report_stats: Arc::new(Mutex::new(SyncReportStats::default())),
         };
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -669,6 +892,7 @@ mod tests {
             config: config.clone(),
             source: dyn_clone::clone_box(&*(source)),
             target: dyn_clone::clone_box(&*(target)),
+            sync_report_stats: Arc::new(Mutex::new(SyncReportStats::default())),
         };
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()

@@ -1,9 +1,11 @@
 use anyhow::{anyhow, Result};
+use std::sync::MutexGuard;
 use tokio::time::Instant;
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 
 use s3sync::pipeline::Pipeline;
 use s3sync::types::token::create_pipeline_cancellation_token;
+use s3sync::types::{SyncReportStats, SYNC_REPORT_SUMMERY_NAME};
 use s3sync::Config;
 
 mod ctrl_c_handler;
@@ -50,6 +52,10 @@ pub async fn run(config: Config) -> Result<()> {
 
         has_warning = pipeline.has_warning();
 
+        if config.report_sync_status {
+            show_sync_report_summary(pipeline.get_sync_report_stats().lock().unwrap());
+        }
+
         trace!(duration_sec = duration_sec, "s3sync has been completed.");
     }
 
@@ -58,6 +64,24 @@ pub async fn run(config: Config) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn show_sync_report_summary(sync_report_stats: MutexGuard<'_, SyncReportStats>) {
+    info!(
+        name = SYNC_REPORT_SUMMERY_NAME,
+        number_of_objects = sync_report_stats.number_of_objects,
+        etag_matches = sync_report_stats.etag_matches,
+        checksum_matches = sync_report_stats.checksum_matches,
+        metadata_matches = sync_report_stats.metadata_matches,
+        tagging_matches = sync_report_stats.tagging_matches,
+        not_found = sync_report_stats.not_found,
+        etag_mismatch = sync_report_stats.etag_mismatch,
+        checksum_mismatch = sync_report_stats.checksum_mismatch,
+        metadata_mismatch = sync_report_stats.metadata_mismatch,
+        tagging_mismatch = sync_report_stats.tagging_mismatch,
+        etag_unknown = sync_report_stats.etag_unknown,
+        checksum_unknown = sync_report_stats.checksum_unknown,
+    );
 }
 
 #[cfg(test)]

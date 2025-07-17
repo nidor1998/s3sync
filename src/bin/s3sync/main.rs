@@ -40,7 +40,12 @@ fn load_config_exit_if_err() -> Config {
         clap::Error::raw(clap::error::ErrorKind::ValueValidation, error_message).exit();
     }
 
-    config.unwrap()
+    // If report_sync_status is enabled, set dry_run to true to show report
+    let mut config = config.unwrap();
+    if config.report_sync_status {
+        config.dry_run = true;
+    }
+    config
 }
 
 fn start_tracing_if_necessary(config: &Config) -> bool {
@@ -84,5 +89,22 @@ rusty_fork_test! {
 
         let config = s3sync::Config::try_from(CLIArgs::try_parse_from(args).unwrap()).unwrap();
         assert!(!start_tracing_if_necessary(&config));
+    }
+
+    #[test]
+    fn with_tracing_sync_report() {
+        let args = vec![
+            "unittest",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--report-sync-status",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        let config = s3sync::Config::try_from(CLIArgs::try_parse_from(args).unwrap()).unwrap();
+        assert!(start_tracing_if_necessary(&config));
     }
 }

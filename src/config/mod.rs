@@ -73,6 +73,9 @@ pub struct Config {
     pub target_accelerate: bool,
     pub source_request_payer: bool,
     pub target_request_payer: bool,
+    pub report_sync_status: bool,
+    pub report_metadata_sync_status: bool,
+    pub report_tagging_sync_status: bool,
 }
 
 impl Config {

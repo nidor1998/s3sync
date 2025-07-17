@@ -76,6 +76,9 @@ const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS: u16 = 16;
 const DEFAULT_ACCELERATE: bool = false;
 const DEFAULT_REQUEST_PAYER: bool = false;
+const DEFAULT_REPORT_SYNC_STATUS: bool = false;
+const DEFAULT_REPORT_METADATA_SYNC_STATUS: bool = false;
+const DEFAULT_REPORT_TAGGING_SYNC_STATUS: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -168,7 +171,14 @@ const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_POINT_IN_TIME: &str =
 const POINT_IN_TIME_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--point-in-time is not supported with express onezone storage class\n";
 const POINT_IN_TIME_VALUE_INVALID: &str = "--point-in-time value is later than current time\n";
-
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_METADATA_SYNC_STATUS: &str =
+    "with --report-metadata-sync-status, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_METADATA_SYNC_STATUS: &str =
+    "with --report-metadata-sync-status, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS: &str =
+    "with --report-tagging-sync-status, source storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS: &str =
+    "with --report-tagging-sync-status, target storage must be s3://\n";
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
 
@@ -584,6 +594,40 @@ Example: 2025-07-16T12:00:00Z)"#
     #[clap(flatten)]
     verbosity: Verbosity<WarnLevel>,
 
+    #[arg(
+        long,
+        env,
+        default_value_t = DEFAULT_REPORT_SYNC_STATUS,
+        conflicts_with_all = ["dry_run", "delete", "enable_versioning", "head_each_target"],
+        help_heading = "Reporting",
+        long_help = r#"Report sync status to the target storage.
+Default verification is for etag. For additional checksum, use --check-additional-checksum.
+For more precise control, use with --auto-chunksize."#
+    )]
+    report_sync_status: bool,
+
+    #[arg(
+        long,
+        env,
+        default_value_t = DEFAULT_REPORT_METADATA_SYNC_STATUS,
+        requires = "report_sync_status",
+        help_heading = "Reporting",
+        long_help = r#"Report metadata sync status to the target storage.
+It must be used with --report-sync-status."#
+    )]
+    report_metadata_sync_status: bool,
+
+    #[arg(
+        long,
+        env,
+        default_value_t = DEFAULT_REPORT_TAGGING_SYNC_STATUS,
+        requires = "report_sync_status",
+        help_heading = "Reporting",
+        long_help = r#"Report tagging sync status to the target storage.
+It must be used with --report-sync-status."#
+    )]
+    report_tagging_sync_status: bool,
+
     /// Show trace as json format.
     #[arg(long, env, default_value_t = DEFAULT_JSON_TRACING, help_heading = "Tracing/Logging")]
     json_tracing: bool,
@@ -790,6 +834,8 @@ impl CLIArgs {
         self.check_server_no_sync_system_metadata_conflict()?;
         self.check_server_no_sync_user_defined_metadata_conflict()?;
         self.check_point_in_time_conflict()?;
+        self.check_report_metadata_sync_status_conflict()?;
+        self.check_report_tagging_sync_status_conflict()?;
 
         Ok(())
     }
@@ -1310,6 +1356,46 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_report_metadata_sync_status_conflict(&self) -> Result<(), String> {
+        if !self.report_metadata_sync_status {
+            return Ok(());
+        }
+
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) {
+            return Err(
+                SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_METADATA_SYNC_STATUS.to_string(),
+            );
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) {
+            return Err(
+                TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_METADATA_SYNC_STATUS.to_string(),
+            );
+        }
+
+        Ok(())
+    }
+
+    fn check_report_tagging_sync_status_conflict(&self) -> Result<(), String> {
+        if !self.report_tagging_sync_status {
+            return Ok(());
+        }
+
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS.to_string());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS.to_string());
+        }
+
+        Ok(())
+    }
+
     fn build_client_configs(
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
@@ -1466,26 +1552,6 @@ impl TryFrom<CLIArgs> for Config {
             disable_color_tracing: value.disable_color_tracing,
         });
 
-        if value.dry_run {
-            if tracing_config.is_none() {
-                tracing_config = Some(TracingConfig {
-                    tracing_level: log::Level::Info,
-                    json_tracing: DEFAULT_JSON_TRACING,
-                    aws_sdk_tracing: DEFAULT_AWS_SDK_TRACING,
-                    span_events_tracing: DEFAULT_SPAN_EVENTS_TRACING,
-                    disable_color_tracing: DEFAULT_DISABLE_COLOR_TRACING,
-                });
-            } else if tracing_config.unwrap().tracing_level < log::Level::Info {
-                tracing_config = Some(TracingConfig {
-                    tracing_level: log::Level::Info,
-                    json_tracing: tracing_config.unwrap().json_tracing,
-                    aws_sdk_tracing: tracing_config.unwrap().aws_sdk_tracing,
-                    span_events_tracing: tracing_config.unwrap().span_events_tracing,
-                    disable_color_tracing: tracing_config.unwrap().disable_color_tracing,
-                });
-            }
-        }
-
         let storage_class = value
             .storage_class
             .map(|storage_class| StorageClass::from_str(&storage_class).unwrap());
@@ -1613,11 +1679,54 @@ impl TryFrom<CLIArgs> for Config {
 
         // If point-in-time is specified, we need to remove the modified filter.
         // Because target objects may need to be modified.
-        let remove_modified_filter = if value.point_in_time.is_some() {
+        let mut remove_modified_filter = if value.point_in_time.is_some() {
             true
         } else {
             value.remove_modified_filter
         };
+
+        // Reporting need to be done in dry run mode.
+        let dry_run = if value.report_sync_status {
+            true
+        } else {
+            value.dry_run
+        };
+
+        // If report_sync_status is true, we need to remove the modified filter.
+        // And must warn as error.
+        let warn_as_error;
+        let check_etag;
+        let head_each_target;
+        if value.report_sync_status {
+            remove_modified_filter = true;
+            warn_as_error = true;
+            head_each_target = true;
+            check_etag = check_additional_checksum_algorithm.is_none();
+        } else {
+            warn_as_error = value.warn_as_error;
+            check_etag = value.check_etag;
+            head_each_target = value.head_each_target;
+        }
+
+        if dry_run {
+            if tracing_config.is_none() {
+                tracing_config = Some(TracingConfig {
+                    tracing_level: log::Level::Info,
+                    json_tracing: DEFAULT_JSON_TRACING,
+                    aws_sdk_tracing: DEFAULT_AWS_SDK_TRACING,
+                    span_events_tracing: DEFAULT_SPAN_EVENTS_TRACING,
+                    disable_color_tracing: DEFAULT_DISABLE_COLOR_TRACING,
+                });
+            } else if tracing_config.unwrap().tracing_level < log::Level::Info {
+                tracing_config = Some(TracingConfig {
+                    tracing_level: log::Level::Info,
+                    json_tracing: tracing_config.unwrap().json_tracing,
+                    aws_sdk_tracing: tracing_config.unwrap().aws_sdk_tracing,
+                    span_events_tracing: tracing_config.unwrap().span_events_tracing,
+                    disable_color_tracing: tracing_config.unwrap().disable_color_tracing,
+                });
+            }
+        }
 
         Ok(Config {
             source: storage_path::parse_storage_path(&value.source),
@@ -1641,9 +1750,9 @@ impl TryFrom<CLIArgs> for Config {
 
             worker_size: value.worker_size,
 
-            warn_as_error: value.warn_as_error,
+            warn_as_error,
             follow_symlinks: !value.ignore_symlinks,
-            head_each_target: value.head_each_target,
+            head_each_target,
             sync_with_delete: value.delete,
             disable_tagging: value.disable_tagging,
             sync_latest_tagging: value.sync_latest_tagging,
@@ -1671,7 +1780,7 @@ impl TryFrom<CLIArgs> for Config {
             canned_acl,
             additional_checksum_algorithm,
             additional_checksum_mode: checksum_mode,
-            dry_run: value.dry_run,
+            dry_run,
             rate_limit_objects: value.rate_limit_objects,
             rate_limit_bandwidth,
             cache_control: value.cache_control,
@@ -1690,7 +1799,7 @@ impl TryFrom<CLIArgs> for Config {
                 after_time: value.filter_mtime_after,
                 remove_modified_filter,
                 check_size: value.check_size,
-                check_etag: value.check_etag,
+                check_etag,
                 check_mtime_and_etag: value.check_mtime_and_etag,
                 check_checksum_algorithm: check_additional_checksum_algorithm,
                 check_mtime_and_additional_checksum,
@@ -1717,6 +1826,9 @@ impl TryFrom<CLIArgs> for Config {
             target_accelerate: value.target_accelerate,
             source_request_payer: value.source_request_payer,
             target_request_payer: value.target_request_payer,
+            report_sync_status: value.report_sync_status,
+            report_metadata_sync_status: value.report_metadata_sync_status,
+            report_tagging_sync_status: value.report_tagging_sync_status,
         })
     }
 }

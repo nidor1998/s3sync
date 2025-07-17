@@ -17,6 +17,10 @@ pub fn is_show_result_needed(config: &Config) -> bool {
         return true;
     }
 
+    if config.report_sync_status {
+        return false;
+    }
+
     !config.tracing_config.as_ref().unwrap().json_tracing
 }
 
@@ -145,6 +149,23 @@ mod tests {
             "--source-profile",
             "source_profile",
             "--json-tracing",
+            "s3://source-bucket",
+            "/target-dir",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        assert!(!is_show_result_needed(&config))
+    }
+
+    #[test]
+    fn is_show_result_needed_sync_report() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "-v",
+            "--source-profile",
+            "source_profile",
+            "--report-sync-status",
             "s3://source-bucket",
             "/target-dir",
         ];

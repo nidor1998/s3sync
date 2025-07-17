@@ -4,7 +4,8 @@ use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ServerSideEncryption;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::{debug, warn};
+use std::sync::{Arc, Mutex};
+use tracing::{debug, info, warn};
 
 use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
 use crate::storage::e_tag_verify::{
@@ -13,8 +14,11 @@ use crate::storage::e_tag_verify::{
 };
 use crate::storage::local::fs_util;
 use crate::storage::Storage;
-use crate::types::S3syncObject;
 use crate::types::SyncStatistics::SyncWarning;
+use crate::types::{
+    S3syncObject, SyncReportStats, SYNC_REPORT_ETAG_TYPE, SYNC_REPORT_RECORD_NAME,
+    SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN,
+};
 use crate::Config;
 
 const FILTER_NAME: &str = "ETagDiffDetector";
@@ -23,6 +27,7 @@ pub struct ETagDiffDetector {
     config: Config,
     source: Storage,
     target: Storage,
+    sync_report_stats: Arc<Mutex<SyncReportStats>>,
 }
 
 #[async_trait]
@@ -51,11 +56,17 @@ impl DiffDetectionStrategy for ETagDiffDetector {
 }
 
 impl ETagDiffDetector {
-    pub fn boxed_new(config: Config, source: Storage, target: Storage) -> DiffDetector {
+    pub fn boxed_new(
+        config: Config,
+        source: Storage,
+        target: Storage,
+        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    ) -> DiffDetector {
         Box::new(ETagDiffDetector {
             config,
             source,
             target,
+            sync_report_stats,
         })
     }
 
@@ -104,6 +115,32 @@ impl ETagDiffDetector {
                     "object filtered. Only ServerSideEncryption::Aes256 is supported."
                 );
 
+                if self.config.report_sync_status {
+                    info!(
+                        name = SYNC_REPORT_RECORD_NAME,
+                        type = SYNC_REPORT_ETAG_TYPE,
+                        status = SYNC_STATUS_UNKNOWN,
+                        key = key,
+                        source_version_id = source_object.version_id().unwrap_or_default(),
+                        target_version_id = head_target_object_output
+                            .version_id
+                            .as_ref()
+                            .unwrap_or(&"".to_string()),
+                        source_e_tag = source_e_tag,
+                        target_e_tag = target_e_tag,
+                        source_last_modified = source_last_modified,
+                        target_last_modified = target_last_modified,
+                        source_size = source_object.size(),
+                        target_size = head_target_object_output.content_length().unwrap(),
+                        "Unknown. Only ServerSideEncryption::Aes256 is supported."
+                    );
+
+                    self.sync_report_stats
+                        .lock()
+                        .unwrap()
+                        .increment_etag_unknown();
+                }
+
                 return Ok(false);
             }
         }
@@ -124,6 +161,31 @@ impl ETagDiffDetector {
                 key = key,
                 "object filtered. ETags are same."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_ETAG_TYPE,
+                    status = SYNC_STATUS_MATCHES,
+                    key = key,
+                    source_version_id = source_object.version_id().unwrap_or_default(),
+                    target_version_id = head_target_object_output
+                        .version_id
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    source_e_tag = source_e_tag,
+                    target_e_tag = target_e_tag,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = source_object.size(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_etag_matches();
+            }
 
             return Ok(false);
         } else {
@@ -161,6 +223,32 @@ impl ETagDiffDetector {
                         "object filtered. Only ServerSideEncryption::Aes256 is supported."
                     );
 
+                    if self.config.report_sync_status {
+                        info!(
+                        name = SYNC_REPORT_RECORD_NAME,
+                        type = SYNC_REPORT_ETAG_TYPE,
+                            status = SYNC_STATUS_UNKNOWN,
+                            key = key,
+                            source_version_id = source_object.version_id().unwrap_or_default(),
+                            target_version_id = head_target_object_output
+                                .version_id
+                                .as_ref()
+                                .unwrap_or(&"".to_string()),
+                            source_e_tag = source_e_tag,
+                            target_e_tag = target_e_tag,
+                            source_last_modified = source_last_modified,
+                            target_last_modified = target_last_modified,
+                            source_size = head_source_object_output.content_length().unwrap(),
+                            target_size = head_target_object_output.content_length().unwrap(),
+                            "Unknown. Only ServerSideEncryption::Aes256 is supported."
+                        );
+
+                        self.sync_report_stats
+                            .lock()
+                            .unwrap()
+                            .increment_etag_unknown();
+                    }
+
                     return Ok(false);
                 }
             }
@@ -176,6 +264,31 @@ impl ETagDiffDetector {
                 key = key,
                 "ETags are different."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_ETAG_TYPE,
+                    status = SYNC_STATUS_MISMATCH,
+                    key = key,
+                    source_version_id = source_object.version_id().unwrap_or_default(),
+                    target_version_id = head_target_object_output
+                        .version_id
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    source_e_tag = source_e_tag,
+                    target_e_tag = target_e_tag,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = source_object.size(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_etag_mismatch();
+            }
         }
 
         Ok(true)
@@ -290,6 +403,32 @@ impl ETagDiffDetector {
                     "object filtered. Only ServerSideEncryption::Aes256 is supported."
                 );
 
+                if self.config.report_sync_status {
+                    info!(
+                        name = SYNC_REPORT_RECORD_NAME,
+                        type = SYNC_REPORT_ETAG_TYPE,
+                        status = SYNC_STATUS_UNKNOWN,
+                        key = key,
+                        source_version_id = "",
+                        target_version_id = head_target_object_output
+                            .version_id
+                            .as_ref()
+                            .unwrap_or(&"".to_string()),
+                        source_e_tag = source_e_tag,
+                        target_e_tag = target_e_tag,
+                        source_last_modified = source_last_modified,
+                        target_last_modified = target_last_modified,
+                        source_size = head_source_object_output.content_length().unwrap(),
+                        target_size = head_target_object_output.content_length().unwrap(),
+                        "Unknown. Only ServerSideEncryption::Aes256 is supported."
+                    );
+
+                    self.sync_report_stats
+                        .lock()
+                        .unwrap()
+                        .increment_etag_unknown();
+                }
+
                 return Ok(false);
             }
         }
@@ -312,6 +451,31 @@ impl ETagDiffDetector {
                 key = key,
                 "object filtered. ETags are same."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_ETAG_TYPE,
+                    status = SYNC_STATUS_MATCHES,
+                    key = key,
+                    source_version_id = "",
+                    target_version_id = head_target_object_output
+                        .version_id
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    source_e_tag = source_e_tag,
+                    target_e_tag = target_e_tag,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_etag_matches();
+            }
             return Ok(false);
         } else {
             debug!(
@@ -325,6 +489,31 @@ impl ETagDiffDetector {
                 key = key,
                 "ETags are different."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_ETAG_TYPE,
+                    status = SYNC_STATUS_MISMATCH,
+                    key = key,
+                    source_version_id = "",
+                    target_version_id = head_target_object_output
+                        .version_id
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    source_e_tag = source_e_tag,
+                    target_e_tag = target_e_tag,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = head_source_object_output.content_length().unwrap(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_etag_mismatch();
+            }
         }
 
         Ok(true)
@@ -428,6 +617,29 @@ impl ETagDiffDetector {
                 key = key,
                 "object filtered. ETags are same."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_ETAG_TYPE,
+                    status = SYNC_STATUS_MATCHES,
+                    key = key,
+                    source_version_id = source_object.version_id().unwrap_or_default(),
+                    target_version_id = "",
+                    source_e_tag = source_e_tag,
+                    target_e_tag = target_e_tag,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = source_object.size(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_etag_matches();
+            }
+
             return Ok(false);
         } else {
             let head_source_object_output = self
@@ -464,6 +676,29 @@ impl ETagDiffDetector {
                         "object filtered. Only ServerSideEncryption::Aes256 is supported."
                     );
 
+                    if self.config.report_sync_status {
+                        info!(
+                            name = SYNC_REPORT_RECORD_NAME,
+                            type = SYNC_REPORT_ETAG_TYPE,
+                            status = SYNC_STATUS_UNKNOWN,
+                            key = key,
+                            source_version_id = source_object.version_id().unwrap_or_default(),
+                            target_version_id = "",
+                            source_e_tag = source_e_tag,
+                            target_e_tag = target_e_tag,
+                            source_last_modified = source_last_modified,
+                            target_last_modified = target_last_modified,
+                            source_size = head_source_object_output.content_length().unwrap(),
+                            target_size = head_target_object_output.content_length().unwrap(),
+                            "Unknown. Only ServerSideEncryption::Aes256 is supported."
+                        );
+
+                        self.sync_report_stats
+                            .lock()
+                            .unwrap()
+                            .increment_etag_unknown();
+                    }
+
                     return Ok(false);
                 }
             }
@@ -479,6 +714,31 @@ impl ETagDiffDetector {
                 key = key,
                 "ETags are different."
             );
+
+            if self.config.report_sync_status {
+                info!(
+                    name = SYNC_REPORT_RECORD_NAME,
+                    type = SYNC_REPORT_ETAG_TYPE,
+                    status = SYNC_STATUS_MISMATCH,
+                    key = key,
+                    source_version_id = source_object.version_id().unwrap_or_default(),
+                    target_version_id = head_target_object_output
+                        .version_id
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    source_e_tag = source_e_tag,
+                    target_e_tag = target_e_tag,
+                    source_last_modified = source_last_modified,
+                    target_last_modified = target_last_modified,
+                    source_size = source_object.size(),
+                    target_size = head_target_object_output.content_length().unwrap(),
+                );
+
+                self.sync_report_stats
+                    .lock()
+                    .unwrap()
+                    .increment_etag_mismatch();
+            }
         }
 
         Ok(true)
@@ -527,6 +787,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -544,7 +805,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false
@@ -577,6 +838,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -594,7 +856,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false
@@ -626,6 +888,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -644,7 +907,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false
@@ -676,6 +939,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -693,7 +957,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false
@@ -726,6 +990,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -743,7 +1008,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false
@@ -775,6 +1040,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -793,7 +1059,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false
@@ -825,6 +1091,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -842,7 +1109,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false
@@ -876,6 +1143,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncReportStats::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -893,7 +1161,7 @@ mod tests {
         );
         assert_eq!(
             diff_detector
-                .is_different(&source_object, &head_object_output)
+                .is_different(&source_object, &head_object_output,)
                 .await
                 .unwrap(),
             false

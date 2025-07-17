@@ -19,7 +19,7 @@ use crate::pipeline::syncer::ObjectSyncer;
 use crate::pipeline::terminator::Terminator;
 use crate::storage::{Storage, StoragePair};
 use crate::types::token::PipelineCancellationToken;
-use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics};
+use crate::types::{ObjectKeyMap, S3syncObject, SyncReportStats, SyncStatistics};
 use crate::Config;
 
 const CHANNEL_CAPACITY: usize = 20000;
@@ -51,6 +51,7 @@ pub struct Pipeline {
     has_warning: Arc<AtomicBool>,
     errors: Arc<Mutex<VecDeque<Error>>>,
     ready: bool,
+    sync_report_stats: Arc<Mutex<SyncReportStats>>,
 }
 
 impl Pipeline {
@@ -94,6 +95,7 @@ impl Pipeline {
             has_warning,
             errors: Arc::new(Mutex::new(VecDeque::<Error>::new())),
             ready: true,
+            sync_report_stats: Arc::new(Mutex::new(SyncReportStats::default())),
         }
     }
 
@@ -414,7 +416,9 @@ impl Pipeline {
                 target_objects.clone(),
                 self.has_warning.clone(),
             );
-            let object_syncer = ObjectSyncer::new(stage, worker_index);
+
+            let object_syncer =
+                ObjectSyncer::new(stage, worker_index, self.get_sync_report_stats());
             let has_error = self.has_error.clone();
             let error_list = self.errors.clone();
 
@@ -628,6 +632,10 @@ impl Pipeline {
         }
 
         Some(errors_to_return)
+    }
+
+    pub fn get_sync_report_stats(&self) -> Arc<Mutex<SyncReportStats>> {
+        self.sync_report_stats.clone()
     }
 
     pub fn close_stats_sender(&self) {

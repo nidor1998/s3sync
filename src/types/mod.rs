@@ -19,6 +19,28 @@ pub mod token;
 
 pub const S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY: &str = "s3sync_origin_version_id";
 pub const S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY: &str = "s3sync_origin_last_modified";
+pub const SYNC_REPORT_SUMMERY_NAME: &str = "REPORT_SUMMARY";
+pub const SYNC_REPORT_RECORD_NAME: &str = "SYNC_STATUS";
+pub const SYNC_REPORT_EXISTENCE_TYPE: &str = "EXISTENCE";
+pub const SYNC_REPORT_ETAG_TYPE: &str = "ETAG";
+pub const SYNC_REPORT_CHECKSUM_TYPE: &str = "CHECKSUM";
+pub const SYNC_REPORT_METADATA_TYPE: &str = "METADATA";
+pub const SYNC_REPORT_TAGGING_TYPE: &str = "TAGGING";
+pub const SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY: &str = "Content-Disposition";
+pub const SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY: &str = "Content-Encoding";
+pub const SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY: &str = "Content-Language";
+pub const SYNC_REPORT_CONTENT_TYPE_METADATA_KEY: &str = "Content-Type";
+pub const SYNC_REPORT_CACHE_CONTROL_METADATA_KEY: &str = "Cache-Control";
+pub const SYNC_REPORT_EXPIRES_METADATA_KEY: &str = "Expires";
+pub const SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY: &str = "x-amz-website-redirect-location";
+pub const SYNC_REPORT_USER_DEFINED_METADATA_KEY: &str = "x-amz-meta-";
+
+pub const METADATA_SYNC_REPORT_LOG_NAME: &str = "METADATA_SYNC_STATUS";
+pub const TAGGING_SYNC_REPORT_LOG_NAME: &str = "TAGGING_SYNC_STATUS";
+pub const SYNC_STATUS_MATCHES: &str = "MATCHES";
+pub const SYNC_STATUS_MISMATCH: &str = "MISMATCH";
+pub const SYNC_STATUS_NOT_FOUND: &str = "NOT_FOUND";
+pub const SYNC_STATUS_UNKNOWN: &str = "UNKNOWN";
 pub(crate) const MINIMUM_CHUNKSIZE: usize = 5 * 1024 * 1024;
 
 pub type Sha1Digest = [u8; 20];
@@ -44,6 +66,61 @@ pub type ObjectVersions = Vec<S3syncObject>;
 pub struct PackedObjectVersions {
     pub key: String,
     pub packed_object_versions: ObjectVersions,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SyncReportStats {
+    pub number_of_objects: usize,
+    pub not_found: usize,
+    pub etag_matches: usize,
+    pub etag_mismatch: usize,
+    pub etag_unknown: usize,
+    pub checksum_matches: usize,
+    pub checksum_mismatch: usize,
+    pub checksum_unknown: usize,
+    pub metadata_matches: usize,
+    pub metadata_mismatch: usize,
+    pub tagging_matches: usize,
+    pub tagging_mismatch: usize,
+}
+
+impl SyncReportStats {
+    pub fn increment_number_of_objects(&mut self) {
+        self.number_of_objects += 1;
+    }
+    pub fn increment_not_found(&mut self) {
+        self.not_found += 1;
+    }
+    pub fn increment_etag_matches(&mut self) {
+        self.etag_matches += 1;
+    }
+    pub fn increment_etag_mismatch(&mut self) {
+        self.etag_mismatch += 1;
+    }
+    pub fn increment_etag_unknown(&mut self) {
+        self.etag_unknown += 1;
+    }
+    pub fn increment_checksum_matches(&mut self) {
+        self.checksum_matches += 1;
+    }
+    pub fn increment_checksum_mismatch(&mut self) {
+        self.checksum_mismatch += 1;
+    }
+    pub fn increment_checksum_unknown(&mut self) {
+        self.checksum_unknown += 1;
+    }
+    pub fn increment_metadata_matches(&mut self) {
+        self.metadata_matches += 1;
+    }
+    pub fn increment_metadata_mismatch(&mut self) {
+        self.metadata_mismatch += 1;
+    }
+    pub fn increment_tagging_matches(&mut self) {
+        self.tagging_matches += 1;
+    }
+    pub fn increment_tagging_mismatch(&mut self) {
+        self.tagging_mismatch += 1;
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
