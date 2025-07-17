@@ -152,6 +152,7 @@ impl HeadObjectChecker {
                 );
 
                 self.sync_report_stats.lock().unwrap().increment_not_found();
+                self.target.set_warning();
             }
 
             return Ok(true);
