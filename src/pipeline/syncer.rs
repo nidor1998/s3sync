@@ -1498,7 +1498,6 @@ impl ObjectSyncer {
         !is_match
     }
 
-    // skipcq: RS-W1031
     async fn check_metadata_sync_status(
         &self,
         key: &str,
@@ -1740,10 +1739,12 @@ impl ObjectSyncer {
             mismatched_metadata = true;
         }
 
+        // skipcq: RS-W1031
         let mut source_metadata = source_get_object_output
             .metadata()
             .unwrap_or(&HashMap::new())
             .clone();
+        // skipcq: RS-W1031
         let mut target_metadata = target_head_object_output
             .metadata()
             .unwrap_or(&HashMap::new())
@@ -1799,7 +1800,6 @@ impl ObjectSyncer {
         Ok(())
     }
 
-    // skipcq: RS-W1070
     async fn check_tagging_sync_status(
         &self,
         key: &str,
@@ -1825,6 +1825,7 @@ impl ObjectSyncer {
 
         let target_get_object_tagging_output;
         if target_get_object_tagging_output_result.is_ok() {
+            // skipcq: RS-W1070
             target_get_object_tagging_output =
                 target_get_object_tagging_output_result.unwrap().clone();
             target_tagging = Some(target_get_object_tagging_output.tag_set());
