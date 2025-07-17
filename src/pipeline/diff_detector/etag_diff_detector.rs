@@ -16,7 +16,7 @@ use crate::storage::local::fs_util;
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncWarning;
 use crate::types::{
-    S3syncObject, SyncReportStats, SYNC_REPORT_ETAG_TYPE, SYNC_REPORT_RECORD_NAME,
+    S3syncObject, SyncStatsReport, SYNC_REPORT_ETAG_TYPE, SYNC_REPORT_RECORD_NAME,
     SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN,
 };
 use crate::Config;
@@ -27,7 +27,7 @@ pub struct ETagDiffDetector {
     config: Config,
     source: Storage,
     target: Storage,
-    sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    sync_stats_report: Arc<Mutex<SyncStatsReport>>,
 }
 
 #[async_trait]
@@ -60,13 +60,13 @@ impl ETagDiffDetector {
         config: Config,
         source: Storage,
         target: Storage,
-        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+        sync_stats_report: Arc<Mutex<SyncStatsReport>>,
     ) -> DiffDetector {
         Box::new(ETagDiffDetector {
             config,
             source,
             target,
-            sync_report_stats,
+            sync_stats_report,
         })
     }
 
@@ -135,7 +135,7 @@ impl ETagDiffDetector {
                         "Unknown. Only ServerSideEncryption::Aes256 is supported."
                     );
 
-                    self.sync_report_stats
+                    self.sync_stats_report
                         .lock()
                         .unwrap()
                         .increment_etag_unknown();
@@ -181,7 +181,7 @@ impl ETagDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_etag_matches();
@@ -243,7 +243,7 @@ impl ETagDiffDetector {
                             "Unknown. Only ServerSideEncryption::Aes256 is supported."
                         );
 
-                        self.sync_report_stats
+                        self.sync_stats_report
                             .lock()
                             .unwrap()
                             .increment_etag_unknown();
@@ -284,7 +284,7 @@ impl ETagDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_etag_mismatch();
@@ -424,7 +424,7 @@ impl ETagDiffDetector {
                         "Unknown. Only ServerSideEncryption::Aes256 is supported."
                     );
 
-                    self.sync_report_stats
+                    self.sync_stats_report
                         .lock()
                         .unwrap()
                         .increment_etag_unknown();
@@ -472,7 +472,7 @@ impl ETagDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_etag_matches();
@@ -510,7 +510,7 @@ impl ETagDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_etag_mismatch();
@@ -636,7 +636,7 @@ impl ETagDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_etag_matches();
@@ -695,7 +695,7 @@ impl ETagDiffDetector {
                             "Unknown. Only ServerSideEncryption::Aes256 is supported."
                         );
 
-                        self.sync_report_stats
+                        self.sync_stats_report
                             .lock()
                             .unwrap()
                             .increment_etag_unknown();
@@ -736,7 +736,7 @@ impl ETagDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_etag_mismatch();
@@ -790,7 +790,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -841,7 +841,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -891,7 +891,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -942,7 +942,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -993,7 +993,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1043,7 +1043,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1094,7 +1094,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1146,7 +1146,7 @@ mod tests {
             config.clone(),
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()

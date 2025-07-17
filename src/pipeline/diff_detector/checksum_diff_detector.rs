@@ -15,7 +15,7 @@ use crate::storage::local::fs_util;
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncWarning;
 use crate::types::{
-    is_full_object_checksum, S3syncObject, SyncReportStats, SYNC_REPORT_CHECKSUM_TYPE,
+    is_full_object_checksum, S3syncObject, SyncStatsReport, SYNC_REPORT_CHECKSUM_TYPE,
     SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN,
 };
 use crate::{types, Config};
@@ -25,7 +25,7 @@ pub struct ChecksumDiffDetector {
     config: Config,
     source: Storage,
     target: Storage,
-    sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    sync_stats_report: Arc<Mutex<SyncStatsReport>>,
 }
 
 #[async_trait]
@@ -64,13 +64,13 @@ impl ChecksumDiffDetector {
         config: Config,
         source: Storage,
         target: Storage,
-        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+        sync_stats_report: Arc<Mutex<SyncStatsReport>>,
     ) -> DiffDetector {
         Box::new(ChecksumDiffDetector {
             config,
             source,
             target,
-            sync_report_stats,
+            sync_stats_report,
         })
     }
 
@@ -172,7 +172,7 @@ impl ChecksumDiffDetector {
                     "Unknown. Checksum not found."
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_unknown();
@@ -217,7 +217,7 @@ impl ChecksumDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_matches();
@@ -279,7 +279,7 @@ impl ChecksumDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_mismatch();
@@ -388,7 +388,7 @@ impl ChecksumDiffDetector {
                     "Unknown. Target checksum not found."
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_unknown();
@@ -493,7 +493,7 @@ impl ChecksumDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_matches();
@@ -531,7 +531,7 @@ impl ChecksumDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_mismatch();
@@ -635,7 +635,7 @@ impl ChecksumDiffDetector {
                     "Unknown. Source checksum not found."
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_unknown();
@@ -729,7 +729,7 @@ impl ChecksumDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_matches();
@@ -789,7 +789,7 @@ impl ChecksumDiffDetector {
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 
-                self.sync_report_stats
+                self.sync_stats_report
                     .lock()
                     .unwrap()
                     .increment_checksum_mismatch();
@@ -847,7 +847,7 @@ mod tests {
             config: config.clone(),
             source: dyn_clone::clone_box(&*(source)),
             target: dyn_clone::clone_box(&*(target)),
-            sync_report_stats: Arc::new(Mutex::new(SyncReportStats::default())),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
         };
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -895,7 +895,7 @@ mod tests {
             config: config.clone(),
             source: dyn_clone::clone_box(&*(source)),
             target: dyn_clone::clone_box(&*(target)),
-            sync_report_stats: Arc::new(Mutex::new(SyncReportStats::default())),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
         };
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()

@@ -9,7 +9,7 @@ use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip
 use crate::types::{
     format_metadata, format_tags, get_additional_checksum,
     get_additional_checksum_with_head_object, is_full_object_checksum, ObjectChecksum,
-    S3syncObject, SseCustomerKey, SyncReportStats, METADATA_SYNC_REPORT_LOG_NAME,
+    S3syncObject, SseCustomerKey, SyncStatsReport, METADATA_SYNC_REPORT_LOG_NAME,
     MINIMUM_CHUNKSIZE, S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY,
     S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, SYNC_REPORT_CACHE_CONTROL_METADATA_KEY,
     SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY, SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY,
@@ -51,19 +51,19 @@ const EXCLUDE_TAG_REGEX_FILTER_NAME: &str = "exclude_tag_regex_filter";
 pub struct ObjectSyncer {
     worker_index: u16,
     base: Stage,
-    sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    sync_stats_report: Arc<Mutex<SyncStatsReport>>,
 }
 
 impl ObjectSyncer {
     pub fn new(
         base: Stage,
         worker_index: u16,
-        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+        sync_stats_report: Arc<Mutex<SyncStatsReport>>,
     ) -> Self {
         Self {
             worker_index,
             base,
-            sync_report_stats,
+            sync_stats_report,
         }
     }
 
@@ -261,11 +261,11 @@ impl ObjectSyncer {
             dyn_clone::clone_box(&*(*self.base.source.as_ref().unwrap())),
             dyn_clone::clone_box(&*(*self.base.target.as_ref().unwrap())),
             self.worker_index,
-            self.get_sync_report_stats(),
+            self.get_sync_stats_report(),
         );
 
         if self.base.config.report_sync_status {
-            self.get_sync_report_stats()
+            self.get_sync_stats_report()
                 .lock()
                 .unwrap()
                 .increment_number_of_objects();
@@ -1785,12 +1785,12 @@ impl ObjectSyncer {
         }
 
         if !mismatched_metadata {
-            self.sync_report_stats
+            self.sync_stats_report
                 .lock()
                 .unwrap()
                 .increment_metadata_matches();
         } else {
-            self.sync_report_stats
+            self.sync_stats_report
                 .lock()
                 .unwrap()
                 .increment_metadata_mismatch();
@@ -1846,7 +1846,7 @@ impl ObjectSyncer {
                 source_tagging = source_tagging_string,
                 target_tagging = target_tagging_string,
             );
-            self.sync_report_stats
+            self.sync_stats_report
                 .lock()
                 .unwrap()
                 .increment_tagging_matches();
@@ -1861,7 +1861,7 @@ impl ObjectSyncer {
                 source_tagging = source_tagging_string,
                 target_tagging = target_tagging_string,
             );
-            self.sync_report_stats
+            self.sync_stats_report
                 .lock()
                 .unwrap()
                 .increment_tagging_mismatch();
@@ -1870,8 +1870,8 @@ impl ObjectSyncer {
 
         Ok(())
     }
-    pub fn get_sync_report_stats(&self) -> Arc<Mutex<SyncReportStats>> {
-        self.sync_report_stats.clone()
+    pub fn get_sync_stats_report(&self) -> Arc<Mutex<SyncStatsReport>> {
+        self.sync_stats_report.clone()
     }
 }
 
@@ -2203,7 +2203,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         )
         .sync()
         .await;
@@ -2265,7 +2265,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         )
         .sync()
         .await;
@@ -2341,7 +2341,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         )
         .sync()
         .await;
@@ -2411,7 +2411,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         )
         .sync()
         .await;
@@ -2475,7 +2475,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         )
         .sync()
         .await;
@@ -2530,7 +2530,7 @@ mod tests {
                 Arc::new(AtomicBool::new(false)),
             ),
             0,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         )
         .sync()
         .await;
