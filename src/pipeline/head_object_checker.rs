@@ -16,7 +16,7 @@ use crate::pipeline::diff_detector::standard_diff_detector::StandardDiffDetector
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncError;
 use crate::types::{
-    S3syncObject, SyncReportStats, SYNC_REPORT_EXISTENCE_TYPE, SYNC_REPORT_RECORD_NAME,
+    S3syncObject, SyncStatsReport, SYNC_REPORT_EXISTENCE_TYPE, SYNC_REPORT_RECORD_NAME,
     SYNC_STATUS_NOT_FOUND,
 };
 use crate::Config;
@@ -26,7 +26,7 @@ pub struct HeadObjectChecker {
     config: Config,
     source: Storage,
     target: Storage,
-    sync_report_stats: Arc<Mutex<SyncReportStats>>,
+    sync_stats_report: Arc<Mutex<SyncStatsReport>>,
 }
 
 impl HeadObjectChecker {
@@ -35,14 +35,14 @@ impl HeadObjectChecker {
         source: Storage,
         target: Storage,
         worker_index: u16,
-        sync_report_stats: Arc<Mutex<SyncReportStats>>,
+        sync_stats_report: Arc<Mutex<SyncStatsReport>>,
     ) -> Self {
         Self {
             config,
             source,
             target,
             worker_index,
-            sync_report_stats,
+            sync_stats_report,
         }
     }
 
@@ -111,7 +111,7 @@ impl HeadObjectChecker {
                     self.config.clone(),
                     dyn_clone::clone_box(self.source.as_ref()),
                     dyn_clone::clone_box(self.target.as_ref()),
-                    self.sync_report_stats.clone(),
+                    self.sync_stats_report.clone(),
                 )
             } else if self.config.filter_config.check_etag {
                 // ETag has been checked by modified filter
@@ -127,7 +127,7 @@ impl HeadObjectChecker {
                     self.config.clone(),
                     dyn_clone::clone_box(self.source.as_ref()),
                     dyn_clone::clone_box(self.target.as_ref()),
-                    self.sync_report_stats.clone(),
+                    self.sync_stats_report.clone(),
                 )
             } else {
                 StandardDiffDetector::boxed_new()
@@ -151,7 +151,7 @@ impl HeadObjectChecker {
                     source_size = source_object.size(),
                 );
 
-                self.sync_report_stats.lock().unwrap().increment_not_found();
+                self.sync_stats_report.lock().unwrap().increment_not_found();
                 self.target.set_warning();
             }
 
@@ -352,7 +352,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             1,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let source_object =
@@ -400,7 +400,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             1,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let source_object =
@@ -441,7 +441,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             1,
-            Arc::new(Mutex::new(SyncReportStats::default())),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
         let source_object =

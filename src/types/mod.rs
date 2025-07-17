@@ -69,7 +69,7 @@ pub struct PackedObjectVersions {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct SyncReportStats {
+pub struct SyncStatsReport {
     pub number_of_objects: usize,
     pub not_found: usize,
     pub etag_matches: usize,
@@ -84,7 +84,7 @@ pub struct SyncReportStats {
     pub tagging_mismatch: usize,
 }
 
-impl SyncReportStats {
+impl SyncStatsReport {
     pub fn increment_number_of_objects(&mut self) {
         self.number_of_objects += 1;
     }
