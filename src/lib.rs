@@ -94,6 +94,16 @@ async fn main() {
   if pipeline.has_warning() {
     println!("A warning has occurred.\n\n");
   }
+
+  // If you use `--report-sync-stats`, `--report-metadata-sync-status` or
+  // `--report-tagging-sync-status` options, you can get the sync statistics report.
+  // These options are used to report the sync status of each object and not transfer the objects.
+  // The above code does not use these options, so the sync statistics report is empty(all zero).
+  let sync_stats_to_be_locked = pipeline.get_sync_stats_report();
+  let sync_stats = sync_stats_to_be_locked.lock().unwrap();
+  if sync_stats.number_of_objects == sync_stats.etag_matches {
+    println!("All objects are synced correctly.");
+  }
 }
 ```
 
