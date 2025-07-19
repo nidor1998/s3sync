@@ -170,7 +170,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   If you transfer S3 to S3(cross-region or different object storage), you cannot use server-side copy.
 
 - Versioning support  
-  All versions of the object can be synchronized.(Except intermediate delete markers)
+  All versions of the object can be synchronized. (Except intermediate delete markers)
 
 - Tagging support  
   All tags of the object can be synchronized.

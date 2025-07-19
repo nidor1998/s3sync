@@ -70,9 +70,9 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Flexible filtering  
   - size, modified time
   - key, `ContentType`, user-defined metadata, tagging, by regular expression.
-  
-- Versions  
-  You can transfer all versions of an object.
+
+- Versioning support  
+  All versions of the object can be synchronized. (Except intermediate delete markers)
 
 - Point-in-time snapshot  
   With versioning enabled S3 bucket, you can transfer objects at a specific point in time.
@@ -134,6 +134,9 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   </details>
 
   You can check the synchronization status of the object's tagging and metadata with `--report-metadata-sync-status` and `--report-tagging-sync-status` option.
+
+- Amazon S3 Express One Zone(Directory bucket) support  
+  s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
 
 ## More information
 For more information, please refer to the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md)
