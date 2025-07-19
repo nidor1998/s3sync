@@ -35,12 +35,13 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   $ s3sync --additional-checksum-algorithm SHA256 test_data s3://xxxxx
   772.00 KiB | 772.00 KiB/sec,  transferred 100 objects | 100 objects/sec,  etag verified 100 objects,  checksum verified 100 objects ...(omitted)
   ```
- 
+  
+  `transferred 100 objects | 100 objects/sec,  etag verified 100 objects,  checksum verified 100 objects` means that all objects have been transferred and ETag(MD5 or equivalent) and additional checksum(SHA256 in this case) have been verified successfully.  
   If you want to get detailed evidence of the integrity check, you can use `Sync statistics report` feature(see below).
 
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
-  For example, If you want to know all the objects transferred by awscli have been transferred correctly(checksum based), the following command will show the report.
+  For example, If you want to know all the objects transferred by AWS CLI(of course, you can use s3sync) have been transferred correctly(checksum based), the following command will show the report.
   ```bash
   aws s3 sync test_data s3://xxxx/
   s3sync --check-additional-checksum CRC64NVME --json-tracing --report-sync-status test_data s3://xxxx/ |tail -2 |jq
@@ -117,7 +118,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
   
 - Multiple platforms support  
-  Linux(x86_64, aarch64), macOS, Windows(x86_64, aarch64) are fully tested and supported.
+  Linux(x86_64, aarch64), macOS, Windows(x86_64, aarch64) are fully tested and supported.  
+  s3sync ia a single binary with no dependencies, so it can be easily run on above platforms.
 
 - Incremental transfer  
   There are many ways to transfer objects:
@@ -126,8 +128,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
     - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
 
 - Flexible filtering  
-  - size, modified time
   - key, `ContentType`, user-defined metadata, tagging, by regular expression.
+  - size, modified time
 
 - Versioning support  
   All versions of the object can be synchronized. (Except intermediate delete markers)
