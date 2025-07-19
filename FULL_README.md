@@ -915,7 +915,9 @@ Reporting:
                                      Default verification is for etag. For additional checksum, use --check-additional-checksum.
                                      For more precise control, use with --auto-chunksize. [env: REPORT_SYNC_STATUS=]
       --report-metadata-sync-status  Report metadata sync status to the target storage.
-                                     It must be used with --report-sync-status. [env: REPORT_METADATA_SYNC_STATUS=]
+                                     It must be used with --report-sync-status.
+                                     Note: s3sync generated user-defined metadata(s3sync_origin_version_id/s3sync_origin_last_modified) were ignored.
+                                           Because they are usually different from the source storage. [env: REPORT_METADATA_SYNC_STATUS=]
       --report-tagging-sync-status   Report tagging sync status to the target storage.
                                      It must be used with --report-sync-status. [env: REPORT_TAGGING_SYNC_STATUS=]
 

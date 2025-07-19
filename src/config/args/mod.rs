@@ -613,7 +613,9 @@ For more precise control, use with --auto-chunksize."#
         requires = "report_sync_status",
         help_heading = "Reporting",
         long_help = r#"Report metadata sync status to the target storage.
-It must be used with --report-sync-status."#
+It must be used with --report-sync-status.
+Note: s3sync generated user-defined metadata(s3sync_origin_version_id/s3sync_origin_last_modified) were ignored.
+      Because they are usually different from the source storage."#
     )]
     report_metadata_sync_status: bool,
 
