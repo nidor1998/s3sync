@@ -38,45 +38,6 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
  
   If you want to get detailed evidence of the integrity check, you can use `Sync statistics report` feature(see below).
 
-- Very fast  
-  s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
-  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB).
-
-- Multiple ways
-  - Local to S3(S3-compatible storage)
-  - S3(S3-compatible storage) to Local
-  - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
-  
-- Multiple platforms support  
-  Linux(x86_64, aarch64), macOS, Windows(x86_64, aarch64) are fully tested and supported.
-
-- Easy to use  
-  s3sync is designed to be easy to use.  
-  s3sync has many options, but the default settings are reasonable for most cases of reliable synchronization.
-
-  For example, In the IAM role environment, you can use the following command to synchronize a local directory with an S3 bucket.
-  If something goes wrong, s3sync will show a warning or error message, so you can understand what went wrong.
-
-  ```bash
-  s3sync /path/to/local s3://bucket-name/prefix
-  ```
-
-- Incremental transfer  
-  There many ways to transfer objects:
-    - Modified time based(default)
-    - ETag(MD5 or equivalent) based
-    - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
-
-- Flexible filtering  
-  - size, modified time
-  - key, `ContentType`, user-defined metadata, tagging, by regular expression.
-
-- Versioning support  
-  All versions of the object can be synchronized. (Except intermediate delete markers)
-
-- Point-in-time snapshot  
-  With versioning enabled S3 bucket, you can transfer objects at a specific point in time.
-
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
   For example, If you want to know all the objects transferred by awscli have been transferred correctly(checksum based), the following command will show the report.
@@ -134,6 +95,45 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   </details>
 
   You can check the synchronization status of the object's tagging and metadata with `--report-metadata-sync-status` and `--report-tagging-sync-status` option.
+
+- Easy to use  
+  s3sync is designed to be easy to use.  
+  s3sync has many options, but the default settings are reasonable for most cases of reliable synchronization.
+
+  For example, In the IAM role environment, you can use the following command to synchronize a local directory with an S3 bucket.  
+  If something goes wrong, s3sync will show a warning or error message, so you can understand what went wrong.
+
+  ```bash
+  s3sync /path/to/local s3://bucket-name/prefix
+  ```
+
+- Very fast  
+  s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
+  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB).
+
+- Multiple ways
+  - Local to S3(S3-compatible storage)
+  - S3(S3-compatible storage) to Local
+  - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
+  
+- Multiple platforms support  
+  Linux(x86_64, aarch64), macOS, Windows(x86_64, aarch64) are fully tested and supported.
+
+- Incremental transfer  
+  There are many ways to transfer objects:
+    - Modified time based(default)
+    - ETag(MD5 or equivalent) based
+    - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
+
+- Flexible filtering  
+  - size, modified time
+  - key, `ContentType`, user-defined metadata, tagging, by regular expression.
+
+- Versioning support  
+  All versions of the object can be synchronized. (Except intermediate delete markers)
+
+- Point-in-time snapshot  
+  With versioning enabled S3 bucket, you can transfer objects at a specific point in time.
 
 - Amazon S3 Express One Zone(Directory bucket) support  
   s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
