@@ -280,6 +280,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 All features are tested on the above platforms.
 
+NOTE: ARM64 Windows 11 cannot build with `legacy_hyper014_feature` due dependency build issue. If you want to use `legacy_hyper014_feature`, you need to build with x86_64 Windows.
+
 ## Licence
 This project is licensed under the Apache-2.0 License.
 
@@ -585,6 +587,8 @@ For example, on Linux: `ulimit -n 8192`
 The maximum number of parallel uploads/downloads for objects larger than `multipart-threshold`.  
 This feature is implemented by using HTTP `Range` header.  
 Default: 16
+
+**Note: Specifying a large number of parallel uploads(64 or more) is not recommended. It can cause OS to be unstable.**
 
 #### `--force-retry-count`
 s3sync forcibly retries the operation that AWS SDK for Rust cannot retry.  
