@@ -305,7 +305,7 @@ impl ETagDiffDetector {
             local_path.push(key);
 
             if self.config.transfer_config.auto_chunksize {
-                if let Ok(object_parts) = self
+                match self
                     .target
                     .get_object_parts(
                         key,
@@ -315,7 +315,7 @@ impl ETagDiffDetector {
                         self.config.target_sse_c_key_md5.clone(),
                     )
                     .await
-                {
+                { Ok(object_parts) => {
                     if object_parts.is_empty() {
                         generate_e_tag_hash_from_path(
                             &local_path,
@@ -333,9 +333,9 @@ impl ETagDiffDetector {
                         )
                         .await?
                     }
-                } else {
+                } _ => {
                     return Err(anyhow!("get_object_parts() failed. key={}.", key,));
-                }
+                }}
             } else {
                 generate_e_tag_hash_from_path(
                     &local_path,
@@ -531,7 +531,7 @@ impl ETagDiffDetector {
             let local_path = fs_util::key_to_file_path(self.target.get_local_path(), key);
 
             if self.config.transfer_config.auto_chunksize {
-                if let Ok(object_parts) = self
+                match self
                     .source
                     .get_object_parts(
                         key,
@@ -541,7 +541,7 @@ impl ETagDiffDetector {
                         self.config.target_sse_c_key_md5.clone(),
                     )
                     .await
-                {
+                { Ok(object_parts) => {
                     if object_parts.is_empty() {
                         generate_e_tag_hash_from_path(
                             &local_path,
@@ -559,9 +559,9 @@ impl ETagDiffDetector {
                         )
                         .await?
                     }
-                } else {
+                } _ => {
                     return Err(anyhow!("get_object_parts() failed. key={}.", key,));
-                }
+                }}
             } else {
                 generate_e_tag_hash_from_path(
                     &local_path,

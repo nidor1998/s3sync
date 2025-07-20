@@ -1794,24 +1794,28 @@ impl TestHelper {
     }
 
     pub fn enable_not_found_dangerous_simulation() {
-        std::env::set_var(
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe { std::env::set_var(
             NOT_FOUND_DANGEROUS_SIMULATION_ENV,
             NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW,
-        );
+        ) };
     }
 
     pub fn disable_not_found_dangerous_simulation() {
-        std::env::remove_var(NOT_FOUND_DANGEROUS_SIMULATION_ENV);
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe { std::env::remove_var(NOT_FOUND_DANGEROUS_SIMULATION_ENV) };
     }
 
     pub fn enable_cancel_dangerous_simulation() {
-        std::env::set_var(
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe { std::env::set_var(
             CANCEL_DANGEROUS_SIMULATION_ENV,
             CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW,
-        );
+        ) };
     }
 
     pub fn disable_cancel_dangerous_simulation() {
-        std::env::remove_var(CANCEL_DANGEROUS_SIMULATION_ENV);
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe { std::env::remove_var(CANCEL_DANGEROUS_SIMULATION_ENV) };
     }
 }

@@ -65,7 +65,8 @@ rusty_fork_test! {
 
     #[test]
     fn init_normal_tracing() {
-        env::remove_var(EVENT_FILTER_ENV_VAR);
+        // This code is used to test purpose only and run separated processes.
+        unsafe { env::remove_var(EVENT_FILTER_ENV_VAR) };
 
         init_tracing(&TracingConfig {
             tracing_level: log::Level::Info,
@@ -100,7 +101,8 @@ rusty_fork_test! {
 
     #[test]
     fn init_with_env() {
-        env::set_var(EVENT_FILTER_ENV_VAR, "trace");
+        // This code is used to test purpose only and run separated processes.
+        unsafe { env::set_var(EVENT_FILTER_ENV_VAR, "trace") };
 
         init_tracing(&TracingConfig {
             tracing_level: log::Level::Info,

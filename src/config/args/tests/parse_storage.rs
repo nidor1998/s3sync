@@ -14,12 +14,12 @@ mod tests {
             "./test_data/target",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             assert!(config_args.validate_storage_config().is_ok());
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -34,12 +34,12 @@ mod tests {
             "s3://target-bucket",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             assert!(config_args.validate_storage_config().is_ok());
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -56,12 +56,12 @@ mod tests {
             "s3://target-bucket",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             assert!(config_args.validate_storage_config().is_ok());
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -70,12 +70,12 @@ mod tests {
 
         let args = vec!["s3sync", "/source-dir", "./test_data/target"];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             assert!(config_args.validate_storage_config().is_err());
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -92,16 +92,16 @@ mod tests {
             "s3://target-bucket",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             let result = config_args.validate_storage_config();
             assert!(result.is_err());
             if let Err(e) = result {
                 assert_eq!(e, NO_SOURCE_CREDENTIAL_REQUIRED.to_string());
             }
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -118,16 +118,16 @@ mod tests {
             "./test_data/target",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             let result = config_args.validate_storage_config();
             assert!(result.is_err());
             if let Err(e) = result {
                 assert_eq!(e, NO_TARGET_CREDENTIAL_REQUIRED.to_string());
             }
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -144,12 +144,12 @@ mod tests {
             "s3://target-bucket",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             assert!(config_args.validate_storage_config().is_ok());
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -166,7 +166,7 @@ mod tests {
             "s3://target-bucket",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             let result = config_args.validate_storage_config();
             assert!(result.is_err());
             if let Err(e) = result {
@@ -175,10 +175,10 @@ mod tests {
                     SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string()
                 );
             }
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
             "./test_data/target",
         ];
 
-        if let Ok(config_args) = parse_from_args(args) {
+        match parse_from_args(args) { Ok(config_args) => {
             let result = config_args.validate_storage_config();
             assert!(result.is_err());
             if let Err(e) = result {
@@ -204,10 +204,10 @@ mod tests {
                     TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string()
                 );
             }
-        } else {
+        } _ => {
             // skipcq: RS-W1021
             assert!(false, "error occurred.");
-        }
+        }}
     }
 
     fn init_dummy_tracing_subscriber() {
