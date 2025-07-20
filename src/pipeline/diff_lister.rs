@@ -72,7 +72,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
-    use crate::types::{sha1_digest_from_key, ObjectEntry};
+    use crate::types::{ObjectEntry, sha1_digest_from_key};
     use aws_sdk_s3::primitives::DateTime;
     use tracing_subscriber::EnvFilter;
 

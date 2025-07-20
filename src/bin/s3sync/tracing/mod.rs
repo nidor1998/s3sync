@@ -23,7 +23,9 @@ pub fn init_tracing(config: &TracingConfig) {
     let mut show_target = true;
     let tracing_level = config.tracing_level;
     let event_filter = if config.aws_sdk_tracing {
-        format!("s3sync={tracing_level},aws_smithy_runtime={tracing_level},aws_config={tracing_level},aws_sigv4={tracing_level}")
+        format!(
+            "s3sync={tracing_level},aws_smithy_runtime={tracing_level},aws_config={tracing_level},aws_sigv4={tracing_level}"
+        )
     } else if env::var(EVENT_FILTER_ENV_VAR).is_ok() {
         env::var(EVENT_FILTER_ENV_VAR).unwrap()
     } else {

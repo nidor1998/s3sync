@@ -1,6 +1,7 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
+use aws_sdk_s3::Client;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::builders::GetObjectOutputBuilder;
@@ -16,14 +17,13 @@ use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, Object, ObjectPart, ObjectVersion, RequestPayer,
     ServerSideEncryption, StorageClass, Tagging,
 };
-use aws_sdk_s3::Client;
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::{Response, StatusCode};
 use aws_smithy_types::body::SdkBody;
 use aws_smithy_types::byte_stream::Length;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use futures_util::stream::FuturesUnordered;
 use futures_util::StreamExt;
+use futures_util::stream::FuturesUnordered;
 use leaky_bucket::RateLimiter;
 use std::error::Error;
 use std::io;
@@ -48,17 +48,17 @@ use crate::storage::e_tag_verify::{
     is_multipart_upload_e_tag, verify_e_tag,
 };
 use crate::storage::{
-    convert_to_buf_byte_stream_with_callback, get_size_string_from_content_range, Storage,
-    StorageFactory, StorageTrait,
+    Storage, StorageFactory, StorageTrait, convert_to_buf_byte_stream_with_callback,
+    get_size_string_from_content_range,
 };
+use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncBytes, SyncWarning};
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
-use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncBytes, SyncWarning};
 use crate::types::{
-    is_full_object_checksum, ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath,
-    SyncStatistics,
+    ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
+    is_full_object_checksum,
 };
-use crate::{storage, Config};
+use crate::{Config, storage};
 
 pub mod fs_util;
 
@@ -657,7 +657,9 @@ impl LocalStorage {
 
             if tmp_buffer.is_empty() {
                 if read_data_size != first_chunk_content_length {
-                    return Err(anyhow!("Invalid first chunk data size. Expected: {first_chunk_content_length}, Actual: {read_data_size}"));
+                    return Err(anyhow!(
+                        "Invalid first chunk data size. Expected: {first_chunk_content_length}, Actual: {read_data_size}"
+                    ));
                 }
                 break;
             }
@@ -787,7 +789,9 @@ impl LocalStorage {
 
                         if tmp_buffer.is_empty() {
                             if read_data_size != chunk_content_length {
-                                return Err(anyhow!("Invalid chunk data size. Expected: {chunk_content_length}, Actual: {read_data_size}"));
+                                return Err(anyhow!(
+                                    "Invalid chunk data size. Expected: {chunk_content_length}, Actual: {read_data_size}"
+                                ));
                             }
                             break;
                         }
@@ -1405,8 +1409,7 @@ impl StorageTrait for LocalStorage {
 async fn simulate_not_found_test_case() {
     #[cfg(feature = "e2e_test_dangerous_simulations")]
     {
-        const NOT_FOUND_TEST_FILE: &str =
-            "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";
+        const NOT_FOUND_TEST_FILE: &str = "./playground/not_found_test/s3sync_not_found_test_66143ea2-53cb-4ee9-98d6-7067bf5f325d";
         const NOT_FOUND_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_NOT_FOUND_DANGEROUS_SIMULATION";
         const NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
 

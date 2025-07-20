@@ -91,16 +91,16 @@ impl ObjectFilterBase<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::Config;
     use crate::config::args::parse_from_args;
-    use crate::storage::local::LocalStorageFactory;
     use crate::storage::StorageFactory;
+    use crate::storage::local::LocalStorageFactory;
     use crate::types::token;
     use crate::types::token::PipelineCancellationToken;
-    use crate::Config;
     use async_channel::Receiver;
     use aws_sdk_s3::types::Object;
-    use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
 
     use super::*;

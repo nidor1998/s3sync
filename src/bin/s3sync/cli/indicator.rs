@@ -3,7 +3,7 @@ use std::io::Write;
 
 use async_channel::Receiver;
 use indicatif::{HumanBytes, HumanCount, HumanDuration, ProgressBar, ProgressStyle};
-use simple_moving_average::{SumTreeSMA, SMA};
+use simple_moving_average::{SMA, SumTreeSMA};
 use tokio::task::JoinHandle;
 use tokio::time::Instant;
 

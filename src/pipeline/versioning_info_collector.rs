@@ -9,8 +9,8 @@ use tracing::debug;
 
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncSkip;
-use crate::types::{ObjectVersions, S3syncObject, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY};
-use crate::{types, Config};
+use crate::types::{ObjectVersions, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, S3syncObject};
+use crate::{Config, types};
 
 pub struct VersioningInfoCollector {
     config: Config,

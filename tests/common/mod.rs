@@ -18,7 +18,7 @@ use aws_sdk_s3::types::{
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
 use aws_types::SdkConfig;
-use filetime::{set_file_mtime, FileTime};
+use filetime::{FileTime, set_file_mtime};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs::File;
@@ -36,11 +36,11 @@ use walkdir::WalkDir;
 
 use sha2::{Digest, Sha256};
 
+use s3sync::Config;
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
-use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::SyncStatistics;
-use s3sync::Config;
+use s3sync::types::token::create_pipeline_cancellation_token;
 
 pub const REGION: &str = "ap-northeast-1";
 pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
@@ -1795,10 +1795,12 @@ impl TestHelper {
 
     pub fn enable_not_found_dangerous_simulation() {
         // This code is used to test purpose only and run within a critical section test.
-        unsafe { std::env::set_var(
-            NOT_FOUND_DANGEROUS_SIMULATION_ENV,
-            NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW,
-        ) };
+        unsafe {
+            std::env::set_var(
+                NOT_FOUND_DANGEROUS_SIMULATION_ENV,
+                NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW,
+            )
+        };
     }
 
     pub fn disable_not_found_dangerous_simulation() {
@@ -1808,10 +1810,12 @@ impl TestHelper {
 
     pub fn enable_cancel_dangerous_simulation() {
         // This code is used to test purpose only and run within a critical section test.
-        unsafe { std::env::set_var(
-            CANCEL_DANGEROUS_SIMULATION_ENV,
-            CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW,
-        ) };
+        unsafe {
+            std::env::set_var(
+                CANCEL_DANGEROUS_SIMULATION_ENV,
+                CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW,
+            )
+        };
     }
 
     pub fn disable_cancel_dangerous_simulation() {

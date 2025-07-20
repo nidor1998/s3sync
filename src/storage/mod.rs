@@ -1,6 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
+use aws_sdk_s3::Client;
 use aws_sdk_s3::operation::copy_object::CopyObjectOutput;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
@@ -13,7 +14,6 @@ use aws_sdk_s3::operation::upload_part::UploadPartOutput;
 use aws_sdk_s3::operation::upload_part_copy::UploadPartCopyOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::{ChecksumMode, ObjectPart, ObjectVersion, RequestPayer, Tagging};
-use aws_sdk_s3::Client;
 use aws_smithy_types::body::SdkBody;
 use dyn_clone::DynClone;
 use futures_util::stream::TryStreamExt;
@@ -21,17 +21,17 @@ use http_body_util::{BodyExt, StreamBody};
 use hyper::body::Frame;
 use leaky_bucket::RateLimiter;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use tokio::io::{AsyncRead, BufReader};
 use tokio_util::io::ReaderStream;
 
+use crate::Config;
 use crate::config::ClientConfig;
 use crate::storage::checksum::AdditionalChecksum;
 use crate::types::async_callback::AsyncReadWithCallback;
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics};
-use crate::Config;
 
 pub mod additional_checksum_verify;
 pub mod checksum;

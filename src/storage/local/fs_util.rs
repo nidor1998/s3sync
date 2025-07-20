@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use aws_sdk_s3::primitives::DateTime;
-use filetime::{set_file_mtime, FileTime};
+use filetime::{FileTime, set_file_mtime};
 use regex::Regex;
 use tempfile::NamedTempFile;
 use tokio::fs::File;
@@ -241,12 +241,14 @@ mod tests {
         .await
         .unwrap();
 
-        assert!(!create_directory_hierarchy_from_key(
-            PathBuf::from("playground/"),
-            "testdir3/testdir4/",
-        )
-        .await
-        .unwrap());
+        assert!(
+            !create_directory_hierarchy_from_key(
+                PathBuf::from("playground/"),
+                "testdir3/testdir4/",
+            )
+            .await
+            .unwrap()
+        );
     }
 
     #[tokio::test]
@@ -271,12 +273,14 @@ mod tests {
         .await
         .unwrap();
 
-        assert!(!create_directory_hierarchy_from_key(
-            PathBuf::from("playground\\"),
-            "testdir3/testdir4/",
-        )
-        .await
-        .unwrap());
+        assert!(
+            !create_directory_hierarchy_from_key(
+                PathBuf::from("playground\\"),
+                "testdir3/testdir4/",
+            )
+            .await
+            .unwrap()
+        );
     }
 
     #[test]

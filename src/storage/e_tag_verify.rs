@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use aws_sdk_s3::types::ServerSideEncryption;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;

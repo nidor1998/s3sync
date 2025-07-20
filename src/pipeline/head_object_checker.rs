@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::types::ChecksumMode;
 use aws_smithy_runtime_api::client::result::SdkError;
@@ -13,13 +13,13 @@ use crate::pipeline::diff_detector::etag_diff_detector::ETagDiffDetector;
 use crate::pipeline::diff_detector::size_diff_detector::SizeDiffDetector;
 use crate::pipeline::diff_detector::standard_diff_detector::StandardDiffDetector;
 
+use crate::Config;
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncError;
 use crate::types::{
-    S3syncObject, SyncStatsReport, SYNC_REPORT_EXISTENCE_TYPE, SYNC_REPORT_RECORD_NAME,
-    SYNC_STATUS_NOT_FOUND,
+    S3syncObject, SYNC_REPORT_EXISTENCE_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_NOT_FOUND,
+    SyncStatsReport,
 };
-use crate::Config;
 
 pub struct HeadObjectChecker {
     worker_index: u16,
@@ -256,8 +256,8 @@ mod tests {
     use crate::types::token::create_pipeline_cancellation_token;
     use aws_sdk_s3::types::Object;
     use aws_smithy_runtime_api::http::{Response, StatusCode};
-    use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
 
     use super::*;
@@ -357,17 +357,21 @@ mod tests {
 
         let source_object =
             S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(6).build());
-        assert!(!head_object_checker
-            .is_old_object(&source_object)
-            .await
-            .unwrap());
+        assert!(
+            !head_object_checker
+                .is_old_object(&source_object)
+                .await
+                .unwrap()
+        );
 
         let source_object =
             S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(5).build());
-        assert!(head_object_checker
-            .is_old_object(&source_object)
-            .await
-            .unwrap());
+        assert!(
+            head_object_checker
+                .is_old_object(&source_object)
+                .await
+                .unwrap()
+        );
     }
 
     #[tokio::test]

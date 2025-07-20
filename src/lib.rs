@@ -118,8 +118,8 @@ For more information about s3sync binary,
 see [s3sync homepage](https://github.com/nidor1998/s3sync).
 */
 
-pub use config::args::CLIArgs;
 pub use config::Config;
+pub use config::args::CLIArgs;
 
 pub mod config;
 pub mod pipeline;

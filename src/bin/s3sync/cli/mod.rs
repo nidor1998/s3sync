@@ -1,12 +1,12 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::sync::MutexGuard;
 use tokio::time::Instant;
 use tracing::{error, info, trace};
 
+use s3sync::Config;
 use s3sync::pipeline::Pipeline;
 use s3sync::types::token::create_pipeline_cancellation_token;
-use s3sync::types::{SyncStatsReport, SYNC_REPORT_SUMMERY_NAME};
-use s3sync::Config;
+use s3sync::types::{SYNC_REPORT_SUMMERY_NAME, SyncStatsReport};
 
 mod ctrl_c_handler;
 mod indicator;

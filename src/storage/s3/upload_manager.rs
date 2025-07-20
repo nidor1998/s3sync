@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
+use aws_sdk_s3::Client;
 use aws_sdk_s3::operation::abort_multipart_upload::AbortMultipartUploadOutput;
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
@@ -12,9 +13,8 @@ use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart, MetadataDirective,
     ObjectPart, RequestPayer, ServerSideEncryption, StorageClass, TaggingDirective,
 };
-use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use chrono::SecondsFormat;
 use futures::stream::{FuturesUnordered, StreamExt};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -28,15 +28,15 @@ use crate::config::Config;
 use crate::storage;
 use crate::storage::e_tag_verify::{generate_e_tag_hash, is_multipart_upload_e_tag};
 use crate::storage::{
-    convert_copy_to_put_object_output, convert_copy_to_upload_part_output,
+    Storage, convert_copy_to_put_object_output, convert_copy_to_upload_part_output,
     convert_to_buf_byte_stream_with_callback, get_range_from_content_range,
-    parse_range_header_string, Storage,
+    parse_range_header_string,
 };
+use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
 use crate::types::error::S3syncError;
 use crate::types::token::PipelineCancellationToken;
-use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
 use crate::types::{
-    SyncStatistics, S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY,
+    S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, SyncStatistics,
 };
 
 const MISMATCH_WARNING_WITH_HELP: &str = "mismatch. object in the target storage may be corrupted. \
@@ -1067,7 +1067,9 @@ impl UploadManager {
                         upload_size = get_object_output.content_length().unwrap();
 
                         if get_object_output.content_range().is_none() {
-                            error!("get_object() - auto-chunksize returned no content range. This is unexpected.");
+                            error!(
+                                "get_object() - auto-chunksize returned no content range. This is unexpected."
+                            );
                             return Err(anyhow!(
                                 "get_object() returned no content range. This is unexpected. key={}.",
                                 &target_key

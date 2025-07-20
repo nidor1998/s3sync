@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use tracing::{error, info, trace};
 
 use crate::types::SyncStatistics::SyncDelete;

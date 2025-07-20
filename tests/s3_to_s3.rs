@@ -10,10 +10,10 @@ mod tests {
     use aws_sdk_s3::types::{ServerSideEncryption, StorageClass, Tag, Tagging};
 
     use common::*;
+    use s3sync::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
-    use s3sync::Config;
 
     use super::*;
 
@@ -1502,11 +1502,13 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert!(helper
-                .get_object_tagging(&BUCKET2.to_string(), "data1", None)
-                .await
-                .tag_set()
-                .is_empty());
+            assert!(
+                helper
+                    .get_object_tagging(&BUCKET2.to_string(), "data1", None)
+                    .await
+                    .tag_set()
+                    .is_empty()
+            );
         }
 
         helper
@@ -3535,10 +3537,12 @@ mod tests {
             );
 
             let object = helper.get_object(&BUCKET2.to_string(), "data1", None).await;
-            assert!(object
-                .metadata
-                .unwrap()
-                .contains_key("s3sync_origin_last_modified"));
+            assert!(
+                object
+                    .metadata
+                    .unwrap()
+                    .contains_key("s3sync_origin_last_modified")
+            );
         }
 
         helper

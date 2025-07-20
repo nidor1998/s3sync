@@ -1,24 +1,24 @@
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
-use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::ChecksumMode;
+use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn};
 
 use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
+use crate::storage::Storage;
 use crate::storage::additional_checksum_verify::{
     generate_checksum_from_path_for_check, generate_checksum_from_path_with_chunksize,
 };
 use crate::storage::local::fs_util;
-use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncWarning;
 use crate::types::{
-    is_full_object_checksum, S3syncObject, SyncStatsReport, SYNC_REPORT_CHECKSUM_TYPE,
-    SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN,
+    S3syncObject, SYNC_REPORT_CHECKSUM_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES,
+    SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN, SyncStatsReport, is_full_object_checksum,
 };
-use crate::{types, Config};
+use crate::{Config, types};
 
 const FILTER_NAME: &str = "ChecksumDiffDetector";
 pub struct ChecksumDiffDetector {
@@ -810,8 +810,8 @@ mod tests {
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::ChecksumAlgorithm;
-    use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
 
     use super::*;

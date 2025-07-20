@@ -34,20 +34,24 @@ mod tests {
             assert!(false, "s3 url not found");
         }
 
-        assert!(config
-            .source_client_config
-            .as_ref()
-            .unwrap()
-            .client_config_location
-            .aws_config_file
-            .is_none());
-        assert!(config
-            .source_client_config
-            .as_ref()
-            .unwrap()
-            .client_config_location
-            .aws_shared_credentials_file
-            .is_none());
+        assert!(
+            config
+                .source_client_config
+                .as_ref()
+                .unwrap()
+                .client_config_location
+                .aws_config_file
+                .is_none()
+        );
+        assert!(
+            config
+                .source_client_config
+                .as_ref()
+                .unwrap()
+                .client_config_location
+                .aws_shared_credentials_file
+                .is_none()
+        );
 
         if let S3Credentials::Profile(profile_name) =
             &config.source_client_config.as_ref().unwrap().credential
@@ -58,18 +62,22 @@ mod tests {
             assert!(false, "source profile not found")
         }
 
-        assert!(config
-            .source_client_config
-            .as_ref()
-            .unwrap()
-            .region
-            .is_none());
-        assert!(config
-            .source_client_config
-            .as_ref()
-            .unwrap()
-            .endpoint_url
-            .is_none());
+        assert!(
+            config
+                .source_client_config
+                .as_ref()
+                .unwrap()
+                .region
+                .is_none()
+        );
+        assert!(
+            config
+                .source_client_config
+                .as_ref()
+                .unwrap()
+                .endpoint_url
+                .is_none()
+        );
         assert!(
             !config
                 .source_client_config
@@ -97,20 +105,24 @@ mod tests {
             100
         );
 
-        assert!(config
-            .target_client_config
-            .as_ref()
-            .unwrap()
-            .client_config_location
-            .aws_config_file
-            .is_none());
-        assert!(config
-            .target_client_config
-            .as_ref()
-            .unwrap()
-            .client_config_location
-            .aws_shared_credentials_file
-            .is_none());
+        assert!(
+            config
+                .target_client_config
+                .as_ref()
+                .unwrap()
+                .client_config_location
+                .aws_config_file
+                .is_none()
+        );
+        assert!(
+            config
+                .target_client_config
+                .as_ref()
+                .unwrap()
+                .client_config_location
+                .aws_shared_credentials_file
+                .is_none()
+        );
 
         if let S3Credentials::Profile(profile_name) =
             &config.target_client_config.as_ref().unwrap().credential
@@ -121,18 +133,22 @@ mod tests {
             assert!(false, "target profile not found")
         }
 
-        assert!(config
-            .target_client_config
-            .as_ref()
-            .unwrap()
-            .region
-            .is_none());
-        assert!(config
-            .target_client_config
-            .as_ref()
-            .unwrap()
-            .endpoint_url
-            .is_none());
+        assert!(
+            config
+                .target_client_config
+                .as_ref()
+                .unwrap()
+                .region
+                .is_none()
+        );
+        assert!(
+            config
+                .target_client_config
+                .as_ref()
+                .unwrap()
+                .endpoint_url
+                .is_none()
+        );
         assert!(
             !config
                 .target_client_config

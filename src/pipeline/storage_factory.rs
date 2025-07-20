@@ -1,16 +1,16 @@
 use async_channel::Sender;
 use aws_sdk_s3::types::RequestPayer;
 use leaky_bucket::RateLimiter;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
+use crate::Config;
 use crate::config::ClientConfig;
 use crate::storage::local::LocalStorageFactory;
 use crate::storage::s3::S3StorageFactory;
 use crate::storage::{Storage, StorageFactory, StoragePair};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{StoragePath, SyncStatistics};
-use crate::Config;
 
 // default refill interval 100ms
 const REFILL_PER_INTERVAL_DIVIDER: usize = 10;

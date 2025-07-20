@@ -1,6 +1,7 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
+use aws_sdk_s3::Client;
 use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
@@ -14,31 +15,30 @@ use aws_sdk_s3::types::{
     BucketVersioningStatus, ChecksumMode, DeleteMarkerEntry, ObjectAttributes, ObjectPart,
     ObjectVersion, RequestPayer, Tagging,
 };
-use aws_sdk_s3::Client;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use tracing::{debug, info, trace};
 
+use crate::Config;
 use crate::config::ClientConfig;
 use crate::storage::checksum::AdditionalChecksum;
 use crate::storage::s3::upload_manager::UploadManager;
 use crate::storage::{
-    convert_to_buf_byte_stream_with_callback, get_size_string_from_content_range, Storage,
-    StorageFactory, StorageTrait,
+    Storage, StorageFactory, StorageTrait, convert_to_buf_byte_stream_with_callback,
+    get_size_string_from_content_range,
 };
-use crate::types::token::PipelineCancellationToken;
 use crate::types::SyncStatistics::{SyncBytes, SyncSkip};
+use crate::types::token::PipelineCancellationToken;
 use crate::types::{
-    clone_object_version_with_key, get_additional_checksum, is_full_object_checksum,
     ObjectChecksum, ObjectVersions, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
+    clone_object_version_with_key, get_additional_checksum, is_full_object_checksum,
 };
-use crate::Config;
 
 const EXPRESS_ONEZONE_STORAGE_SUFFIX: &str = "--x-s3";
 
@@ -1171,18 +1171,20 @@ mod tests {
         )
         .await;
 
-        assert!(storage
-            .get_object(
-                "source/data1",
-                None,
-                None,
-                None,
-                None,
-                SseCustomerKey { key: None },
-                None,
-            )
-            .await
-            .is_err());
+        assert!(
+            storage
+                .get_object(
+                    "source/data1",
+                    None,
+                    None,
+                    None,
+                    None,
+                    SseCustomerKey { key: None },
+                    None,
+                )
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
