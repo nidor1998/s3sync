@@ -41,6 +41,10 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
+  Sync statistics report feature supports objects that any tools have transferred, such as AWS CLI, Rclone, s5cmd, and other S3 storage tools.  
+  And s3sync supports multipart upload and guesses chunk size automatically and verifies the integrity of the uploaded objects. (`--auto-chunksize` option).  
+  `--auto-chunksize` option is useful for S3 compatible storage that does not support additional checksum.
+
   For example, If you want to know all the objects transferred by AWS CLI(of course, you can use s3sync) have been transferred correctly(checksum based), the following command will show the report.
   ```bash
   aws s3 sync test_data s3://xxxx/
@@ -142,7 +146,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - CI/CD friendly  
   s3sync is designed to be used in CI/CD pipelines.
-  - JSON tracing(logging) support
+  - JSON tracing(logging) support(`--json-tracing` option)
   - Explicit exit code  
     `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch).
   - Supports all options via environment variables
