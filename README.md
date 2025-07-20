@@ -101,7 +101,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   s3sync is designed to be easy to use.  
   s3sync has many options, but the default settings are reasonable for most cases of reliable synchronization.
 
-  For example, In the IAM role environment, you can use the following command to synchronize a local directory with an S3 bucket.  
+  For example, In the IAM role environment, the following command will transfer all objects from the local directory to the S3 bucket and verify the integrity of the transferred objects using ETag(MD5 or equivalent).  
   If something goes wrong, s3sync will show a warning or error message, so you can understand what went wrong.
 
   ```bash
@@ -118,8 +118,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
   
 - Multiple platforms support  
-  Linux(x86_64, aarch64), macOS, Windows(x86_64, aarch64) are fully tested and supported.  
-  s3sync ia a single binary with no dependencies, so it can be easily run on above platforms.
+  Linux(x86_64, aarch64), macOS(aarch64), Windows(x86_64, aarch64) are fully tested and supported.  
+  s3sync ia a single binary with no dependencies, so it can be easily run on the above platforms.
 
 - Incremental transfer  
   There are many ways to transfer objects:
