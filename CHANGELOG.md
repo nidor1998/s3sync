@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Rust Edition 2024 build
+- Updated documentation.
+- Updated dependencies.
+
+
+## [1.25.2] - 2025-07-20
+
+### Changed
+
 - Updated help message.
 
 
