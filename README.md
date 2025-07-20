@@ -16,6 +16,9 @@ s3sync is a reliable, very fast, and powerful synchronization tool for S3.
 s3sync is designed for users who need to synchronize data with S3 or S3-compatible object storage.  
 This tool is specifically tailored for those who require reliable synchronization capabilities and get evidence of data integrity.
 
+If you don't use s3sync for synchronization, you can use s3sync for checking the integrity of objects that have been transferred by other tools, such as AWS CLI, Rclone, s5cmd, and other S3 storage tools.  
+In general, it makes sense to verify with other tools, if you want to ensure that the objects have been transferred correctly.
+
 ## As a Rust library
 s3sync can be used as a Rust library.  
 s3sync CLI is a very thin wrapper of the s3sync library. You can use all features of s3sync CLI in the library.
