@@ -41,69 +41,69 @@ tokio = { version = "1", features = ["full"] }
 ```
 
 ```no_run
-use s3sync::config::args::parse_from_args;
 use s3sync::config::Config;
+use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
-use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::SyncStatistics;
+use s3sync::types::token::create_pipeline_cancellation_token;
 
 #[tokio::main]
 async fn main() {
-  // You can use all the arguments for s3sync CLI.
-  let args = vec![
-    "program_name",
-    "--aws-max-attempts",
-    "7",
-    "./src",
-    "s3://test-bucket/src/",
-  ];
+    // You can use all the arguments for s3sync CLI.
+    let args = vec![
+        "program_name",
+        "--aws-max-attempts",
+        "7",
+        "./src",
+        "s3://test-bucket/src/",
+    ];
 
-  // s3sync library converts the arguments to Config.
-  let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+    // s3sync library converts the arguments to Config.
+    let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
-  // Create a cancellation token for the pipeline.
-  // You can use this token to cancel the pipeline.
-  let cancellation_token = create_pipeline_cancellation_token();
-  let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
-  let stats_receiver = pipeline.get_stats_receiver();
+    // Create a cancellation token for the pipeline.
+    // You can use this token to cancel the pipeline.
+    let cancellation_token = create_pipeline_cancellation_token();
+    let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+    let stats_receiver = pipeline.get_stats_receiver();
 
-  // You can close statistics sender to stop statistics collection, if needed.
-  // Statistics collection consumes some Memory, so it is recommended to close it if you don't need it.
-  // pipeline.close_stats_sender();
+    // You can close statistics sender to stop statistics collection, if needed.
+    // Statistics collection consumes some Memory, so it is recommended to close it if you don't need it.
+    // pipeline.close_stats_sender();
 
-  pipeline.run().await;
+    pipeline.run().await;
 
-  // You can use the statistics receiver to get the statistics of the pipeline.
-  // Or, you can get the live statistics, If you run async the pipeline.
-  let mut total_sync_count = 0;
-  while let Ok(sync_stats) = stats_receiver.try_recv() {
-    if matches!(sync_stats, SyncStatistics::SyncComplete { .. }) {
-      total_sync_count += 1;
+    // You can use the statistics receiver to get the statistics of the pipeline.
+    // Or, you can get the live statistics, If you run async the pipeline.
+    let mut total_sync_count = 0;
+    while let Ok(sync_stats) = stats_receiver.try_recv() {
+        if matches!(sync_stats, SyncStatistics::SyncComplete { .. }) {
+            total_sync_count += 1;
+        }
     }
-  }
 
-  println!("Total sync count: {}", total_sync_count);
+    println!("Total sync count: {}", total_sync_count);
 
-  // If there is an error in the pipeline, you can get the errors.
-  if pipeline.has_error() {
-    println!("An error has occurred.\n\n");
-    println!("{:?}", pipeline.get_errors_and_consume().unwrap()[0]);
-  }
+    // If there is an error in the pipeline, you can get the errors.
+    if pipeline.has_error() {
+        println!("An error has occurred.\n\n");
+        println!("{:?}", pipeline.get_errors_and_consume().unwrap()[0]);
+    }
 
-  // If there is a warning in the pipeline, you can check it.
-  if pipeline.has_warning() {
-    println!("A warning has occurred.\n\n");
-  }
+    // If there is a warning in the pipeline, you can check it.
+    if pipeline.has_warning() {
+        println!("A warning has occurred.\n\n");
+    }
 
-  // If you use `--report-sync-stats`, `--report-metadata-sync-status` or
-  // `--report-tagging-sync-status` options, you can get the sync statistics report.
-  // These options are used to report the sync status of each object and not transfer the objects.
-  // The above code does not use these options, so the sync statistics report is empty(all zero).
-  let sync_stats_to_be_locked = pipeline.get_sync_stats_report();
-  let sync_stats = sync_stats_to_be_locked.lock().unwrap();
-  if sync_stats.number_of_objects == sync_stats.etag_matches {
-    println!("All objects are synced correctly.");
-  }
+    // If you use `--report-sync-stats`, `--report-metadata-sync-status` or
+    // `--report-tagging-sync-status` options, you can get the sync statistics report.
+    // These options are used to report the sync status of each object and not transfer the objects.
+    // The above code does not use these options, so the sync statistics report is empty(all zero).
+    let sync_stats_to_be_locked = pipeline.get_sync_stats_report();
+    let sync_stats = sync_stats_to_be_locked.lock().unwrap();
+    if sync_stats.number_of_objects != sync_stats.etag_matches {
+        println!("Some objects could not be transferred correctly.");
+    }
 }
 ```
 
