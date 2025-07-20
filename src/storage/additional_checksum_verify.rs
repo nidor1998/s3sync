@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::storage::checksum::AdditionalChecksum;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use aws_sdk_s3::types::ChecksumAlgorithm;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -160,9 +160,8 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::storage::additional_checksum_verify::{
-        generate_checksum_from_path, generate_checksum_from_path_for_check,
+        UNKNOWN_CHECKSUM_VALUE, generate_checksum_from_path, generate_checksum_from_path_for_check,
         generate_checksum_from_path_with_chunksize, is_multipart_upload_checksum,
-        UNKNOWN_CHECKSUM_VALUE,
     };
     use aws_sdk_s3::types::ChecksumAlgorithm;
     use tracing_subscriber::EnvFilter;

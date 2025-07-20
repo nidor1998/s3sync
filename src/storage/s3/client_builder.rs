@@ -2,15 +2,15 @@ use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
 use aws_config::retry::RetryConfig;
 use aws_config::{BehaviorVersion, ConfigLoader};
 use aws_runtime::env_config::file::{EnvConfigFileKind, EnvConfigFiles};
-use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::Client;
+use aws_sdk_s3::config::Builder;
 use std::time::Duration;
 
 use crate::config::ClientConfig;
 use aws_smithy_runtime_api::client::stalled_stream_protection::StalledStreamProtectionConfig;
 use aws_smithy_types::timeout::TimeoutConfig;
-use aws_types::region::Region;
 use aws_types::SdkConfig;
+use aws_types::region::Region;
 use cfg_if::cfg_if;
 
 cfg_if! {

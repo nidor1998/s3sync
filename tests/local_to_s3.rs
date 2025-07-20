@@ -11,8 +11,8 @@ mod tests {
     use aws_sdk_s3::types::{ServerSideEncryption, StorageClass};
 
     use common::*;
-    use s3sync::config::args::parse_from_args;
     use s3sync::config::Config;
+    use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
 
@@ -1726,10 +1726,12 @@ mod tests {
             );
 
             let object = helper.get_object(&BUCKET1.to_string(), "data1", None).await;
-            assert!(object
-                .metadata
-                .unwrap()
-                .contains_key("s3sync_origin_last_modified"));
+            assert!(
+                object
+                    .metadata
+                    .unwrap()
+                    .contains_key("s3sync_origin_last_modified")
+            );
         }
 
         helper

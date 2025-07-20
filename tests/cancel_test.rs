@@ -6,8 +6,8 @@ mod common;
 #[cfg(feature = "e2e_test")]
 mod tests {
     use common::*;
-    use s3sync::config::args::parse_from_args;
     use s3sync::config::Config;
+    use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
     use std::convert::TryFrom;

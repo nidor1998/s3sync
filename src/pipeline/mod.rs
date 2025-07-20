@@ -2,11 +2,12 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use async_channel::{Receiver, Sender};
 use tokio::task::JoinHandle;
 use tracing::{error, trace};
 
+use crate::Config;
 use crate::pipeline::deleter::ObjectDeleter;
 use crate::pipeline::diff_lister::DiffLister;
 use crate::pipeline::filter::{ExcludeRegexFilter, IncludeRegexFilter, ObjectFilter};
@@ -20,7 +21,6 @@ use crate::pipeline::terminator::Terminator;
 use crate::storage::{Storage, StoragePair};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics, SyncStatsReport};
-use crate::Config;
 
 const CHANNEL_CAPACITY: usize = 20000;
 
@@ -846,9 +846,11 @@ mod tests {
         assert!(!pipeline.get_stats_receiver().is_empty());
         assert!(!pipeline.has_error());
 
-        assert!(!PathBuf::from("./test_data/target/delete_test/data1")
-            .try_exists()
-            .unwrap());
+        assert!(
+            !PathBuf::from("./test_data/target/delete_test/data1")
+                .try_exists()
+                .unwrap()
+        );
     }
 
     #[tokio::test]
@@ -899,9 +901,11 @@ mod tests {
         assert!(!pipeline.get_stats_receiver().is_empty());
         assert!(!pipeline.has_error());
 
-        assert!(!PathBuf::from("./test_data/target/delete_test2/data1")
-            .try_exists()
-            .unwrap());
+        assert!(
+            !PathBuf::from("./test_data/target/delete_test2/data1")
+                .try_exists()
+                .unwrap()
+        );
     }
 
     #[tokio::test]

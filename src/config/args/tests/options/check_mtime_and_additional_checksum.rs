@@ -18,10 +18,12 @@ mod tests {
 
         let config = build_config_from_args(args).unwrap();
 
-        assert!(config
-            .filter_config
-            .check_mtime_and_additional_checksum
-            .is_none());
+        assert!(
+            config
+                .filter_config
+                .check_mtime_and_additional_checksum
+                .is_none()
+        );
     }
 
     #[test]

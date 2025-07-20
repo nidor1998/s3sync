@@ -4,21 +4,20 @@ use crate::storage::{
     convert_head_to_get_object_output, e_tag_verify, get_range_from_content_range,
     parse_range_header_string,
 };
-use crate::types::error::S3syncError;
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
+use crate::types::error::S3syncError;
 use crate::types::{
-    format_metadata, format_tags, get_additional_checksum,
-    get_additional_checksum_with_head_object, is_full_object_checksum, ObjectChecksum,
-    S3syncObject, SseCustomerKey, SyncStatsReport, METADATA_SYNC_REPORT_LOG_NAME,
-    MINIMUM_CHUNKSIZE, S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY,
-    S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, SYNC_REPORT_CACHE_CONTROL_METADATA_KEY,
-    SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY, SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY,
-    SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY, SYNC_REPORT_CONTENT_TYPE_METADATA_KEY,
-    SYNC_REPORT_EXPIRES_METADATA_KEY, SYNC_REPORT_METADATA_TYPE, SYNC_REPORT_TAGGING_TYPE,
-    SYNC_REPORT_USER_DEFINED_METADATA_KEY, SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY,
-    SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, TAGGING_SYNC_REPORT_LOG_NAME,
+    METADATA_SYNC_REPORT_LOG_NAME, MINIMUM_CHUNKSIZE, ObjectChecksum,
+    S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, S3syncObject,
+    SYNC_REPORT_CACHE_CONTROL_METADATA_KEY, SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY,
+    SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY, SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY,
+    SYNC_REPORT_CONTENT_TYPE_METADATA_KEY, SYNC_REPORT_EXPIRES_METADATA_KEY,
+    SYNC_REPORT_METADATA_TYPE, SYNC_REPORT_TAGGING_TYPE, SYNC_REPORT_USER_DEFINED_METADATA_KEY,
+    SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH,
+    SseCustomerKey, SyncStatsReport, TAGGING_SYNC_REPORT_LOG_NAME, format_metadata, format_tags,
+    get_additional_checksum, get_additional_checksum_with_head_object, is_full_object_checksum,
 };
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{Context, Error, Result, anyhow};
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingError;
 use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
@@ -851,11 +850,11 @@ impl ObjectSyncer {
 
         if head_object_result.is_err() {
             warn!(
-                    worker_index = self.worker_index,
-                    key = object.key(),
-                    "failed to get object parts information. checksum verification may fail. \
+                worker_index = self.worker_index,
+                key = object.key(),
+                "failed to get object parts information. checksum verification may fail. \
                     this is most likely due to the lack of HeadObject support for partNumber parameter"
-                );
+            );
 
             self.base
                 .send_stats(SyncWarning {
@@ -1061,9 +1060,11 @@ impl ObjectSyncer {
                 }
             } else {
                 // Even if the object is not a multipart upload, we need to return the object parts for auto-chunksize.
-                let object_parts = vec![ObjectPartBuilder::default()
-                    .size(first_chunk_content_length)
-                    .build()];
+                let object_parts = vec![
+                    ObjectPartBuilder::default()
+                        .size(first_chunk_content_length)
+                        .build(),
+                ];
                 return Ok(Some(object_parts));
             }
 
@@ -2051,21 +2052,21 @@ fn is_object_with_directory_name_suffix_and_none_zero_size(object: &S3syncObject
 
 #[cfg(test)]
 mod tests {
+    use crate::Config;
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
     use crate::storage::StoragePair;
     use crate::types::token::create_pipeline_cancellation_token;
-    use crate::Config;
     use aws_sdk_s3::operation::head_object::HeadObjectError;
     use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
     use aws_sdk_s3::primitives::DateTime;
-    use aws_sdk_s3::types::error::NotFound;
     use aws_sdk_s3::types::Object;
+    use aws_sdk_s3::types::error::NotFound;
     use aws_smithy_runtime_api::http::{Response, StatusCode};
     use aws_smithy_types::body::SdkBody;
 
-    use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
 
     use super::*;
@@ -2727,8 +2728,8 @@ mod tests {
         SdkError::service_error(head_object_error, response)
     }
 
-    fn build_get_object_tagging_not_found_error(
-    ) -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
+    fn build_get_object_tagging_not_found_error()
+    -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
         let unhandled_error = GetObjectTaggingError::unhandled("Not Found");
 
         let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
@@ -2772,8 +2773,8 @@ mod tests {
         SdkError::service_error(unhandled_error, response)
     }
 
-    fn build_get_object_tagging_access_denied_error(
-    ) -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
+    fn build_get_object_tagging_access_denied_error()
+    -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
         let unhandled_error = GetObjectTaggingError::generic(
             aws_sdk_s3::error::ErrorMetadata::builder()
                 .code("AccessDenied")
@@ -2797,8 +2798,8 @@ mod tests {
         SdkError::service_error(unhandled_error, response)
     }
 
-    fn build_put_object_tagging_access_denied_error(
-    ) -> SdkError<PutObjectTaggingError, Response<SdkBody>> {
+    fn build_put_object_tagging_access_denied_error()
+    -> SdkError<PutObjectTaggingError, Response<SdkBody>> {
         let unhandled_error = PutObjectTaggingError::generic(
             aws_sdk_s3::error::ErrorMetadata::builder()
                 .code("AccessDenied")
@@ -2836,13 +2837,13 @@ mod tests {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_delete_object_tagging_timeout_error(
-    ) -> SdkError<DeleteObjectTaggingError, Response<SdkBody>> {
+    fn build_delete_object_tagging_timeout_error()
+    -> SdkError<DeleteObjectTaggingError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_get_object_attributes_timeout_error(
-    ) -> SdkError<GetObjectAttributesError, Response<SdkBody>> {
+    fn build_get_object_attributes_timeout_error()
+    -> SdkError<GetObjectAttributesError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
@@ -2850,8 +2851,8 @@ mod tests {
         SdkError::timeout_error("timeout_error")
     }
 
-    fn build_list_object_versions_timeout_error(
-    ) -> SdkError<ListObjectVersionsError, Response<SdkBody>> {
+    fn build_list_object_versions_timeout_error()
+    -> SdkError<ListObjectVersionsError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 

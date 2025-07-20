@@ -1,12 +1,12 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_channel::{Receiver, Sender};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::Config;
 use crate::storage::Storage;
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{S3syncObject, SyncStatistics};
-use crate::Config;
 
 pub struct Stage {
     pub config: Config,

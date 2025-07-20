@@ -8,7 +8,7 @@ use crate::config::FilterConfig;
 use crate::pipeline::filter::{ObjectFilter, ObjectFilterBase};
 use crate::pipeline::stage::Stage;
 use crate::storage::e_tag_verify::normalize_e_tag;
-use crate::types::{sha1_digest_from_key, ObjectKey, ObjectKeyMap, S3syncObject};
+use crate::types::{ObjectKey, ObjectKeyMap, S3syncObject, sha1_digest_from_key};
 
 pub struct TargetModifiedFilter<'a> {
     base: ObjectFilterBase<'a>,

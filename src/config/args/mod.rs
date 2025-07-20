@@ -1,3 +1,4 @@
+use crate::Config;
 use crate::config::args::value_parser::{
     canned_acl, checksum_algorithm, human_bytes, metadata, sse, storage_class, storage_path,
     tagging, url,
@@ -9,15 +10,14 @@ use crate::config::{
 use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
 };
-use crate::Config;
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, RequestPayer, ServerSideEncryption,
     StorageClass,
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 use chrono::{DateTime, Utc};
-use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
 use clap::Parser;
+use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
 use clap_verbosity_flag::{Verbosity, WarnLevel};
 use regex::Regex;
 #[cfg(feature = "version")]

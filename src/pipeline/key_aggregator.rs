@@ -1,7 +1,7 @@
 use anyhow::Result;
 use tracing::trace;
 
-use crate::types::{sha1_digest_from_key, ObjectEntry, ObjectKey, ObjectKeyMap, S3syncObject};
+use crate::types::{ObjectEntry, ObjectKey, ObjectKeyMap, S3syncObject, sha1_digest_from_key};
 
 use super::stage::{SendResult, Stage};
 
@@ -72,12 +72,12 @@ fn build_object_key_entry(object: &S3syncObject) -> ObjectEntry {
 
 #[cfg(test)]
 mod tests {
+    use crate::Config;
     use crate::config::args::parse_from_args;
-    use crate::pipeline::key_aggregator::{build_object_key_entry, insert_key, KeyAggregator};
+    use crate::pipeline::key_aggregator::{KeyAggregator, build_object_key_entry, insert_key};
     use crate::pipeline::stage::Stage;
     use crate::types::token::create_pipeline_cancellation_token;
-    use crate::types::{sha1_digest_from_key, ObjectKey, ObjectKeyMap, S3syncObject};
-    use crate::Config;
+    use crate::types::{ObjectKey, ObjectKeyMap, S3syncObject, sha1_digest_from_key};
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
     use std::collections::HashMap;

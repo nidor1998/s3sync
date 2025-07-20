@@ -7,19 +7,19 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn};
 
+use crate::Config;
 use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
+use crate::storage::Storage;
 use crate::storage::e_tag_verify::{
     generate_e_tag_hash_from_path, generate_e_tag_hash_from_path_with_auto_chunksize,
     normalize_e_tag,
 };
 use crate::storage::local::fs_util;
-use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncWarning;
 use crate::types::{
-    S3syncObject, SyncStatsReport, SYNC_REPORT_ETAG_TYPE, SYNC_REPORT_RECORD_NAME,
-    SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN,
+    S3syncObject, SYNC_REPORT_ETAG_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES,
+    SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN, SyncStatsReport,
 };
-use crate::Config;
 
 const FILTER_NAME: &str = "ETagDiffDetector";
 
@@ -315,27 +315,30 @@ impl ETagDiffDetector {
                         self.config.target_sse_c_key_md5.clone(),
                     )
                     .await
-                { Ok(object_parts) => {
-                    if object_parts.is_empty() {
-                        generate_e_tag_hash_from_path(
-                            &local_path,
-                            self.config.transfer_config.multipart_chunksize as usize,
-                            self.config.transfer_config.multipart_threshold as usize,
-                        )
-                        .await?
-                    } else {
-                        generate_e_tag_hash_from_path_with_auto_chunksize(
-                            &local_path,
-                            object_parts
-                                .iter()
-                                .map(|part| part.size().unwrap())
-                                .collect(),
-                        )
-                        .await?
+                {
+                    Ok(object_parts) => {
+                        if object_parts.is_empty() {
+                            generate_e_tag_hash_from_path(
+                                &local_path,
+                                self.config.transfer_config.multipart_chunksize as usize,
+                                self.config.transfer_config.multipart_threshold as usize,
+                            )
+                            .await?
+                        } else {
+                            generate_e_tag_hash_from_path_with_auto_chunksize(
+                                &local_path,
+                                object_parts
+                                    .iter()
+                                    .map(|part| part.size().unwrap())
+                                    .collect(),
+                            )
+                            .await?
+                        }
                     }
-                } _ => {
-                    return Err(anyhow!("get_object_parts() failed. key={}.", key,));
-                }}
+                    _ => {
+                        return Err(anyhow!("get_object_parts() failed. key={}.", key,));
+                    }
+                }
             } else {
                 generate_e_tag_hash_from_path(
                     &local_path,
@@ -541,27 +544,30 @@ impl ETagDiffDetector {
                         self.config.target_sse_c_key_md5.clone(),
                     )
                     .await
-                { Ok(object_parts) => {
-                    if object_parts.is_empty() {
-                        generate_e_tag_hash_from_path(
-                            &local_path,
-                            self.config.transfer_config.multipart_chunksize as usize,
-                            self.config.transfer_config.multipart_threshold as usize,
-                        )
-                        .await?
-                    } else {
-                        generate_e_tag_hash_from_path_with_auto_chunksize(
-                            &local_path,
-                            object_parts
-                                .iter()
-                                .map(|part| part.size().unwrap())
-                                .collect(),
-                        )
-                        .await?
+                {
+                    Ok(object_parts) => {
+                        if object_parts.is_empty() {
+                            generate_e_tag_hash_from_path(
+                                &local_path,
+                                self.config.transfer_config.multipart_chunksize as usize,
+                                self.config.transfer_config.multipart_threshold as usize,
+                            )
+                            .await?
+                        } else {
+                            generate_e_tag_hash_from_path_with_auto_chunksize(
+                                &local_path,
+                                object_parts
+                                    .iter()
+                                    .map(|part| part.size().unwrap())
+                                    .collect(),
+                            )
+                            .await?
+                        }
                     }
-                } _ => {
-                    return Err(anyhow!("get_object_parts() failed. key={}.", key,));
-                }}
+                    _ => {
+                        return Err(anyhow!("get_object_parts() failed. key={}.", key,));
+                    }
+                }
             } else {
                 generate_e_tag_hash_from_path(
                     &local_path,
@@ -757,8 +763,8 @@ mod tests {
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
-    use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
 
     use super::*;

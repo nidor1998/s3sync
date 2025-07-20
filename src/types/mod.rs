@@ -889,11 +889,13 @@ mod tests {
 
         assert!(!S3syncObject::NotVersioning(Object::builder().build()).is_delete_marker());
         assert!(!S3syncObject::Versioning(ObjectVersion::builder().build()).is_delete_marker());
-        assert!(!S3syncObject::PackedVersions(PackedObjectVersions {
-            key: "test".to_string(),
-            packed_object_versions: vec![]
-        })
-        .is_delete_marker());
+        assert!(
+            !S3syncObject::PackedVersions(PackedObjectVersions {
+                key: "test".to_string(),
+                packed_object_versions: vec![]
+            })
+            .is_delete_marker()
+        );
     }
 
     #[test]
