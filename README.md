@@ -140,5 +140,12 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Amazon S3 Express One Zone(Directory bucket) support  
   s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
 
+- CI/CD friendly  
+  s3sync is designed to be used in CI/CD pipelines.
+  - JSON tracing(logging) support
+  - Explicit exit code  
+    `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch).
+  - Supports all options via environment variables
+
 ## More information
 For more information, please refer to the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md)
