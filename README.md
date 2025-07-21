@@ -156,3 +156,14 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 ## More information
 For more information, please refer to the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md)
+
+## Contributing
+
+While this project began as a personal hobby, it has been built with careful attention to production-quality standards.
+
+- Suggestions and bug reports are welcome, but responses are not guaranteed.
+- Pull requests for new features are generally not accepted, as they may conflict with the design philosophy.
+- If you find this project useful, feel free to fork and modify it as you wish.
+
+🔒 I consider this project to be “complete” and will maintain it only minimally going forward.  
+However, I intend to keep the AWS SDK for Rust and other dependencies up to date regularly.
