@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.26.0"
+version = "1.26.1"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, very fast, and powerful synchronization tool for S3."
@@ -66,7 +66,8 @@ walkdir = "2.5.0"
 zeroize = "1.8.1"
 zeroize_derive = "1.4.2"
 
-# The following dependencies are only required for the legacy_hyper014_feature
+# The following dependencies are only required for the legacy_hyper014_feature.
+# The legacy_hyper014_feature is not recommended for security reasons.
 aws-smithy-runtime = { version = "1.8.3", optional = true }
 headers = { version = "0.3.9", optional = true }
 hyper_014 = { package = "hyper", version = "0.14.13", optional = true }
