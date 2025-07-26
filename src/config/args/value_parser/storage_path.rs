@@ -7,8 +7,13 @@ use crate::types::StoragePath;
 const INVALID_SCHEME: &str = "scheme must be s3:// .";
 const NO_BUCKET_NAME_SPECIFIED: &str = "bucket name must be specified.";
 const NO_PATH_SPECIFIED: &str = "path must be specified.";
+const MULTI_REGION_ARN_REGEX: &str = r"^s3://arn:aws:s3::.+:accesspoint/.+";
 
 pub fn check_storage_path(path: &str) -> Result<String, String> {
+    if is_multi_region_arn(path) {
+        return Ok(path.to_string());
+    }
+
     let result = Url::parse(path);
     if result == Err(ParseError::RelativeUrlWithoutBase) {
         if path.is_empty() {
@@ -39,8 +44,19 @@ pub fn check_storage_path(path: &str) -> Result<String, String> {
     Ok(path.to_string())
 }
 
+fn is_multi_region_arn(path: &str) -> bool {
+    Regex::new(MULTI_REGION_ARN_REGEX).unwrap().is_match(path)
+}
+
 pub fn parse_storage_path(path: &str) -> StoragePath {
     check_storage_path(path).unwrap();
+
+    if is_multi_region_arn(path) {
+        return StoragePath::S3 {
+            bucket: extract_multi_region_arn(path),
+            prefix: extract_prefix(path),
+        };
+    }
 
     let result = Url::parse(path);
     if result == Err(ParseError::RelativeUrlWithoutBase) {
@@ -51,6 +67,31 @@ pub fn parse_storage_path(path: &str) -> StoragePath {
     }
 
     parse_s3_path(path)
+}
+
+fn extract_multi_region_arn(path: &str) -> String {
+    let mut iter = path.match_indices('/');
+    let third_slash = iter.nth(3);
+    match third_slash {
+        Some((idx, _)) => {
+            let arn = &path[..=idx].to_string();
+            arn.replace("s3://", "")
+                .to_string()
+                .strip_suffix('/')
+                .unwrap_or(arn)
+                .to_string()
+        }
+        None => path.replace("s3://", "").to_string(),
+    }
+}
+
+fn extract_prefix(path: &str) -> String {
+    path.char_indices()
+        .filter(|&(_, c)| c == '/')
+        .nth(3)
+        .map(|(i, _)| &path[i + 1..])
+        .unwrap_or("")
+        .to_string()
 }
 
 pub fn is_both_storage_local(source: &StoragePath, target: &StoragePath) -> bool {
@@ -140,6 +181,12 @@ mod tests {
         check_storage_path("s3://my-bucket/../xxx").unwrap();
         check_storage_path("s3://my-bucket/x+y/y+z").unwrap();
         check_storage_path("s3://my-bucket/hello/こんばんは/☃").unwrap();
+
+        check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap").unwrap();
+        check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap/").unwrap();
+        check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap/prefix").unwrap();
+        check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap/prefix/").unwrap();
+        check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap//prefix/").unwrap();
     }
 
     #[test]
@@ -329,6 +376,56 @@ mod tests {
         if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
             assert_eq!(bucket, "test-bucket");
             assert_eq!(prefix, "こんにちは/Καλησπέρα σας");
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "s3 url not found");
+        }
+    }
+
+    #[test]
+    fn parse_s3_url_arn() {
+        init_dummy_tracing_subscriber();
+
+        let s3_url = "s3://arn:aws:s3::1111111:accesspoint/xxxxxx.mrap";
+        if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+            assert_eq!(bucket, "arn:aws:s3::1111111:accesspoint/xxxxxx.mrap");
+            assert_eq!(prefix, "");
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "s3 url not found");
+        }
+
+        let s3_url = "s3://arn:aws:s3::1111111:accesspoint/xxxxxx.mrap/";
+        if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+            assert_eq!(bucket, "arn:aws:s3::1111111:accesspoint/xxxxxx.mrap");
+            assert_eq!(prefix, "");
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "s3 url not found");
+        }
+
+        let s3_url = "s3://arn:aws:s3::1111111:accesspoint/xxxxxx.mrap/prefix";
+        if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+            assert_eq!(bucket, "arn:aws:s3::1111111:accesspoint/xxxxxx.mrap");
+            assert_eq!(prefix, "prefix");
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "s3 url not found");
+        }
+
+        let s3_url = "s3://arn:aws:s3::1111111:accesspoint/xxxxxx.mrap/prefix/";
+        if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+            assert_eq!(bucket, "arn:aws:s3::1111111:accesspoint/xxxxxx.mrap");
+            assert_eq!(prefix, "prefix/");
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "s3 url not found");
+        }
+
+        let s3_url = "s3://arn:aws:s3::1111111:accesspoint/xxxxxx.mrap//prefix/";
+        if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+            assert_eq!(bucket, "arn:aws:s3::1111111:accesspoint/xxxxxx.mrap");
+            assert_eq!(prefix, "/prefix/");
         } else {
             // skipcq: RS-W1021
             assert!(false, "s3 url not found");

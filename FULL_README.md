@@ -372,6 +372,11 @@ s3sync --target-endpoint-url https://foo --target-force-path-style /path/to/loca
 s3sync --source-accelerate --target-accelerate s3://bucket-name1/prefix s3://bucket-name2/prefix
 ```
 
+### [Amazon S3 Multi-Region Access Points](https://aws.amazon.com/s3/features/multi-region-access-points/)
+```bash
+s3sync /path/to/local s3://arn:aws:s3::000000000000:accesspoint/xxxxxxxxxxxxx/
+```
+
 ### Dry run
 ```bash
 s3sync --dry-run s3://bucket-name1/prefix s3://bucket-name2/prefix
