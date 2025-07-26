@@ -83,7 +83,7 @@ fn extract_multi_region_arn(path: &str) -> String {
             arn.replace("s3://", "")
                 .to_string()
                 .strip_suffix('/')
-                .unwrap_or(arn)
+                .map_or(arn.to_string(), |s| s.to_string())
                 .to_string()
         }
         None => path.replace("s3://", "").to_string(),
