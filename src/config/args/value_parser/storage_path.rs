@@ -90,8 +90,8 @@ fn extract_multi_region_arn(path: &str) -> String {
     }
 }
 
-// skipcq: RS-W1201
 fn extract_prefix(path: &str) -> String {
+    // skipcq: RS-W1201
     path.char_indices()
         .filter(|&(_, c)| c == '/')
         .nth(3)
