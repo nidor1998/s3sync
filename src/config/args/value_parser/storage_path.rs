@@ -5,6 +5,7 @@ use url::{ParseError, Url};
 use crate::types::StoragePath;
 
 const INVALID_SCHEME: &str = "scheme must be s3:// .";
+const INVALID_PATH: &str = "path must be a valid URL or a local path.";
 const NO_BUCKET_NAME_SPECIFIED: &str = "bucket name must be specified.";
 const NO_PATH_SPECIFIED: &str = "path must be specified.";
 const MULTI_REGION_ARN_REGEX: &str = r"^s3://arn:aws:s3::.+:accesspoint/.+";
@@ -25,6 +26,10 @@ pub fn check_storage_path(path: &str) -> Result<String, String> {
         }
 
         return Ok(path.to_string());
+    }
+
+    if result.is_err() {
+        return Err(INVALID_PATH.to_string());
     }
 
     let parsed = result.unwrap();
@@ -187,6 +192,13 @@ mod tests {
         check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap/prefix").unwrap();
         check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap/prefix/").unwrap();
         check_storage_path("s3://arn:aws:s3::111111111111:accesspoint/xxxx.mrap//prefix/").unwrap();
+    }
+
+    #[test]
+    fn check_valid_url_error() {
+        init_dummy_tracing_subscriber();
+
+        assert!(check_storage_path("s3://arn:aws").is_err());
     }
 
     #[test]
