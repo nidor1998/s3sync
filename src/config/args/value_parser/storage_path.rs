@@ -95,7 +95,7 @@ fn extract_prefix(path: &str) -> String {
         .filter(|&(_, c)| c == '/')
         .nth(3)
         .map(|(i, _)| &path[i + 1..])
-        .unwrap_or("")
+        .map_or("", |s| s)
         .to_string()
 }
 
