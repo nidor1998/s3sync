@@ -34,6 +34,7 @@ use crate::storage::{
 };
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
 use crate::types::error::S3syncError;
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, SyncStatistics,
@@ -410,6 +411,10 @@ impl UploadManager {
         let source_local_storage = source_e_tag.is_none();
         let source_checksum = self.source_additional_checksum.clone();
         let source_storage_class = get_object_output_first_chunk.storage_class().cloned();
+        let source_version_id = get_object_output_first_chunk
+            .version_id()
+            .map(|v| v.to_string());
+        let source_last_modified = get_object_output_first_chunk.last_modified().copied();
 
         let upload_parts = if self.is_auto_chunksize_enabled() {
             self.upload_parts_with_auto_chunksize(
@@ -458,6 +463,18 @@ impl UploadManager {
             "{complete_multipart_upload_output:?}"
         );
 
+        let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_version_id.clone();
+        event_data.target_version_id = complete_multipart_upload_output
+            .version_id
+            .clone()
+            .map(|v| v.to_string());
+        event_data.source_last_modified = source_last_modified;
+        event_data.source_size = Some(self.source_total_size);
+        event_data.target_size = Some(self.source_total_size); // Assuming the size is the same as source
+        self.config.event_manager.trigger_event(event_data).await;
+
         let source_e_tag = if source_local_storage {
             Some(self.generate_e_tag_hash(self.calculate_parts_count(source_content_length as i64)))
         } else {
@@ -483,6 +500,11 @@ impl UploadManager {
                 &source_e_tag,
                 &target_sse,
                 &target_e_tag,
+                source_version_id.clone(),
+                complete_multipart_upload_output
+                    .version_id
+                    .clone()
+                    .map(|v| v.to_string()),
             )
             .await;
         }
@@ -498,6 +520,11 @@ impl UploadManager {
             target_checksum,
             &source_e_tag,
             source_remote_storage,
+            source_version_id,
+            complete_multipart_upload_output
+                .version_id
+                .clone()
+                .map(|v| v.to_string()),
         )
         .await;
 
@@ -506,6 +533,7 @@ impl UploadManager {
             .build())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn verify_e_tag(
         &mut self,
         key: &str,
@@ -514,6 +542,8 @@ impl UploadManager {
         source_e_tag: &Option<String>,
         target_sse: &Option<ServerSideEncryption>,
         target_e_tag: &Option<String>,
+        source_version_id: Option<String>,
+        target_version_id: Option<String>,
     ) {
         let verify_result = storage::e_tag_verify::verify_e_tag(
             !self.config.disable_multipart_verify,
@@ -524,6 +554,13 @@ impl UploadManager {
             target_sse,
             target_e_tag,
         );
+
+        let mut event_data = EventData::new(EventType::UNDEFINED);
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_version_id;
+        event_data.target_version_id = target_version_id;
+        event_data.source_etag = source_e_tag.clone();
+        event_data.target_etag = target_e_tag.clone();
 
         if let Some(e_tag_match) = verify_result {
             if !e_tag_match {
@@ -553,6 +590,9 @@ impl UploadManager {
                     .await;
                     self.has_warning.store(true, Ordering::SeqCst);
 
+                    event_data.event_type = EventType::SYNC_ETAG_MISMATCH;
+                    self.config.event_manager.trigger_event(event_data).await;
+
                     let source_e_tag = source_e_tag.clone().unwrap();
                     let target_e_tag = target_e_tag.clone().unwrap();
 
@@ -568,6 +608,9 @@ impl UploadManager {
                     key: key.to_string(),
                 })
                 .await;
+
+                event_data.event_type = EventType::SYNC_ETAG_VERIFIED;
+                self.config.event_manager.trigger_event(event_data).await;
 
                 trace!(
                     key = &key,
@@ -1521,6 +1564,15 @@ impl UploadManager {
             }
         };
 
+        let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_version_id.clone();
+        event_data.target_version_id = put_object_output.version_id().map(|v| v.to_string());
+        event_data.source_last_modified = get_object_output.last_modified().copied();
+        event_data.source_size = Some(self.source_total_size);
+        event_data.target_size = Some(self.source_total_size); // Assuming the size is the same as source
+        self.config.event_manager.trigger_event(event_data).await;
+
         let source_e_tag = if source_local_storage {
             Some(self.generate_e_tag_hash(0))
         } else {
@@ -1542,6 +1594,8 @@ impl UploadManager {
                 &source_e_tag,
                 &target_sse,
                 &target_e_tag,
+                source_version_id.clone(),
+                put_object_output.version_id().map(|v| v.to_string()),
             )
             .await;
         }
@@ -1557,12 +1611,15 @@ impl UploadManager {
             target_checksum,
             &source_e_tag,
             source_remote_storage,
+            source_version_id,
+            put_object_output.version_id().map(|v| v.to_string()),
         )
         .await;
 
         Ok(put_object_output)
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn validate_checksum(
         &mut self,
         key: &str,
@@ -1570,6 +1627,8 @@ impl UploadManager {
         target_checksum: Option<String>,
         source_e_tag: &Option<String>,
         source_remote_storage: bool,
+        source_version_id: Option<String>,
+        target_version_id: Option<String>,
     ) {
         if self.config.additional_checksum_mode.is_some() && source_checksum.is_none() {
             self.send_stats(SyncWarning {
@@ -1594,6 +1653,15 @@ impl UploadManager {
                 .as_ref()
                 .unwrap()
                 .as_str();
+
+            let mut event_data = EventData::new(EventType::UNDEFINED);
+            event_data.key = Some(key.to_string());
+            event_data.source_version_id = source_version_id;
+            event_data.target_version_id = target_version_id;
+            event_data.source_checksum = Some(source_checksum.clone());
+            event_data.target_checksum = Some(target_checksum.clone());
+            event_data.checksum_algorithm =
+                Some(self.config.additional_checksum_algorithm.clone().unwrap());
 
             if target_checksum != source_checksum {
                 if source_remote_storage
@@ -1624,6 +1692,9 @@ impl UploadManager {
                             .to_string()
                     };
 
+                    event_data.event_type = EventType::SYNC_CHECKSUM_MISMATCH;
+                    self.config.event_manager.trigger_event(event_data).await;
+
                     warn!(
                         key = &key,
                         additional_checksum_algorithm = additional_checksum_algorithm,
@@ -1637,6 +1708,9 @@ impl UploadManager {
                     key: key.to_string(),
                 })
                 .await;
+
+                event_data.event_type = EventType::SYNC_CHECKSUM_VERIFIED;
+                self.config.event_manager.trigger_event(event_data).await;
 
                 trace!(
                     key = &key,

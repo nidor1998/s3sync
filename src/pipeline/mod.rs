@@ -19,6 +19,7 @@ use crate::pipeline::stage::Stage;
 use crate::pipeline::syncer::ObjectSyncer;
 use crate::pipeline::terminator::Terminator;
 use crate::storage::{Storage, StoragePair};
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics, SyncStatsReport};
 
@@ -105,8 +106,20 @@ impl Pipeline {
         }
         self.ready = false;
 
+        let mut event_data = EventData::new(EventType::PIPELINE_START);
+        self.config
+            .event_manager
+            .trigger_event(event_data.clone())
+            .await;
+
         if !self.check_prerequisites().await {
             self.shutdown().await;
+
+            event_data.event_type = EventType::PIPELINE_END;
+            self.config
+                .event_manager
+                .trigger_event(event_data.clone())
+                .await;
 
             return;
         }
@@ -116,6 +129,26 @@ impl Pipeline {
             if self.has_error() {
                 self.shutdown().await;
 
+                event_data.event_type = EventType::PIPELINE_ERROR;
+                event_data.message = Some(
+                    self.get_errors_and_consume()
+                        .unwrap_or_default()
+                        .first()
+                        .unwrap_or(&anyhow!("Unknown error"))
+                        .to_string(),
+                );
+                self.config
+                    .event_manager
+                    .trigger_event(event_data.clone())
+                    .await;
+
+                event_data.event_type = EventType::PIPELINE_END;
+                event_data.message = None;
+                self.config
+                    .event_manager
+                    .trigger_event(event_data.clone())
+                    .await;
+
                 return;
             }
         }
@@ -123,6 +156,29 @@ impl Pipeline {
         self.sync().await;
 
         self.shutdown().await;
+
+        if self.has_error() {
+            self.shutdown().await;
+
+            event_data.event_type = EventType::PIPELINE_ERROR;
+            event_data.message = Some(
+                self.get_errors_and_consume()
+                    .unwrap_or_default()
+                    .first()
+                    .unwrap_or(&anyhow!("Unknown error"))
+                    .to_string(),
+            );
+            self.config
+                .event_manager
+                .trigger_event(event_data.clone())
+                .await;
+        }
+
+        event_data.event_type = EventType::PIPELINE_END;
+        self.config
+            .event_manager
+            .trigger_event(event_data.clone())
+            .await;
     }
 
     async fn shutdown(&self) {
@@ -131,7 +187,8 @@ impl Pipeline {
 
     async fn check_prerequisites(&self) -> bool {
         if self.config.enable_versioning && !self.is_both_bucket_versioning_enabled().await {
-            self.print_and_store_error(None, "Versioning must be enabled on both buckets.");
+            self.print_and_store_error(None, "Versioning must be enabled on both buckets.")
+                .await;
 
             return false;
         }
@@ -141,7 +198,8 @@ impl Pipeline {
             self.print_and_store_error(
                 None,
                 "--point-in-time option requires versioning enabled on the source bucket.",
-            );
+            )
+            .await;
 
             return false;
         }
@@ -155,7 +213,8 @@ impl Pipeline {
             self.print_and_store_error(
                 Some(e),
                 "failed to check versioning status of source bucket.",
-            );
+            )
+            .await;
 
             return false;
         }
@@ -165,7 +224,8 @@ impl Pipeline {
             self.print_and_store_error(
                 Some(e),
                 "failed to check versioning status of target bucket.",
-            );
+            )
+            .await;
 
             return false;
         }
@@ -183,7 +243,8 @@ impl Pipeline {
             self.print_and_store_error(
                 Some(e),
                 "failed to check versioning status of source bucket.",
-            );
+            )
+            .await;
 
             return false;
         }
@@ -588,16 +649,29 @@ impl Pipeline {
         )
     }
 
-    fn print_and_store_error(&self, e: Option<Error>, message: &str) {
+    async fn print_and_store_error(&self, e: Option<Error>, message: &str) {
         self.has_error.store(true, Ordering::SeqCst);
 
+        let mut event_data = EventData::new(EventType::PIPELINE_ERROR);
         if let Some(e) = e {
             let error = e.to_string();
             let source = e.source();
 
+            event_data.message = Some(format!("{error}: {message}"));
+            self.config
+                .event_manager
+                .trigger_event(event_data.clone())
+                .await;
+
             error!(error = error, source = source, message);
             self.errors.lock().unwrap().push_back(e);
         } else {
+            event_data.message = Some(message.to_string());
+            self.config
+                .event_manager
+                .trigger_event(event_data.clone())
+                .await;
+
             error!("{}", message.to_string());
             self.errors
                 .lock()

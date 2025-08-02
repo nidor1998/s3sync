@@ -1,7 +1,7 @@
+use crate::types::SyncStatistics::SyncDelete;
+use crate::types::event_callback::{EventData, EventType};
 use anyhow::{Result, anyhow};
 use tracing::{error, info, trace};
-
-use crate::types::SyncStatistics::SyncDelete;
 
 use super::stage::Stage;
 
@@ -34,6 +34,13 @@ impl ObjectDeleter {
                                 error!(worker_index = self.worker_index, "delete worker has been cancelled with error.");
                                 return Err(anyhow!("delete worker has been cancelled with error."));
                             }
+
+                            let mut event_data = EventData::new(EventType::SYNC_DELETE);
+                            event_data.key = Some(object.key().to_string());
+                            self.base.config
+                                .event_manager
+                                .trigger_event(event_data.clone())
+                                .await;
                         },
                         Err(_) => {
                             // normal shutdown

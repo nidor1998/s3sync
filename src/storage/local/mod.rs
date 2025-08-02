@@ -53,6 +53,7 @@ use crate::storage::{
 };
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncBytes, SyncWarning};
 use crate::types::error::S3syncError;
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
@@ -203,7 +204,13 @@ impl LocalStorage {
         target_object_parts: Option<Vec<ObjectPart>>,
         target_content_length: u64,
         source_express_onezone_storage: bool,
+        source_version_id: Option<String>,
     ) -> Result<()> {
+        let mut event_data = EventData::new(EventType::UNDEFINED);
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_version_id;
+        event_data.source_etag = source_e_tag.clone();
+
         let key = key.to_string();
         if !self.config.disable_etag_verify && !source_express_onezone_storage {
             trace!(
@@ -283,6 +290,13 @@ impl LocalStorage {
                                 .to_string()
                         };
 
+                        event_data.event_type = EventType::SYNC_ETAG_MISMATCH;
+                        event_data.target_etag = target_e_tag.clone();
+                        self.config
+                            .event_manager
+                            .trigger_event(event_data.clone())
+                            .await;
+
                         let source_e_tag = source_e_tag.clone().unwrap();
                         let target_e_tag = target_e_tag.clone().unwrap();
                         warn!(
@@ -296,8 +310,16 @@ impl LocalStorage {
                         self.set_warning();
                     }
                 } else {
+                    event_data.event_type = EventType::SYNC_ETAG_VERIFIED;
+                    event_data.target_etag = target_e_tag.clone();
+                    self.config
+                        .event_manager
+                        .trigger_event(event_data.clone())
+                        .await;
+
                     let source_e_tag = source_e_tag.clone().unwrap();
                     let target_e_tag = target_e_tag.clone().unwrap();
+
                     trace!(
                         key = &key,
                         source_e_tag = source_e_tag,
@@ -326,6 +348,12 @@ impl LocalStorage {
         if self.config.additional_checksum_mode.is_none() {
             return Ok(());
         }
+
+        event_data.event_type = EventType::UNDEFINED;
+        event_data.source_etag = None;
+        event_data.target_etag = None;
+        event_data.checksum_algorithm = source_checksum_algorithm.clone();
+        event_data.source_checksum = source_final_checksum.clone();
 
         if let Some(source_final_checksum) = source_final_checksum {
             trace!(
@@ -370,6 +398,10 @@ impl LocalStorage {
                 source_checksum_algorithm.as_ref().unwrap().as_str();
 
             if source_final_checksum != target_final_checksum {
+                event_data.event_type = EventType::SYNC_CHECKSUM_MISMATCH;
+                event_data.target_checksum = Some(target_final_checksum.clone());
+                self.config.event_manager.trigger_event(event_data).await;
+
                 warn!(
                     key = key,
                     additional_checksum_algorithm = additional_checksum_algorithm,
@@ -381,6 +413,10 @@ impl LocalStorage {
                 self.send_stats(SyncWarning { key }).await;
                 self.set_warning();
             } else {
+                event_data.event_type = EventType::SYNC_CHECKSUM_VERIFIED;
+                event_data.target_checksum = Some(target_final_checksum.clone());
+                self.config.event_manager.trigger_event(event_data).await;
+
                 trace!(
                     key = &key,
                     additional_checksum_algorithm = additional_checksum_algorithm,
@@ -417,11 +453,13 @@ impl LocalStorage {
             None
         };
         let source_storage_class = get_object_output.storage_class().cloned();
+        let source_version_id = get_object_output.version_id().map(|v| v.to_string());
 
         let source_last_modified =
             DateTime::from_millis(get_object_output.last_modified.unwrap().to_millis()?)
                 .to_chrono_utc()?
                 .to_rfc3339();
+        let source_last_modified_raw = get_object_output.last_modified().copied();
 
         if fs_util::check_directory_traversal(key) {
             return Err(anyhow!(S3syncError::DirectoryTraversalError));
@@ -522,6 +560,14 @@ impl LocalStorage {
 
         let target_content_length = fs_util::get_file_size(&real_path).await;
 
+        let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_version_id.clone();
+        event_data.source_last_modified = source_last_modified_raw;
+        event_data.source_size = Some(source_content_length);
+        event_data.target_size = Some(target_content_length);
+        self.config.event_manager.trigger_event(event_data).await;
+
         self.verify_local_file(
             key,
             object_checksum,
@@ -534,6 +580,7 @@ impl LocalStorage {
             target_object_parts,
             target_content_length,
             source_storage_class == Some(StorageClass::ExpressOnezone),
+            source_version_id,
         )
         .await?;
 
@@ -593,6 +640,7 @@ impl LocalStorage {
             .as_ref()
             .unwrap()
             .subsec_nanos();
+        let source_last_modified_raw = get_object_output_first_chunk.last_modified().copied();
 
         if fs_util::check_directory_traversal(key) {
             return Err(anyhow!(S3syncError::DirectoryTraversalError));
@@ -891,6 +939,14 @@ impl LocalStorage {
 
         let target_content_length = fs_util::get_file_size(&real_path).await;
 
+        let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_version_id.clone();
+        event_data.source_last_modified = source_last_modified_raw;
+        event_data.source_size = Some(source_size);
+        event_data.target_size = Some(target_content_length);
+        self.config.event_manager.trigger_event(event_data).await;
+
         self.verify_local_file(
             key,
             object_checksum,
@@ -903,6 +959,7 @@ impl LocalStorage {
             target_object_parts,
             target_content_length,
             source_storage_class == Some(StorageClass::ExpressOnezone),
+            source_version_id,
         )
         .await?;
 

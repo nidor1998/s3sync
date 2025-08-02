@@ -15,6 +15,8 @@ use zeroize_derive::{Zeroize, ZeroizeOnDrop};
 
 pub mod async_callback;
 pub mod error;
+pub mod event_callback;
+pub mod event_manager;
 pub mod token;
 
 pub const S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY: &str = "s3sync_origin_version_id";
