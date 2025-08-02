@@ -1,3 +1,6 @@
+use crate::types;
+use crate::types::event_callback::EventType;
+use crate::types::event_manager::EventManager;
 use crate::types::{ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, RequestPayer, ServerSideEncryption,
@@ -76,11 +79,22 @@ pub struct Config {
     pub report_sync_status: bool,
     pub report_metadata_sync_status: bool,
     pub report_tagging_sync_status: bool,
+    pub event_manager: EventManager,
 }
 
 impl Config {
     pub fn is_sha1_digest_listing_required(&self) -> bool {
         is_sha1_digest_listing_required(self.sync_with_delete)
+    }
+
+    pub fn register_event_callback<
+        T: 'static + Send + Sync + types::event_callback::EventCallback,
+    >(
+        &mut self,
+        events_flag: EventType,
+        callback: T,
+    ) {
+        self.event_manager.register_callback(events_flag, callback);
     }
 }
 

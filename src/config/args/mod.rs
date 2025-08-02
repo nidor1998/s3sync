@@ -7,6 +7,7 @@ use crate::config::{
     CLITimeoutConfig, ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig,
     TransferConfig,
 };
+use crate::types::event_manager::EventManager;
 use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
 };
@@ -1831,6 +1832,7 @@ impl TryFrom<CLIArgs> for Config {
             report_sync_status: value.report_sync_status,
             report_metadata_sync_status: value.report_metadata_sync_status,
             report_tagging_sync_status: value.report_tagging_sync_status,
+            event_manager: EventManager::new(),
         })
     }
 }
