@@ -11,6 +11,8 @@ pub struct EventManager {
 }
 
 impl Default for EventManager {
+    // RS-A1008 is not applicable here as this is intentional implementation
+    // skipcq: RS-A1008
     fn default() -> Self {
         Self::new()
     }
