@@ -1641,10 +1641,17 @@ impl UploadManager {
             .await;
             self.has_warning.store(true, Ordering::SeqCst);
 
-            warn!(
-                key = &key,
-                "additional checksum algorithm is different from the target storage. skip additional checksum verification."
-            );
+            let message = "additional checksum algorithm is different from the target storage. skip additional checksum verification.";
+            warn!(key = &key, message);
+
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_version_id.clone();
+            // skipcq: RS-W1070
+            event_data.target_version_id = target_version_id.clone();
+            event_data.message = Some(message.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
         }
 
         if target_checksum.is_some() && source_checksum.is_some() {
