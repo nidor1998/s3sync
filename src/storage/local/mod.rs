@@ -209,6 +209,7 @@ impl LocalStorage {
         let mut event_data = EventData::new(EventType::UNDEFINED);
         event_data.key = Some(key.to_string());
         event_data.source_version_id = source_version_id;
+        // skipcq: RS-W1070
         event_data.source_etag = source_e_tag.clone();
 
         let key = key.to_string();
@@ -291,6 +292,7 @@ impl LocalStorage {
                         };
 
                         event_data.event_type = EventType::SYNC_ETAG_MISMATCH;
+                        // skipcq: RS-W1070
                         event_data.target_etag = target_e_tag.clone();
                         self.config
                             .event_manager
@@ -311,6 +313,7 @@ impl LocalStorage {
                     }
                 } else {
                     event_data.event_type = EventType::SYNC_ETAG_VERIFIED;
+                    // skipcq: RS-W1070
                     event_data.target_etag = target_e_tag.clone();
                     self.config
                         .event_manager
@@ -352,7 +355,9 @@ impl LocalStorage {
         event_data.event_type = EventType::UNDEFINED;
         event_data.source_etag = None;
         event_data.target_etag = None;
+        // skipcq: RS-W1070
         event_data.checksum_algorithm = source_checksum_algorithm.clone();
+        // skipcq: RS-W1070
         event_data.source_checksum = source_final_checksum.clone();
 
         if let Some(source_final_checksum) = source_final_checksum {
@@ -562,6 +567,7 @@ impl LocalStorage {
 
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
+        // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.source_last_modified = source_last_modified_raw;
         event_data.source_size = Some(source_content_length);
@@ -941,6 +947,7 @@ impl LocalStorage {
 
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
+        // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.source_last_modified = source_last_modified_raw;
         event_data.source_size = Some(source_size);

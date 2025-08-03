@@ -465,6 +465,7 @@ impl UploadManager {
 
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
+        // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.target_version_id = complete_multipart_upload_output
             .version_id
@@ -559,7 +560,9 @@ impl UploadManager {
         event_data.key = Some(key.to_string());
         event_data.source_version_id = source_version_id;
         event_data.target_version_id = target_version_id;
+        // skipcq: RS-W1070
         event_data.source_etag = source_e_tag.clone();
+        // skipcq: RS-W1070
         event_data.target_etag = target_e_tag.clone();
 
         if let Some(e_tag_match) = verify_result {
@@ -1566,6 +1569,7 @@ impl UploadManager {
 
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
+        // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.target_version_id = put_object_output.version_id().map(|v| v.to_string());
         event_data.source_last_modified = get_object_output.last_modified().copied();
