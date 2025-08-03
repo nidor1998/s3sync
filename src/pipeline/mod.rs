@@ -130,8 +130,8 @@ impl Pipeline {
                 self.shutdown().await;
 
                 event_data.event_type = EventType::PIPELINE_ERROR;
-                // skipcq: RS-W1031
                 event_data.message = Some(
+                    // skipcq: RS-W1031
                     self.get_errors_and_consume()
                         .unwrap_or_default()
                         .first()
@@ -162,8 +162,8 @@ impl Pipeline {
             self.shutdown().await;
 
             event_data.event_type = EventType::PIPELINE_ERROR;
-            // skipcq: RS-W1031
             event_data.message = Some(
+                // skipcq: RS-W1031
                 self.get_errors_and_consume()
                     .unwrap_or_default()
                     .first()
