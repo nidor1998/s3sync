@@ -144,6 +144,13 @@ impl LocalStorage {
         let regular_file_check_result = fs_util::is_regular_file(&entry.path().to_path_buf()).await;
         if let Err(e) = regular_file_check_result {
             let path = entry.path().to_str().unwrap();
+            let error = e.to_string();
+
+            let message = "failed to access file.";
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(path.to_string());
+            event_data.message = Some(format!("{message}: {error}"));
+            self.config.event_manager.trigger_event(event_data).await;
 
             self.send_stats(SyncWarning {
                 key: path.to_string(),
@@ -151,16 +158,9 @@ impl LocalStorage {
             .await;
             self.set_warning();
 
-            let path = entry.path().to_str().unwrap();
-            let error = e.to_string();
             let source = e.source();
 
-            warn!(
-                path = path,
-                error = error,
-                source = source,
-                "failed to access file."
-            );
+            warn!(path = path, error = error, source = source, message);
 
             if warn_as_error {
                 return Err(anyhow!("failed to is_regular_file(): {:?}.", e));
@@ -334,12 +334,20 @@ impl LocalStorage {
                 }
             }
         } else if source_content_length != target_content_length {
+            let message = "content length mismatch. file in the local storage may be corrupted.";
             warn!(
                 key = &key,
                 source_content_length = source_content_length,
                 target_content_length = target_content_length,
-                "content length mismatch. file in the local storage may be corrupted."
+                message
             );
+
+            event_data.event_type = EventType::SYNC_WARNING;
+            event_data.message = Some(message.to_string());
+            self.config
+                .event_manager
+                .trigger_event(event_data.clone())
+                .await;
 
             self.send_stats(SyncWarning { key: key.clone() }).await;
             self.set_warning();
@@ -355,6 +363,7 @@ impl LocalStorage {
         event_data.event_type = EventType::UNDEFINED;
         event_data.source_etag = None;
         event_data.target_etag = None;
+        event_data.message = None;
         // skipcq: RS-W1070
         event_data.checksum_algorithm = source_checksum_algorithm.clone();
         // skipcq: RS-W1070
@@ -1018,7 +1027,13 @@ impl StorageTrait for LocalStorage {
                 self.set_warning();
 
                 let error = e.to_string();
-                warn!(path = path, error = error, "failed to list local files.");
+                let message = "failed to list local files.";
+                warn!(path = path, error = error, message);
+
+                let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                event_data.key = Some(path.to_string());
+                event_data.message = Some(format!("{message}: {error}"));
+                self.config.event_manager.trigger_event(event_data).await;
 
                 if warn_as_error {
                     return Err(anyhow!("failed to list(): {:?}.", e));
@@ -1291,9 +1306,16 @@ impl StorageTrait for LocalStorage {
             self.set_warning();
 
             let error = e.to_string();
-            let source = e.source();
 
-            warn!(error = error, source = source, "failed to access object.");
+            let message = "failed to access local file.";
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(key.to_string());
+            event_data.message = Some(format!("{message}: {error}"));
+            self.config.event_manager.trigger_event(event_data).await;
+
+            let source = e.source();
+            warn!(error = error, source = source, message);
+
             return Err(anyhow!("failed to path.try_exists()."));
         }
 

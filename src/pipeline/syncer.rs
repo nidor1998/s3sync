@@ -141,13 +141,25 @@ impl ObjectSyncer {
                         .await;
                     self.base.set_warning();
 
+                    let message = "force retryable error has occurred.";
                     warn!(
                         worker_index = self.worker_index,
                         key = key,
                         error = error,
                         source = e.source(),
-                        "force retryable error has occurred."
+                        message
                     );
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(object.key().to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.message = Some(message.to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
 
                     tokio::time::sleep(std::time::Duration::from_millis(
                         self.base
@@ -167,13 +179,26 @@ impl ObjectSyncer {
                         })
                         .await;
                     self.base.set_warning();
+
+                    let message = "object not found. skipping.";
                     warn!(
                         worker_index = self.worker_index,
                         key = key,
                         error = error,
                         source = e.source(),
-                        "object not found. skipping."
+                        message
                     );
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(object.key().to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.message = Some(message.to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
 
                     if self.base.config.warn_as_error {
                         return Err(e);
@@ -189,13 +214,26 @@ impl ObjectSyncer {
                         })
                         .await;
                     self.base.set_warning();
+
+                    let message = "access denied. skipping.";
                     warn!(
                         worker_index = self.worker_index,
                         key = key,
                         error = error,
                         source = e.source(),
-                        "access denied. skipping."
+                        message
                     );
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(object.key().to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.message = Some(message.to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
 
                     if self.base.config.warn_as_error {
                         return Err(e);
@@ -245,12 +283,24 @@ impl ObjectSyncer {
                 })
                 .await;
 
+            let message = "skip directory name suffix and non zero size object that is incompatible for local storage";
             warn!(
                 worker_index = self.worker_index,
                 key = key,
                 size = object.size(),
-                "skip directory name suffix and non zero size object that is incompatible for local storage "
+                message
             );
+
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(object.key().to_string());
+            event_data.source_version_id =
+                object.version_id().map(|version_id| version_id.to_string());
+            event_data.message = Some(message.to_string());
+            self.base
+                .config
+                .event_manager
+                .trigger_event(event_data)
+                .await;
 
             return Ok(());
         }
@@ -678,21 +728,33 @@ impl ObjectSyncer {
         self.base.set_warning();
 
         if is_cancelled_error(&e) {
-            warn!(
-                worker_index = self.worker_index,
-                key = key,
-                "put_object() has been cancelled."
-            );
+            let message = "put_object() has been cancelled.";
+            warn!(worker_index = self.worker_index, key = key, message);
+
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(key.to_string());
+            event_data.message = Some(message.to_string());
+            self.base
+                .config
+                .event_manager
+                .trigger_event(event_data)
+                .await;
 
             return Ok(());
         }
 
         if is_directory_traversal_error(&e) {
-            warn!(
-                worker_index = self.worker_index,
-                key = key,
-                "object references a parent directory."
-            );
+            let message = "object references a parent directory.";
+            warn!(worker_index = self.worker_index, key = key, message);
+
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(key.to_string());
+            event_data.message = Some(message.to_string());
+            self.base
+                .config
+                .event_manager
+                .trigger_event(event_data)
+                .await;
 
             if self.base.config.warn_as_error {
                 return Err(e);
@@ -701,13 +763,23 @@ impl ObjectSyncer {
             return Ok(());
         }
 
+        let message = "put_object() failed.";
         warn!(
             worker_index = self.worker_index,
             key = key,
             error = e.to_string(),
             source = e.source(),
-            "put_object() failed."
+            message
         );
+
+        let mut event_data = EventData::new(EventType::SYNC_WARNING);
+        event_data.key = Some(key.to_string());
+        event_data.message = Some(message.to_string());
+        self.base
+            .config
+            .event_manager
+            .trigger_event(event_data)
+            .await;
 
         Err(e)
     }
@@ -867,12 +939,24 @@ impl ObjectSyncer {
             .context("pipeline::syncer::get_final_checksum() failed.");
 
         if head_object_result.is_err() {
+            let message = "failed to get object parts information. \
+                checksum verification may fail. This is most likely due to the lack of HeadObject support for partNumber parameter.";
             warn!(
                 worker_index = self.worker_index,
                 key = object.key(),
-                "failed to get object parts information. checksum verification may fail. \
-                    this is most likely due to the lack of HeadObject support for partNumber parameter"
+                message
             );
+
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(object.key().to_string());
+            event_data.source_version_id =
+                object.version_id().map(|version_id| version_id.to_string());
+            event_data.message = Some(message.to_string());
+            self.base
+                .config
+                .event_manager
+                .trigger_event(event_data)
+                .await;
 
             self.base
                 .send_stats(SyncWarning {

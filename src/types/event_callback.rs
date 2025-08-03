@@ -9,6 +9,8 @@ bitflags! {
         const UNDEFINED = 0u64;
         const PIPELINE_START = 1u64 << 1;
         const PIPELINE_END = 1u64 << 2;
+
+        // The following events occur per object during the sync process
         const SYNC_START = 1u64 << 3;
         const SYNC_COMPLETE = 1u64 << 4;
         const SYNC_DELETE =  1u64 << 5;
@@ -16,9 +18,13 @@ bitflags! {
         const SYNC_CHECKSUM_VERIFIED = 1u64 << 7;
         const SYNC_ETAG_MISMATCH = 1u64 << 8;
         const SYNC_CHECKSUM_MISMATCH = 1u64 << 9;
+
+        // Not all warnings trigger this event, but it is used for general (useful for crate user) warnings
         const SYNC_WARNING = 1u64 << 10;
+
         const PIPELINE_ERROR = 1u64 << 11;
 
+        // This is a special event mask to indicate that all events should be captured
         const ALL_EVENTS  = !0;
     }
 }
