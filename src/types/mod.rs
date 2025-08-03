@@ -14,6 +14,7 @@ use sha1::{Digest, Sha1};
 use zeroize_derive::{Zeroize, ZeroizeOnDrop};
 
 pub mod async_callback;
+pub mod debug_event_callback;
 pub mod error;
 pub mod event_callback;
 pub mod event_manager;
@@ -224,6 +225,7 @@ impl S3syncObject {
         match &self {
             Self::Versioning(object) => object.version_id(),
             Self::NotVersioning(_) => None,
+            Self::DeleteMarker(object) => object.version_id(),
             _ => panic!("unsupported."),
         }
     }

@@ -1,3 +1,4 @@
+use super::stage::Stage;
 use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
 use crate::storage::{
@@ -6,6 +7,7 @@ use crate::storage::{
 };
 use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip, SyncWarning};
 use crate::types::error::S3syncError;
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::{
     METADATA_SYNC_REPORT_LOG_NAME, MINIMUM_CHUNKSIZE, ObjectChecksum,
     S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, S3syncObject,
@@ -36,8 +38,6 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, error, info, trace, warn};
-
-use super::stage::Stage;
 
 const INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME: &str = "include_content_type_regex_filter";
 const EXCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME: &str = "exclude_content_type_regex_filter";
@@ -344,6 +344,10 @@ impl ObjectSyncer {
     async fn sync_or_delete_object(&self, object: S3syncObject) -> Result<()> {
         let key = object.key();
 
+        let mut event_data = EventData::new(EventType::UNDEFINED);
+        event_data.key = Some(object.key().to_string());
+        event_data.source_version_id = object.version_id().map(|version_id| version_id.to_string());
+
         if object.is_delete_marker() {
             self.delete_object(key).await?;
 
@@ -353,8 +357,22 @@ impl ObjectSyncer {
                 })
                 .await;
 
+            event_data.event_type = EventType::SYNC_DELETE;
+            self.base
+                .config
+                .event_manager
+                .trigger_event(event_data.clone())
+                .await;
+
             return Ok(());
         }
+
+        event_data.event_type = EventType::SYNC_START;
+        self.base
+            .config
+            .event_manager
+            .trigger_event(event_data.clone())
+            .await;
 
         let size = object.size();
 

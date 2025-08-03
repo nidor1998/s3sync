@@ -9,13 +9,15 @@ bitflags! {
         const UNDEFINED = 0u64;
         const PIPELINE_START = 1u64 << 1;
         const PIPELINE_END = 1u64 << 2;
-        const SYNC_COMPLETE = 1u64 << 3;
-        const SYNC_DELETE =  1u64 << 4;
-        const SYNC_ETAG_VERIFIED = 1u64 << 5;
-        const SYNC_CHECKSUM_VERIFIED = 1u64 << 6;
-        const SYNC_ETAG_MISMATCH = 1u64 << 7;
-        const SYNC_CHECKSUM_MISMATCH = 1u64 << 8;
-        const PIPELINE_ERROR = 1u64 << 9;
+        const SYNC_START = 1u64 << 3;
+        const SYNC_COMPLETE = 1u64 << 4;
+        const SYNC_DELETE =  1u64 << 5;
+        const SYNC_ETAG_VERIFIED = 1u64 << 6;
+        const SYNC_CHECKSUM_VERIFIED = 1u64 << 7;
+        const SYNC_ETAG_MISMATCH = 1u64 << 8;
+        const SYNC_CHECKSUM_MISMATCH = 1u64 << 9;
+        const SYNC_WARNING = 1u64 << 10;
+        const PIPELINE_ERROR = 1u64 << 11;
 
         const ALL_EVENTS  = !0;
     }
