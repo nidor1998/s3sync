@@ -6,6 +6,10 @@ use bitflags::bitflags;
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
     pub struct EventType: u64 {
+        // Sync statistics report events are not captured by the pipeline.
+        // Maybe there is no need to capture these events
+        // the pipeline captures only synchronization events.
+
         const UNDEFINED = 0u64;
         const PIPELINE_START = 1u64 << 1;
         const PIPELINE_END = 1u64 << 2;
@@ -14,6 +18,8 @@ bitflags! {
         const SYNC_START = 1u64 << 3;
         const SYNC_COMPLETE = 1u64 << 4;
         const SYNC_DELETE =  1u64 << 5;
+
+        // The following events occur after the SYNC_COMPLETE event
         const SYNC_ETAG_VERIFIED = 1u64 << 6;
         const SYNC_CHECKSUM_VERIFIED = 1u64 << 7;
         const SYNC_ETAG_MISMATCH = 1u64 << 8;
@@ -22,6 +28,7 @@ bitflags! {
         // Not all warnings trigger this event, but it is used for general (useful for crate user) warnings
         const SYNC_WARNING = 1u64 << 10;
 
+        // If an error occurs during the pipeline, this event is triggered and the pipeline is stopped
         const PIPELINE_ERROR = 1u64 << 11;
 
         // This is a special event mask to indicate that all events should be captured
