@@ -38,6 +38,9 @@ Example usage
 [dependencies]
 s3sync = "1"
 tokio = { version = "1", features = ["full"] }
+
+# If you want to use EventCallback, you need to add async-trait crate.
+async-trait = "0.1"
 ```
 
 ```no_run
@@ -45,7 +48,33 @@ use s3sync::config::Config;
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
 use s3sync::types::SyncStatistics;
+use s3sync::types::event_callback::{EventCallback, EventData, EventType};
 use s3sync::types::token::create_pipeline_cancellation_token;
+
+use async_trait::async_trait;
+
+pub struct DebugEventCallback;
+
+#[async_trait]
+impl EventCallback for DebugEventCallback {
+    // A callback function is called when an event occurs in the pipeline.
+    // You can use this callback to handle events, such as logging, monitoring, or custom actions.
+    // The callbacks are called serially, and the callback function MUST return immediately.
+    // If a callback function takes a long time to execute, it may block a whole pipeline.
+    async fn on_event(&mut self, event_data: EventData) {
+        match event_data.event_type {
+            EventType::SYNC_START => {
+                println!("Sync started: {event_data:?}");
+            }
+            EventType::SYNC_COMPLETE => {
+                println!("Sync complete: {event_data:?}");
+            }
+            _ => {
+                println!("Other events: {event_data:?}");
+            }
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -59,7 +88,15 @@ async fn main() {
     ];
 
     // s3sync library converts the arguments to Config.
-    let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+    let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+    // This is an event manager that manages the event callbacks.(optional)
+    // You can specify the events you want to capture. E.g. `EventType::SYNC_START | EventType::SYNC_COMPLETE`
+    // If you want to capture all events, use `EventType::ALL_EVENTS`.
+    config.event_manager.register_callback(
+        EventType::SYNC_START | EventType::SYNC_COMPLETE,
+        DebugEventCallback {},
+    );
 
     // Create a cancellation token for the pipeline.
     // You can use this token to cancel the pipeline.
@@ -82,7 +119,7 @@ async fn main() {
         }
     }
 
-    println!("Total sync count: {}", total_sync_count);
+    println!("Total sync count: {total_sync_count}");
 
     // If there is an error in the pipeline, you can get the errors.
     if pipeline.has_error() {
