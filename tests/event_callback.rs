@@ -1,22 +1,3 @@
-use async_trait::async_trait;
-use s3sync::types::event_callback::{EventCallback, EventData, EventType};
-
-pub struct TestEventCallback;
-
-#[async_trait]
-impl EventCallback for TestEventCallback {
-    async fn on_event(&mut self, event_data: EventData) {
-        match event_data.event_type {
-            EventType::SYNC_COMPLETE => {
-                println!("Sync complete: {event_data:?}");
-            }
-            _ => {
-                println!("Other events: {event_data:?}");
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 #[cfg(feature = "e2e_test")]
 mod common;
@@ -28,6 +9,8 @@ mod tests {
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
+    use s3sync::types::debug_event_callback::DebugEventCallback;
+    use s3sync::types::event_callback::EventType;
     use s3sync::types::token::create_pipeline_cancellation_token;
     use std::convert::TryFrom;
 
@@ -58,7 +41,7 @@ mod tests {
             let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             config
                 .event_manager
-                .register_callback(EventType::ALL_EVENTS, TestEventCallback {});
+                .register_callback(EventType::ALL_EVENTS, DebugEventCallback {});
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
