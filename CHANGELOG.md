@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Added Multi-Region Access Point support.
+- aws-sdk-s3 = "1.100.0"
 - Updated dependencies.
 
 
