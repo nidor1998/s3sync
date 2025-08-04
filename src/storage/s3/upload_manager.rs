@@ -7,6 +7,7 @@ use aws_sdk_s3::operation::abort_multipart_upload::AbortMultipartUploadOutput;
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
+use aws_sdk_s3::operation::put_object::builders::PutObjectOutputBuilder;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
@@ -35,6 +36,7 @@ use crate::storage::{
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncWarning};
 use crate::types::error::S3syncError;
 use crate::types::event_callback::{EventData, EventType};
+use crate::types::preprocess_callback::{UploadMetadata, is_callback_cancelled};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, SyncStatistics,
@@ -297,78 +299,111 @@ impl UploadManager {
             None
         };
 
-        let create_multipart_upload_output = self
-            .client
-            .create_multipart_upload()
-            .set_request_payer(self.request_payer.clone())
-            .set_storage_class(storage_class)
-            .bucket(bucket)
-            .key(key)
-            .set_metadata(get_object_output_first_chunk.metadata().cloned())
-            .set_tagging(self.tagging.clone())
-            .set_website_redirect_location(if self.config.website_redirect.is_none() {
-                get_object_output_first_chunk
-                    .website_redirect_location()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.website_redirect.clone()
-            })
-            .set_content_type(if self.config.content_type.is_none() {
-                get_object_output_first_chunk
-                    .content_type()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.content_type.clone()
-            })
-            .set_content_encoding(if self.config.content_encoding.is_none() {
-                get_object_output_first_chunk
-                    .content_encoding()
-                    .map(|value| value.to_string())
-            } else {
-                self.config.content_encoding.clone()
-            })
-            .set_cache_control(if self.config.cache_control.is_none() {
+        let mut upload_metadata = UploadMetadata {
+            acl: self.config.canned_acl.clone(),
+            cache_control: if self.config.cache_control.is_none() {
                 get_object_output_first_chunk
                     .cache_control()
                     .map(|value| value.to_string())
             } else {
                 self.config.cache_control.clone()
-            })
-            .set_content_disposition(if self.config.content_disposition.is_none() {
+            },
+            content_disposition: if self.config.content_disposition.is_none() {
                 get_object_output_first_chunk
                     .content_disposition()
                     .map(|value| value.to_string())
             } else {
                 self.config.content_disposition.clone()
-            })
-            .set_content_language(if self.config.content_language.is_none() {
+            },
+            content_encoding: if self.config.content_encoding.is_none() {
+                get_object_output_first_chunk
+                    .content_encoding()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.content_encoding.clone()
+            },
+            content_language: if self.config.content_language.is_none() {
                 get_object_output_first_chunk
                     .content_language()
                     .map(|value| value.to_string())
             } else {
                 self.config.content_language.clone()
-            })
-            .set_expires(if self.config.expires.is_none() {
+            },
+            content_type: if self.config.content_type.is_none() {
+                get_object_output_first_chunk
+                    .content_type()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.content_type.clone()
+            },
+            expires: if self.config.expires.is_none() {
                 get_object_output_first_chunk
                     .expires_string()
                     .map(|expires_string| {
                         DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
                     })
             } else {
-                Some(
-                    DateTime::from_str(
-                        &self.config.expires.unwrap().to_rfc3339(),
-                        DateTimeFormat::DateTimeWithOffset,
-                    )
-                    .unwrap(),
-                )
-            })
+                Some(DateTime::from_str(
+                    &self.config.expires.unwrap().to_rfc3339(),
+                    DateTimeFormat::DateTimeWithOffset,
+                )?)
+            },
+            metadata: if self.config.metadata.is_none() {
+                get_object_output_first_chunk.metadata().cloned()
+            } else {
+                self.config.metadata.clone()
+            },
+            request_payer: self.request_payer.clone(),
+            storage_class: storage_class.clone(),
+            website_redirect_location: if self.config.website_redirect.is_none() {
+                get_object_output_first_chunk
+                    .website_redirect_location()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.website_redirect.clone()
+            },
+            tagging: self.tagging.clone(),
+        };
+
+        let callback_result = self
+            .config
+            .preprocess_manager
+            .execute_preprocessing(key, &get_object_output_first_chunk, &mut upload_metadata)
+            .await;
+        if let Err(e) = callback_result {
+            if is_callback_cancelled(&e) {
+                debug!(
+                    key = key,
+                    "PreprocessCallback execute_preprocessing() cancelled. Skipping upload."
+                );
+                return Ok(PutObjectOutputBuilder::default().build());
+            } else {
+                return Err(e.context("PreprocessCallback before_upload() failed."));
+            }
+        }
+
+        let create_multipart_upload_output = self
+            .client
+            .create_multipart_upload()
+            .set_request_payer(upload_metadata.request_payer)
+            .set_storage_class(upload_metadata.storage_class)
+            .bucket(bucket)
+            .key(key)
+            .set_metadata(upload_metadata.metadata)
+            .set_tagging(upload_metadata.tagging)
+            .set_website_redirect_location(upload_metadata.website_redirect_location)
+            .set_content_type(upload_metadata.content_type)
+            .set_content_encoding(upload_metadata.content_encoding)
+            .set_cache_control(upload_metadata.cache_control)
+            .set_content_disposition(upload_metadata.content_disposition)
+            .set_content_language(upload_metadata.content_language)
+            .set_expires(upload_metadata.expires)
             .set_server_side_encryption(self.config.sse.clone())
             .set_ssekms_key_id(self.config.sse_kms_key_id.clone().id.clone())
             .set_sse_customer_algorithm(self.config.target_sse_c.clone())
             .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
-            .set_acl(self.config.canned_acl.clone())
+            .set_acl(upload_metadata.acl)
             .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
             .set_checksum_type(checksum_type)
             .send()
@@ -1393,6 +1428,87 @@ impl UploadManager {
             Some(self.config.storage_class.as_ref().unwrap().clone())
         };
 
+        let mut upload_metadata = UploadMetadata {
+            acl: self.config.canned_acl.clone(),
+            cache_control: if self.config.cache_control.is_none() {
+                get_object_output
+                    .cache_control()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.cache_control.clone()
+            },
+            content_disposition: if self.config.content_disposition.is_none() {
+                get_object_output
+                    .content_disposition()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.content_disposition.clone()
+            },
+            content_encoding: if self.config.content_encoding.is_none() {
+                get_object_output
+                    .content_encoding()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.content_encoding.clone()
+            },
+            content_language: if self.config.content_language.is_none() {
+                get_object_output
+                    .content_language()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.content_language.clone()
+            },
+            content_type: if self.config.content_type.is_none() {
+                get_object_output
+                    .content_type()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.content_type.clone()
+            },
+            expires: if self.config.expires.is_none() {
+                get_object_output.expires_string().map(|expires_string| {
+                    DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
+                })
+            } else {
+                Some(DateTime::from_str(
+                    &self.config.expires.unwrap().to_rfc3339(),
+                    DateTimeFormat::DateTimeWithOffset,
+                )?)
+            },
+            metadata: if self.config.metadata.is_none() {
+                get_object_output.metadata().cloned()
+            } else {
+                self.config.metadata.clone()
+            },
+            request_payer: self.request_payer.clone(),
+            storage_class: storage_class.clone(),
+            website_redirect_location: if self.config.website_redirect.is_none() {
+                get_object_output
+                    .website_redirect_location()
+                    .map(|value| value.to_string())
+            } else {
+                self.config.website_redirect.clone()
+            },
+            tagging: self.tagging.clone(),
+        };
+
+        let callback_result = self
+            .config
+            .preprocess_manager
+            .execute_preprocessing(key, &get_object_output, &mut upload_metadata)
+            .await;
+        if let Err(e) = callback_result {
+            if is_callback_cancelled(&e) {
+                debug!(
+                    key = key,
+                    "PreprocessCallback execute_preprocessing() cancelled. Skipping upload."
+                );
+                return Ok(PutObjectOutputBuilder::default().build());
+            } else {
+                return Err(e.context("PreprocessCallback before_upload() failed."));
+            }
+        }
+
         let put_object_output = if self.config.server_side_copy {
             let copy_source = self
                 .source
@@ -1401,66 +1517,21 @@ impl UploadManager {
                 .client
                 .copy_object()
                 .copy_source(copy_source)
-                .set_request_payer(self.request_payer.clone())
-                .set_storage_class(storage_class)
+                .set_request_payer(upload_metadata.request_payer)
+                .set_storage_class(upload_metadata.storage_class)
                 .bucket(bucket)
                 .key(key)
                 .metadata_directive(MetadataDirective::Replace)
                 .tagging_directive(TaggingDirective::Replace)
-                .set_metadata(get_object_output.metadata().cloned())
-                .set_tagging(self.tagging.clone())
-                .set_website_redirect_location(if self.config.website_redirect.is_none() {
-                    get_object_output
-                        .website_redirect_location()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.website_redirect.clone()
-                })
-                .set_content_type(if self.config.content_type.is_none() {
-                    get_object_output
-                        .content_type()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_type.clone()
-                })
-                .set_content_encoding(if self.config.content_encoding.is_none() {
-                    get_object_output
-                        .content_encoding()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_encoding.clone()
-                })
-                .set_cache_control(if self.config.cache_control.is_none() {
-                    get_object_output
-                        .cache_control()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.cache_control.clone()
-                })
-                .set_content_disposition(if self.config.content_disposition.is_none() {
-                    get_object_output
-                        .content_disposition()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_disposition.clone()
-                })
-                .set_content_language(if self.config.content_language.is_none() {
-                    get_object_output
-                        .content_language()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_language.clone()
-                })
-                .set_expires(if self.config.expires.is_none() {
-                    get_object_output.expires_string().map(|expires_string| {
-                        DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
-                    })
-                } else {
-                    Some(DateTime::from_str(
-                        &self.config.expires.unwrap().to_rfc3339(),
-                        DateTimeFormat::DateTimeWithOffset,
-                    )?)
-                })
+                .set_metadata(upload_metadata.metadata)
+                .set_tagging(upload_metadata.tagging)
+                .set_website_redirect_location(upload_metadata.website_redirect_location)
+                .set_content_type(upload_metadata.content_type)
+                .set_content_encoding(upload_metadata.content_encoding)
+                .set_cache_control(upload_metadata.cache_control)
+                .set_content_disposition(upload_metadata.content_disposition)
+                .set_content_language(upload_metadata.content_language)
+                .set_expires(upload_metadata.expires)
                 .set_server_side_encryption(self.config.sse.clone())
                 .set_ssekms_key_id(self.config.sse_kms_key_id.clone().id.clone())
                 .set_sse_customer_algorithm(self.config.target_sse_c.clone())
@@ -1469,7 +1540,7 @@ impl UploadManager {
                 .set_copy_source_sse_customer_algorithm(self.config.source_sse_c.clone())
                 .set_copy_source_sse_customer_key(self.config.source_sse_c_key.clone().key.clone())
                 .set_copy_source_sse_customer_key_md5(self.config.source_sse_c_key_md5.clone())
-                .set_acl(self.config.canned_acl.clone())
+                .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .send()
                 .await?;
@@ -1481,73 +1552,28 @@ impl UploadManager {
             let builder = self
                 .client
                 .put_object()
-                .set_request_payer(self.request_payer.clone())
-                .set_storage_class(storage_class.clone())
+                .set_request_payer(upload_metadata.request_payer)
+                .set_storage_class(upload_metadata.storage_class)
                 .bucket(bucket)
                 .key(key)
                 .content_length(self.source_total_size as i64)
                 .body(buffer_stream)
-                .set_metadata(get_object_output.metadata().cloned())
-                .set_tagging(self.tagging.clone())
-                .set_website_redirect_location(if self.config.website_redirect.is_none() {
-                    get_object_output
-                        .website_redirect_location()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.website_redirect.clone()
-                })
+                .set_metadata(upload_metadata.metadata)
+                .set_tagging(upload_metadata.tagging)
+                .set_website_redirect_location(upload_metadata.website_redirect_location)
                 .set_content_md5(md5_digest_base64)
-                .set_content_type(if self.config.content_type.is_none() {
-                    get_object_output
-                        .content_type()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_type.clone()
-                })
-                .set_content_encoding(if self.config.content_encoding.is_none() {
-                    get_object_output
-                        .content_encoding()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_encoding.clone()
-                })
-                .set_cache_control(if self.config.cache_control.is_none() {
-                    get_object_output
-                        .cache_control()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.cache_control.clone()
-                })
-                .set_content_disposition(if self.config.content_disposition.is_none() {
-                    get_object_output
-                        .content_disposition()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_disposition.clone()
-                })
-                .set_content_language(if self.config.content_language.is_none() {
-                    get_object_output
-                        .content_language()
-                        .map(|value| value.to_string())
-                } else {
-                    self.config.content_language.clone()
-                })
-                .set_expires(if self.config.expires.is_none() {
-                    get_object_output.expires_string().map(|expires_string| {
-                        DateTime::from_str(expires_string, DateTimeFormat::HttpDate).unwrap()
-                    })
-                } else {
-                    Some(DateTime::from_str(
-                        &self.config.expires.unwrap().to_rfc3339(),
-                        DateTimeFormat::DateTimeWithOffset,
-                    )?)
-                })
+                .set_content_type(upload_metadata.content_type)
+                .set_content_encoding(upload_metadata.content_encoding)
+                .set_cache_control(upload_metadata.cache_control)
+                .set_content_disposition(upload_metadata.content_disposition)
+                .set_content_language(upload_metadata.content_language)
+                .set_expires(upload_metadata.expires)
                 .set_server_side_encryption(self.config.sse.clone())
                 .set_ssekms_key_id(self.config.sse_kms_key_id.clone().id.clone())
                 .set_sse_customer_algorithm(self.config.target_sse_c.clone())
                 .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
                 .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
-                .set_acl(self.config.canned_acl.clone())
+                .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(
                     self.config.additional_checksum_algorithm.as_ref().cloned(),
                 );

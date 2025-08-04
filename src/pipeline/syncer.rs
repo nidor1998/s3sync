@@ -484,6 +484,7 @@ impl ObjectSyncer {
             return Ok(());
         }
 
+        let mut is_callback_cancelled = false;
         match get_object_output {
             Ok(get_object_output) => {
                 if range.is_some() {
@@ -654,17 +655,32 @@ impl ObjectSyncer {
                 if let Err(e) = put_object_output {
                     return self.handle_put_object_error(key, e).await;
                 }
+
+                // If preprocess_callback is registered and preprocess was cancelled, e_tag will be None.
+                if self.base.config.preprocess_manager.is_callback_registered()
+                    && put_object_output.as_ref().unwrap().e_tag.is_none()
+                {
+                    is_callback_cancelled = true;
+                }
             }
             Err(e) => {
                 return Err(e);
             }
         }
 
-        self.base
-            .send_stats(SyncComplete {
-                key: key.to_string(),
-            })
-            .await;
+        if !is_callback_cancelled {
+            self.base
+                .send_stats(SyncComplete {
+                    key: key.to_string(),
+                })
+                .await;
+        } else {
+            self.base
+                .send_stats(SyncSkip {
+                    key: key.to_string(),
+                })
+                .await;
+        }
 
         self.base.send(object).await?;
         Ok(())

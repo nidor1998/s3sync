@@ -852,14 +852,19 @@ impl StorageTrait for S3Storage {
             .upload(&self.bucket, &target_key, get_object_output_first_chunk)
             .await?;
 
-        info!(
-            key = key,
-            source_version_id = version_id,
-            source_last_modified = source_last_modified,
-            target_key = target_key,
-            size = source_size,
-            "sync completed.",
-        );
+        // If preprocess_callback is registered and preprocess was cancelled, e_tag will be None.
+        if self.config.preprocess_manager.is_callback_registered()
+            && put_object_output.e_tag.is_some()
+        {
+            info!(
+                key = key,
+                source_version_id = version_id,
+                source_last_modified = source_last_modified,
+                target_key = target_key,
+                size = source_size,
+                "sync completed.",
+            );
+        }
 
         Ok(put_object_output)
     }
