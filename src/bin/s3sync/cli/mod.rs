@@ -1,12 +1,12 @@
 use anyhow::{Result, anyhow};
-use std::sync::MutexGuard;
-use tokio::time::Instant;
-use tracing::{error, info, trace};
-
 use s3sync::Config;
+use s3sync::callback::user_defined_preprocess_callback::UserDefinedPreprocessCallback;
 use s3sync::pipeline::Pipeline;
 use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::{SYNC_REPORT_SUMMERY_NAME, SyncStatsReport};
+use std::sync::MutexGuard;
+use tokio::time::Instant;
+use tracing::{error, info, trace};
 
 mod ctrl_c_handler;
 mod indicator;
@@ -20,12 +20,22 @@ const EXIT_CODE_ERROR: i32 = 1;
 const EXIT_CODE_INVALID_ARGS: i32 = 2;
 const EXIT_CODE_WARNING: i32 = 3;
 
-pub async fn run(config: Config) -> Result<()> {
+pub async fn run(mut config: Config) -> Result<()> {
     #[allow(unused_assignments)]
     let mut has_warning = false;
 
     {
         let cancellation_token = create_pipeline_cancellation_token();
+
+        // The user-defined preprocess callback is disabled by default.
+        // But you can modify the `UserDefinedPreprocessCallback` to enable it.
+        // User-defined preprocess callback allows us to modify the object attributes dynamically before uploading to S3.
+        let user_defined_preprocess_callback = UserDefinedPreprocessCallback::new();
+        if user_defined_preprocess_callback.is_enabled() {
+            config
+                .preprocess_manager
+                .register_callback(user_defined_preprocess_callback);
+        }
 
         ctrl_c_handler::spawn_ctrl_c_handler(cancellation_token.clone());
 

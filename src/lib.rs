@@ -158,6 +158,7 @@ see [s3sync homepage](https://github.com/nidor1998/s3sync).
 pub use config::Config;
 pub use config::args::CLIArgs;
 
+pub mod callback;
 pub mod config;
 pub mod pipeline;
 pub mod storage;
