@@ -69,6 +69,10 @@ pub const LARGE_FILE_S3_ETAG: &str = "\"9be3303e9a8d67a0f1e609fb7a29030a-4\"";
 pub const TEST_FILE_SIZE_8MIB: usize = 8 * 1024 * 1024;
 pub const TEST_8MIB_FILE_KEY: &str = "8mib_file";
 
+pub const LARGE_FILE_DIR_FOR_PREPROCESS_TEST: &str = "./playground/preprocess_test/";
+const LARGE_FILE_PATH_1_FOR_PREPROCESS_TEST: &str = "./playground/preprocess_test/data1";
+const LARGE_FILE_PATH_2_FOR_PREPROCESS_TEST: &str = "./playground/preprocess_test/data2";
+
 pub const TEST_RANDOM_DATA_FILE_KEY: &str = "random_data";
 
 pub const TEST_CONTENT_DISPOSITION: &str = "attachment; filename=\"filename.jpg\"";
@@ -1601,6 +1605,20 @@ impl TestHelper {
 
         let data = vec![0_u8; LARGE_FILE_SIZE];
         std::fs::write(LARGE_FILE_PATH, data.as_slice()).unwrap();
+    }
+
+    pub fn create_large_file_for_preprocess_test() {
+        if Self::is_file_exist(LARGE_FILE_PATH_1_FOR_PREPROCESS_TEST)
+            && Self::is_file_exist(LARGE_FILE_PATH_2_FOR_PREPROCESS_TEST)
+        {
+            return;
+        }
+
+        std::fs::create_dir_all(LARGE_FILE_DIR_FOR_PREPROCESS_TEST).unwrap();
+
+        let data = vec![0_u8; LARGE_FILE_SIZE];
+        std::fs::write(LARGE_FILE_PATH_1_FOR_PREPROCESS_TEST, data.as_slice()).unwrap();
+        std::fs::write(LARGE_FILE_PATH_2_FOR_PREPROCESS_TEST, data.as_slice()).unwrap();
     }
 
     pub fn create_case3_large_file() {

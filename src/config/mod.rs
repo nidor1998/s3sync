@@ -1,6 +1,7 @@
 use crate::types;
 use crate::types::event_callback::EventType;
 use crate::types::event_manager::EventManager;
+use crate::types::preprocess_manager::PreprocessManager;
 use crate::types::{ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, RequestPayer, ServerSideEncryption,
@@ -80,6 +81,7 @@ pub struct Config {
     pub report_metadata_sync_status: bool,
     pub report_tagging_sync_status: bool,
     pub event_manager: EventManager,
+    pub preprocess_manager: PreprocessManager,
 }
 
 impl Config {

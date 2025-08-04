@@ -8,6 +8,7 @@ use crate::config::{
     TransferConfig,
 };
 use crate::types::event_manager::EventManager;
+use crate::types::preprocess_manager::PreprocessManager;
 use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
 };
@@ -1833,6 +1834,7 @@ impl TryFrom<CLIArgs> for Config {
             report_metadata_sync_status: value.report_metadata_sync_status,
             report_tagging_sync_status: value.report_tagging_sync_status,
             event_manager: EventManager::new(),
+            preprocess_manager: PreprocessManager::new(),
         })
     }
 }
