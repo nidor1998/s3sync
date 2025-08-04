@@ -399,6 +399,12 @@ impl ObjectSyncer {
         event_data.source_version_id = object.version_id().map(|version_id| version_id.to_string());
 
         if object.is_delete_marker() {
+            if !self.base.config.enable_versioning {
+                panic!(
+                    "delete operation is not allowed to be used without versioning. It is a bug in the code."
+                );
+            }
+
             self.delete_object(key).await?;
 
             self.base

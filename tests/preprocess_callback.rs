@@ -9,7 +9,6 @@ mod tests {
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
-    use s3sync::types::debug_preprocess_callback::DebugPreprocessCallback;
     use s3sync::types::token::create_pipeline_cancellation_token;
     use std::convert::TryFrom;
 
