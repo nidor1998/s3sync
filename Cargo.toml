@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.29.0"
+version = "1.30.0"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, very fast, and powerful synchronization tool for S3."

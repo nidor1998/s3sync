@@ -16,7 +16,7 @@ pub struct UserDefinedPreprocessCallback {
 impl UserDefinedPreprocessCallback {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        // If you need to enable the callback, set `enable` to `true`
+        // Todo: If you need to enable the callback, set `enable` to `true`
         Self { enable: false }
     }
 
@@ -26,15 +26,20 @@ impl UserDefinedPreprocessCallback {
 }
 
 #[async_trait]
+#[cfg(not(tarpaulin_include))]
 impl PreprocessCallback for UserDefinedPreprocessCallback {
+    // If you want to implement a custom preprocess callback, you can do so by modifying this function.
     // The callbacks are called serially, and the callback function MUST return immediately.
     // If a callback function takes a long time to execute, it may block a whole pipeline.
+    #[cfg(not(tarpaulin_include))]
     async fn preprocess_before_upload(
         &mut self,
         _key: &str,                       // The key of the object being uploaded
         _source_object: &GetObjectOutput, // The source object being uploaded(read only)
         _metadata: &mut UploadMetadata,   // The metadata for the upload, which can be modified
     ) -> Result<()> {
+        // Todo: Implement your custom preprocessing logic here.
+
         // If we want to cancel the upload, return an error with PreprocessError::Cancelled
         Err(anyhow::Error::from(PreprocessError::Cancelled))
 

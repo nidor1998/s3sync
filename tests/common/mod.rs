@@ -69,7 +69,7 @@ pub const LARGE_FILE_S3_ETAG: &str = "\"9be3303e9a8d67a0f1e609fb7a29030a-4\"";
 pub const TEST_FILE_SIZE_8MIB: usize = 8 * 1024 * 1024;
 pub const TEST_8MIB_FILE_KEY: &str = "8mib_file";
 
-pub const LARGE_FILE_DIR_FOR_PREPROCESS_TEST: &str = "./playground/preprocess_test/";
+const LARGE_FILE_DIR_FOR_PREPROCESS_TEST: &str = "./playground/preprocess_test/";
 const LARGE_FILE_PATH_1_FOR_PREPROCESS_TEST: &str = "./playground/preprocess_test/data1";
 const LARGE_FILE_PATH_2_FOR_PREPROCESS_TEST: &str = "./playground/preprocess_test/data2";
 

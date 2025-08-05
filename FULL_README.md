@@ -272,10 +272,15 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - User-defined preprocessing  
   If you are familiar with Rust, you can use `UserDefinedPreprocessCallback` to dynamically modify the object attributes(e.g. metadata, tagging) before transferring it to S3.  
-  Thanks to Rust's clear compiler error messages, even software engineers unfamiliar with the language can implement it easily.  
+  Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
   To use `UserDefinedPreprocessCallback`, you need to implement the `PreprocessCallback` trait and rebuild the s3sync binary.  
   See [UserDefinedPreprocessCallback source code](https://github.com/nidor1998/s3sync/tree/main/src/callback/user_defined_preprocess_callback.rs) for more information.
 
+- User-defined event callback  
+  If you are familiar with Rust, you can use `UserDefinedEventCallback` to implement custom event handling logic, such as logging or monitoring and custom actions before and after synchronization.  
+  Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
+  To use `UserDefinedEventCallback`, you need to implement the `EventCallback` trait and rebuild the s3sync binary.  
+  See [UserDefinedEventCallback source code](https://github.com/nidor1998/s3sync/tree/main/src/callback/user_defined_event_callback.rs) for more information.
 
 
 ## Requirements
