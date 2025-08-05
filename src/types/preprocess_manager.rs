@@ -67,6 +67,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_preprocess_manager() {
+        // skipcq: RS-W1079
         let preprocess_manager = PreprocessManager::new();
 
         assert!(!preprocess_manager.is_callback_registered());
