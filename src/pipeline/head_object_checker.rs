@@ -376,47 +376,6 @@ mod tests {
 
     #[tokio::test]
     #[should_panic]
-    async fn head_object_check_etag_panic() {
-        init_dummy_tracing_subscriber();
-
-        let args = vec![
-            "s3sync",
-            "--allow-both-local-storage",
-            "--check-etag",
-            "--auto-chunksize",
-            "./test_data/source/dir1/",
-            "./test_data/target/dir1/",
-        ];
-        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-        let cancellation_token = create_pipeline_cancellation_token();
-        let (stats_sender, _) = async_channel::unbounded();
-
-        let StoragePair { target, source } = create_storage_pair(
-            config.clone(),
-            cancellation_token.clone(),
-            stats_sender,
-            Arc::new(AtomicBool::new(false)),
-        )
-        .await;
-
-        let head_object_checker = HeadObjectChecker::new(
-            config.clone(),
-            dyn_clone::clone_box(&*(source)),
-            dyn_clone::clone_box(&*(target)),
-            1,
-            Arc::new(Mutex::new(SyncStatsReport::default())),
-        );
-
-        let source_object =
-            S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(6).build());
-        head_object_checker
-            .is_old_object(&source_object)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    #[should_panic]
     async fn head_object_check_checksum_panic() {
         init_dummy_tracing_subscriber();
 

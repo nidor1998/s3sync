@@ -6,6 +6,7 @@ mod common;
 #[cfg(feature = "e2e_test")]
 mod tests {
     use common::*;
+    use s3sync::callback::debug_preprocess_callback::DebugPreprocessCallback;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;

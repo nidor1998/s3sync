@@ -52,3 +52,16 @@ impl fmt::Debug for EventManager {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn create_event_manager() {
+        let event_manager = EventManager::new();
+
+        assert!(event_manager.event_callback.is_none());
+        println!("{:?}", event_manager);
+    }
+}

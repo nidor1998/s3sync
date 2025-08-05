@@ -270,6 +270,13 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Multi-platform support  
   All features are supported on supported platforms.
 
+- User-defined preprocessing  
+  If you are familiar with Rust, you can use `UserDefinedPreprocessCallback` to dynamically modify the object attributes(e.g. metadata, tagging) before transferring it to S3.  
+  Thanks to Rust's clear compiler error messages, even software engineers unfamiliar with the language can implement it easily.  
+  To use `UserDefinedPreprocessCallback`, you need to implement the `PreprocessCallback` trait and rebuild the s3sync binary.  
+  See [UserDefinedPreprocessCallback source code](https://github.com/nidor1998/s3sync/tree/main/src/callback/user_defined_preprocess_callback.rs) for more information.
+
+
 
 ## Requirements
 - x86_64 Linux (kernel 3.2 or later, glibc 2.17 or later)

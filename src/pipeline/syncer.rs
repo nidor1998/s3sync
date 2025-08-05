@@ -681,6 +681,16 @@ impl ObjectSyncer {
                 })
                 .await;
         } else {
+            let mut event_data = EventData::new(EventType::SYNC_CANCEL);
+            event_data.key = Some(object.key().to_string());
+            event_data.source_version_id =
+                object.version_id().map(|version_id| version_id.to_string());
+            self.base
+                .config
+                .event_manager
+                .trigger_event(event_data)
+                .await;
+
             self.base
                 .send_stats(SyncSkip {
                     key: key.to_string(),
@@ -1301,7 +1311,7 @@ impl ObjectSyncer {
             return true;
         }
 
-        if metadata.is_none() {
+        if metadata.is_none() || metadata.as_ref().unwrap().is_empty() {
             debug!(
                 name = INCLUDE_METADATA_REGEX_FILTER_NAME,
                 worker_index = self.worker_index,
@@ -1362,7 +1372,7 @@ impl ObjectSyncer {
             return true;
         }
 
-        if metadata.is_none() {
+        if metadata.is_none() || metadata.as_ref().unwrap().is_empty() {
             debug!(
                 name = EXCLUDE_METADATA_REGEX_FILTER_NAME,
                 worker_index = self.worker_index,
@@ -1946,19 +1956,12 @@ impl ObjectSyncer {
             return Err(e);
         }
 
-        let target_tagging;
-        let target_get_object_tagging_output;
-        if target_get_object_tagging_output_result.is_ok() {
-            // skipcq: RS-W1070
-            target_get_object_tagging_output =
-                target_get_object_tagging_output_result.unwrap().clone();
-            target_tagging = Some(target_get_object_tagging_output.tag_set());
-        } else {
-            target_tagging = None
-        }
+        let target_get_object_tagging_output =
+            target_get_object_tagging_output_result.unwrap().clone();
+        let target_tagging = target_get_object_tagging_output.tag_set();
 
         let source_tagging_string = format_tags(source_tagging.unwrap_or_default());
-        let target_tagging_string = format_tags(target_tagging.unwrap_or_default());
+        let target_tagging_string = format_tags(target_tagging);
 
         if source_tagging_string == target_tagging_string {
             info!(

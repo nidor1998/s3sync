@@ -170,7 +170,7 @@ mod tests {
             "/target-dir",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-        assert!(!is_progress_indicator_needed(&config))
+        assert!(!is_show_result_needed(&config))
     }
 
     fn init_dummy_tracing_subscriber() {
