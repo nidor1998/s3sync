@@ -5,7 +5,7 @@ use aws_sdk_s3::types::ServerSideEncryption;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use std::sync::{Arc, Mutex};
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::Config;
 use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
@@ -50,7 +50,8 @@ impl DiffDetectionStrategy for ETagDiffDetector {
                 .is_target_local_e_tag_different_from_source_s3(key, source_object)
                 .await?)
         } else {
-            panic!("source and target are both local storage.")
+            error!("Both source and target are local storage. This is not supported.");
+            Ok(false)
         }
     }
 }

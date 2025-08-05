@@ -60,3 +60,16 @@ impl fmt::Debug for PreprocessManager {
             .finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn create_preprocess_manager() {
+        let preprocess_manager = PreprocessManager::new();
+
+        assert!(!preprocess_manager.is_callback_registered());
+        println!("{:?}", preprocess_manager);
+    }
+}

@@ -4,6 +4,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
 
+// Uncomment the following line if you need to use `HashMap` for user-defined metadata.
+// use std::collections::HashMap;
+
 // This struct represents a user-defined preprocessed callback.
 // It can be used to implement custom preprocessing logic before uploading objects to S3.
 pub struct UserDefinedPreprocessCallback {
@@ -34,6 +37,19 @@ impl PreprocessCallback for UserDefinedPreprocessCallback {
     ) -> Result<()> {
         // If we want to cancel the upload, return an error with PreprocessError::Cancelled
         Err(anyhow::Error::from(PreprocessError::Cancelled))
+
+        // The following code is an example of how to modify the user-defined metadata before uploading based on the source object.
+
+        /*
+        let content_length = _source_object.content_length.unwrap().to_string();
+        if let Some(user_defined_metadata) = _metadata.metadata.as_mut() {
+            user_defined_metadata.insert("mycontent-length".to_string(), content_length);
+        } else {
+            let mut user_defined_metadata = HashMap::new();
+            user_defined_metadata.insert("mycontent-length".to_string(), content_length);
+            _metadata.metadata = Some(user_defined_metadata);
+        }
+        */
 
         // Ok(())
     }

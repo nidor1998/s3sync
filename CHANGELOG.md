@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Support a preprocess callback before uploading to S3 within the library
-  We can use this to modify the object attributes dynamically before uploading.  
+- Support a preprocess callback before uploading to S3 within the library  
+  We can use this to modify the object attributes(e.g. metadata, tagging) dynamically before uploading to s3.  
   See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Updated dependencies.
 

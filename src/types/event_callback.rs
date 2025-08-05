@@ -31,6 +31,9 @@ bitflags! {
         // If an error occurs during the pipeline, this event is triggered and the pipeline is stopped
         const PIPELINE_ERROR = 1u64 << 11;
 
+        // If a syncing object is cancelled by preprocess callback, this event is triggered
+        const SYNC_CANCEL = 1u64 << 12;
+
         // This is a special event mask to indicate that all events should be captured
         const ALL_EVENTS  = !0;
     }

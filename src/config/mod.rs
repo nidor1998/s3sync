@@ -1,5 +1,3 @@
-use crate::types;
-use crate::types::event_callback::EventType;
 use crate::types::event_manager::EventManager;
 use crate::types::preprocess_manager::PreprocessManager;
 use crate::types::{ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath};
@@ -87,16 +85,6 @@ pub struct Config {
 impl Config {
     pub fn is_sha1_digest_listing_required(&self) -> bool {
         is_sha1_digest_listing_required(self.sync_with_delete)
-    }
-
-    pub fn register_event_callback<
-        T: 'static + Send + Sync + types::event_callback::EventCallback,
-    >(
-        &mut self,
-        events_flag: EventType,
-        callback: T,
-    ) {
-        self.event_manager.register_callback(events_flag, callback);
     }
 }
 

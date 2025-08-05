@@ -113,7 +113,23 @@ mod tests {
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
-        run(config).await.unwrap();
+        let _ = run(config).await;
+    }
+
+    #[tokio::test]
+    async fn run_pipeline_with_report() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--report-sync-status",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let _ = run(config).await;
     }
 
     #[tokio::test]
@@ -147,7 +163,7 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("dummy=trace")
+            .with_env_filter("s3sync=trace")
             .try_init();
     }
 }
