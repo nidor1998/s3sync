@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.0] - 2025-08-06
+
+### Changed
+
+- Support user-defined event callback within s3sync CLI  
+  If you are familiar with Rust, you can use `UserDefinedEventCallback` to implement custom event handling logic, such as logging or monitoring and custom actions before and after synchronization.  
+  Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
+  To use `UserDefinedEventCallback`, you need to implement the `EventCallback` trait and rebuild the s3sync binary.
+
+
 ## [1.29.0] - 2025-08-04
 
 ### Changed

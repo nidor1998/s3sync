@@ -1,7 +1,9 @@
 use anyhow::{Result, anyhow};
 use s3sync::Config;
+use s3sync::callback::user_defined_event_callback::UserDefinedEventCallback;
 use s3sync::callback::user_defined_preprocess_callback::UserDefinedPreprocessCallback;
 use s3sync::pipeline::Pipeline;
+use s3sync::types::event_callback::EventType;
 use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::{SYNC_REPORT_SUMMERY_NAME, SyncStatsReport};
 use std::sync::MutexGuard;
@@ -26,6 +28,16 @@ pub async fn run(mut config: Config) -> Result<()> {
 
     {
         let cancellation_token = create_pipeline_cancellation_token();
+
+        // The user-defined event callback is disabled by default.
+        let user_defined_event_callback = UserDefinedEventCallback::new();
+        if user_defined_event_callback.is_enabled() {
+            // By default, the user-defined event callback notifies all events.
+            // You can modify EventType::ALL_EVENTS to filter specific events (e.g., EventType::SYNC_START | EventType::SYNC_COMPLETE)
+            config
+                .event_manager
+                .register_callback(EventType::ALL_EVENTS, user_defined_event_callback);
+        }
 
         // The user-defined preprocess callback is disabled by default.
         // But you can modify the `UserDefinedPreprocessCallback` to enable it.
