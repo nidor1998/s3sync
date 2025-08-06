@@ -69,8 +69,10 @@ mod tests {
     async fn create_preprocess_manager() {
         // skipcq: RS-W1079
         let preprocess_manager = PreprocessManager::new();
-
         assert!(!preprocess_manager.is_callback_registered());
         println!("{:?}", preprocess_manager);
+
+        let preprocess_manager = PreprocessManager::default();
+        assert!(!preprocess_manager.is_callback_registered());
     }
 }

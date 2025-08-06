@@ -61,8 +61,10 @@ mod tests {
     async fn create_event_manager() {
         // skipcq: RS-W1079
         let event_manager = EventManager::new();
-
         assert!(event_manager.event_callback.is_none());
         println!("{:?}", event_manager);
+
+        let event_manager = EventManager::default();
+        assert!(event_manager.event_callback.is_none());
     }
 }
