@@ -890,6 +890,7 @@ impl UploadManager {
 
                     trace!(key = &target_key, "{upload_part_output:?}");
 
+                    #[allow(clippy::unnecessary_unwrap)]
                     if md5_digest.is_some() {
                         let mut locked_multipart_etags = multipart_etags.lock().unwrap();
                         locked_multipart_etags.push(MutipartEtags {
@@ -1250,6 +1251,7 @@ impl UploadManager {
 
                     if md5_digest.is_some() {
                         let mut locked_multipart_etags = multipart_etags.lock().unwrap();
+                        #[allow(clippy::unnecessary_unwrap)]
                         locked_multipart_etags.push(MutipartEtags {
                             digest: md5_digest.as_ref().unwrap().as_slice().to_vec(),
                             part_number,
@@ -1680,6 +1682,7 @@ impl UploadManager {
             self.config.event_manager.trigger_event(event_data).await;
         }
 
+        #[allow(clippy::unnecessary_unwrap)]
         if target_checksum.is_some() && source_checksum.is_some() {
             let target_checksum = target_checksum.unwrap();
             let source_checksum = source_checksum.unwrap();

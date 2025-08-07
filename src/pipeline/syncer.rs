@@ -130,6 +130,7 @@ impl ObjectSyncer {
             return if result.is_ok() {
                 Ok(())
             } else {
+                #[allow(clippy::unnecessary_unwrap)]
                 let e = result.unwrap_err();
                 let error = e.to_string();
 
