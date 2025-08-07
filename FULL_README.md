@@ -389,6 +389,12 @@ s3sync --source-accelerate --target-accelerate s3://bucket-name1/prefix s3://buc
 s3sync /path/to/local s3://arn:aws:s3::000000000000:accesspoint/xxxxxxxxxxxxx/
 ```
 
+### [Amazon S3 access points](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-access-points.html)
+Access Point alias is also supported.
+```bash
+s3sync /path/to/local s3://arn:aws:s3:000000000000:accesspoint/xxxxxxxxxxxxx/
+```
+
 ### Dry run
 ```bash
 s3sync --dry-run s3://bucket-name1/prefix s3://bucket-name2/prefix

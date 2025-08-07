@@ -8,7 +8,8 @@ const INVALID_SCHEME: &str = "scheme must be s3:// .";
 const INVALID_PATH: &str = "path must be a valid URL or a local path.";
 const NO_BUCKET_NAME_SPECIFIED: &str = "bucket name must be specified.";
 const NO_PATH_SPECIFIED: &str = "path must be specified.";
-const MULTI_REGION_ARN_REGEX: &str = r"^s3://arn:aws:s3::.+:accesspoint/.+";
+// S3 access points are also supported
+const MULTI_REGION_ARN_REGEX: &str = r"^s3://arn:aws:s3::?.+:accesspoint/.+";
 
 pub fn check_storage_path(path: &str) -> Result<String, String> {
     if is_multi_region_arn(path) {
@@ -439,6 +440,24 @@ mod tests {
         if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
             assert_eq!(bucket, "arn:aws:s3::1111111:accesspoint/xxxxxx.mrap");
             assert_eq!(prefix, "/prefix/");
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "s3 url not found");
+        }
+
+        let s3_url = "s3://arn:aws:s3:1111111:accesspoint/xyz";
+        if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+            assert_eq!(bucket, "arn:aws:s3:1111111:accesspoint/xyz");
+            assert_eq!(prefix, "");
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "s3 url not found");
+        }
+
+        let s3_url = "s3://arn:aws:s3:1111111:accesspoint/xyz/prefix/";
+        if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+            assert_eq!(bucket, "arn:aws:s3:1111111:accesspoint/xyz");
+            assert_eq!(prefix, "prefix/");
         } else {
             // skipcq: RS-W1021
             assert!(false, "s3 url not found");
