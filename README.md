@@ -131,6 +131,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Incremental transfer  
   There are many ways to transfer objects:
     - Modified time based(default)
+    - Size-based
     - ETag(MD5 or equivalent) based
     - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
 
