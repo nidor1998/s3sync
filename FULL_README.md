@@ -475,6 +475,23 @@ See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_Hea
 
 **Warning: In case of S3 to S3, if the source object is uploaded with a large chunk size, s3sync will consume a lot of memory.**
 
+### Filtering order
+s3sync filters objects in the following order.  
+You can specify multiple filters.
+
+1. `--filter-mtime-before`
+2. `--filter-mtime-after`
+3. `--filter-smaller-size`
+4. `--filter-larger-size`
+5. `--filter-include-regex`
+6. `--filter-exclude-regex`
+7. `--filter-include-content-type-regex`
+8. `--filter-exclude-content-type-regex`
+9. `--filter-include-metadata-regex`
+10. `--filter-exclude-metadata-regex`
+11. `--filter-include-tag-regex`
+12. `--filter-exclude-tag-regex`
+
 ### Incremental transfer
 s3sync transfers only modified objects.It checks `LastModified` timestamp.
 
@@ -769,16 +786,16 @@ Filtering:
       --filter-mtime-after <FILTER_MTIME_AFTER>
           Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
           Example: 2023-02-19T12:00:00Z) [env: FILTER_MTIME_AFTER=]
-      --filter-include-regex <FILTER_INCLUDE_REGEX>
-          Sync only objects that match a given regular expression [env: FILTER_INCLUDE_REGEX=]
-      --filter-exclude-regex <FILTER_EXCLUDE_REGEX>
-          Do not sync objects that match a given regular expression [env: FILTER_EXCLUDE_REGEX=]
       --filter-smaller-size <FILTER_SMALLER_SIZE>
           Sync only objects smaller than given size.
           Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_SMALLER_SIZE=]
       --filter-larger-size <FILTER_LARGER_SIZE>
           Sync only objects larger than OR EQUAL TO given size.
           Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_LARGER_SIZE=]
+      --filter-include-regex <FILTER_INCLUDE_REGEX>
+          Sync only objects that match a given regular expression [env: FILTER_INCLUDE_REGEX=]
+      --filter-exclude-regex <FILTER_EXCLUDE_REGEX>
+          Do not sync objects that match a given regular expression [env: FILTER_EXCLUDE_REGEX=]
       --filter-include-content-type-regex <FILTER_INCLUDE_CONTENT_TYPE_REGEX>
           Sync only objects that have Content-Type matching a given regular expression.
           If the source is local storage, Content-Type is guessed by the file extension,

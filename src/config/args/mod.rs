@@ -319,14 +319,6 @@ Example: 2023-02-19T12:00:00Z)"#
     )]
     filter_mtime_after: Option<DateTime<Utc>>,
 
-    /// Sync only objects that match a given regular expression.
-    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering")]
-    filter_include_regex: Option<String>,
-
-    /// Do not sync objects that match a given regular expression.
-    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering")]
-    filter_exclude_regex: Option<String>,
-
     #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects smaller than given size.
 Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
     filter_smaller_size: Option<String>,
@@ -334,6 +326,14 @@ Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
     #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects larger than OR EQUAL TO given size.
 Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
     filter_larger_size: Option<String>,
+
+    /// Sync only objects that match a given regular expression.
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering")]
+    filter_include_regex: Option<String>,
+
+    /// Do not sync objects that match a given regular expression.
+    #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering")]
+    filter_exclude_regex: Option<String>,
 
     #[arg(long, env, value_parser = crate::config::args::value_parser::regex::parse_regex, help_heading = "Filtering",
     long_help = r#"Sync only objects that have Content-Type matching a given regular expression.
