@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 use s3sync::Config;
 use s3sync::callback::user_defined_event_callback::UserDefinedEventCallback;
+use s3sync::callback::user_defined_filter_callback::UserDefinedFilterCallback;
 use s3sync::callback::user_defined_preprocess_callback::UserDefinedPreprocessCallback;
 use s3sync::pipeline::Pipeline;
 use s3sync::types::event_callback::EventType;
@@ -37,6 +38,17 @@ pub async fn run(mut config: Config) -> Result<()> {
             config
                 .event_manager
                 .register_callback(EventType::ALL_EVENTS, user_defined_event_callback);
+        }
+
+        // The user-defined filter callback is disabled by default.
+        // But you can modify the `UserDefinedFilterCallback` to enable it.
+        // User-defined filter callback allows us to filter objects while listing them in the source.
+        let user_defined_filter_callback = UserDefinedFilterCallback::new();
+        if user_defined_filter_callback.is_enabled() {
+            config
+                .filter_config
+                .filter_manager
+                .register_callback(user_defined_filter_callback);
         }
 
         // The user-defined preprocess callback is disabled by default.

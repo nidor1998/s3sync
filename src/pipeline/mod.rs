@@ -18,6 +18,7 @@ use crate::pipeline::packer_point_in_time::ObjectPointInTimePacker;
 use crate::pipeline::stage::Stage;
 use crate::pipeline::syncer::ObjectSyncer;
 use crate::pipeline::terminator::Terminator;
+use crate::pipeline::user_defined_filter::UserDefinedFilter;
 use crate::storage::{Storage, StoragePair};
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
@@ -38,6 +39,7 @@ mod stage;
 mod storage_factory;
 mod syncer;
 mod terminator;
+mod user_defined_filter;
 mod versioning_info_collector;
 
 pub struct Pipeline {
@@ -439,6 +441,21 @@ impl Pipeline {
             previous_stage_receiver = new_receiver;
         }
 
+        if self
+            .config
+            .filter_config
+            .filter_manager
+            .is_callback_registered()
+        {
+            let (stage, new_receiver) =
+                self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
+
+            self.spawn_user_defined_filter(stage);
+            trace!("UserDefinedFilter has been started.");
+
+            previous_stage_receiver = new_receiver;
+        }
+
         if !self.config.enable_versioning && !self.config.filter_config.remove_modified_filter {
             let (stage, new_receiver) =
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
@@ -460,6 +477,23 @@ impl Pipeline {
 
         tokio::spawn(async move {
             let result = filter.filter().await;
+            match result {
+                Ok(_) => {}
+                Err(e) => {
+                    log_error(has_error, error_list, e, "filter objects failed.");
+                }
+            }
+        });
+    }
+
+    fn spawn_user_defined_filter(&self, stage: Stage) {
+        let has_error = self.has_error.clone();
+        let error_list = self.errors.clone();
+
+        let mut user_defined_filter = UserDefinedFilter::new(stage);
+
+        tokio::spawn(async move {
+            let result = user_defined_filter.filter().await;
             match result {
                 Ok(_) => {}
                 Err(e) => {

@@ -69,6 +69,7 @@ mod tests {
     use std::sync::Mutex;
 
     use super::*;
+    use crate::types::filter_manager::FilterManager;
     use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
     use aws_sdk_s3::types::Object;
     use tracing_subscriber::EnvFilter;
@@ -105,6 +106,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_before(
@@ -147,6 +149,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(!is_before(
@@ -189,6 +192,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(!is_before(

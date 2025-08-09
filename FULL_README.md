@@ -282,6 +282,12 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   To use `UserDefinedEventCallback`, you need to implement the `EventCallback` trait and rebuild the s3sync binary.  
   See [UserDefinedEventCallback source code](https://github.com/nidor1998/s3sync/tree/main/src/callback/user_defined_event_callback.rs) for more information.
 
+- User-defined filter callback  
+  If you are familiar with Rust, you can use `UserDefinedFilterCallback` to implement custom filtering logic.  
+  Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
+  To use `UserDefinedFilterCallback`, you need to implement the `FilterCallback` trait and rebuild the s3sync binary.  
+  See [UserDefinedFilterCallback source code](https://github.com/nidor1998/s3sync/tree/main/src/callback/user_defined_filter_callback.rs) for more information.
+
 
 ## Requirements
 - x86_64 Linux (kernel 3.2 or later, glibc 2.17 or later)
@@ -485,12 +491,15 @@ You can specify multiple filters.
 4. `--filter-larger-size`
 5. `--filter-include-regex`
 6. `--filter-exclude-regex`
-7. `--filter-include-content-type-regex`
-8. `--filter-exclude-content-type-regex`
-9. `--filter-include-metadata-regex`
-10. `--filter-exclude-metadata-regex`
-11. `--filter-include-tag-regex`
-12. `--filter-exclude-tag-regex`
+7. `FilterCallback(UserDefinedFilterCallback)`
+8. `Update check(Check the source object has been modified)`
+9. `--filter-include-content-type-regex`
+10. `--filter-exclude-content-type-regex`
+11. `--filter-include-metadata-regex`
+12. `--filter-exclude-metadata-regex`
+13. `--filter-include-tag-regex`
+14. `--filter-exclude-tag-regex`
+15. `PreprocessCallback(UserDefinedPreprocessCallback)`
 
 ### Incremental transfer
 s3sync transfers only modified objects.It checks `LastModified` timestamp.
