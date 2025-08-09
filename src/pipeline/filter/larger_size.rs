@@ -64,11 +64,11 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
+    use super::*;
+    use crate::types::filter_manager::FilterManager;
     use crate::types::{ObjectEntry, ObjectKey};
     use aws_sdk_s3::types::{DeleteMarkerEntry, Object};
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     #[tokio::test]
     async fn larger() {
@@ -95,6 +95,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: Some(5),
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_larger_or_equal(
@@ -129,6 +130,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: Some(5),
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(!is_larger_or_equal(
@@ -163,6 +165,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: Some(4),
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_larger_or_equal(
@@ -198,6 +201,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: Some(4),
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_larger_or_equal(

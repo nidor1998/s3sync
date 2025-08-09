@@ -68,12 +68,12 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Mutex;
 
+    use super::*;
+    use crate::types::filter_manager::FilterManager;
     use crate::types::{ObjectEntry, ObjectKey};
     use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
     use aws_sdk_s3::types::Object;
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     #[tokio::test]
     async fn after() {
@@ -107,6 +107,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_after_or_equal(
@@ -149,6 +150,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(!is_after_or_equal(
@@ -190,6 +192,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_after_or_equal(

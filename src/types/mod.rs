@@ -18,6 +18,8 @@ pub mod error;
 pub mod event_callback;
 pub mod event_manager;
 
+pub mod filter_callback;
+pub mod filter_manager;
 pub mod preprocess_callback;
 pub mod preprocess_manager;
 pub mod token;

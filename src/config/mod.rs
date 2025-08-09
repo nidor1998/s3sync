@@ -1,4 +1,5 @@
 use crate::types::event_manager::EventManager;
+use crate::types::filter_manager::FilterManager;
 use crate::types::preprocess_manager::PreprocessManager;
 use crate::types::{ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath};
 use aws_sdk_s3::types::{
@@ -173,6 +174,7 @@ pub struct FilterConfig {
     pub exclude_tag_regex: Option<Regex>,
     pub larger_size: Option<u64>,
     pub smaller_size: Option<u64>,
+    pub filter_manager: FilterManager,
 }
 
 #[cfg(test)]

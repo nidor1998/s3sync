@@ -225,13 +225,13 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
+    use super::*;
     use crate::config::FilterConfig;
+    use crate::types::filter_manager::FilterManager;
     use crate::types::{ObjectEntry, S3syncObject};
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     #[tokio::test]
     async fn not_modified_sha1() {
@@ -263,6 +263,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_modified_from_timestamp(
@@ -302,6 +303,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -351,6 +353,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_modified_from_timestamp(
@@ -390,6 +393,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -461,6 +465,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         assert!(is_modified_from_size(
@@ -495,6 +500,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -539,6 +545,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -583,6 +590,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -627,6 +635,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -688,6 +697,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -739,6 +749,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -790,6 +801,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();
@@ -841,6 +853,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let mut key_map = HashMap::new();

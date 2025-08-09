@@ -8,6 +8,7 @@ use crate::config::{
     TransferConfig,
 };
 use crate::types::event_manager::EventManager;
+use crate::types::filter_manager::FilterManager;
 use crate::types::preprocess_manager::PreprocessManager;
 use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
@@ -1817,6 +1818,7 @@ impl TryFrom<CLIArgs> for Config {
                 exclude_tag_regex,
                 larger_size: filter_larger_size,
                 smaller_size: filter_smaller_size,
+                filter_manager: FilterManager::new(),
             },
             max_keys: value.max_keys,
             put_last_modified_metadata: value.put_last_modified_metadata,
