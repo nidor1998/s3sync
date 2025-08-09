@@ -8,15 +8,30 @@ Supports multipart upload, versioning, metadata.
 - Reliable: In-depth end-to-end object integrity check
   s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.
   An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.
-  Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.(with `--auto-chunksize`)
   Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.
-  Note: Amazon S3 Express One Zone does not support ETag as verification. But you can use additional checksum algorithm.
+  s3sync always shows the integrity check result, so you can verify that the synchronization was successful.
 
 - Very fast
   s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.
-  In my environment(`c7a.large`, with 256 workers), Local to S3, about 4,200 objects/sec (small objects 10KiB).
-  s3sync is optimized for synchronizing large amounts(over millions) of objects.
-  Not optimized for transferring small amounts of objects(less than worker-size: default 16) of large size.(Of course, it can be used for this purpose.)
+  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB) and Local to S3 16 objects(6GiB objects) 96.00 GiB, about 280 MiB/sec.
+  Large objects are transferred in parallel using multipart upload (or get-range request for download), so it can transfer large objects very fast.  
+  Note: The default s3sync setting uses `--worker-size 16` and `--max-parallel-uploads 16`. This is a moderate setting for most cases. If you want to improve performance, you can increase `--worker-size` and `--max-parallel-uploads`. But it will increase CPU and memory usage.
+
+- Multiple ways
+  - Local to S3(S3-compatible storage)
+  - S3(S3-compatible storage) to Local
+  - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
+
+- Incremental transfer
+  There are many ways to transfer objects:
+    - Modified time based(default)
+    - Size-based
+    - ETag(MD5 or equivalent) based
+    - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
+
+- Flexible filtering
+  - key, `ContentType`, user-defined metadata, tagging, by regular expression.
+  - size, modified time
 
 For more information, see [s3sync homepage](https://github.com/nidor1998/s3sync)
 
