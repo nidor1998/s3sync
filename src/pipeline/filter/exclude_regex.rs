@@ -63,12 +63,12 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Mutex;
 
+    use super::*;
+    use crate::types::filter_manager::FilterManager;
     use crate::types::{ObjectEntry, ObjectKey};
     use aws_sdk_s3::types::Object;
     use regex::Regex;
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     #[tokio::test]
     async fn is_not_match_true() {
@@ -93,6 +93,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let object = S3syncObject::NotVersioning(Object::builder().key("dir1/aaa.txt").build());
@@ -133,6 +134,7 @@ mod tests {
             exclude_tag_regex: None,
             larger_size: None,
             smaller_size: None,
+            filter_manager: FilterManager::new(),
         };
 
         let object = S3syncObject::NotVersioning(Object::builder().key("aaa.csv").build());
