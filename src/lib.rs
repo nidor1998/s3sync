@@ -51,10 +51,11 @@ use std::collections::HashMap;
 use s3sync::config::Config;
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
-use s3sync::types::SyncStatistics;
 use s3sync::types::event_callback::{EventCallback, EventData, EventType};
+use s3sync::types::filter_callback::FilterCallback;
 use s3sync::types::preprocess_callback::{PreprocessCallback, PreprocessError, UploadMetadata};
 use s3sync::types::token::create_pipeline_cancellation_token;
+use s3sync::types::{S3syncObject, SyncStatistics};
 
 // This struct represents a user-defined event callback.
 // You can use this callback to handle events, such as logging, monitoring, or custom actions.
@@ -80,6 +81,26 @@ impl EventCallback for DebugEventCallback {
                 println!("Other events: {event_data:?}");
             }
         }
+    }
+}
+
+// This struct represents a user-defined filter callback.
+// It can be used to implement custom filtering logic for objects while listing them in the source.
+// While preprocess callback is invoked after the source object data is fetched, this callback is invoked while listing objects.
+// So this callback is preferred to be used for filtering objects based on basic properties like key, size, etc.
+pub struct DebugFilterCallback;
+#[async_trait]
+#[cfg(not(tarpaulin_include))]
+impl FilterCallback for DebugFilterCallback {
+    // The callbacks are called serially, and the callback function MUST return immediately.
+    // If a callback function takes a long time to execute, it may block a whole pipeline.
+    // This callback is invoked while listing objects in the source.
+    // This function should return false if the object should be filtered out (not uploaded)
+    // and true if the object should be uploaded.
+    // If an error occurs, it should be handled gracefully, and the function should return an error, and the pipeline will be cancelled.
+    #[cfg(not(tarpaulin_include))]
+    async fn filter(&mut self, source_object: &S3syncObject) -> anyhow::Result<bool> {
+        Ok(!source_object.key().starts_with("should_be_skipped/"))
     }
 }
 
@@ -137,6 +158,13 @@ async fn main() {
         EventType::SYNC_START | EventType::SYNC_COMPLETE | EventType::SYNC_CANCEL,
         DebugEventCallback {},
     );
+
+    // The user-defined filter callback is disabled by default.
+    // You can register a filter callback to filter objects while listing them in the source.
+    config
+        .filter_config
+        .filter_manager
+        .register_callback(DebugFilterCallback {});
 
     // This is a preprocess manager that manages the preprocess callbacks.(optional)
     // You can register a preprocess callback to dynamically modify the upload metadata before uploading objects to S3.
