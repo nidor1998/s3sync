@@ -774,7 +774,7 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
     #[arg(
         long,
         env,
-        help_heading = "Lua callback support",
+        help_heading = "Lua scripting support",
         value_parser = file_exist::is_file_exist,
         long_help = r#"Path to the Lua script that is executed as preprocess callback"#
     )]
@@ -784,7 +784,7 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
     #[arg(
         long,
         env,
-        help_heading = "Lua callback support",
+        help_heading = "Lua scripting support",
         value_parser = file_exist::is_file_exist,
         long_help = r#"Path to the Lua script that is executed as event callback"#
     )]
@@ -794,18 +794,18 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
     #[arg(
         long,
         env,
-        help_heading = "Lua callback support",
+        help_heading = "Lua scripting support",
         value_parser = file_exist::is_file_exist,
         long_help = r#"Path to the Lua script that is executed as filter callback"#
     )]
     filter_callback_lua_script: Option<String>,
 
     #[cfg(feature = "lua_support")]
-    #[arg(long, env, conflicts_with_all = ["allow_lua_unsafe_vm"], default_value_t = DEFAULT_ALLOW_LUA_OS_LIBRARY, help_heading = "Lua callback support", long_help="Allow Lua OS library functions in the Lua script.")]
+    #[arg(long, env, conflicts_with_all = ["allow_lua_unsafe_vm"], default_value_t = DEFAULT_ALLOW_LUA_OS_LIBRARY, help_heading = "Lua scripting support", long_help="Allow Lua OS library functions in the Lua script.")]
     allow_lua_os_library: bool,
 
     #[cfg(feature = "lua_support")]
-    #[arg(long, env, default_value = DEFAULT_LUA_VM_MEMORY_LIMIT, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Lua callback support",
+    #[arg(long, env, default_value = DEFAULT_LUA_VM_MEMORY_LIMIT, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Lua scripting support",
     long_help=r#"Memory limit for the Lua VM. Allow suffixes: KB, KiB, MB, MiB, GB, GiB.
 Zero means no limit.
 If the memory limit is exceeded, the whole process will be terminated."#)]

@@ -270,19 +270,33 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Multi-platform support  
   All features are supported on supported platforms.
 
-- User-defined preprocessing  
+- Lua scripting support  
+  You can use Lua script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
+  `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
+  Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  
+  For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object attributes(e.g., metadata, tagging) before transferring it to S3.  
+  By default, Lua script run as safe mode, so it cannot use Lua os library functions.   
+  If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
+  See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
+
+  Note: By default, Lua 5.4 is used. If you want to use LuaJIT, you can modify the `Cargo.toml` file and set the `mlua` feature to `luajit`.
+
+- User-defined preprocessing callback  
+  This feature is for advanced users not satisfied with the default Lua scripting.  
   If you are familiar with Rust, you can use `UserDefinedPreprocessCallback` to dynamically modify the object attributes(e.g. metadata, tagging) before transferring it to S3.  
   Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
   To use `UserDefinedPreprocessCallback`, you need to implement the `PreprocessCallback` trait and rebuild the s3sync binary.  
   See [UserDefinedPreprocessCallback source code](https://github.com/nidor1998/s3sync/tree/main/src/callback/user_defined_preprocess_callback.rs) for more information.
 
 - User-defined event callback  
+  This feature is for advanced users not satisfied with the default Lua scripting.  
   If you are familiar with Rust, you can use `UserDefinedEventCallback` to implement custom event handling logic, such as logging or monitoring and custom actions before and after synchronization.  
   Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
   To use `UserDefinedEventCallback`, you need to implement the `EventCallback` trait and rebuild the s3sync binary.  
   See [UserDefinedEventCallback source code](https://github.com/nidor1998/s3sync/tree/main/src/callback/user_defined_event_callback.rs) for more information.
 
 - User-defined filter callback  
+  This feature is for advanced users not satisfied with the default Lua scripting.  
   If you are familiar with Rust, you can use `UserDefinedFilterCallback` to implement custom filtering logic.  
   Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
   To use `UserDefinedFilterCallback`, you need to implement the `FilterCallback` trait and rebuild the s3sync binary.  
@@ -1039,10 +1053,26 @@ Advanced:
           Disable default additional checksum verification in Express One Zone storage class.
             [env: DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM=]
 
+Lua scripting support:
+      --preprocess-callback-lua-script <PREPROCESS_CALLBACK_LUA_SCRIPT>
+          Path to the Lua script that is executed as preprocess callback [env: PREPROCESS_CALLBACK_LUA_SCRIPT=]
+      --event-callback-lua-script <EVENT_CALLBACK_LUA_SCRIPT>
+          Path to the Lua script that is executed as event callback [env: EVENT_CALLBACK_LUA_SCRIPT=]
+      --filter-callback-lua-script <FILTER_CALLBACK_LUA_SCRIPT>
+          Path to the Lua script that is executed as filter callback [env: FILTER_CALLBACK_LUA_SCRIPT=]
+      --allow-lua-os-library
+          Allow Lua OS library functions in the Lua script. [env: ALLOW_LUA_OS_LIBRARY=]
+      --lua-vm-memory-limit <LUA_VM_MEMORY_LIMIT>
+          Memory limit for the Lua VM. Allow suffixes: KB, KiB, MB, MiB, GB, GiB.
+          Zero means no limit.
+          If the memory limit is exceeded, the whole process will be terminated. [env: LUA_VM_MEMORY_LIMIT=] [default: 64MiB]
+
 Dangerous:
-      --delete  Delete objects that exist in the target but not in the source.
-                 [Warning] Since this can cause data loss, test first with the --dry-run option
-                  [env: DELETE=]
+      --allow-lua-unsafe-vm  Allow unsafe Lua VM functions in the Lua script.
+                             It allows the Lua script to load unsafe standard libraries or C modules. [env: ALLOW_LUA_UNSAFE_VM=]
+      --delete               Delete objects that exist in the target but not in the source.
+                              [Warning] Since this can cause data loss, test first with the --dry-run option
+                               [env: DELETE=]
 $
 ```
 
