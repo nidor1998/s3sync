@@ -1,4 +1,7 @@
 use crate::Config;
+use crate::callback::event_manager::EventManager;
+use crate::callback::filter_manager::FilterManager;
+use crate::callback::preprocess_manager::PreprocessManager;
 use crate::config::args::value_parser::{
     canned_acl, checksum_algorithm, human_bytes, metadata, sse, storage_class, storage_path,
     tagging, url,
@@ -7,9 +10,6 @@ use crate::config::{
     CLITimeoutConfig, ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig,
     TransferConfig,
 };
-use crate::types::event_manager::EventManager;
-use crate::types::filter_manager::FilterManager;
-use crate::types::preprocess_manager::PreprocessManager;
 use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
 };
