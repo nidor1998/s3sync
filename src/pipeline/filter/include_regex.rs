@@ -64,7 +64,7 @@ mod tests {
     use std::sync::Mutex;
 
     use super::*;
-    use crate::types::filter_manager::FilterManager;
+    use crate::callback::filter_manager::FilterManager;
     use crate::types::{ObjectEntry, ObjectKey};
     use aws_sdk_s3::types::Object;
     use regex::Regex;

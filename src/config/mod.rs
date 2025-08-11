@@ -1,6 +1,6 @@
-use crate::types::event_manager::EventManager;
-use crate::types::filter_manager::FilterManager;
-use crate::types::preprocess_manager::PreprocessManager;
+use crate::callback::event_manager::EventManager;
+use crate::callback::filter_manager::FilterManager;
+use crate::callback::preprocess_manager::PreprocessManager;
 use crate::types::{ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath};
 use aws_sdk_s3::types::{
     ChecksumAlgorithm, ChecksumMode, ObjectCannedAcl, RequestPayer, ServerSideEncryption,
