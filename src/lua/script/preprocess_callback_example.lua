@@ -2,7 +2,7 @@
 -- The callbacks are called serially, and the callback function MUST return immediately.
 -- If a callback function takes a long time to execute, it may block a whole pipeline.
 function preprocess_callback(source_object, upload_metadata)
-    -- The following code prints the source object properties.
+    -- The following code prints the source object attributes.
     print("source_object.accept_ranges: ", source_object.accept_ranges)
     print("source_object.bucket_key_enabled: ", source_object.bucket_key_enabled)
     print("source_object.cache_control: ", source_object.cache_control)
@@ -56,7 +56,7 @@ function preprocess_callback(source_object, upload_metadata)
     upload_metadata.expires_string = "2029-02-19T12:00:00Z"
     upload_metadata.metadata["my_custom_key"] = "new_value3"
 
-    -- The following code prints the upload metadata properties.
+    -- The following code prints the upload metadata attributes.
     print("upload_metadata.acl:", upload_metadata.acl)
     print("upload_metadata.cache_control:", upload_metadata.cache_control)
     print("upload_metadata.content_disposition:", upload_metadata.content_disposition)

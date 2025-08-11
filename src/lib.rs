@@ -46,7 +46,7 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 **NOTE: s3sync library is assumed to be used like a way that you use s3sync CLI.**
 
-**NOTE: Lua callback support cli arguments are ignored in the library. But you can use Lua scripting callback in the library. see LuaEventCallback/LuaPreprocessCallback/LuaFilterCallback structs.**
+**NOTE: Lua scripting support cli arguments are ignored in the library. But you can use Lua scripting callback in your code. see LuaEventCallback/LuaPreprocessCallback/LuaFilterCallback structs.**
 
 **NOTE: Each type of callback is registered only once.**
 
