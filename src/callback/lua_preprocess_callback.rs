@@ -37,7 +37,6 @@ impl LuaPreprocessCallback {
 }
 
 #[async_trait]
-#[cfg(not(tarpaulin_include))]
 impl PreprocessCallback for LuaPreprocessCallback {
     async fn preprocess_before_upload(
         &mut self,
@@ -60,7 +59,6 @@ impl PreprocessCallback for LuaPreprocessCallback {
 
 impl LuaPreprocessCallback {
     // skipcq: RS-R1000
-    #[cfg(not(tarpaulin_include))]
     async fn preprocess_before_upload_by_lua(
         &mut self,
         key: &str,                            // The key of the object being uploaded
