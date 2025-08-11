@@ -273,8 +273,9 @@ impl S3syncObject {
     pub fn is_latest(&self) -> bool {
         match &self {
             Self::Versioning(object) => object.is_latest().unwrap(),
+            Self::NotVersioning(_) => false,
             Self::DeleteMarker(maker) => maker.is_latest().unwrap(),
-            _ => panic!("doesn't have is_latest."),
+            Self::PackedVersions(_) => false,
         }
     }
 

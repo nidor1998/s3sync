@@ -3,8 +3,8 @@ use crate::callback::event_manager::EventManager;
 use crate::callback::filter_manager::FilterManager;
 use crate::callback::preprocess_manager::PreprocessManager;
 use crate::config::args::value_parser::{
-    canned_acl, checksum_algorithm, human_bytes, metadata, sse, storage_class, storage_path,
-    tagging, url,
+    canned_acl, checksum_algorithm, file_exist, human_bytes, metadata, sse, storage_class,
+    storage_path, tagging, url,
 };
 use crate::config::{
     CLITimeoutConfig, ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig,
@@ -18,6 +18,7 @@ use aws_sdk_s3::types::{
     StorageClass,
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation;
+use cfg_if::cfg_if;
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
@@ -82,6 +83,10 @@ const DEFAULT_REQUEST_PAYER: bool = false;
 const DEFAULT_REPORT_SYNC_STATUS: bool = false;
 const DEFAULT_REPORT_METADATA_SYNC_STATUS: bool = false;
 const DEFAULT_REPORT_TAGGING_SYNC_STATUS: bool = false;
+
+const DEFAULT_ALLOW_LUA_OS_LIBRARY: bool = false;
+const DEFAULT_ALLOW_LUA_UNSAFE_VM: bool = false;
+const DEFAULT_LUA_VM_MEMORY_LIMIT: &str = "64MiB";
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -759,6 +764,51 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
     long_help=r#"Disable default additional checksum verification in Express One Zone storage class.
  "#)]
     disable_express_one_zone_additional_checksum: bool,
+
+    #[cfg(feature = "lua_support")]
+    #[arg(
+        long,
+        env,
+        help_heading = "Lua callback support",
+        value_parser = file_exist::is_file_exist,
+        long_help = r#"Path to the Lua script that is executed as preprocess callback"#
+    )]
+    preprocess_callback_lua_script: Option<String>,
+
+    #[cfg(feature = "lua_support")]
+    #[arg(
+        long,
+        env,
+        help_heading = "Lua callback support",
+        value_parser = file_exist::is_file_exist,
+        long_help = r#"Path to the Lua script that is executed as event callback"#
+    )]
+    event_callback_lua_script: Option<String>,
+
+    #[cfg(feature = "lua_support")]
+    #[arg(
+        long,
+        env,
+        help_heading = "Lua callback support",
+        value_parser = file_exist::is_file_exist,
+        long_help = r#"Path to the Lua script that is executed as filter callback"#
+    )]
+    filter_callback_lua_script: Option<String>,
+
+    #[cfg(feature = "lua_support")]
+    #[arg(long, env, default_value_t = DEFAULT_ALLOW_LUA_OS_LIBRARY, help_heading = "Lua callback support", long_help="Allow Lua OS library functions in the Lua script.")]
+    allow_lua_os_library: bool,
+
+    #[cfg(feature = "lua_support")]
+    #[arg(long, env, default_value = DEFAULT_LUA_VM_MEMORY_LIMIT, value_parser = human_bytes::check_human_bytes, help_heading = "Lua callback support",
+    long_help=r#"Memory limit for the Lua VM. Allow suffixes: MB, MiB, GB, GiB."#)]
+    lua_vm_memory_limit: String,
+
+    #[cfg(feature = "lua_support")]
+    #[arg(long, env, default_value_t = DEFAULT_ALLOW_LUA_UNSAFE_VM, help_heading = "Dangerous",
+    long_help=r#"Allow unsafe Lua VM functions in the Lua script.
+It allows the Lua script to load unsafe standard libraries or C modules."#)]
+    allow_lua_unsafe_vm: bool,
 
     #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_SYNC_WITH_DELETE, help_heading = "Dangerous",
     long_help=r#"Delete objects that exist in the target but not in the source.
@@ -1733,6 +1783,24 @@ impl TryFrom<CLIArgs> for Config {
             }
         }
 
+        cfg_if! {
+            if #[cfg(feature = "lua_support")] {
+                let preprocess_callback_lua_script =  value.preprocess_callback_lua_script.clone();
+                let event_callback_lua_script = value.event_callback_lua_script.clone();
+                let filter_callback_lua_script = value.filter_callback_lua_script.clone();
+                let allow_lua_os_library = value.allow_lua_os_library;
+                let allow_lua_unsafe_vm = value.allow_lua_unsafe_vm;
+                let lua_vm_memory_limit = human_bytes::parse_human_bytes(&value.lua_vm_memory_limit)? as usize;
+            } else {
+                let preprocess_callback_lua_script =  None;
+                let event_callback_lua_script = None;
+                let filter_callback_lua_script = None;
+                let allow_lua_os_library = false;
+                let allow_lua_unsafe_vm = false;
+                let lua_vm_memory_limit = 0;
+            }
+        }
+
         Ok(Config {
             source: storage_path::parse_storage_path(&value.source),
             target: storage_path::parse_storage_path(&value.target),
@@ -1837,6 +1905,12 @@ impl TryFrom<CLIArgs> for Config {
             report_tagging_sync_status: value.report_tagging_sync_status,
             event_manager: EventManager::new(),
             preprocess_manager: PreprocessManager::new(),
+            preprocess_callback_lua_script,
+            event_callback_lua_script,
+            filter_callback_lua_script,
+            allow_lua_os_library,
+            allow_lua_unsafe_vm,
+            lua_vm_memory_limit,
         })
     }
 }

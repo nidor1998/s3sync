@@ -1,5 +1,6 @@
 pub mod canned_acl;
 pub mod checksum_algorithm;
+pub mod file_exist;
 pub mod human_bytes;
 pub mod metadata;
 pub mod regex;

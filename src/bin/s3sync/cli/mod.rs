@@ -1,4 +1,5 @@
 use anyhow::{Result, anyhow};
+use cfg_if::cfg_if;
 use s3sync::Config;
 use s3sync::callback::user_defined_event_callback::UserDefinedEventCallback;
 use s3sync::callback::user_defined_filter_callback::UserDefinedFilterCallback;
@@ -38,6 +39,28 @@ pub async fn run(mut config: Config) -> Result<()> {
             config
                 .event_manager
                 .register_callback(EventType::ALL_EVENTS, user_defined_event_callback);
+        } else {
+            cfg_if! {
+                if #[cfg(feature = "lua_support")] {
+                    #[allow(clippy::collapsible_else_if)]
+                    if let Some(event_callback_lua_script) = config.event_callback_lua_script.as_ref() {
+                        let mut lua_event_callback =
+                            s3sync::callback::lua_event_callback::LuaEventCallback::new(
+                                config.lua_vm_memory_limit,
+                                config.allow_lua_os_library,
+                                config.allow_lua_unsafe_vm
+                            );
+                        if let Err(e) = lua_event_callback
+                            .load_and_compile(event_callback_lua_script.as_str())
+                            .await
+                        {
+                            error!("Failed to load and compile Lua script event callback: {}",e);
+                            return Err(anyhow!("Failed to load and compile Lua script event callback"));
+                        }
+                        config.event_manager.register_callback(EventType::ALL_EVENTS, lua_event_callback);
+                    }
+                }
+            }
         }
 
         // The user-defined filter callback is disabled by default.
@@ -49,6 +72,28 @@ pub async fn run(mut config: Config) -> Result<()> {
                 .filter_config
                 .filter_manager
                 .register_callback(user_defined_filter_callback);
+        } else {
+            cfg_if! {
+                if #[cfg(feature = "lua_support")] {
+                    #[allow(clippy::collapsible_else_if)]
+                    if let Some(filter_callback_lua_script) = config.filter_callback_lua_script.as_ref() {
+                        let mut lua_filter_callback =
+                            s3sync::callback::lua_filter_callback::LuaFilterCallback::new(
+                                config.lua_vm_memory_limit,
+                                config.allow_lua_os_library,
+                                config.allow_lua_unsafe_vm
+                            );
+                        if let Err(e) = lua_filter_callback
+                            .load_and_compile(filter_callback_lua_script.as_str())
+                            .await
+                        {
+                            error!("Failed to load and compile Lua script filter callback: {}",e);
+                            return Err(anyhow!("Failed to load and compile Lua script filer callback"));
+                        }
+                        config.filter_config.filter_manager.register_callback(lua_filter_callback);
+                    }
+                }
+            }
         }
 
         // The user-defined preprocess callback is disabled by default.
@@ -59,6 +104,28 @@ pub async fn run(mut config: Config) -> Result<()> {
             config
                 .preprocess_manager
                 .register_callback(user_defined_preprocess_callback);
+        } else {
+            cfg_if! {
+                if #[cfg(feature = "lua_support")] {
+                    #[allow(clippy::collapsible_else_if)]
+                    if let Some(preprocess_callback_lua_script) = config.preprocess_callback_lua_script.as_ref() {
+                        let mut lua_preprocess_callback =
+                            s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
+                                config.lua_vm_memory_limit,
+                                config.allow_lua_os_library,
+                                config.allow_lua_unsafe_vm
+                            );
+                        if let Err(e) = lua_preprocess_callback
+                            .load_and_compile(preprocess_callback_lua_script.as_str())
+                            .await
+                        {
+                            error!("Failed to load and compile Lua script preprocess callback: {}",e);
+                            return Err(anyhow!("Failed to load and compile Lua script preprocess callback"));
+                        }
+                        config.preprocess_manager.register_callback(lua_preprocess_callback);
+                    }
+                }
+            }
         }
 
         ctrl_c_handler::spawn_ctrl_c_handler(cancellation_token.clone());
