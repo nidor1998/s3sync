@@ -81,17 +81,11 @@ pub struct Config {
     pub report_tagging_sync_status: bool,
     pub event_manager: EventManager,
     pub preprocess_manager: PreprocessManager,
-    #[cfg(feature = "lua_support")]
     pub preprocess_callback_lua_script: Option<String>,
-    #[cfg(feature = "lua_support")]
     pub event_callback_lua_script: Option<String>,
-    #[cfg(feature = "lua_support")]
     pub filter_callback_lua_script: Option<String>,
-    #[cfg(feature = "lua_support")]
     pub allow_lua_os_library: bool,
-    #[cfg(feature = "lua_support")]
     pub allow_lua_unsafe_vm: bool,
-    #[cfg(feature = "lua_support")]
     pub lua_vm_memory_limit: usize,
 }
 

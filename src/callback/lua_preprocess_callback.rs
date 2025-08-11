@@ -59,6 +59,7 @@ impl PreprocessCallback for LuaPreprocessCallback {
 }
 
 impl LuaPreprocessCallback {
+    // skipcq: RS-R1000
     #[cfg(not(tarpaulin_include))]
     async fn preprocess_before_upload_by_lua(
         &mut self,
@@ -234,6 +235,7 @@ impl LuaPreprocessCallback {
             .await?;
 
         let acl: Option<ObjectCannedAcl> =
+            // skipcq: RS-W1006
             match modified_update_metadata.get::<Option<String>>("acl") {
                 Ok(Some(acl_str)) => acl_str
                     .parse::<ObjectCannedAcl>()
@@ -242,6 +244,7 @@ impl LuaPreprocessCallback {
                 _ => None,
             };
         if let Some(acl) = &acl {
+            // skipcq: RS-W1006
             #[allow(clippy::single_match)]
             match acl {
                 #[allow(deprecated)]
@@ -303,6 +306,7 @@ impl LuaPreprocessCallback {
                 _ => None,
             };
         if let Some(request_payer) = &request_payer {
+            // skipcq: RS-W1006
             #[allow(clippy::single_match)]
             match request_payer {
                 #[allow(deprecated)]
@@ -329,6 +333,7 @@ impl LuaPreprocessCallback {
                 _ => None,
             };
         if let Some(storage_class) = &storage_class {
+            // skipcq: RS-W1006
             #[allow(clippy::single_match)]
             match storage_class {
                 #[allow(deprecated)]

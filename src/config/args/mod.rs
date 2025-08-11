@@ -2,6 +2,7 @@ use crate::Config;
 use crate::callback::event_manager::EventManager;
 use crate::callback::filter_manager::FilterManager;
 use crate::callback::preprocess_manager::PreprocessManager;
+#[allow(unused_imports)]
 use crate::config::args::value_parser::{
     canned_acl, checksum_algorithm, file_exist, human_bytes, metadata, sse, storage_class,
     storage_path, tagging, url,
@@ -83,9 +84,13 @@ const DEFAULT_REQUEST_PAYER: bool = false;
 const DEFAULT_REPORT_SYNC_STATUS: bool = false;
 const DEFAULT_REPORT_METADATA_SYNC_STATUS: bool = false;
 const DEFAULT_REPORT_TAGGING_SYNC_STATUS: bool = false;
-
+#[allow(dead_code)]
 const DEFAULT_ALLOW_LUA_OS_LIBRARY: bool = false;
+
+#[allow(dead_code)]
 const DEFAULT_ALLOW_LUA_UNSAFE_VM: bool = false;
+
+#[allow(dead_code)]
 const DEFAULT_LUA_VM_MEMORY_LIMIT: &str = "64MiB";
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
