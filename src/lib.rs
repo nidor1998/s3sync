@@ -174,7 +174,7 @@ async fn main() {
         DebugEventCallback {},
     );
 
-    // The user-defined filter callback is disabled by default.
+    // This is a filter manager that manages the filter callbacks.(optional)
     // You can register a filter callback to filter objects while listing them in the source.
     config
         .filter_config
@@ -249,6 +249,7 @@ pub use config::args::CLIArgs;
 
 pub mod callback;
 pub mod config;
+pub mod lua;
 pub mod pipeline;
 pub mod storage;
 pub mod types;

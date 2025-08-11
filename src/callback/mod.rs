@@ -3,6 +3,12 @@ pub mod debug_filter_callback;
 pub mod debug_preprocess_callback;
 pub mod event_manager;
 pub mod filter_manager;
+#[cfg(feature = "lua_support")]
+pub mod lua_event_callback;
+#[cfg(feature = "lua_support")]
+pub mod lua_filter_callback;
+#[cfg(feature = "lua_support")]
+pub mod lua_preprocess_callback;
 pub mod preprocess_manager;
 pub mod user_defined_event_callback;
 pub mod user_defined_filter_callback;
