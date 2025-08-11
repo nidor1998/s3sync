@@ -491,7 +491,7 @@ You can specify multiple filters.
 4. `--filter-larger-size`
 5. `--filter-include-regex`
 6. `--filter-exclude-regex`
-7. `FilterCallback(UserDefinedFilterCallback)`
+7. `FilterCallback(UserDefinedFilterCallback/LuaFilterCallback)`
 8. `Update check(Check the source object has been modified)`
 9. `--filter-include-content-type-regex`
 10. `--filter-exclude-content-type-regex`
@@ -499,7 +499,9 @@ You can specify multiple filters.
 12. `--filter-exclude-metadata-regex`
 13. `--filter-include-tag-regex`
 14. `--filter-exclude-tag-regex`
-15. `PreprocessCallback(UserDefinedPreprocessCallback)`
+15. `PreprocessCallback(UserDefinedPreprocessCallback/LuaPreprocessCallback)`
+
+It is recommended to filter before `--filter-include-content-type-regex`, because after that, s3sync needs to need to call extra API calls.
 
 ### Incremental transfer
 s3sync transfers only modified objects.It checks `LastModified` timestamp.

@@ -26,11 +26,29 @@ pub fn check_human_bytes(value: &str) -> Result<String, String> {
     Ok(value.to_string())
 }
 
+pub fn check_human_bytes_without_low_limit(value: &str) -> Result<String, String> {
+    let result = Byte::from_str(value).map_err(|e| e.to_string())?;
+
+    if result.as_u128() > MAX_VALUE {
+        return Err(OVER_MAX_VALUE.to_string());
+    }
+
+    Ok(value.to_string())
+}
+
 pub fn parse_human_bytes(value: &str) -> Result<u64, String> {
     check_human_bytes(value)?;
 
     let result = Byte::from_str(value).map_err(|e| e.to_string())?;
     Ok(result.as_u128().try_into().unwrap())
+}
+
+#[allow(dead_code)]
+pub fn parse_human_bytes_without_low_limit(value: &str) -> Result<u64, String> {
+    check_human_bytes_without_low_limit(value)?;
+
+    let result = Byte::from_str(value).map_err(|e| e.to_string())?;
+    Ok(result.as_u64())
 }
 
 pub fn check_human_bytes_without_limit(value: &str) -> Result<String, String> {
@@ -258,6 +276,23 @@ mod tests {
         if let Err(e) = result {
             assert_eq!(e, UNDER_MIN_VALUE);
         }
+    }
+
+    #[test]
+    fn parse_without_min_limit() {
+        init_dummy_tracing_subscriber();
+
+        let result = parse_human_bytes_without_low_limit("0");
+        assert!(result.is_ok());
+        assert_eq!(0, result.unwrap());
+    }
+
+    #[test]
+    fn parse_without_min_limit_error() {
+        init_dummy_tracing_subscriber();
+
+        let result = parse_human_bytes_without_low_limit("6GiB");
+        assert!(result.is_err());
     }
 
     #[test]

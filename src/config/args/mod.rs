@@ -801,16 +801,18 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
     filter_callback_lua_script: Option<String>,
 
     #[cfg(feature = "lua_support")]
-    #[arg(long, env, default_value_t = DEFAULT_ALLOW_LUA_OS_LIBRARY, help_heading = "Lua callback support", long_help="Allow Lua OS library functions in the Lua script.")]
+    #[arg(long, env, conflicts_with_all = ["allow_lua_unsafe_vm"], default_value_t = DEFAULT_ALLOW_LUA_OS_LIBRARY, help_heading = "Lua callback support", long_help="Allow Lua OS library functions in the Lua script.")]
     allow_lua_os_library: bool,
 
     #[cfg(feature = "lua_support")]
-    #[arg(long, env, default_value = DEFAULT_LUA_VM_MEMORY_LIMIT, value_parser = human_bytes::check_human_bytes, help_heading = "Lua callback support",
-    long_help=r#"Memory limit for the Lua VM. Allow suffixes: MB, MiB, GB, GiB."#)]
+    #[arg(long, env, default_value = DEFAULT_LUA_VM_MEMORY_LIMIT, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Lua callback support",
+    long_help=r#"Memory limit for the Lua VM. Allow suffixes: MB, MiB, GB, GiB.
+Zero means no limit.
+If the memory limit is exceeded, the whole process will be terminated."#)]
     lua_vm_memory_limit: String,
 
     #[cfg(feature = "lua_support")]
-    #[arg(long, env, default_value_t = DEFAULT_ALLOW_LUA_UNSAFE_VM, help_heading = "Dangerous",
+    #[arg(long, env, conflicts_with_all = ["allow_lua_os_library"], default_value_t = DEFAULT_ALLOW_LUA_UNSAFE_VM, help_heading = "Dangerous",
     long_help=r#"Allow unsafe Lua VM functions in the Lua script.
 It allows the Lua script to load unsafe standard libraries or C modules."#)]
     allow_lua_unsafe_vm: bool,
@@ -1795,7 +1797,7 @@ impl TryFrom<CLIArgs> for Config {
                 let filter_callback_lua_script = value.filter_callback_lua_script.clone();
                 let allow_lua_os_library = value.allow_lua_os_library;
                 let allow_lua_unsafe_vm = value.allow_lua_unsafe_vm;
-                let lua_vm_memory_limit = human_bytes::parse_human_bytes(&value.lua_vm_memory_limit)? as usize;
+                let lua_vm_memory_limit = human_bytes::parse_human_bytes_without_low_limit(&value.lua_vm_memory_limit)? as usize;
             } else {
                 let preprocess_callback_lua_script =  None;
                 let event_callback_lua_script = None;

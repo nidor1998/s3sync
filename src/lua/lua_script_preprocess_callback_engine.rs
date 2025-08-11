@@ -4,6 +4,9 @@ use anyhow::Result;
 #[cfg(feature = "lua_support")]
 use mlua::{Lua, LuaOptions, StdLib};
 
+#[allow(unused_imports)]
+use tracing::{debug, info};
+
 #[cfg(feature = "lua_support")]
 pub struct LuaScriptCallbackEngine {
     engine: Lua,
@@ -12,18 +15,30 @@ pub struct LuaScriptCallbackEngine {
 #[cfg(feature = "lua_support")]
 impl LuaScriptCallbackEngine {
     pub fn new(memory_limit: usize) -> Self {
+        info!(
+            "Creating Lua engine with all libraries enabled, memory limit: {} bytes",
+            memory_limit
+        );
+
         let engine = Lua::new();
         engine.set_memory_limit(memory_limit).unwrap();
         LuaScriptCallbackEngine { engine }
     }
 
     pub fn new_without_os(memory_limit: usize) -> Self {
+        debug!(
+            "Creating Lua engine without OS library, memory limit: {} bytes",
+            memory_limit
+        );
+
         let engine = Lua::new_with(StdLib::ALL_SAFE ^ StdLib::OS, LuaOptions::default()).unwrap();
         engine.set_memory_limit(memory_limit).unwrap();
         LuaScriptCallbackEngine { engine }
     }
 
     pub fn unsafe_new(memory_limit: usize) -> Self {
+        info!("Creating Lua engine with unsafe mode enabled");
+
         let engine;
         unsafe { engine = Lua::unsafe_new() };
         engine.set_memory_limit(memory_limit).unwrap();
