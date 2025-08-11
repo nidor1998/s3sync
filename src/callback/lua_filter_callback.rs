@@ -32,7 +32,6 @@ impl LuaFilterCallback {
 }
 
 #[async_trait]
-#[cfg(not(tarpaulin_include))]
 impl FilterCallback for LuaFilterCallback {
     async fn filter(&mut self, source_object: &S3syncObject) -> Result<bool> {
         let result = self.filter_by_lua(source_object).await;
