@@ -1,4 +1,6 @@
 -- Callback function name should be `preprocess_callback`
+-- The callbacks are called serially, and the callback function MUST return immediately.
+-- If a callback function takes a long time to execute, it may block a whole pipeline.
 function preprocess_callback(source_object, upload_metadata)
     -- The following code prints the source object properties.
     print("source_object.accept_ranges: ", source_object.accept_ranges)

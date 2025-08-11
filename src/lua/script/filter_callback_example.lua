@@ -1,3 +1,5 @@
+-- The callbacks are called serially, and the callback function MUST return immediately.
+-- If a callback function takes a long time to execute, it may block a whole pipeline.
 -- Callback function name should be `filter`
 function filter(source_object)
     print("key:", source_object.key)
