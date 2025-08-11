@@ -104,6 +104,10 @@ mod tests {
     fn check_valid_value_without_limit() {
         init_dummy_tracing_subscriber();
 
+        check_human_bytes_without_limit("0").unwrap();
+        check_human_bytes_without_limit("1KiB").unwrap();
+        check_human_bytes_without_limit("1KB").unwrap();
+        check_human_bytes_without_limit("1024").unwrap();
         check_human_bytes_without_limit("5MiB").unwrap();
         check_human_bytes_without_limit("5242880").unwrap();
         check_human_bytes_without_limit("5GiB").unwrap();

@@ -15,7 +15,7 @@ pub struct LuaScriptCallbackEngine {
 #[cfg(feature = "lua_support")]
 impl LuaScriptCallbackEngine {
     pub fn new(memory_limit: usize) -> Self {
-        info!(
+        debug!(
             "Creating Lua engine with all libraries enabled, memory limit: {} bytes",
             memory_limit
         );
@@ -37,7 +37,7 @@ impl LuaScriptCallbackEngine {
     }
 
     pub fn unsafe_new(memory_limit: usize) -> Self {
-        info!("Creating Lua engine with unsafe mode enabled");
+        debug!("Creating Lua engine with unsafe mode enabled");
 
         let engine;
         unsafe { engine = Lua::unsafe_new() };

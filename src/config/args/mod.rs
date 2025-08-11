@@ -806,7 +806,7 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
 
     #[cfg(feature = "lua_support")]
     #[arg(long, env, default_value = DEFAULT_LUA_VM_MEMORY_LIMIT, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Lua callback support",
-    long_help=r#"Memory limit for the Lua VM. Allow suffixes: MB, MiB, GB, GiB.
+    long_help=r#"Memory limit for the Lua VM. Allow suffixes: KB, KiB, MB, MiB, GB, GiB.
 Zero means no limit.
 If the memory limit is exceeded, the whole process will be terminated."#)]
     lua_vm_memory_limit: String,

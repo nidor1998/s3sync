@@ -1,5 +1,3 @@
--- The callbacks are called serially, and the callback function MUST return immediately.
--- If a callback function takes a long time to execute, it may block a whole pipeline.
 -- Callback function name should be `on_event`
 function on_event(event_data)
     -- The following code prints the event
