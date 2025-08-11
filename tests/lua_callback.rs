@@ -1228,6 +1228,7 @@ mod tests {
                         config.allow_lua_os_library,
                         config.allow_lua_unsafe_vm,
                     );
+                // skipcq: RS-W1029
                 if let Ok(_) = lua_preprocess_callback
                     .load_and_compile(preprocess_callback_lua_script.as_str())
                     .await
@@ -1282,6 +1283,8 @@ mod tests {
                         config.allow_lua_os_library,
                         config.allow_lua_unsafe_vm,
                     );
+
+                // skipcq: RS-W1029
                 if let Ok(_) = lua_preprocess_callback
                     .load_and_compile(preprocess_callback_lua_script.as_str())
                     .await
