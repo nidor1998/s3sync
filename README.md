@@ -148,7 +148,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Lua scripting support  
   You can use Lua script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
   `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
-  Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  
+  Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  
   For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object attributes(e.g., metadata, tagging) before transferring it to S3.  
   By default, Lua script run as safe mode, so it cannot use Lua os library functions.   
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
