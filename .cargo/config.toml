@@ -4,6 +4,9 @@ rustflags = [
     "-C", "link-arg=/STACK:2000000"
 ]
 
+## "link-args=-rdynamic" is used to ensure that symbols are exported correctly.
+## This is required for mlua to work properly on Linux and macOS.
+## see. https://github.com/mlua-rs/mlua/blob/main/FAQ.md
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "link-args=-rdynamic"]
 

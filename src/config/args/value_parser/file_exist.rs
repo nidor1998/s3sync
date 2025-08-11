@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[allow(dead_code)]
 pub fn is_file_exist(file_path: &str) -> Result<String, String> {
     let file_path = PathBuf::from(file_path);
 
