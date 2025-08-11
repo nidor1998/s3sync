@@ -31,6 +31,8 @@ pub async fn run(mut config: Config) -> Result<()> {
     {
         let cancellation_token = create_pipeline_cancellation_token();
 
+        // Note: Each type of callback is registered only once.
+
         // The user-defined event callback is disabled by default.
         let user_defined_event_callback = UserDefinedEventCallback::new();
         if user_defined_event_callback.is_enabled() {
@@ -57,6 +59,8 @@ pub async fn run(mut config: Config) -> Result<()> {
                             error!("Failed to load and compile Lua script event callback: {}",e);
                             return Err(anyhow!("Failed to load and compile Lua script event callback"));
                         }
+
+                        // Lua event callback is registered for all events.
                         config.event_manager.register_callback(EventType::ALL_EVENTS, lua_event_callback);
                     }
                 }
