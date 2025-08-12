@@ -97,3 +97,15 @@ impl EventCallback for LuaEventCallback {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn create_callback() {
+        let _callback = LuaEventCallback::new(8 * 1024 * 1024, false, false);
+        let _callback = LuaEventCallback::new(8 * 1024 * 1024, true, false);
+        let _callback = LuaEventCallback::new(0, true, true);
+    }
+}
