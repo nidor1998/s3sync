@@ -639,6 +639,12 @@ s3sync requires the following permissions.
 - 2: Invalid arguments
 - 3: Exit with warning
 
+### About binary size
+Since v1.33.0, s3sync is built with `link-args=-rdynamic` option.  
+This is because Lua C libraries require dynamic linking to work properly.  
+But it increases the binary size. If you want to reduce the binary size, you remove the `link-args=-rdynamic` option from the `.cargo/config.toml` file and rebuild the binary. (Some Lua C libraries may not work properly)
+
+
 ### Advanced options
 
 #### `--worker-size`

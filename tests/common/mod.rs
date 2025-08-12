@@ -659,6 +659,41 @@ impl TestHelper {
         true
     }
 
+    pub async fn verify_test_object_no_metadata(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+    ) -> bool {
+        let head_object_output = self
+            .client
+            .head_object()
+            .bucket(bucket)
+            .key(key)
+            .set_version_id(version_id.clone())
+            .send()
+            .await
+            .unwrap();
+
+        assert!(head_object_output.cache_control().is_none());
+        assert!(head_object_output.content_disposition().is_none());
+        assert!(head_object_output.content_encoding().is_none());
+        assert!(head_object_output.content_language().is_none());
+        assert_eq!(
+            head_object_output.content_type().unwrap(),
+            "application/octet-stream"
+        );
+        assert!(head_object_output.metadata().unwrap().is_empty());
+        assert!(head_object_output.expires_string.is_none());
+        assert!(head_object_output.website_redirect_location().is_none());
+
+        assert!(head_object_output.tag_count().is_none());
+
+        assert!(head_object_output.storage_class().is_none());
+
+        true
+    }
+
     pub async fn verify_test_object_no_system_metadata(
         &self,
         bucket: &str,

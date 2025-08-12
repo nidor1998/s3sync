@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.33.0] - 2025-08-12
+
+### Changed
+
+- Lua scripting support  
+  You can use Lua script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
+  `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
+  Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  
+  For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object attributes(e.g., metadata, tagging) before transferring it to S3.  
+  By default, Lua script run as safe mode, so it cannot use Lua os library functions.   
+  If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
+  See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
+- Updated dependencies.
+
 ## [1.32.0] - 2025-08-10
 
 ### Changed

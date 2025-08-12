@@ -212,6 +212,60 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn event_callback_lua_script_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+            "--event-callback-lua-script",
+            "./test_data/script/invalid_script.lua",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let result = run(config).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn filter_callback_lua_script_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+            "--filter-callback-lua-script",
+            "./test_data/script/invalid_script.lua",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let result = run(config).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn preprocess_callback_lua_script_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+            "--preprocess-callback-lua-script",
+            "./test_data/script/invalid_script.lua",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let result = run(config).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
     async fn run_pipeline_with_report() {
         init_dummy_tracing_subscriber();
 

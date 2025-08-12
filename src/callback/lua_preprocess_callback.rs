@@ -367,3 +367,15 @@ impl LuaPreprocessCallback {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn create_callback() {
+        let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, false, false);
+        let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, true, false);
+        let _callback = LuaPreprocessCallback::new(0, true, true);
+    }
+}
