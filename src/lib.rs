@@ -33,7 +33,17 @@ Supports multipart upload, versioning, metadata.
   - key, `ContentType`, user-defined metadata, tagging, by regular expression.
   - size, modified time
 
-For more information, see [s3sync homepage](https://github.com/nidor1998/s3sync)
+- Callbacks support
+  - Event callback: You can register a callback to handle events, such as logging, monitoring, or custom actions.
+  - Filter callback: You can register a callback to filter objects while listing them in the source.
+  - Preprocess callback: You can register a callback to modify the upload metadata before uploading objects to S3.
+
+  You can use these callbacks via Lua scripting or implement your own callback in Rust.
+
+- Robust retry logic  
+  For long time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
+
+For more information, see [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).
 
 ## As a library
 s3sync can be used as a library.
@@ -44,9 +54,9 @@ s3sync library has many features that are not documented. You can refer to the s
 
 You can refer to the source code bin/cli to implement your own synchronization tool.
 
-**NOTE: s3sync library is assumed to be used like a way that you use s3sync CLI.**
+**NOTE: s3sync library is assumed to be used like a way that you use s3sync CLI. If you want to control more finely, instead of using s3sync library, we recommend using AWS SDK for Rust or aws-s3-transfer-manager-rs(developer preview) directly.**
 
-**NOTE: Each type of callback is registered only once. Lua scripting support cli arguments are disabled if you use custom callbacks.**
+**NOTE: Each type of callback is registered only once. Lua scripting support CLI arguments are disabled if you use custom callbacks.**
 
 If you use Lua scripting and `Loading a C module fails with error undefined symbol: lua_xxx` error occurs,
 You may need to consider specifying `rustflags = ["-C", "link-args=-rdynamic"]` in your `.cargo/config.toml` file.
@@ -116,7 +126,6 @@ impl EventCallback for DebugEventCallback {
 // So this callback is preferred to be used for filtering objects based on basic properties like key, size, etc.
 pub struct DebugFilterCallback;
 #[async_trait]
-#[cfg(not(tarpaulin_include))]
 impl FilterCallback for DebugFilterCallback {
     // The callbacks are called serially, and the callback function MUST return immediately.
     // If a callback function takes a long time to execute, it may block a whole pipeline.
@@ -124,7 +133,6 @@ impl FilterCallback for DebugFilterCallback {
     // This function should return false if the object should be filtered out (not uploaded)
     // and true if the object should be uploaded.
     // If an error occurs, it should be handled gracefully, and the function should return an error, and the pipeline will be cancelled.
-    #[cfg(not(tarpaulin_include))]
     async fn filter(&mut self, source_object: &S3syncObject) -> anyhow::Result<bool> {
         Ok(!source_object.key().starts_with("should_be_skipped/"))
     }
