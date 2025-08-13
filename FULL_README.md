@@ -665,7 +665,7 @@ s3sync requires the following permissions.
 ### About Lua VM
 Each type of callback has its own Lua VM and memory limit.  
 Lua VM is shared between workers and called serially.  
-Each type of Lua script is loaded and compiled once at the CLI arguments parsing stage, and lives until the end of the total operation.
+Each type of Lua script is loaded and compiled once at the CLI arguments parsing stage, and lives until the end of the total synchronization operations.
 
 ### About Lua VM security
 By default, a Lua script runs in a safe mode.
