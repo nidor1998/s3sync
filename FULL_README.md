@@ -271,15 +271,13 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   All features are supported on supported platforms.
 
 - Lua scripting support  
-  You can use Lua script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
+  You can use Lua(5.4) script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
   `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
   Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  
   For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object attributes(e.g., metadata, tagging) before transferring it to S3.  
   By default, Lua script run as safe mode, so it cannot use Lua os library functions.   
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
   See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
-
-  Note: By default, Lua 5.4 is used. If you want to use LuaJIT, you can modify the `Cargo.toml` file and set the `mlua` feature to `luajit`.
 
 - User-defined preprocessing callback  
   This feature is for advanced users not satisfied with the default Lua scripting.  
@@ -495,6 +493,24 @@ See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_Hea
 
 **Warning: In case of S3 to S3, if the source object is uploaded with a large chunk size, s3sync will consume a lot of memory.**
 
+### Robust retry logic
+s3sync automatically retries with exponential backoff implemented in the AWS SDK for Rust.  
+You can configure the retry behavior with `--aws-max-attempts` and `--initial-backoff-milliseconds` option.
+
+s3sync uses another original retry logic `force retry`.  
+In this logic, s3sync retries the operation that is retryable for synchronization purpose(e.g., `Connection reset by peer` that is AWS SDK for Rust does not retry for idempotent).  
+For example, if `--force-retry-count` is `5` (default) and `--aws-max-attempts` is `10` (default), s3sync retries the operation up to total 50 times in the case of retryable error.  
+If one object failed to transfer that retry over the `--force-retry-count`, s3sync will stop the whole operation and exit with error code `1`.
+
+On the other hand, if an error that is not retryable occurs, s3sync will stop the whole operation immediately and exit with error code `1`.
+
+This behavior is useful for synchronization that is taking a long time to complete and hard to resume.  
+In almost all cases, s3sync will recover from the error before the operation is stopped.
+
+If you have a trouble with force retry(S3 SlowDown/503/429 response, etc.), you can disable it with `--force-retry-count 0`.
+
+If s3sync stops due to an error, you can resume the operation by running the same command again. s3sync uses incremental transfer, so it will not transfer the same objects again.
+
 ### Filtering order
 s3sync filters objects in the following order.  
 You can specify multiple filters.
@@ -505,7 +521,7 @@ You can specify multiple filters.
 4. `--filter-larger-size`
 5. `--filter-include-regex`
 6. `--filter-exclude-regex`
-7. `FilterCallback(UserDefinedFilterCallback/LuaFilterCallback)`
+7. `FilterCallback(--filter-callback-lua-script/UserDefinedFilterCallback)`
 8. `Update check(Check the source object has been modified)`
 9. `--filter-include-content-type-regex`
 10. `--filter-exclude-content-type-regex`
@@ -513,10 +529,12 @@ You can specify multiple filters.
 12. `--filter-exclude-metadata-regex`
 13. `--filter-include-tag-regex`
 14. `--filter-exclude-tag-regex`
-15. `PreprocessCallback(UserDefinedPreprocessCallback/LuaPreprocessCallback)`
+15. `PreprocessCallback(--preprocess-callback-lua-script/UserDefinedPreprocessCallback)`
 
 It is recommended to filter before `Update check`, because after that, s3sync needs to need to call extra API calls.  
 But after `Update check`, you can get more information about the object, such as the additional checksum, user-defined metadata, tagging, etc.
+
+Note: `PreprocessCallback(--preprocess-callback-lua-script/UserDefinedPreprocessCallback)` is called just before transferring the object to S3. So dry-run does not call this callback.
 
 ### Incremental transfer
 s3sync transfers only modified objects.It checks `LastModified` timestamp.
@@ -643,7 +661,7 @@ s3sync requires the following permissions.
 ### About Lua VM
 Each type of callback has its own Lua VM and memory limit.  
 Lua VM is shared between workers and called serially.  
-Each type of Lua script is loaded and compiled once at the CLI arguments parsing stage.
+Each type of Lua script is loaded and compiled once at the CLI arguments parsing stage, and lives until the end of the total operation.
 
 ### About Lua VM security
 By default, a Lua script runs in a safe mode.
@@ -657,11 +675,15 @@ If these restrictions are too strict, you can use `--allow-lua-os-library` or `-
 Generally, if a Lua script raises an error, s3sync will stop the operation and exit with error code `1`.  
 But an event callback Lua script does not stop the operation, just show the warning message.
 
+### About Lua version
+s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.4.  
+If you want to use `LuaJIT`, `luau-jit`, etc, you can modify the `Cargo.toml` file and set the `mlua` feature.  
+For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
+
 ### About binary size
 Since v1.33.0, s3sync is built with `link-args=-rdynamic` option.  
 This is because Lua C libraries require dynamic linking to work properly.  
 But it increases the binary size. If you want to reduce the binary size, you remove the `link-args=-rdynamic` option from the `.cargo/config.toml` file and rebuild the binary. (Some Lua C libraries may not work properly)
-
 
 ### Advanced options
 
