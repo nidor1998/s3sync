@@ -645,6 +645,14 @@ Each type of callback has its own Lua VM and memory limit.
 Lua VM is shared between workers and called serially.  
 Each type of Lua script is loaded and compiled once at the CLI arguments parsing stage.
 
+### About Lua VM security
+By default, a Lua script runs in a safe mode.
+Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.8) is disabled by default.  
+This is because Lua's OS facilities can be used to execute arbitrary commands, which can be a security risk. (especially set-uid programs)  
+Also, Lua VM is not allowed to load unsafe standard libraries or C modules.  
+
+If these restrictions are too strict, you can use `--allow-lua-os-library` or `--allow-lua-unsafe-vm` options to allow Lua's OS facilities and unsafe standard libraries or C modules.
+
 ### About Lua script error
 Generally, if a Lua script raises an error, s3sync will stop the operation and exit with error code `1`.  
 But an event callback Lua script does not stop the operation, just show the warning message.
