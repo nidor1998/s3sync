@@ -11,6 +11,8 @@ use crate::config::{
     CLITimeoutConfig, ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig,
     TransferConfig,
 };
+#[allow(unused_imports)]
+use crate::types::event_callback::EventType;
 use crate::types::{
     AccessKeys, ClientConfigLocation, S3Credentials, SseCustomerKey, SseKmsKeyId, StoragePath,
 };
@@ -194,6 +196,8 @@ const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS: &str =
     "with --report-tagging-sync-status, target storage must be s3://\n";
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
+#[allow(dead_code)]
+const LUA_SCRIPT_LOAD_ERROR: &str = "Failed to load and compile Lua script callback: ";
 
 #[cfg(feature = "version")]
 shadow!(build);
@@ -1808,6 +1812,66 @@ impl TryFrom<CLIArgs> for Config {
             }
         }
 
+        #[allow(unused_mut)]
+        let mut preprocess_manager = PreprocessManager::new();
+        cfg_if! {
+            if #[cfg(feature = "lua_support")] {
+                if let Some(preprocess_callback_lua_script) = preprocess_callback_lua_script.as_ref() {
+                    let mut lua_preprocess_callback = crate::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
+                        lua_vm_memory_limit,
+                        allow_lua_os_library,
+                        allow_lua_unsafe_vm,
+                    );
+                    if let Err(e) =
+                        lua_preprocess_callback.load_and_compile(preprocess_callback_lua_script.as_str())
+                    {
+                        return Err(LUA_SCRIPT_LOAD_ERROR.to_string() + &e.to_string());
+                    }
+                    preprocess_manager.register_callback(lua_preprocess_callback);
+                }
+            }
+        }
+
+        #[allow(unused_mut)]
+        let mut event_manager = EventManager::new();
+        cfg_if! {
+            if #[cfg(feature = "lua_support")] {
+                if let Some(event_callback_lua_script) = event_callback_lua_script.as_ref() {
+                    let mut lua_event_callback = crate::callback::lua_event_callback::LuaEventCallback::new(
+                        lua_vm_memory_limit,
+                        allow_lua_os_library,
+                        allow_lua_unsafe_vm,
+                    );
+                    if let Err(e) = lua_event_callback.load_and_compile(event_callback_lua_script.as_str())
+                    {
+                        return Err(LUA_SCRIPT_LOAD_ERROR.to_string() + &e.to_string());
+                    }
+                    // Lua event callback is registered for all events.
+                    event_manager.register_callback(EventType::ALL_EVENTS, lua_event_callback);
+                }
+            }
+        }
+
+        #[allow(unused_mut)]
+        let mut filter_manager = FilterManager::new();
+        cfg_if! {
+            if #[cfg(feature = "lua_support")] {
+                if let Some(filter_callback_lua_script) = filter_callback_lua_script.as_ref() {
+                    let mut lua_filter_callback = crate::callback::lua_filter_callback::LuaFilterCallback::new(
+                        lua_vm_memory_limit,
+                        allow_lua_os_library,
+                        allow_lua_unsafe_vm,
+                    );
+                    if let Err(e) =
+                        lua_filter_callback.load_and_compile(filter_callback_lua_script.as_str())
+                    {
+                        return Err(LUA_SCRIPT_LOAD_ERROR.to_string() + &e.to_string());
+                    }
+                    filter_manager.register_callback(lua_filter_callback);
+                }
+            }
+        }
+
         Ok(Config {
             source: storage_path::parse_storage_path(&value.source),
             target: storage_path::parse_storage_path(&value.target),
@@ -1893,7 +1957,7 @@ impl TryFrom<CLIArgs> for Config {
                 exclude_tag_regex,
                 larger_size: filter_larger_size,
                 smaller_size: filter_smaller_size,
-                filter_manager: FilterManager::new(),
+                filter_manager,
             },
             max_keys: value.max_keys,
             put_last_modified_metadata: value.put_last_modified_metadata,
@@ -1910,8 +1974,8 @@ impl TryFrom<CLIArgs> for Config {
             report_sync_status: value.report_sync_status,
             report_metadata_sync_status: value.report_metadata_sync_status,
             report_tagging_sync_status: value.report_tagging_sync_status,
-            event_manager: EventManager::new(),
-            preprocess_manager: PreprocessManager::new(),
+            event_manager,
+            preprocess_manager,
             preprocess_callback_lua_script,
             event_callback_lua_script,
             filter_callback_lua_script,

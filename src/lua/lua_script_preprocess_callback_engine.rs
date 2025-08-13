@@ -49,7 +49,7 @@ impl LuaScriptCallbackEngine {
         &self.engine
     }
 
-    pub async fn load_and_compile(&self, script: &str) -> Result<()> {
+    pub fn load_and_compile(&self, script: &str) -> Result<()> {
         self.engine
             .load(script)
             .exec()

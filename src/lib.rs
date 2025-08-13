@@ -46,20 +46,27 @@ You can refer to the source code bin/cli to implement your own synchronization t
 
 **NOTE: s3sync library is assumed to be used like a way that you use s3sync CLI.**
 
-**NOTE: Lua scripting support cli arguments are ignored in the library. But you can use Lua scripting callback in your code. see LuaEventCallback/LuaPreprocessCallback/LuaFilterCallback structs.**
+**NOTE: Each type of callback is registered only once. Lua scripting support cli arguments are disabled if you use custom callbacks.**
 
-**NOTE: Each type of callback is registered only once.**
+If you use Lua scripting and `Loading a C module fails with error undefined symbol: lua_xxx` error occurs,
+You may need to consider specifying `rustflags = ["-C", "link-args=-rdynamic"]` in your `.cargo/config.toml` file.
 
 Example usage
 =============
 
 ```Toml
 [dependencies]
+## If you want to use custom callbacks, you need to add anyhow crate.
+anyhow = "1"
+
 s3sync = "1"
 tokio = { version = "1", features = ["full"] }
 
 # If you want to use EventCallback, you need to add async-trait crate.
 async-trait = "0.1"
+
+## If you want to use custom preprocess callback, you need to add aws-sdk-s3 crate.
+aws-sdk-s3 = "1"
 ```
 
 ```no_run

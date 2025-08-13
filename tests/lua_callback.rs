@@ -10,7 +10,6 @@ mod tests {
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
-    use s3sync::types::event_callback::EventType;
     use s3sync::types::token::create_pipeline_cancellation_token;
     use std::convert::TryFrom;
 
@@ -74,32 +73,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(event_callback_lua_script) = config.event_callback_lua_script.as_ref() {
-                let mut lua_event_callback =
-                    s3sync::callback::lua_event_callback::LuaEventCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_event_callback
-                    .load_and_compile(event_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script event callback: {}",
-                        e
-                    );
-                }
-
-                // Lua event callback is registered for all events.
-                config
-                    .event_manager
-                    .register_callback(EventType::ALL_EVENTS, lua_event_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -145,32 +119,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(event_callback_lua_script) = config.event_callback_lua_script.as_ref() {
-                let mut lua_event_callback =
-                    s3sync::callback::lua_event_callback::LuaEventCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_event_callback
-                    .load_and_compile(event_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script event callback: {}",
-                        e
-                    );
-                }
-
-                // Lua event callback is registered for all events.
-                config
-                    .event_manager
-                    .register_callback(EventType::ALL_EVENTS, lua_event_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -215,31 +164,8 @@ mod tests {
                 "./test_data/e2e_test/case1/",
                 &target_bucket_url,
             ];
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(event_callback_lua_script) = config.event_callback_lua_script.as_ref() {
-                let mut lua_event_callback =
-                    s3sync::callback::lua_event_callback::LuaEventCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_event_callback
-                    .load_and_compile(event_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script event callback: {}",
-                        e
-                    );
-                }
-
-                // Lua event callback is registered for all events.
-                config
-                    .event_manager
-                    .register_callback(EventType::ALL_EVENTS, lua_event_callback);
-            }
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -318,31 +244,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(filter_callback_lua_script) = config.filter_callback_lua_script.as_ref() {
-                let mut lua_filter_callback =
-                    s3sync::callback::lua_filter_callback::LuaFilterCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_filter_callback
-                    .load_and_compile(filter_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script filter callback: {}",
-                        e
-                    );
-                }
-                config
-                    .filter_config
-                    .filter_manager
-                    .register_callback(lua_filter_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -388,31 +290,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(filter_callback_lua_script) = config.filter_callback_lua_script.as_ref() {
-                let mut lua_filter_callback =
-                    s3sync::callback::lua_filter_callback::LuaFilterCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_filter_callback
-                    .load_and_compile(filter_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script filter callback: {}",
-                        e
-                    );
-                }
-                config
-                    .filter_config
-                    .filter_manager
-                    .register_callback(lua_filter_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -451,31 +329,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(filter_callback_lua_script) = config.filter_callback_lua_script.as_ref() {
-                let mut lua_filter_callback =
-                    s3sync::callback::lua_filter_callback::LuaFilterCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_filter_callback
-                    .load_and_compile(filter_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script filter callback: {}",
-                        e
-                    );
-                }
-                config
-                    .filter_config
-                    .filter_manager
-                    .register_callback(lua_filter_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -514,31 +368,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(filter_callback_lua_script) = config.filter_callback_lua_script.as_ref() {
-                let mut lua_filter_callback =
-                    s3sync::callback::lua_filter_callback::LuaFilterCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_filter_callback
-                    .load_and_compile(filter_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script filter callback: {}",
-                        e
-                    );
-                }
-                config
-                    .filter_config
-                    .filter_manager
-                    .register_callback(lua_filter_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -578,31 +408,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(filter_callback_lua_script) = config.filter_callback_lua_script.as_ref() {
-                let mut lua_filter_callback =
-                    s3sync::callback::lua_filter_callback::LuaFilterCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_filter_callback
-                    .load_and_compile(filter_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script filter callback: {}",
-                        e
-                    );
-                }
-                config
-                    .filter_config
-                    .filter_manager
-                    .register_callback(lua_filter_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -649,31 +455,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(filter_callback_lua_script) = config.filter_callback_lua_script.as_ref() {
-                let mut lua_filter_callback =
-                    s3sync::callback::lua_filter_callback::LuaFilterCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_filter_callback
-                    .load_and_compile(filter_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script filter callback: {}",
-                        e
-                    );
-                }
-                config
-                    .filter_config
-                    .filter_manager
-                    .register_callback(lua_filter_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -752,32 +534,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -816,32 +573,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -892,32 +624,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -967,32 +674,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -1031,32 +713,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -1095,32 +752,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -1159,32 +791,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -1223,32 +830,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
@@ -1294,27 +876,8 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                // skipcq: RS-W1029
-                if let Ok(_) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    // skipcq: RS-W1021
-                    assert!(false, "Expected error loading Lua script, but succeeded");
-                }
-            }
+            let config = Config::try_from(parse_from_args(args).unwrap());
+            assert!(config.is_err());
         }
 
         helper
@@ -1349,28 +912,8 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-
-                // skipcq: RS-W1029
-                if let Ok(_) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    // skipcq: RS-W1021
-                    assert!(false, "Expected error loading Lua script, but succeeded");
-                }
-            }
+            let config = Config::try_from(parse_from_args(args).unwrap());
+            assert!(config.is_err());
         }
 
         helper
@@ -1426,32 +969,7 @@ mod tests {
                 &target_bucket_url,
             ];
 
-            let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-
-            #[allow(clippy::collapsible_else_if)]
-            if let Some(preprocess_callback_lua_script) =
-                config.preprocess_callback_lua_script.as_ref()
-            {
-                let mut lua_preprocess_callback =
-                    s3sync::callback::lua_preprocess_callback::LuaPreprocessCallback::new(
-                        config.lua_vm_memory_limit,
-                        config.allow_lua_os_library,
-                        config.allow_lua_unsafe_vm,
-                    );
-                if let Err(e) = lua_preprocess_callback
-                    .load_and_compile(preprocess_callback_lua_script.as_str())
-                    .await
-                {
-                    panic!(
-                        "Failed to load and compile Lua script preprocess callback: {}",
-                        e
-                    );
-                }
-                config
-                    .preprocess_manager
-                    .register_callback(lua_preprocess_callback);
-            }
-
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 

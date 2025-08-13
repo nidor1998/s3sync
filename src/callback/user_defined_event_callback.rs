@@ -11,6 +11,7 @@ impl UserDefinedEventCallback {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         // Todo: If you need to enable the callback, set `enable` to `true`
+        // Lua scripting event callback is disabled if UserDefinedEventCallback is enabled.
         Self { enable: false }
     }
 
