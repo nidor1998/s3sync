@@ -40,7 +40,7 @@ Supports multipart upload, versioning, metadata.
 
   You can use these callbacks via Lua scripting or implement your own callback in Rust.
 
-- Robust retry logic  
+- Robust retry logic
   For long time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
 
 For more information, see [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).
