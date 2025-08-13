@@ -28,11 +28,9 @@ impl LuaPreprocessCallback {
         Self { lua }
     }
 
-    pub async fn load_and_compile(&mut self, script_path: &str) -> Result<()> {
-        let lua_script = tokio::fs::read(script_path).await?;
-        self.lua
-            .load_and_compile(&String::from_utf8(lua_script)?)
-            .await
+    pub fn load_and_compile(&mut self, script_path: &str) -> Result<()> {
+        let lua_script = std::fs::read(script_path)?;
+        self.lua.load_and_compile(&String::from_utf8(lua_script)?)
     }
 }
 

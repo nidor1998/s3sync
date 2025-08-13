@@ -16,6 +16,7 @@ impl UserDefinedFilterCallback {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         // Todo: If you need to enable the callback, set `enable` to `true`
+        // Lua scripting filter callback is disabled if UserDefinedFilterCallback is enabled.
         Self { enable: false }
     }
 

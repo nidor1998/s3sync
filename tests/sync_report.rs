@@ -16,7 +16,7 @@ mod tests {
 
     #[tokio::test]
     async fn local_to_s3_sync_report() {
-        TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::init_tracing_subscriber_for_report();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
@@ -416,7 +416,7 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_local_sync_report() {
-        TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::init_tracing_subscriber_for_report();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
@@ -810,7 +810,7 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_s3_sync_report() {
-        TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::init_tracing_subscriber_for_report();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
@@ -1416,8 +1416,7 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_s3_sync_metadata_report() {
-        // TestHelper::init_tracing_subscriber_for_report();
-        TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::init_tracing_subscriber_for_report();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
@@ -1730,8 +1729,7 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_s3_sync_tagging_report() {
-        // TestHelper::init_tracing_subscriber_for_report();
-        TestHelper::init_dummy_tracing_subscriber();
+        TestHelper::init_tracing_subscriber_for_report();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 

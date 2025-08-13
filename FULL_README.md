@@ -515,7 +515,8 @@ You can specify multiple filters.
 14. `--filter-exclude-tag-regex`
 15. `PreprocessCallback(UserDefinedPreprocessCallback/LuaPreprocessCallback)`
 
-It is recommended to filter before `--filter-include-content-type-regex`, because after that, s3sync needs to need to call extra API calls.
+It is recommended to filter before `Update check`, because after that, s3sync needs to need to call extra API calls.  
+But after `Update check`, you can get more information about the object, such as the additional checksum, user-defined metadata, tagging, etc.
 
 ### Incremental transfer
 s3sync transfers only modified objects.It checks `LastModified` timestamp.
@@ -638,6 +639,15 @@ s3sync requires the following permissions.
 - 1: Exit with error
 - 2: Invalid arguments
 - 3: Exit with warning
+
+### About Lua VM
+Each type of callback has its own Lua VM and memory limit.  
+Lua VM is shared between workers and called serially.  
+Each type of Lua script is loaded and compiled once at the CLI arguments parsing stage.
+
+### About Lua script error
+Generally, if a Lua script raises an error, s3sync will stop the operation and exit with error code `1`.  
+But an event callback Lua script does not stop the operation, just show the warning message.
 
 ### About binary size
 Since v1.33.0, s3sync is built with `link-args=-rdynamic` option.  
