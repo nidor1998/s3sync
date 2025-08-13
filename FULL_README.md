@@ -149,6 +149,9 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   
   with `--check-mtime-and-additional-checksum` option, s3sync checks the modification time and additional checksum of the source and target objects. It is useful if you want to transfer only modified objects based on the modification time and additional checksum.
 
+- Robust retry logic  
+  For long time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
+
 - Amazon S3 Express One Zone(Directory bucket) support  
   s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).  
   AWS CLI does not support `aws s3 sync` with Amazon S3 Express One Zone. see [AWS S3 sync operations do not work with S3 directory buckets (S3 Express One Zone)](https://github.com/aws/aws-cli/issues/8470).
@@ -493,7 +496,7 @@ See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_Hea
 
 **Warning: In case of S3 to S3, if the source object is uploaded with a large chunk size, s3sync will consume a lot of memory.**
 
-### Robust retry logic
+### About retry logic
 s3sync automatically retries with exponential backoff implemented in the AWS SDK for Rust.  
 You can configure the retry behavior with `--aws-max-attempts` and `--initial-backoff-milliseconds` option.
 
@@ -665,7 +668,7 @@ Each type of Lua script is loaded and compiled once at the CLI arguments parsing
 
 ### About Lua VM security
 By default, a Lua script runs in a safe mode.
-Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.8) is disabled by default.  
+Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.9) is disabled by default.  
 This is because Lua's OS facilities can be used to execute arbitrary commands, which can be a security risk. (especially set-uid programs)  
 Also, Lua VM is not allowed to load unsafe standard libraries or C modules.  
 
