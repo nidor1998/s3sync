@@ -118,7 +118,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Very fast  
   s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.  
-  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB).
+  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB),  
+  in the case of large objects(6GiB object, total 96GiB, `--max-parallel-uploads 64`), about 280MB/sec, 5.5 minutes,
 
 - Multiple ways
   - Local to S3(S3-compatible storage)
