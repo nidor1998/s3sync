@@ -54,15 +54,22 @@ impl ObjectFilterBase<'_> {
             ObjectKeyMap::new(Mutex::new(HashMap::new()))
         };
 
+        // On x86_64 linux, there is a performance issue with async tasks in the case of high load,
+        // So, we yield the task to allow other tasks to run.
+        // Other platforms may not need this, but it is safe to keep it for consistency.
         loop {
+            tokio::task::yield_now().await;
             if self.base.cancellation_token.is_cancelled() {
                 trace!(name = self.name, "filter has been cancelled.");
                 return Ok(());
             }
 
+            tokio::task::yield_now().await;
             match self.base.receiver.as_ref().unwrap().recv().await {
                 Ok(object) => {
+                    tokio::task::yield_now().await;
                     if !filter_fn(&object, &self.base.config.filter_config, &target_key_map) {
+                        tokio::task::yield_now().await;
                         let _ = self
                             .base
                             .target
@@ -76,6 +83,7 @@ impl ObjectFilterBase<'_> {
                         continue;
                     }
 
+                    tokio::task::yield_now().await;
                     if self.base.send(object).await? == SendResult::Closed {
                         return Ok(());
                     }

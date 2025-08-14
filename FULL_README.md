@@ -274,7 +274,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Multi-platform support  
   All features are supported on supported platforms.
 
-- Lua scripting support  
+- [Lua](https://www.lua.org) scripting support  
   You can use Lua(5.4) script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
   `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
   Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  
@@ -334,6 +334,10 @@ s3sync requires Rust 1.86 or later.
 ```bash
 cargo install s3sync
 ```
+
+Note: The above command ignores project's configuration and builds with global configuration. If you want to use Lua third-party C libraries, you need to manually download the source code and build. e.g. `cargo install --path .` .
+
+```bash
 
 ## Usage
 AWS credentials are required to use s3sync. IAM Roles, AWC CLI Profile, environment variables, etc supported.  
@@ -670,7 +674,7 @@ Each type of Lua script is loaded and compiled once at the CLI arguments parsing
 ### About Lua VM security
 By default, a Lua script runs in a safe mode.
 Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.9) is disabled by default.  
-This is because Lua's OS facilities can be used to execute arbitrary commands, which can be a security risk. (especially set-uid programs)  
+This is because Lua's OS facilities can be used to execute arbitrary commands, which can be a security risk. (especially set-uid/set-gid/fs-capability programs)  
 Also, Lua VM is not allowed to load unsafe standard libraries or C modules.  
 
 If these restrictions are too strict, you can use `--allow-lua-os-library` or `--allow-lua-unsafe-vm` options to allow Lua's OS facilities and unsafe standard libraries or C modules.
