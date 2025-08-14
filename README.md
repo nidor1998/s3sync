@@ -149,7 +149,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Robust retry logic  
   For long time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
 
-- Lua scripting support  
+- [Lua](https://www.lua.org) scripting support   
   You can use Lua(5.4) script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
   `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
   Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  

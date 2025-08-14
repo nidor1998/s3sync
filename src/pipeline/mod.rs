@@ -450,6 +450,7 @@ impl Pipeline {
             let (stage, new_receiver) =
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
+            // Lua filter callback is implemented as a user-defined filter
             self.spawn_user_defined_filter(stage);
             trace!("UserDefinedFilter has been started.");
 
