@@ -337,8 +337,6 @@ cargo install s3sync
 
 Note: The above command ignores project's configuration and builds with global configuration. If you want to use Lua third-party C libraries, you need to manually download the source code and build. e.g. `cargo install --path .` .
 
-```bash
-
 ## Usage
 AWS credentials are required to use s3sync. IAM Roles, AWC CLI Profile, environment variables, etc supported.  
 By default s3sync access credentials from many locations(IAM Roles, environment variables, etc).  
