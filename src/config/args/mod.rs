@@ -805,7 +805,7 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
     filter_callback_lua_script: Option<String>,
 
     #[cfg(feature = "lua_support")]
-    #[arg(long, env, conflicts_with_all = ["allow_lua_unsafe_vm"], default_value_t = DEFAULT_ALLOW_LUA_OS_LIBRARY, help_heading = "Lua scripting support", long_help="Allow Lua OS library functions in the Lua script.")]
+    #[arg(long, env, conflicts_with_all = ["allow_lua_unsafe_vm"], default_value_t = DEFAULT_ALLOW_LUA_OS_LIBRARY, help_heading = "Lua scripting support", long_help="Allow Lua OS and I/O library functions in the Lua script.")]
     allow_lua_os_library: bool,
 
     #[cfg(feature = "lua_support")]

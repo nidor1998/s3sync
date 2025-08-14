@@ -17,7 +17,7 @@ impl LuaFilterCallback {
         } else if allow_lua_os_library {
             LuaScriptCallbackEngine::new(memory_limit)
         } else {
-            LuaScriptCallbackEngine::new_without_os(memory_limit)
+            LuaScriptCallbackEngine::new_without_os_io_libs(memory_limit)
         };
 
         Self { lua }
