@@ -671,8 +671,8 @@ Each type of Lua script is loaded and compiled once at the CLI arguments parsing
 
 ### About Lua VM security
 By default, a Lua script runs in a safe mode.
-Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.9) is disabled by default.  
-This is because Lua's OS facilities can be used to execute arbitrary commands, which can be a security risk. (especially set-uid/set-gid/fs-capability programs)  
+Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.9) and [Input and Output Facilities](https://www.lua.org/manual/5.4/manual.html#6.8) is disabled by default.  
+This is because these facilities can be used to execute arbitrary commands, which can be a security risk. (especially set-uid/set-gid/fs-capability programs)  
 Also, Lua VM is not allowed to load unsafe standard libraries or C modules.  
 
 If these restrictions are too strict, you can use `--allow-lua-os-library` or `--allow-lua-unsafe-vm` options to allow Lua's OS facilities and unsafe standard libraries or C modules.
@@ -1113,7 +1113,7 @@ Lua scripting support:
       --filter-callback-lua-script <FILTER_CALLBACK_LUA_SCRIPT>
           Path to the Lua script that is executed as filter callback [env: FILTER_CALLBACK_LUA_SCRIPT=]
       --allow-lua-os-library
-          Allow Lua OS library functions in the Lua script. [env: ALLOW_LUA_OS_LIBRARY=]
+          Allow Lua OS and I/O library functions in the Lua script. [env: ALLOW_LUA_OS_LIBRARY=]
       --lua-vm-memory-limit <LUA_VM_MEMORY_LIMIT>
           Memory limit for the Lua VM. Allow suffixes: KB, KiB, MB, MiB, GB, GiB.
           Zero means no limit.

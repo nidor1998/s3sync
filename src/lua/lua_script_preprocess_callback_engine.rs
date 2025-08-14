@@ -25,13 +25,17 @@ impl LuaScriptCallbackEngine {
         LuaScriptCallbackEngine { engine }
     }
 
-    pub fn new_without_os(memory_limit: usize) -> Self {
+    pub fn new_without_os_io_libs(memory_limit: usize) -> Self {
         debug!(
             "Creating Lua engine without OS library, memory limit: {} bytes",
             memory_limit
         );
 
-        let engine = Lua::new_with(StdLib::ALL_SAFE ^ StdLib::OS, LuaOptions::default()).unwrap();
+        let engine = Lua::new_with(
+            StdLib::ALL_SAFE ^ (StdLib::OS | StdLib::IO),
+            LuaOptions::default(),
+        )
+        .unwrap();
         engine.set_memory_limit(memory_limit).unwrap();
         LuaScriptCallbackEngine { engine }
     }
@@ -65,7 +69,8 @@ mod tests {
     #[tokio::test]
     async fn create_new() {
         let _lua_engine = LuaScriptCallbackEngine::new(8 * 1024 * 1024);
-        let _lua_engine_without_os = LuaScriptCallbackEngine::new_without_os(8 * 1024 * 1024);
+        let _lua_engine_without_os =
+            LuaScriptCallbackEngine::new_without_os_io_libs(8 * 1024 * 1024);
         let _lua_engine_unsafe = LuaScriptCallbackEngine::unsafe_new(8 * 1024 * 1024);
     }
 }
