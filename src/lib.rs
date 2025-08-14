@@ -13,7 +13,7 @@ Supports multipart upload, versioning, metadata.
 
 - Very fast
   s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.
-  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB) and Local to S3 16 objects(6GiB objects) 96.00 GiB, about 280 MiB/sec.
+  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB) and Local to S3 16 objects(6GiB objects, `--max-parallel-uploads 64`) 96.00 GiB, about 280 MiB/sec.
   Large objects are transferred in parallel using multipart upload (or get-range request for download), so it can transfer large objects very fast.
   Note: The default s3sync setting uses `--worker-size 16` and `--max-parallel-uploads 16`. This is a moderate setting for most cases. If you want to improve performance, you can increase `--worker-size` and `--max-parallel-uploads`. But it will increase CPU and memory usage.
 
