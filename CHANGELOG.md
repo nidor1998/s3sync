@@ -10,7 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Support Look-around with regular expressions.   
   Look-around features are invaluable for filtering objects with complex patterns.  
-  For example, `'^(?!.*&test=s3_to_s3_tag_filtering).*stage=first_stage'` can be used to filter objects that do not contain `test=s3_to_s3_tag_filtering` in the tag and contain `stage=first_stage` in the tag.
+  For example, `'^(?!.*&test=true).*stage=first_stage'` can be used to filter objects that do not contain `test=true` in the tag and contain `stage=first_stage` in the tag.  
+  And you can also create regular expressions that combine multiple logical conditions with look-around features.  
+  This feature deduces the need for Lua scripts or custom Rust code to filter objects with complex patterns.
 - Updated documentation.
 - Updated dependencies.
 - aws-sdk-s3 = "1.103.0"
