@@ -1336,7 +1336,8 @@ impl ObjectSyncer {
             .include_metadata_regex
             .as_ref()
             .unwrap()
-            .is_match(&formatted);
+            .is_match(&formatted)
+            .unwrap();
 
         debug!(
             name = INCLUDE_METADATA_REGEX_FILTER_NAME,
@@ -1392,7 +1393,8 @@ impl ObjectSyncer {
             .exclude_metadata_regex
             .as_ref()
             .unwrap()
-            .is_match(&formatted);
+            .is_match(&formatted)
+            .unwrap();
 
         debug!(
             name = EXCLUDE_METADATA_REGEX_FILTER_NAME,
@@ -1447,7 +1449,8 @@ impl ObjectSyncer {
             .include_tag_regex
             .as_ref()
             .unwrap()
-            .is_match(&formatted);
+            .is_match(&formatted)
+            .unwrap();
 
         debug!(
             name = INCLUDE_TAG_REGEX_FILTER_NAME,
@@ -1497,7 +1500,8 @@ impl ObjectSyncer {
             .exclude_tag_regex
             .as_ref()
             .unwrap()
-            .is_match(&formatted);
+            .is_match(&formatted)
+            .unwrap();
 
         debug!(
             name = EXCLUDE_TAG_REGEX_FILTER_NAME,
@@ -1557,7 +1561,8 @@ impl ObjectSyncer {
             .include_content_type_regex
             .as_ref()
             .unwrap()
-            .is_match(content_type.unwrap());
+            .is_match(content_type.unwrap())
+            .unwrap();
 
         debug!(
             name = INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
@@ -1612,7 +1617,8 @@ impl ObjectSyncer {
             .exclude_content_type_regex
             .as_ref()
             .unwrap()
-            .is_match(content_type.unwrap());
+            .is_match(content_type.unwrap())
+            .unwrap();
 
         debug!(
             name = EXCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,

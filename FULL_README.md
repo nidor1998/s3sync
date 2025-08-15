@@ -187,12 +187,16 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - User-defined metadata-based regular expression filtering  
   You can filter objects based on user-defined metadata.  
+  The regular expression syntax is the same as [fancy_regex](https://docs.rs/fancy-regex/latest/fancy_regex/#syntax).  
+  This nice crate supports Look-around assertions.  
   Example: `--filter-include-metadata-regex 'key1=(value1|xxx),key2=value2'`, `--filter-exclude-metadata-regex 'key1=(value1|xxx),key2=value2'`
 
   Note: When using this option, Additional API calls may be required to get the metadata of each object.
 
 - Tag-based regular expression filtering  
   You can filter objects based on tags.  
+  The regular expression syntax is the same as [fancy_regex](https://docs.rs/fancy-regex/latest/fancy_regex/#syntax).  
+  This nice crate supports Look-around assertions.  
   Example: `--filter-include-tag-regex 'key1=(value1|xxx)&key2=value2'`, `--filter-exclude-tag-regex 'key1=(value1|xxx)&key2=value2'`
 
   Note: When using this option, Additional API calls are required to get the tags of each object.
@@ -772,7 +776,8 @@ Instead of `--aws-sdk-tracing`, you can use `RUST_LOG` environment variable.
 
 #### `--filter-include-regex`, `--filter-exclude-regex`
 You can specify the regular expression to filter the source objects.  
-The regular expression syntax is the same as [regex](https://docs.rs/regex/latest/regex/#syntax).
+The regular expression syntax is the same as [fancy_regex](https://docs.rs/fancy-regex/latest/fancy_regex/#syntax).  
+This nice crate supports Look-around assertions.
 
 #### `--auto-complete-shell`
 You can output the shell script to complete the command.

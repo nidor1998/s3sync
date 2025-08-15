@@ -8,7 +8,7 @@ use aws_sdk_s3::types::{
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 use chrono::{DateTime, Utc};
-use regex::Regex;
+use fancy_regex::Regex;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;

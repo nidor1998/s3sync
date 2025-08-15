@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2025-08-15
+
+### Changed
+- Support Look-around with regular expressions.   
+  Look-around features are invaluable for filtering objects with complex patterns.  
+  For example, `'^(?!.*&test=s3_to_s3_tag_filtering).*stage=first_stage'` can be used to filter objects that do not contain `test=s3_to_s3_tag_filtering` in the tag and contain `stage=first_stage` in the tag.
+- Updated documentation.
+- Updated dependencies.
+- aws-sdk-s3 = "1.103.0"
+
 ## [1.34.1] - 2025-08-14
 
 ### Changed

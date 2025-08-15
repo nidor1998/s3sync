@@ -43,6 +43,47 @@ mod tests {
     }
 
     #[test]
+    fn with_custom_value_pcre2_compatible() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--filter-include-metadata-regex",
+            "^(?!.*key2=value4).*key1=value1",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args).unwrap();
+
+        assert!(config.filter_config.include_metadata_regex.is_some());
+    }
+
+    #[test]
+    fn with_custom_value_pcre2_compatible_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--filter-include-metadata-regex",
+            "^(?!.*key2=value4.*key1=value1",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args);
+        assert!(config.is_err());
+    }
+
+    #[test]
     fn with_custom_value_target_local() {
         init_dummy_tracing_subscriber();
 
