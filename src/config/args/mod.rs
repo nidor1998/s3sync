@@ -26,7 +26,7 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
 use clap_verbosity_flag::{Verbosity, WarnLevel};
-use regex::Regex;
+use fancy_regex::Regex;
 #[cfg(feature = "version")]
 use shadow_rs::shadow;
 use std::ffi::OsString;

@@ -37,7 +37,8 @@ fn is_match(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> b
         .include_regex
         .as_ref()
         .unwrap()
-        .is_match(object.key());
+        .is_match(object.key())
+        .unwrap();
 
     if !match_result {
         let key = object.key();
@@ -67,7 +68,7 @@ mod tests {
     use crate::callback::filter_manager::FilterManager;
     use crate::types::{ObjectEntry, ObjectKey};
     use aws_sdk_s3::types::Object;
-    use regex::Regex;
+    use fancy_regex::Regex;
     use tracing_subscriber::EnvFilter;
 
     #[tokio::test]

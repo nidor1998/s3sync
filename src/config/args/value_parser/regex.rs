@@ -1,4 +1,4 @@
-use regex::Regex;
+use fancy_regex::Regex;
 
 const INVALID_REGEX: &str = "invalid regular expression.";
 
