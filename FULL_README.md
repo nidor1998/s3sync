@@ -197,15 +197,15 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   You can filter objects based on tags.  
   The regular expression syntax is the same as [fancy_regex](https://docs.rs/fancy-regex/latest/fancy_regex/#syntax).  
   This nice crate supports Look-around assertions.  
-  For example, `'^(?!.*&test=true).*stage=first_stage'` can be used to filter objects that do not contain `test=true` in the tag and contain `stage=first_stage` in the tag.  
+  For example, `'^(?!.*&test=true).*stage=first'` can be used to filter objects that do not contain `test=true` in the tag and contain `stage=first` in the tag.  
   And you can also create regular expressions that combine multiple logical conditions with look-around features.  
-  This feature deduces the need for Lua scripts or custom Rust code (see below) to filter objects with complex patterns.
+  This feature reduces the need for Lua scripts or custom callback Rust codes (see below) to filter objects with complex patterns.
 
   Note: When using this option, Additional API calls are required to get the tags of each object.
 
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
-  It only checks the synchronization status without transferring any objects.
+  It only checks the synchronization status without transferring any objects.  
   For example, If you want to know all the objects transferred by awscli have been transferred correctly(checksum based), the following command will show the report.
   ```bash
   aws s3 sync test_data s3://xxxx/

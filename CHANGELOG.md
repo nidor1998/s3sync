@@ -10,9 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Support Look-around with regular expressions.   
   Look-around features are invaluable for filtering objects with complex patterns.  
-  For example, `'^(?!.*&test=true).*stage=first_stage'` can be used to filter objects that do not contain `test=true` in the tag and contain `stage=first_stage` in the tag.  
+  For example, `'^(?!.*&test=true).*stage=first'` can be used to filter objects that do not contain `test=true` in the tag and contain `stage=first` in the tag.  
   And you can also create regular expressions that combine multiple logical conditions with look-around features.  
-  This feature deduces the need for Lua scripts or custom Rust code to filter objects with complex patterns.
+  This feature reduces the need for Lua scripts or custom callback Rust codes to filter objects with complex patterns.  
+  Note: This feature has been implemented with [fancy-regex](https://github.com/fancy-regex/fancy-regex) crate, which falls back to regex crate if a given regex is not `fancy`.
 - Updated documentation.
 - Updated dependencies.
 - aws-sdk-s3 = "1.103.0"
