@@ -113,7 +113,9 @@ impl ETagDiffDetector {
                 event_data.target_version_id = head_target_object_output
                     .version_id()
                     .map(|v| v.to_string());
+                // skipcq: RS-W1070
                 event_data.source_etag = source_e_tag.clone();
+                // skipcq: RS-W1070
                 event_data.target_etag = target_e_tag.clone();
                 event_data.source_last_modified = Some(*source_object.last_modified());
                 event_data.target_last_modified = head_target_object_output.last_modified;
@@ -192,7 +194,9 @@ impl ETagDiffDetector {
             event_data.target_version_id = head_target_object_output
                 .version_id()
                 .map(|v| v.to_string());
+            // skipcq: RS-W1070
             event_data.source_etag = source_e_tag.clone();
+            // skipcq: RS-W1070
             event_data.target_etag = target_e_tag.clone();
             event_data.source_last_modified = Some(*source_object.last_modified());
             event_data.target_last_modified = head_target_object_output.last_modified;
@@ -259,7 +263,9 @@ impl ETagDiffDetector {
                     event_data.target_version_id = head_target_object_output
                         .version_id()
                         .map(|v| v.to_string());
+                    // skipcq: RS-W1070
                     event_data.source_etag = source_e_tag.clone();
+                    // skipcq: RS-W1070
                     event_data.target_etag = target_e_tag.clone();
                     event_data.source_last_modified = Some(*source_object.last_modified());
                     event_data.target_last_modified = head_target_object_output.last_modified;
@@ -463,7 +469,9 @@ impl ETagDiffDetector {
                 event_data.target_version_id = head_target_object_output
                     .version_id()
                     .map(|v| v.to_string());
+                // skipcq: RS-W1070
                 event_data.source_etag = source_e_tag.clone();
+                // skipcq: RS-W1070
                 event_data.target_etag = target_e_tag.clone();
                 event_data.source_last_modified =
                     head_source_object_output.last_modified().copied();
@@ -545,7 +553,9 @@ impl ETagDiffDetector {
             event_data.target_version_id = head_target_object_output
                 .version_id()
                 .map(|v| v.to_string());
+            // skipcq: RS-W1070
             event_data.source_etag = source_e_tag.clone();
+            // skipcq: RS-W1070
             event_data.target_etag = target_e_tag.clone();
             event_data.source_last_modified = head_source_object_output.last_modified().copied();
             event_data.target_last_modified = head_target_object_output.last_modified;
@@ -729,7 +739,9 @@ impl ETagDiffDetector {
             // skipcq: RS-W1070
             event_data.source_version_id = source_object.version_id().map(|v| v.to_string());
             event_data.target_version_id = None;
+            // skipcq: RS-W1070
             event_data.source_etag = source_e_tag.clone();
+            // skipcq: RS-W1070
             event_data.target_etag = target_e_tag.clone();
             event_data.source_last_modified = Some(*source_object.last_modified());
             event_data.target_last_modified = head_target_object_output.last_modified;
@@ -790,7 +802,9 @@ impl ETagDiffDetector {
                     event_data.source_version_id =
                         source_object.version_id().map(|v| v.to_string());
                     event_data.target_version_id = None;
+                    // skipcq: RS-W1070
                     event_data.source_etag = source_e_tag.clone();
+                    // skipcq: RS-W1070
                     event_data.target_etag = target_e_tag.clone();
                     event_data.source_last_modified = Some(*source_object.last_modified());
                     event_data.target_last_modified = head_target_object_output.last_modified;

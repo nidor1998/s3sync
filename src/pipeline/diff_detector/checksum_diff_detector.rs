@@ -142,9 +142,12 @@ impl ChecksumDiffDetector {
         if source_checksum.is_none() || target_checksum.is_none() {
             let mut event_data = EventData::new(EventType::SYNC_WARNING);
             event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
             event_data.checksum_algorithm =
                 self.config.filter_config.check_checksum_algorithm.clone();
+            // skipcq: RS-W1070
             event_data.source_checksum = source_checksum.clone();
+            // skipcq: RS-W1070
             event_data.target_checksum = target_checksum.clone();
             // skipcq: RS-W1070
             event_data.source_version_id = source_version_id.clone();
@@ -207,8 +210,10 @@ impl ChecksumDiffDetector {
         if source_checksum == target_checksum {
             let mut event_data = EventData::new(EventType::SYNC_FILTERED);
             event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
             event_data.checksum_algorithm =
                 self.config.filter_config.check_checksum_algorithm.clone();
+            // skipcq: RS-W1070
             event_data.source_checksum = source_checksum.clone();
             event_data.target_checksum = target_checksum.clone();
             // skipcq: RS-W1070
@@ -398,9 +403,11 @@ impl ChecksumDiffDetector {
 
             let mut event_data = EventData::new(EventType::SYNC_WARNING);
             event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
             event_data.checksum_algorithm =
                 self.config.filter_config.check_checksum_algorithm.clone();
             event_data.source_checksum = None;
+            // skipcq: RS-W1070
             event_data.target_checksum = target_checksum.clone();
             event_data.source_version_id = None;
             // skipcq: RS-W1070
@@ -522,9 +529,12 @@ impl ChecksumDiffDetector {
 
             let mut event_data = EventData::new(EventType::SYNC_FILTERED);
             event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
             event_data.checksum_algorithm =
                 self.config.filter_config.check_checksum_algorithm.clone();
+            // skipcq: RS-W1070
             event_data.source_checksum = Some(source_checksum.clone());
+            // skipcq: RS-W1070
             event_data.target_checksum = target_checksum.clone();
             event_data.source_version_id = None;
             // skipcq: RS-W1070
@@ -680,8 +690,10 @@ impl ChecksumDiffDetector {
         if source_checksum.is_none() {
             let mut event_data = EventData::new(EventType::SYNC_WARNING);
             event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
             event_data.checksum_algorithm =
                 self.config.filter_config.check_checksum_algorithm.clone();
+            // skipcq: RS-W1070
             event_data.source_checksum = source_checksum.clone();
             event_data.target_checksum = None;
             // skipcq: RS-W1070
@@ -794,8 +806,10 @@ impl ChecksumDiffDetector {
         if source_checksum.as_ref().unwrap().as_str() == target_checksum {
             let mut event_data = EventData::new(EventType::SYNC_FILTERED);
             event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
             event_data.checksum_algorithm =
                 self.config.filter_config.check_checksum_algorithm.clone();
+            // skipcq: RS-W1070
             event_data.source_checksum = source_checksum.clone();
             event_data.target_checksum = Some(target_checksum.clone());
             // skipcq: RS-W1070
