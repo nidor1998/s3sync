@@ -79,6 +79,21 @@ impl EventCallback for LuaEventCallback {
             .set("target_etag", event_data.target_etag.clone())
             .unwrap();
         event_data_lua
+            .set(
+                "source_content_type",
+                event_data.source_content_type.clone(),
+            )
+            .unwrap();
+        event_data_lua
+            .set(
+                "source_user_defined_metadata",
+                event_data.source_user_defined_metadata.clone(),
+            )
+            .unwrap();
+        event_data_lua
+            .set("source_tagging", event_data.source_tagging.clone())
+            .unwrap();
+        event_data_lua
             .set("byte_written", event_data.byte_written)
             .unwrap();
         event_data_lua

@@ -34,6 +34,7 @@ use crate::storage::{
     get_size_string_from_content_range,
 };
 use crate::types::SyncStatistics::{SyncBytes, SyncSkip};
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     ObjectChecksum, ObjectVersions, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
@@ -139,13 +140,20 @@ impl S3Storage {
 
             let key_without_prefix = remove_s3_prefix(delete_marker.key().unwrap(), &self.prefix);
             if key_without_prefix.is_empty() {
+                let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                event_data.key = Some(delete_marker.key().unwrap().to_string());
+                // skipcq: RS-W1070
+                event_data.source_version_id = delete_marker.version_id.clone();
+                event_data.message = Some("Key that is same as prefix is skipped.".to_string());
+                self.config.event_manager.trigger_event(event_data).await;
+
                 self.send_stats(SyncSkip {
                     key: delete_marker.key().unwrap().to_string(),
                 })
                 .await;
 
                 let key = delete_marker.key().unwrap();
-                debug!(key = key, "key that is same as prefix is skipped.");
+                debug!(key = key, "Key that is same as prefix is skipped.");
 
                 continue;
             }
@@ -173,13 +181,20 @@ impl S3Storage {
         for object in object_versions {
             let key_without_prefix = remove_s3_prefix(object.key().unwrap(), &self.prefix);
             if key_without_prefix.is_empty() {
+                let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                event_data.key = object.key().map(|k| k.to_string());
+                // skipcq: RS-W1070
+                event_data.source_version_id = object.version_id.clone();
+                event_data.message = Some("Key that is same as prefix is skipped.".to_string());
+                self.config.event_manager.trigger_event(event_data).await;
+
                 self.send_stats(SyncSkip {
                     key: object.key().unwrap().to_string(),
                 })
                 .await;
 
                 let key = object.key().unwrap();
-                debug!(key = key, "key that is same as prefix is skipped.");
+                debug!(key = key, "Key that is same as prefix is skipped.");
 
                 continue;
             }
@@ -345,13 +360,19 @@ impl StorageTrait for S3Storage {
             for object in list_objects_output.contents() {
                 let key_without_prefix = remove_s3_prefix(object.key().unwrap(), &self.prefix);
                 if key_without_prefix.is_empty() {
+                    let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                    event_data.key = object.key().map(|k| k.to_string());
+                    // skipcq: RS-W1070
+                    event_data.message = Some("Key that is same as prefix is skipped.".to_string());
+                    self.config.event_manager.trigger_event(event_data).await;
+
                     self.send_stats(SyncSkip {
                         key: object.key().unwrap().to_string(),
                     })
                     .await;
 
                     let key = object.key().unwrap();
-                    debug!(key = key, "key that is same as prefix is skipped.");
+                    debug!(key = key, "Key that is same as prefix is skipped.");
 
                     continue;
                 }

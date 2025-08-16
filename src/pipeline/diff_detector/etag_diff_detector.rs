@@ -16,6 +16,7 @@ use crate::storage::e_tag_verify::{
 };
 use crate::storage::local::fs_util;
 use crate::types::SyncStatistics::SyncWarning;
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::{
     S3syncObject, SYNC_REPORT_ETAG_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES,
     SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN, SyncStatsReport,
@@ -104,6 +105,26 @@ impl ETagDiffDetector {
                     .await;
                 self.target.set_warning();
 
+                let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                event_data.key = Some(key.to_string());
+                // skipcq: RS-W1070
+                event_data.source_version_id = source_object.version_id().map(|v| v.to_string());
+                // skipcq: RS-W1070
+                event_data.target_version_id = head_target_object_output
+                    .version_id()
+                    .map(|v| v.to_string());
+                event_data.source_etag = source_e_tag.clone();
+                event_data.target_etag = target_e_tag.clone();
+                event_data.source_last_modified = Some(*source_object.last_modified());
+                event_data.target_last_modified = head_target_object_output.last_modified;
+                event_data.source_size = Some(source_object.size() as u64);
+                event_data.target_size =
+                    head_target_object_output.content_length().map(|v| v as u64);
+                event_data.message = Some(
+                    "Object filtered. Only ServerSideEncryption::Aes256 is supported.".to_string(),
+                );
+                self.config.event_manager.trigger_event(event_data).await;
+
                 warn!(
                     name = FILTER_NAME,
                     source_e_tag = source_e_tag,
@@ -113,7 +134,7 @@ impl ETagDiffDetector {
                     source_size = source_object.size(),
                     target_size = head_target_object_output.content_length().unwrap(),
                     key = key,
-                    "object filtered. Only ServerSideEncryption::Aes256 is supported."
+                    "Object filtered. Only ServerSideEncryption::Aes256 is supported."
                 );
 
                 if self.config.report_sync_status {
@@ -133,7 +154,7 @@ impl ETagDiffDetector {
                         target_last_modified = target_last_modified,
                         source_size = source_object.size(),
                         target_size = head_target_object_output.content_length().unwrap(),
-                        "Unknown. Only ServerSideEncryption::Aes256 is supported."
+                        "Object filtered. Only ServerSideEncryption::Aes256 is supported."
                     );
 
                     self.sync_stats_report
@@ -160,8 +181,25 @@ impl ETagDiffDetector {
                 source_size = source_object.size(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered. ETags are same."
+                "Object filtered. ETags are same."
             );
+
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+            event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_object.version_id().map(|v| v.to_string());
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_etag = source_e_tag.clone();
+            event_data.target_etag = target_e_tag.clone();
+            event_data.source_last_modified = Some(*source_object.last_modified());
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = Some(source_object.size() as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. ETags are same.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
 
             if self.config.report_sync_status {
                 info!(
@@ -211,6 +249,28 @@ impl ETagDiffDetector {
                         })
                         .await;
                     self.target.set_warning();
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(key.to_string());
+                    // skipcq: RS-W1070
+                    event_data.source_version_id =
+                        source_object.version_id().map(|v| v.to_string());
+                    // skipcq: RS-W1070
+                    event_data.target_version_id = head_target_object_output
+                        .version_id()
+                        .map(|v| v.to_string());
+                    event_data.source_etag = source_e_tag.clone();
+                    event_data.target_etag = target_e_tag.clone();
+                    event_data.source_last_modified = Some(*source_object.last_modified());
+                    event_data.target_last_modified = head_target_object_output.last_modified;
+                    event_data.source_size = Some(source_object.size() as u64);
+                    event_data.target_size =
+                        head_target_object_output.content_length().map(|v| v as u64);
+                    event_data.message = Some(
+                        "Object filtered. Only ServerSideEncryption::Aes256 is supported."
+                            .to_string(),
+                    );
+                    self.config.event_manager.trigger_event(event_data).await;
 
                     warn!(
                         name = FILTER_NAME,
@@ -396,6 +456,27 @@ impl ETagDiffDetector {
                     .await;
                 self.target.set_warning();
 
+                let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                event_data.key = Some(key.to_string());
+                event_data.source_version_id = None;
+                // skipcq: RS-W1070
+                event_data.target_version_id = head_target_object_output
+                    .version_id()
+                    .map(|v| v.to_string());
+                event_data.source_etag = source_e_tag.clone();
+                event_data.target_etag = target_e_tag.clone();
+                event_data.source_last_modified =
+                    head_source_object_output.last_modified().copied();
+                event_data.target_last_modified = head_target_object_output.last_modified;
+                event_data.source_size =
+                    head_source_object_output.content_length().map(|v| v as u64);
+                event_data.target_size =
+                    head_target_object_output.content_length().map(|v| v as u64);
+                event_data.message = Some(
+                    "Object filtered. Only ServerSideEncryption::Aes256 is supported.".to_string(),
+                );
+                self.config.event_manager.trigger_event(event_data).await;
+
                 warn!(
                     name = FILTER_NAME,
                     source_e_tag = source_e_tag,
@@ -405,7 +486,7 @@ impl ETagDiffDetector {
                     source_size = head_source_object_output.content_length().unwrap(),
                     target_size = head_target_object_output.content_length().unwrap(),
                     key = key,
-                    "object filtered. Only ServerSideEncryption::Aes256 is supported."
+                    "Object filtered. Only ServerSideEncryption::Aes256 is supported."
                 );
 
                 if self.config.report_sync_status {
@@ -454,8 +535,24 @@ impl ETagDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered. ETags are same."
+                "Object filtered. ETags are same."
             );
+
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+            event_data.key = Some(key.to_string());
+            event_data.source_version_id = None;
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_etag = source_e_tag.clone();
+            event_data.target_etag = target_e_tag.clone();
+            event_data.source_last_modified = head_source_object_output.last_modified().copied();
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = head_source_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. ETags are same.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
 
             if self.config.report_sync_status {
                 info!(
@@ -624,8 +721,22 @@ impl ETagDiffDetector {
                 source_size = source_object.size(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered. ETags are same."
+                "Object filtered. ETags are same."
             );
+
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+            event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_object.version_id().map(|v| v.to_string());
+            event_data.target_version_id = None;
+            event_data.source_etag = source_e_tag.clone();
+            event_data.target_etag = target_e_tag.clone();
+            event_data.source_last_modified = Some(*source_object.last_modified());
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = Some(source_object.size() as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. ETags are same.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
 
             if self.config.report_sync_status {
                 info!(
@@ -673,6 +784,25 @@ impl ETagDiffDetector {
                         .await;
                     self.target.set_warning();
 
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(key.to_string());
+                    // skipcq: RS-W1070
+                    event_data.source_version_id =
+                        source_object.version_id().map(|v| v.to_string());
+                    event_data.target_version_id = None;
+                    event_data.source_etag = source_e_tag.clone();
+                    event_data.target_etag = target_e_tag.clone();
+                    event_data.source_last_modified = Some(*source_object.last_modified());
+                    event_data.target_last_modified = head_target_object_output.last_modified;
+                    event_data.source_size = Some(source_object.size() as u64);
+                    event_data.target_size =
+                        head_target_object_output.content_length().map(|v| v as u64);
+                    event_data.message = Some(
+                        "Object filtered. Only ServerSideEncryption::Aes256 is supported."
+                            .to_string(),
+                    );
+                    self.config.event_manager.trigger_event(event_data).await;
+
                     warn!(
                         name = FILTER_NAME,
                         source_e_tag = source_e_tag,
@@ -682,7 +812,7 @@ impl ETagDiffDetector {
                         source_size = head_source_object_output.content_length().unwrap(),
                         target_size = head_target_object_output.content_length().unwrap(),
                         key = key,
-                        "object filtered. Only ServerSideEncryption::Aes256 is supported."
+                        "Object filtered. Only ServerSideEncryption::Aes256 is supported."
                     );
 
                     if self.config.report_sync_status {

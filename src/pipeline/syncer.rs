@@ -528,6 +528,22 @@ impl ObjectSyncer {
                     )
                     .await
                 {
+                    let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                    event_data.key = Some(key.to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_content_type =
+                        get_object_output.content_type().map(|ct| ct.to_string());
+                    event_data.source_size = Some(object.size() as u64);
+                    event_data.source_last_modified = Some(*object.last_modified());
+                    event_data.message =
+                        Some("Filtered by --filter-include-content-type-regex".to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
+
                     return Ok(());
                 }
                 if !self
@@ -537,6 +553,22 @@ impl ObjectSyncer {
                     )
                     .await
                 {
+                    let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                    event_data.key = Some(key.to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_content_type =
+                        get_object_output.content_type().map(|ct| ct.to_string());
+                    event_data.source_size = Some(object.size() as u64);
+                    event_data.source_last_modified = Some(*object.last_modified());
+                    event_data.message =
+                        Some("Filtered by --filter-exclude-content-type-regex".to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
+
                     return Ok(());
                 }
 
@@ -545,12 +577,52 @@ impl ObjectSyncer {
                     .decide_sync_target_by_include_metadata_regex(key, get_object_output.metadata())
                     .await
                 {
+                    let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                    event_data.key = Some(key.to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_user_defined_metadata =
+                        if get_object_output.metadata().is_none() {
+                            None
+                        } else {
+                            Some(format_metadata(get_object_output.metadata().unwrap()))
+                        };
+                    event_data.source_size = Some(object.size() as u64);
+                    event_data.source_last_modified = Some(*object.last_modified());
+                    event_data.message =
+                        Some("Filtered by --filter-include-metadata-regex".to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
+
                     return Ok(());
                 }
                 if !self
                     .decide_sync_target_by_exclude_metadata_regex(key, get_object_output.metadata())
                     .await
                 {
+                    let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                    event_data.key = Some(key.to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_user_defined_metadata =
+                        if get_object_output.metadata().is_none() {
+                            None
+                        } else {
+                            Some(format_metadata(get_object_output.metadata().unwrap()))
+                        };
+                    event_data.source_size = Some(object.size() as u64);
+                    event_data.source_last_modified = Some(*object.last_modified());
+                    event_data.message =
+                        Some("Filtered by --filter-exclude-metadata-regex".to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
+
                     return Ok(());
                 }
 
@@ -586,12 +658,42 @@ impl ObjectSyncer {
                             .decide_sync_target_by_include_tag_regex(key, source_tagging)
                             .await
                         {
+                            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                            event_data.key = Some(key.to_string());
+                            event_data.source_version_id =
+                                object.version_id().map(|version_id| version_id.to_string());
+                            event_data.source_tagging = source_tagging.map(format_tags);
+                            event_data.source_size = Some(object.size() as u64);
+                            event_data.source_last_modified = Some(*object.last_modified());
+                            event_data.message =
+                                Some("Filtered by --filter-include-tag-regex".to_string());
+                            self.base
+                                .config
+                                .event_manager
+                                .trigger_event(event_data)
+                                .await;
+
                             return Ok(());
                         }
                         if !self
                             .decide_sync_target_by_exclude_tag_regex(key, source_tagging)
                             .await
                         {
+                            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                            event_data.key = Some(key.to_string());
+                            event_data.source_version_id =
+                                object.version_id().map(|version_id| version_id.to_string());
+                            event_data.source_tagging = source_tagging.map(format_tags);
+                            event_data.source_size = Some(object.size() as u64);
+                            event_data.source_last_modified = Some(*object.last_modified());
+                            event_data.message =
+                                Some("Filtered by --filter-exclude-tag-regex".to_string());
+                            self.base
+                                .config
+                                .event_manager
+                                .trigger_event(event_data)
+                                .await;
+                            
                             return Ok(());
                         }
                     }

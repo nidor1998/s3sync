@@ -5,6 +5,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use tracing::trace;
 
+use super::stage::{SendResult, Stage};
 use crate::config::FilterConfig;
 pub use crate::pipeline::filter::exclude_regex::ExcludeRegexFilter;
 pub use crate::pipeline::filter::include_regex::IncludeRegexFilter;
@@ -13,9 +14,10 @@ pub use crate::pipeline::filter::modified::TargetModifiedFilter;
 pub use crate::pipeline::filter::mtime_after::MtimeAfterFilter;
 pub use crate::pipeline::filter::mtime_before::MtimeBeforeFilter;
 pub use crate::pipeline::filter::smaller_size::SmallerSizeFilter;
-use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics};
-
-use super::stage::{SendResult, Stage};
+use crate::storage::e_tag_verify::normalize_e_tag;
+use crate::types::event_callback::{EventData, EventType};
+use crate::types::filter_message::get_filtered_message_by_name;
+use crate::types::{ObjectKey, ObjectKeyMap, S3syncObject, SyncStatistics, sha1_digest_from_key};
 
 mod exclude_regex;
 mod include_regex;
@@ -70,6 +72,43 @@ impl ObjectFilterBase<'_> {
                     tokio::task::yield_now().await;
                     if !filter_fn(&object, &self.base.config.filter_config, &target_key_map) {
                         tokio::task::yield_now().await;
+
+                        if self.base.config.event_manager.is_callback_registered() {
+                            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                            event_data.key = Some(object.key().to_string());
+                            // skipcq: RS-W1070
+                            event_data.source_version_id =
+                                object.version_id().map(|v| v.to_string());
+                            event_data.source_etag = object
+                                .e_tag()
+                                .map(|e| normalize_e_tag(&Some(e.to_string())).unwrap());
+                            event_data.source_last_modified = Some(*object.last_modified());
+                            event_data.source_size = Some(object.size() as u64);
+
+                            {
+                                let locked_target_key_map = target_key_map.lock().unwrap();
+                                let mut result = locked_target_key_map.get(
+                                    &ObjectKey::KeySHA1Digest(sha1_digest_from_key(object.key())),
+                                );
+                                if result.is_none() {
+                                    result = locked_target_key_map
+                                        .get(&ObjectKey::KeyString(object.key().to_string()));
+                                }
+                                if let Some(entry) = result {
+                                    event_data.target_etag = normalize_e_tag(&entry.e_tag.clone());
+                                    event_data.target_last_modified = Some(entry.last_modified);
+                                    event_data.target_size = Some(entry.content_length as u64);
+                                }
+                            }
+
+                            event_data.message = Some(get_filtered_message_by_name(self.name));
+                            self.base
+                                .config
+                                .event_manager
+                                .trigger_event(event_data)
+                                .await;
+                        }
+
                         let _ = self
                             .base
                             .target
