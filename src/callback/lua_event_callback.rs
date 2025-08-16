@@ -79,6 +79,15 @@ impl EventCallback for LuaEventCallback {
             .set("target_etag", event_data.target_etag.clone())
             .unwrap();
         event_data_lua
+            .set("byte_written", event_data.byte_written)
+            .unwrap();
+        event_data_lua
+            .set("upload_id", event_data.upload_id.clone())
+            .unwrap();
+        event_data_lua
+            .set("part_number", event_data.part_number)
+            .unwrap();
+        event_data_lua
             .set("message", event_data.message.clone())
             .unwrap();
 

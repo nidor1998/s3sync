@@ -733,6 +733,7 @@ impl UploadManager {
             let server_side_copy = self.config.server_side_copy;
 
             let stats_sender = self.stats_sender.clone();
+            let event_manager = self.config.event_manager.clone();
 
             let mut buffer = if !server_side_copy {
                 let mut buffer = Vec::<u8>::with_capacity(multipart_chunksize as usize);
@@ -780,7 +781,7 @@ impl UploadManager {
                         let get_object_output = source
                             .get_object(
                                 &source_key,
-                                source_version_id,
+                                source_version_id.clone(),
                                 additional_checksum_mode,
                                 Some(range.clone()),
                                 source_sse_c.clone(),
@@ -932,6 +933,16 @@ impl UploadManager {
                         convert_copy_to_upload_part_output(upload_part_copy_output);
                 }
 
+                let mut event_data = EventData::new(EventType::SYNC_WRITE);
+                event_data.key = Some(target_key.clone());
+                // skipcq: RS-W1070
+                event_data.source_version_id = source_version_id.clone();
+                event_data.source_size = Some(source_total_size as u64);
+                event_data.upload_id = Some(target_upload_id.clone());
+                event_data.part_number = Some(part_number as u64);
+                event_data.byte_written = Some(upload_size as u64);
+                event_manager.trigger_event(event_data).await;
+
                 let mut upload_size_vec = total_upload_size.lock().unwrap();
                 upload_size_vec.push(upload_size);
 
@@ -1048,6 +1059,7 @@ impl UploadManager {
 
             let source = dyn_clone::clone_box(&*(self.source));
             let source_key = self.source_key.clone();
+            let source_total_size = self.source_total_size as usize;
             let copy_source = if self.config.server_side_copy {
                 self.source
                     .generate_full_key_with_bucket(source_key.as_ref(), source_version_id.clone())
@@ -1090,6 +1102,7 @@ impl UploadManager {
             let server_side_copy = self.config.server_side_copy;
 
             let stats_sender = self.stats_sender.clone();
+            let event_manager = self.config.event_manager.clone();
 
             let mut buffer = if !server_side_copy {
                 let mut buffer = Vec::<u8>::with_capacity(object_part_chunksize as usize);
@@ -1137,7 +1150,7 @@ impl UploadManager {
                         let get_object_output = source
                             .get_object(
                                 &source_key,
-                                source_version_id,
+                                source_version_id.clone(),
                                 additional_checksum_mode,
                                 Some(range.clone()),
                                 source_sse_c.clone(),
@@ -1290,6 +1303,16 @@ impl UploadManager {
                     upload_part_output =
                         convert_copy_to_upload_part_output(upload_part_copy_output);
                 }
+
+                let mut event_data = EventData::new(EventType::SYNC_WRITE);
+                event_data.key = Some(target_key.clone());
+                // skipcq: RS-W1070
+                event_data.source_version_id = source_version_id.clone();
+                event_data.source_size = Some(source_total_size as u64);
+                event_data.upload_id = Some(target_upload_id.clone());
+                event_data.part_number = Some(part_number as u64);
+                event_data.byte_written = Some(upload_size as u64);
+                event_manager.trigger_event(event_data).await;
 
                 let mut locked_upload_parts = upload_parts.lock().unwrap();
                 locked_upload_parts.push(
@@ -1594,6 +1617,14 @@ impl UploadManager {
                     .context("aws_sdk_s3::client::Client put_object() failed.")?
             }
         };
+
+        let mut event_data = EventData::new(EventType::SYNC_WRITE);
+        event_data.key = Some(key.to_string());
+        // skipcq: RS-W1070
+        event_data.source_version_id = source_version_id.clone();
+        event_data.source_size = Some(self.source_total_size);
+        event_data.byte_written = Some(self.source_total_size); // Assuming the size is the same as source
+        self.config.event_manager.trigger_event(event_data).await;
 
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
