@@ -215,6 +215,7 @@ impl ChecksumDiffDetector {
                 self.config.filter_config.check_checksum_algorithm.clone();
             // skipcq: RS-W1070
             event_data.source_checksum = source_checksum.clone();
+            // skipcq: RS-W1070
             event_data.target_checksum = target_checksum.clone();
             // skipcq: RS-W1070
             event_data.source_version_id = source_version_id.clone();
