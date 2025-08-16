@@ -693,7 +693,7 @@ impl ObjectSyncer {
                                 .event_manager
                                 .trigger_event(event_data)
                                 .await;
-                            
+
                             return Ok(());
                         }
                     }
