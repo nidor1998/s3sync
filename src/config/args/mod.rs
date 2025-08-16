@@ -321,7 +321,7 @@ Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTEL
         env,
         help_heading = "Filtering",
         long_help = r#"Sync only objects older than given time (RFC3339 datetime).
-Example: 2023-02-19T12:00:00Z)"#
+Example: 2023-02-19T12:00:00Z"#
     )]
     filter_mtime_before: Option<DateTime<Utc>>,
 
@@ -330,7 +330,7 @@ Example: 2023-02-19T12:00:00Z)"#
         env,
         help_heading = "Filtering",
         long_help = r#"Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
-Example: 2023-02-19T12:00:00Z)"#
+Example: 2023-02-19T12:00:00Z"#
     )]
     filter_mtime_after: Option<DateTime<Utc>>,
 
@@ -561,7 +561,7 @@ If this option is enabled, the --remove-modified-filter and
 The source storage must be a versioning enabled S3 bucket.
 By default, the target storage's objects will always be overwritten with the source's objects.
 
-Example: 2025-07-16T12:00:00Z)"#
+Example: 2025-07-16T12:00:00Z"#
     )]
     point_in_time: Option<DateTime<Utc>>,
 

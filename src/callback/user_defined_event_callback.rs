@@ -85,6 +85,11 @@ impl EventCallback for UserDefinedEventCallback {
                 println!("Sync write: {event_data:?}");
             }
 
+            // If an object is filtered out, this event is triggered. EventData.message will contain the reason for filtering.
+            EventType::SYNC_FILTERED => {
+                println!("Sync filtered: {event_data:?}");
+            }
+
             // Currently, all events are captured by above match arms,
             _ => {
                 println!("Other events: {event_data:?}");

@@ -1,11 +1,14 @@
+use crate::Config;
+use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
+use crate::types::S3syncObject;
+use crate::types::event_callback::{EventData, EventType};
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use tracing::debug;
 
-use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
-use crate::types::S3syncObject;
-
-pub struct SizeDiffDetector;
+pub struct SizeDiffDetector {
+    config: Config,
+}
 
 const FILTER_NAME: &str = "SizeDiffDetector";
 #[async_trait]
@@ -20,11 +23,24 @@ impl DiffDetectionStrategy for SizeDiffDetector {
             let content_length = source_object.size();
             let key = source_object.key();
 
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+            event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_object.version_id().map(|v| v.to_string());
+            // skipcq: RS-W1070
+            event_data.target_version_id = target_object.version_id().map(|v| v.to_string());
+            event_data.source_last_modified = Some(*source_object.last_modified());
+            event_data.target_last_modified = target_object.last_modified;
+            event_data.source_size = Some(source_object.size() as u64);
+            event_data.target_size = target_object.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. Same size".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             debug!(
                 name = FILTER_NAME,
                 content_length = content_length,
                 key = key,
-                "object filtered."
+                "Object filtered."
             );
         }
 
@@ -33,14 +49,15 @@ impl DiffDetectionStrategy for SizeDiffDetector {
 }
 
 impl SizeDiffDetector {
-    pub fn boxed_new() -> DiffDetector {
-        Box::new(SizeDiffDetector {})
+    pub fn boxed_new(config: Config) -> DiffDetector {
+        Box::new(SizeDiffDetector { config })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::args::parse_from_args;
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::primitives::DateTime;
     use aws_sdk_s3::types::Object;
@@ -50,7 +67,15 @@ mod tests {
     async fn check_same_size() {
         init_dummy_tracing_subscriber();
 
-        let diff_detector = SizeDiffDetector::boxed_new();
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let diff_detector = SizeDiffDetector::boxed_new(config);
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
             .set_content_length(Some(6))
@@ -77,7 +102,15 @@ mod tests {
     async fn check_different_size() {
         init_dummy_tracing_subscriber();
 
-        let diff_detector = SizeDiffDetector::boxed_new();
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let diff_detector = SizeDiffDetector::boxed_new(config);
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
             .set_content_length(Some(6))

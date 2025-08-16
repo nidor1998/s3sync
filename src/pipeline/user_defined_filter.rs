@@ -1,9 +1,9 @@
-use anyhow::{Result, anyhow};
-use tracing::{error, info, trace};
-
 use super::stage::{SendResult, Stage};
+use crate::storage::e_tag_verify::normalize_e_tag;
 use crate::types::SyncStatistics;
 use crate::types::event_callback::{EventData, EventType};
+use anyhow::{Result, anyhow};
+use tracing::{error, info, trace};
 
 pub struct UserDefinedFilter {
     base: Stage,
@@ -42,15 +42,35 @@ impl UserDefinedFilter {
                             }
 
                             if !need_sync.unwrap() {
+                                if self.base.config.event_manager.is_callback_registered() {
+                                    let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                                    event_data.key = Some(object.key().to_string());
+                                    // skipcq: RS-W1070
+                                    event_data.source_version_id =
+                                        object.version_id().map(|v| v.to_string());
+                                    event_data.source_etag = object
+                                        .e_tag()
+                                        .map(|e| normalize_e_tag(&Some(e.to_string())).unwrap());
+                                    event_data.source_last_modified = Some(*object.last_modified());
+                                    event_data.source_size = Some(object.size() as u64);
+
+                                    event_data.message = Some("Object filtered by user defined filter".to_string());
+                                    self.base
+                                        .config
+                                        .event_manager
+                                        .trigger_event(event_data)
+                                        .await;
+                                }
+
                                  let _ = self
-                                .base
-                                .target
-                                .as_ref()
-                                .unwrap()
-                                .get_stats_sender()
-                                .send(SyncStatistics::SyncSkip {
-                                    key: object.key().to_string(),
-                                }).await;
+                                    .base
+                                    .target
+                                    .as_ref()
+                                    .unwrap()
+                                    .get_stats_sender()
+                                    .send(SyncStatistics::SyncSkip {
+                                        key: object.key().to_string(),
+                                    }).await;
 
                                 continue;
                             }

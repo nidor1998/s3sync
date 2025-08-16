@@ -14,6 +14,7 @@ use crate::storage::additional_checksum_verify::{
 };
 use crate::storage::local::fs_util;
 use crate::types::SyncStatistics::SyncWarning;
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::{
     S3syncObject, SYNC_REPORT_CHECKSUM_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES,
     SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN, SyncStatsReport, is_full_object_checksum,
@@ -139,6 +140,25 @@ impl ChecksumDiffDetector {
         let checksum_algorithm = checksum_algorithm.unwrap().to_string();
 
         if source_checksum.is_none() || target_checksum.is_none() {
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(key.to_string());
+            event_data.checksum_algorithm =
+                self.config.filter_config.check_checksum_algorithm.clone();
+            event_data.source_checksum = source_checksum.clone();
+            event_data.target_checksum = target_checksum.clone();
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_version_id.clone();
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_last_modified = head_source_object_output.last_modified;
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = head_source_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. Checksum not found.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             warn!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm,
@@ -151,7 +171,7 @@ impl ChecksumDiffDetector {
                 key = key,
                 source_version_id = source_version_id.clone().unwrap_or_default(),
                 target_version_id = head_target_object_output.version_id().unwrap_or_default(),
-                "object filtered. Checksum not found."
+                "Object filtered. Checksum not found."
             );
 
             if self.config.report_sync_status {
@@ -185,6 +205,25 @@ impl ChecksumDiffDetector {
         }
 
         if source_checksum == target_checksum {
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+            event_data.key = Some(key.to_string());
+            event_data.checksum_algorithm =
+                self.config.filter_config.check_checksum_algorithm.clone();
+            event_data.source_checksum = source_checksum.clone();
+            event_data.target_checksum = target_checksum.clone();
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_version_id.clone();
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_last_modified = head_source_object_output.last_modified;
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = head_source_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. Checksums are same.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm,
@@ -197,7 +236,7 @@ impl ChecksumDiffDetector {
                 key = key,
                 source_version_id = source_version_id.clone().unwrap_or_default(),
                 target_version_id = head_target_object_output.version_id().unwrap_or_default(),
-                "object filtered. Checksums are same."
+                "Object filtered. Checksums are same."
             );
 
             if self.config.report_sync_status {
@@ -357,6 +396,24 @@ impl ChecksumDiffDetector {
                 .await;
             self.target.set_warning();
 
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(key.to_string());
+            event_data.checksum_algorithm =
+                self.config.filter_config.check_checksum_algorithm.clone();
+            event_data.source_checksum = None;
+            event_data.target_checksum = target_checksum.clone();
+            event_data.source_version_id = None;
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_last_modified = head_source_object_output.last_modified;
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = head_source_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. Target checksum not found.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             warn!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
@@ -367,7 +424,7 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered. Target checksum not found."
+                "Object filtered. Target checksum not found."
             );
 
             if self.config.report_sync_status {
@@ -463,6 +520,24 @@ impl ChecksumDiffDetector {
                 );
             }
 
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+            event_data.key = Some(key.to_string());
+            event_data.checksum_algorithm =
+                self.config.filter_config.check_checksum_algorithm.clone();
+            event_data.source_checksum = Some(source_checksum.clone());
+            event_data.target_checksum = target_checksum.clone();
+            event_data.source_version_id = None;
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_last_modified = head_source_object_output.last_modified;
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = head_source_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. Checksums are same.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
@@ -473,7 +548,7 @@ impl ChecksumDiffDetector {
                 source_size = head_source_object_output.content_length().unwrap(),
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
-                "object filtered. Checksums are same."
+                "Object filtered. Checksums are same."
             );
 
             if self.config.report_sync_status {
@@ -603,6 +678,25 @@ impl ChecksumDiffDetector {
         .to_rfc3339();
 
         if source_checksum.is_none() {
+            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            event_data.key = Some(key.to_string());
+            event_data.checksum_algorithm =
+                self.config.filter_config.check_checksum_algorithm.clone();
+            event_data.source_checksum = source_checksum.clone();
+            event_data.target_checksum = None;
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_version_id.clone();
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_last_modified = head_source_object_output.last_modified;
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = head_source_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. Source checksum not found.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             warn!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
@@ -614,7 +708,7 @@ impl ChecksumDiffDetector {
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
                 source_version_id = source_version_id.clone().unwrap_or_default(),
-                "object filtered. Source checksum not found."
+                "Object filtered. Source checksum not found."
             );
 
             if self.config.report_sync_status {
@@ -698,6 +792,25 @@ impl ChecksumDiffDetector {
         }
 
         if source_checksum.as_ref().unwrap().as_str() == target_checksum {
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+            event_data.key = Some(key.to_string());
+            event_data.checksum_algorithm =
+                self.config.filter_config.check_checksum_algorithm.clone();
+            event_data.source_checksum = source_checksum.clone();
+            event_data.target_checksum = Some(target_checksum.clone());
+            // skipcq: RS-W1070
+            event_data.source_version_id = source_version_id.clone();
+            // skipcq: RS-W1070
+            event_data.target_version_id = head_target_object_output
+                .version_id()
+                .map(|v| v.to_string());
+            event_data.source_last_modified = head_source_object_output.last_modified;
+            event_data.target_last_modified = head_target_object_output.last_modified;
+            event_data.source_size = head_source_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = head_target_object_output.content_length().map(|v| v as u64);
+            event_data.message = Some("Object filtered. Checksums are same.".to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             debug!(
                 name = FILTER_NAME,
                 checksum_algorithm = checksum_algorithm.as_ref().unwrap().to_string(),
@@ -709,7 +822,7 @@ impl ChecksumDiffDetector {
                 target_size = head_target_object_output.content_length().unwrap(),
                 key = key,
                 source_version_id = source_version_id.clone().unwrap_or_default(),
-                "object filtered. Checksums are same."
+                "Object filtered. Checksums are same."
             );
 
             if self.config.report_sync_status {
@@ -803,6 +916,7 @@ impl ChecksumDiffDetector {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::config::args::parse_from_args;
     use crate::pipeline::storage_factory::create_storage_pair;
     use crate::storage::StoragePair;
@@ -813,8 +927,6 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     const TEST_OBJECT_CHECKSUM: &str = "CVmbZh4IWzA=";
 

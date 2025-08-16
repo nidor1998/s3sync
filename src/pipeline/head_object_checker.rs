@@ -102,7 +102,7 @@ impl HeadObjectChecker {
 
         if let Ok(target_object) = head_target_object_output {
             let diff_detector = if self.config.filter_config.check_size {
-                SizeDiffDetector::boxed_new()
+                SizeDiffDetector::boxed_new(self.config.clone())
             } else if (self.config.filter_config.check_etag
                 && (self.config.head_each_target || self.config.transfer_config.auto_chunksize))
                 || self.config.filter_config.check_mtime_and_etag
@@ -130,7 +130,7 @@ impl HeadObjectChecker {
                     self.sync_stats_report.clone(),
                 )
             } else {
-                StandardDiffDetector::boxed_new()
+                StandardDiffDetector::boxed_new(self.config.clone())
             };
 
             return diff_detector
@@ -256,6 +256,7 @@ mod tests {
     use crate::types::token::create_pipeline_cancellation_token;
     use aws_sdk_s3::types::Object;
     use aws_smithy_runtime_api::http::{Response, StatusCode};
+    use aws_smithy_types::DateTime;
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
@@ -355,8 +356,13 @@ mod tests {
             Arc::new(Mutex::new(SyncStatsReport::default())),
         );
 
-        let source_object =
-            S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(6).build());
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .build(),
+        );
         assert!(
             !head_object_checker
                 .is_old_object(&source_object)
@@ -364,8 +370,13 @@ mod tests {
                 .unwrap()
         );
 
-        let source_object =
-            S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(5).build());
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(5)
+                .last_modified(DateTime::from_secs(1))
+                .build(),
+        );
         assert!(
             head_object_checker
                 .is_old_object(&source_object)

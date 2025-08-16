@@ -9,6 +9,7 @@ use tracing::debug;
 
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncSkip;
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::{ObjectVersions, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, S3syncObject};
 use crate::{Config, types};
 
@@ -96,6 +97,16 @@ impl VersioningInfoCollector {
                     source_last_modified = source_last_modified,
                     "already synced."
                 );
+
+                let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                event_data.key = Some(key.to_string());
+                // skipcq: RS-W1070
+                event_data.source_version_id = source_object.version_id().map(|v| v.to_string());
+                event_data.source_last_modified = Some(*source_object.last_modified());
+                event_data.source_size = Some(source_object.size() as u64);
+                event_data.message =
+                    Some("Object filtered. This version already synced.".to_string());
+                self.config.event_manager.trigger_event(event_data).await;
 
                 let _ = self
                     .target

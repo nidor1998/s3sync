@@ -37,6 +37,9 @@ bitflags! {
         // If an object (or part of an object) is written, this event is triggered
         const SYNC_WRITE = 1u64 << 13;
 
+        // If an object is filtered out, this event is triggered. EventData.message will contain the reason for filtering.
+        const SYNC_FILTERED = 1u64 << 14;
+
         // This is a special event mask to indicate that all events should be captured
         const ALL_EVENTS  = !0;
     }
@@ -57,6 +60,9 @@ pub struct EventData {
     pub target_checksum: Option<String>,
     pub source_etag: Option<String>,
     pub target_etag: Option<String>,
+    pub source_content_type: Option<String>,
+    pub source_user_defined_metadata: Option<String>,
+    pub source_tagging: Option<String>,
     pub byte_written: Option<u64>,
     pub upload_id: Option<String>,
     pub part_number: Option<u64>,

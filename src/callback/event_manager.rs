@@ -36,6 +36,10 @@ impl EventManager {
         self.event_flags = events_flag;
     }
 
+    pub fn is_callback_registered(&self) -> bool {
+        self.event_callback.is_some()
+    }
+
     pub async fn trigger_event(&self, event_data: EventData) {
         if let Some(callback) = &self.event_callback {
             if self.event_flags.contains(event_data.event_type) {
