@@ -80,6 +80,11 @@ impl EventCallback for UserDefinedEventCallback {
                 println!("Sync cancelled: {event_data:?}");
             }
 
+            // If an object (or part of an object) is written, this event is triggered
+            EventType::SYNC_WRITE => {
+                println!("Sync write: {event_data:?}");
+            }
+
             // Currently, all events are captured by above match arms,
             _ => {
                 println!("Other events: {event_data:?}");
