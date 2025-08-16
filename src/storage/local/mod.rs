@@ -574,6 +574,14 @@ impl LocalStorage {
 
         let target_content_length = fs_util::get_file_size(&real_path).await;
 
+        let mut event_data = EventData::new(EventType::SYNC_WRITE);
+        event_data.key = Some(key.to_string());
+        // skipcq: RS-W1070
+        event_data.source_version_id = source_version_id.clone();
+        event_data.source_size = Some(source_content_length);
+        event_data.byte_written = Some(target_content_length);
+        self.config.event_manager.trigger_event(event_data).await;
+
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
         // skipcq: RS-W1070
@@ -769,6 +777,8 @@ impl LocalStorage {
 
             let total_upload_size = Arc::clone(&shared_total_upload_size);
 
+            let event_manager = self.config.event_manager.clone();
+
             let cancellation_token = self.cancellation_token.clone();
             let mut chunk_whole_data = Vec::<u8>::with_capacity(chunksize);
             chunk_whole_data.resize_with(chunksize, Default::default);
@@ -813,7 +823,7 @@ impl LocalStorage {
                     let get_object_output = cloned_source
                         .get_object(
                             &source_key,
-                            source_version_id,
+                            source_version_id.clone(),
                             additional_checksum_mode,
                             range,
                             source_sse_c,
@@ -890,6 +900,15 @@ impl LocalStorage {
                 cloned_file.seek(io::SeekFrom::Start(offset)).await?;
                 cloned_file.write_all(&chunk_whole_data).await?;
                 cloned_file.flush().await?;
+
+                let mut event_data = EventData::new(EventType::SYNC_WRITE);
+                event_data.key = Some(source_key.to_string());
+                // skipcq: RS-W1070
+                event_data.source_version_id = source_version_id.clone();
+                event_data.source_size = Some(source_size);
+                event_data.part_number = Some(part_number);
+                event_data.byte_written = Some(chunk_whole_data_size as u64);
+                event_manager.trigger_event(event_data).await;
 
                 let mut upload_size_vec = total_upload_size.lock().unwrap();
                 upload_size_vec.push(chunk_whole_data_size as u64);

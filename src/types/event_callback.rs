@@ -34,6 +34,9 @@ bitflags! {
         // If a syncing object is cancelled by preprocess callback, this event is triggered
         const SYNC_CANCEL = 1u64 << 12;
 
+        // If an object (or part of an object) is written, this event is triggered
+        const SYNC_WRITE = 1u64 << 13;
+
         // This is a special event mask to indicate that all events should be captured
         const ALL_EVENTS  = !0;
     }
@@ -54,6 +57,9 @@ pub struct EventData {
     pub target_checksum: Option<String>,
     pub source_etag: Option<String>,
     pub target_etag: Option<String>,
+    pub byte_written: Option<u64>,
+    pub upload_id: Option<String>,
+    pub part_number: Option<u64>,
     pub message: Option<String>,
 }
 
