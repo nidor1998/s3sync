@@ -25,6 +25,10 @@ function on_event(event_data)
         print("PIPELINE_ERROR")
     elseif event_data.event_type == 1 << 12 then
         print("SYNC_CANCEL")
+    elseif event_data.event_type == 1 << 13 then
+        print("SYNC_WRITE")
+    elseif event_data.event_type == 1 << 14 then
+        print("SYNC_FILTERED")
     else
         print("UNKNOWN_EVENT")
     end
@@ -41,6 +45,12 @@ function on_event(event_data)
     print("target_checksum:", event_data.target_checksum)
     print("source_etag:", event_data.source_etag)
     print("target_etag:", event_data.target_etag)
+    print("source_content_type", event_data.source_content_type)
+    print("source_user_defined_metadata", event_data.source_user_defined_metadata)
+    print("source_tagging", event_data.source_tagging)
+    print("byte_written", event_data.byte_written)
+    print("upload_id", event_data.upload_id)
+    print("part_number", event_data.part_number)
     print("message:", event_data.message)
     print("")
 end
