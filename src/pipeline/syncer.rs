@@ -292,7 +292,7 @@ impl ObjectSyncer {
                 message
             );
 
-            let mut event_data = EventData::new(EventType::SYNC_WARNING);
+            let mut event_data = EventData::new(EventType::SYNC_FILTERED);
             event_data.key = Some(object.key().to_string());
             event_data.source_version_id =
                 object.version_id().map(|version_id| version_id.to_string());
