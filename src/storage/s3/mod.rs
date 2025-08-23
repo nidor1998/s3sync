@@ -20,10 +20,13 @@ use leaky_bucket::RateLimiter;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use tracing::{debug, info, trace};
+use tokio::sync::Semaphore;
+use tokio::task::JoinSet;
+use tracing::{debug, error, info, trace};
 
 use crate::Config;
 use crate::config::ClientConfig;
@@ -90,6 +93,7 @@ struct S3Storage {
     rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     has_warning: Arc<AtomicBool>,
+    listing_worker_semaphore: Arc<Semaphore>,
 }
 
 impl S3Storage {
@@ -111,6 +115,7 @@ impl S3Storage {
             panic!("s3 path not found")
         };
 
+        let max_parallel_listings: usize = config.max_parallel_listings as usize;
         let storage = S3Storage {
             config,
             bucket,
@@ -122,6 +127,7 @@ impl S3Storage {
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
             has_warning,
+            listing_worker_semaphore: Arc::new(Semaphore::new(max_parallel_listings)),
         };
 
         Box::new(storage)
@@ -316,6 +322,158 @@ impl S3Storage {
                 .await;
         }
     }
+
+    fn list_objects_with_parallel<'a>(
+        &'a self,
+        prefix: &'a str,
+        sender: &'a Sender<S3syncObject>,
+        max_keys: i32,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        Box::pin(async move {
+            let is_root_prefix = prefix.is_empty();
+            let prefix = if is_root_prefix {
+                self.prefix.clone()
+            } else {
+                prefix.to_string()
+            };
+
+            // For the root prefix, we need to set a delimiter to "/" for parallel listing of sub-prefixes.
+            let delimiter = if is_root_prefix {
+                Some("/".to_string())
+            } else {
+                None
+            };
+
+            trace!(
+                root_prefix = self.prefix,
+                prefix = prefix.as_str(),
+                "Start listing objects."
+            );
+
+            let mut continuation_token = None;
+            loop {
+                // Listing objects is rate-limited.
+                self.exec_rate_limit_objects_per_sec().await;
+
+                let list_object_v2 = self
+                    .client
+                    .as_ref()
+                    .unwrap()
+                    .list_objects_v2()
+                    .set_request_payer(self.request_payer.clone())
+                    .bucket(&self.bucket)
+                    .prefix(&prefix)
+                    .set_delimiter(delimiter.clone())
+                    .set_continuation_token(continuation_token)
+                    .max_keys(max_keys);
+
+                if self.cancellation_token.is_cancelled() {
+                    trace!("list_objects() canceled.");
+                    break;
+                }
+
+                let list_objects_output = list_object_v2.send().await?;
+
+                for object in list_objects_output.contents() {
+                    let key_without_prefix = remove_s3_prefix(object.key().unwrap(), &self.prefix);
+                    if key_without_prefix.is_empty() {
+                        let mut event_data = EventData::new(EventType::SYNC_FILTERED);
+                        event_data.key = object.key().map(|k| k.to_string());
+                        // skipcq: RS-W1070
+                        event_data.message =
+                            Some("Key that is same as prefix is skipped.".to_string());
+                        self.config.event_manager.trigger_event(event_data).await;
+
+                        self.send_stats(SyncSkip {
+                            key: object.key().unwrap().to_string(),
+                        })
+                        .await;
+
+                        let key = object.key().unwrap();
+                        debug!(key = key, "Key that is same as prefix is skipped.");
+
+                        continue;
+                    }
+
+                    let non_versioning_object = S3syncObject::clone_non_versioning_object_with_key(
+                        object,
+                        &key_without_prefix,
+                    );
+
+                    if let Err(e) = sender
+                        .send(non_versioning_object.clone())
+                        .await
+                        .context("async_channel::Sender::send() failed.")
+                    {
+                        error!("Failed to send object: {}", e);
+                        return if !sender.is_closed() { Err(e) } else { Ok(()) };
+                    }
+                }
+
+                if let Some(common_prefixes) = list_objects_output.common_prefixes.clone() {
+                    let mut join_set = JoinSet::new();
+                    for common_prefix in common_prefixes {
+                        if self.cancellation_token.is_cancelled() {
+                            trace!("list_objects() canceled.");
+                            break;
+                        }
+
+                        if let Some(sub_prefix) = common_prefix.prefix() {
+                            let storage = self.clone();
+                            let sub_prefix = sub_prefix.to_string();
+                            let sender = sender.clone();
+
+                            trace!(
+                                root_prefix = self.prefix,
+                                prefix = prefix.as_str(),
+                                sub_prefix = sub_prefix.as_str(),
+                                "Start listing objects in sub-prefix."
+                            );
+
+                            let permit = self
+                                .listing_worker_semaphore
+                                .clone()
+                                .acquire_owned()
+                                .await
+                                .unwrap();
+                            join_set.spawn(async move {
+                                let result = storage
+                                    .list_objects_with_parallel(&sub_prefix, &sender, max_keys)
+                                    .await
+                                    .context("Failed to list objects in sub-prefix.");
+                                drop(permit);
+                                result
+                            });
+                        }
+                    }
+
+                    while let Some(join_result) = join_set.join_next().await {
+                        if let Err(join_error) = join_result {
+                            error!("Failed to join in sub-prefix: {}", join_error);
+                            self.cancellation_token.cancel();
+                            return Err(anyhow!(join_error));
+                        }
+
+                        if let Err(task_error) = join_result.unwrap() {
+                            error!("Failed to list objects in sub-prefix: {}", task_error);
+                            self.cancellation_token.cancel();
+                            return Err(anyhow!(task_error));
+                        }
+                    }
+                }
+
+                if !list_objects_output.is_truncated().unwrap() {
+                    break;
+                }
+
+                continuation_token = list_objects_output
+                    .next_continuation_token()
+                    .map(|token| token.to_string());
+            }
+
+            Ok(())
+        })
+    }
 }
 
 #[async_trait]
@@ -334,6 +492,20 @@ impl StorageTrait for S3Storage {
         max_keys: i32,
         _warn_as_error: bool,
     ) -> Result<()> {
+        if self.config.max_parallel_listings > 1 {
+            debug!(
+                "Using parallel listing with {} workers.",
+                self.config.max_parallel_listings
+            );
+
+            return self
+                .list_objects_with_parallel("", sender, max_keys)
+                .await
+                .context("Failed to parallel object listing.");
+        }
+
+        debug!("Disabled parallel listing.");
+
         let mut continuation_token = None;
         loop {
             let list_object_v2 = self

@@ -52,6 +52,8 @@ pub struct Config {
     pub dry_run: bool,
     pub rate_limit_objects: Option<u32>,
     pub rate_limit_bandwidth: Option<u64>,
+    pub max_parallel_listings: u16,
+    pub object_listing_queue_size: u32,
     pub cache_control: Option<String>,
     pub content_disposition: Option<String>,
     pub content_encoding: Option<String>,

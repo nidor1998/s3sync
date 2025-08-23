@@ -24,8 +24,6 @@ use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics, SyncStatsReport};
 
-const CHANNEL_CAPACITY: usize = 20000;
-
 mod deleter;
 mod diff_detector;
 mod diff_lister;
@@ -506,7 +504,7 @@ impl Pipeline {
 
     fn sync_objects(&self, target_objects: Receiver<S3syncObject>) -> Receiver<S3syncObject> {
         let (sender, next_stage_receiver) =
-            async_channel::bounded::<S3syncObject>(CHANNEL_CAPACITY);
+            async_channel::bounded::<S3syncObject>(self.config.object_listing_queue_size as usize);
 
         for worker_index in 0..(self.config.worker_size) {
             let stage = self.create_mpmc_stage(
@@ -623,7 +621,7 @@ impl Pipeline {
         target_objects: Receiver<S3syncObject>,
     ) -> Receiver<S3syncObject> {
         let (sender, next_stage_receiver) =
-            async_channel::bounded::<S3syncObject>(CHANNEL_CAPACITY);
+            async_channel::bounded::<S3syncObject>(self.config.object_listing_queue_size as usize);
 
         for worker_index in 0..(self.config.worker_size) {
             let stage = self.create_mpmc_stage(
@@ -655,7 +653,7 @@ impl Pipeline {
         has_warning: Arc<AtomicBool>,
     ) -> (Stage, Receiver<S3syncObject>) {
         let (sender, next_stage_receiver) =
-            async_channel::bounded::<S3syncObject>(CHANNEL_CAPACITY);
+            async_channel::bounded::<S3syncObject>(self.config.object_listing_queue_size as usize);
         let stage = Stage::new(
             self.config.clone(),
             Some(dyn_clone::clone_box(&*self.source)),
