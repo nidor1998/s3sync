@@ -1010,6 +1010,7 @@ impl LocalStorage {
         Ok(PutObjectOutput::builder().build())
     }
 
+    // skipcq: RS-R1000
     fn list_objects_with_parallel<'a>(
         &'a self,
         prefix: &'a str,
