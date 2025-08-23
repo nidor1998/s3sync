@@ -493,15 +493,27 @@ impl StorageTrait for S3Storage {
         _warn_as_error: bool,
     ) -> Result<()> {
         if self.config.max_parallel_listings > 1 {
-            debug!(
-                "Using parallel listing with {} workers.",
-                self.config.max_parallel_listings
-            );
+            if !self.is_express_onezone_storage() {
+                debug!(
+                    "Using parallel listing with {} workers.",
+                    self.config.max_parallel_listings
+                );
 
-            return self
-                .list_objects_with_parallel("", sender, max_keys)
-                .await
-                .context("Failed to parallel object listing.");
+                return self
+                    .list_objects_with_parallel("", sender, max_keys)
+                    .await
+                    .context("Failed to parallel object listing.");
+            } else if self.config.allow_parallel_listings_in_express_one_zone {
+                debug!(
+                    "Using parallel listing with {} workers(express one zone).",
+                    self.config.max_parallel_listings
+                );
+
+                return self
+                    .list_objects_with_parallel("", sender, max_keys)
+                    .await
+                    .context("Failed to parallel object listing.");
+            }
         }
 
         debug!("Disabled parallel listing.");

@@ -628,6 +628,24 @@ You can also divide the target objects by filter and run s3sync multiple times.
 
 The `--head-each-target` option calls the `HeadObject` API for each source object, but it is a trade-off between memory usage and API calls.
 
+### About parallel object listing
+By default, s3sync lists objects in the source and target buckets/local in parallel (default 16 workers).
+The parallel listing is enabled when the root has subdirectories or prefixes.
+
+For example, if the source is `s3://bucket-name/prefix` and there are many objects under `prefix/dir1`, `prefix/dir2`, ..., `prefix/dir16`, s3sync lists objects under these prefixes in parallel.
+But If the source has only objects under `prefix/dir1`, s3sync does not list objects in parallel.
+
+You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
+If set to `1`, parallel listing is disabled.
+
+This feature can significantly improve performance with incremental transfer when there are many objects in the source and target buckets/local. 
+
+With express one zone storage class, parallel listing may return in progress multipart upload objects.   
+So, parallel listing is disabled by default when the source or target bucket uses express one zone storage class.   
+You can enable it with `--allow-parallel-listings-in-express-one-zone` option.
+
+Note: Parallel listing may use CPU and memory.
+
 ### S3 Permissions
 s3sync requires the following permissions.
 
@@ -959,9 +977,12 @@ Performance:
       --max-parallel-uploads <MAX_PARALLEL_UPLOADS>
           Maximum number of parallel multipart uploads/downloads [env: MAX_PARALLEL_UPLOADS=] [default: 16]
       --max-parallel-listings <MAX_PARALLEL_LISTINGS>
-          Maximum number of parallel listings of S3 objects. [env: MAX_PARALLEL_LISTINGS=] [default: 16]
+          Maximum number of parallel listings of objects. [env: MAX_PARALLEL_LISTINGS=] [default: 16]
       --object-listing-queue-size <OBJECT_LISTING_QUEUE_SIZE>
-          Queue size for object listings [env: OBJECT_LISTING_QUEUE_SIZE=] [default: 100000]
+          Queue size for object listings [env: OBJECT_LISTING_QUEUE_SIZE=] [default: 200000]
+      --allow-parallel-listings-in-express-one-zone
+          Allow parallel listings in express one zone storage class.
+          It may include multipart upload in progress objects in the listing result. [env: ALLOW_PARALLEL_LISTINGS_IN_EXPRESS_ONE_ZONE=]
       --rate-limit-objects <RATE_LIMIT_OBJECTS>
           Rate limit objects per second [env: RATE_LIMIT_OBJECTS=]
       --rate-limit-bandwidth <RATE_LIMIT_BANDWIDTH>

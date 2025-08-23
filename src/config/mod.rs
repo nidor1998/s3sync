@@ -54,6 +54,7 @@ pub struct Config {
     pub rate_limit_bandwidth: Option<u64>,
     pub max_parallel_listings: u16,
     pub object_listing_queue_size: u32,
+    pub allow_parallel_listings_in_express_one_zone: bool,
     pub cache_control: Option<String>,
     pub content_disposition: Option<String>,
     pub content_encoding: Option<String>,
