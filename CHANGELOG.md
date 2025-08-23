@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated dependencies.
 
+### Fixed
+- Fixed a bug that does not log sync complete message.
+
 ## [1.36.0] - 2025-08-17
 
 ### Changed
