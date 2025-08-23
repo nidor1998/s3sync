@@ -633,16 +633,18 @@ By default, s3sync lists objects in the source and target buckets/local in paral
 The parallel listing is enabled when the root has subdirectories or prefixes.
 
 For example, if the source is `s3://bucket-name/prefix` and there are many objects under `prefix/dir1`, `prefix/dir2`, ..., `prefix/dir16`, s3sync lists objects under these prefixes in parallel.
-But If the source has only objects under `prefix/dir1`, s3sync does not list objects in parallel.
+But If the source has only one subdirectory under `prefix/`, s3sync does not list objects in parallel.
 
 You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
 If set to `1`, parallel listing is disabled.
 
-This feature can significantly improve performance with incremental transfer when there are many objects in the source and target buckets/local. 
+This feature can significantly improve performance with incremental transfer when there are many objects in the source and target bucket/local. 
 
 With express one zone storage class, parallel listing may return in progress multipart upload objects.   
 So, parallel listing is disabled by default when the source or target bucket uses express one zone storage class.   
 You can enable it with `--allow-parallel-listings-in-express-one-zone` option.
+
+When `--enable-versioning` or `--point-in-time` option is specified, parallel listing is disabled.
 
 Note: Parallel listing may use CPU and memory.
 
