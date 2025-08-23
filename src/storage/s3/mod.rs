@@ -1058,9 +1058,7 @@ impl StorageTrait for S3Storage {
             .await?;
 
         // If preprocess_callback is registered and preprocess was cancelled, e_tag will be None.
-        if self.config.preprocess_manager.is_callback_registered()
-            && put_object_output.e_tag.is_some()
-        {
+        if put_object_output.e_tag.is_some() {
             info!(
                 key = key,
                 source_version_id = version_id,
