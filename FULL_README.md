@@ -958,6 +958,10 @@ Performance:
           Number of workers for synchronization [env: WORKER_SIZE=] [default: 16]
       --max-parallel-uploads <MAX_PARALLEL_UPLOADS>
           Maximum number of parallel multipart uploads/downloads [env: MAX_PARALLEL_UPLOADS=] [default: 16]
+      --max-parallel-listings <MAX_PARALLEL_LISTINGS>
+          Maximum number of parallel listings of S3 objects. [env: MAX_PARALLEL_LISTINGS=] [default: 16]
+      --object-listing-queue-size <OBJECT_LISTING_QUEUE_SIZE>
+          Queue size for object listings [env: OBJECT_LISTING_QUEUE_SIZE=] [default: 100000]
       --rate-limit-objects <RATE_LIMIT_OBJECTS>
           Rate limit objects per second [env: RATE_LIMIT_OBJECTS=]
       --rate-limit-bandwidth <RATE_LIMIT_BANDWIDTH>

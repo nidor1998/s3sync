@@ -81,6 +81,8 @@ const DEFAULT_DISABLE_CONTENT_MD5_HEADER: bool = false;
 const DEFAULT_FULL_OBJECT_CHECKSUM: bool = false;
 const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS: u16 = 16;
+const DEFAULT_MAX_PARALLEL_LISTINGS: u16 = 16;
+const DEFAULT_OBJECT_LISTING_QUEUE_SIZE: u32 = 100000;
 const DEFAULT_ACCELERATE: bool = false;
 const DEFAULT_REQUEST_PAYER: bool = false;
 const DEFAULT_REPORT_SYNC_STATUS: bool = false;
@@ -457,6 +459,13 @@ This option cannot be used with SHA1/SHA256 additional checksum."#)]
     /// Maximum number of parallel multipart uploads/downloads
     #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS, value_parser = clap::value_parser!(u16).range(1..), help_heading = "Performance")]
     max_parallel_uploads: u16,
+
+    #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_LISTINGS, value_parser = clap::value_parser!(u16).range(1..), help_heading = "Performance", long_help=r#"Maximum number of parallel listings of S3 objects."#)]
+    max_parallel_listings: u16,
+
+    /// Queue size for object listings
+    #[arg(long, env, default_value_t = DEFAULT_OBJECT_LISTING_QUEUE_SIZE, value_parser = clap::value_parser!(u32).range(1..), help_heading = "Performance")]
+    object_listing_queue_size: u32,
 
     /// Rate limit objects per second
     #[arg(long, env,  value_parser = clap::value_parser!(u32).range(10..), help_heading = "Performance")]
@@ -1927,6 +1936,8 @@ impl TryFrom<CLIArgs> for Config {
             dry_run,
             rate_limit_objects: value.rate_limit_objects,
             rate_limit_bandwidth,
+            max_parallel_listings: value.max_parallel_listings,
+            object_listing_queue_size: value.object_listing_queue_size,
             cache_control: value.cache_control,
             content_disposition: value.content_disposition,
             content_encoding: value.content_encoding,
