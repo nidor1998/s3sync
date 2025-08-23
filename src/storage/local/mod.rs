@@ -34,6 +34,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncSeekExt, AsyncWriteExt};
+use tokio::sync::Semaphore;
 use tokio::task;
 use tokio::task::{JoinHandle, JoinSet};
 use tracing::{debug, error, info, trace, warn};
@@ -106,6 +107,7 @@ struct LocalStorage {
     rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     has_warning: Arc<AtomicBool>,
+    listing_worker_semaphore: Arc<Semaphore>,
 }
 
 impl LocalStorage {
@@ -124,6 +126,7 @@ impl LocalStorage {
             panic!("local path not found")
         };
 
+        let max_parallel_listings: usize = config.max_parallel_listings as usize;
         let storage = LocalStorage {
             config,
             path: local_path,
@@ -132,6 +135,7 @@ impl LocalStorage {
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
             has_warning,
+            listing_worker_semaphore: Arc::new(Semaphore::new(max_parallel_listings)),
         };
 
         Box::new(storage)
@@ -1084,13 +1088,20 @@ impl LocalStorage {
                     let sender = sender.clone();
                     let entry = entry.as_ref().unwrap().clone();
 
+                    let permit = self
+                        .listing_worker_semaphore
+                        .clone()
+                        .acquire_owned()
+                        .await
+                        .unwrap();
+
                     join_set.spawn(async move {
                         trace!(
                             "is_root_prefix: {}, child dir: {:?}",
                             is_root_prefix,
                             &entry.path().to_string_lossy()
                         );
-                        return storage
+                        let result = storage
                             .list_objects_with_parallel(
                                 &entry.path().to_string_lossy(),
                                 &sender,
@@ -1098,6 +1109,8 @@ impl LocalStorage {
                                 warn_as_error,
                             )
                             .await;
+                        drop(permit);
+                        result
                     });
                 }
 
