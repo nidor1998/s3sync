@@ -83,6 +83,74 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn local_to_s3_without_prefix_no_parallel_listing() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--max-parallel-listings",
+                "1",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET1.to_string(), "").await;
+            for object in object_list {
+                assert!(TestHelper::verify_object_md5_digest(
+                    object.key().unwrap(),
+                    object.e_tag().unwrap()
+                ));
+            }
+        }
+
+        {
+            TestHelper::touch_file("./test_data/e2e_test/case1/data1", TOUCH_FILE_SECS_FROM_NOW);
+
+            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--max-parallel-listings",
+                "1",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+
+    #[tokio::test]
     async fn local_to_s3_with_prefix() {
         TestHelper::init_dummy_tracing_subscriber();
 

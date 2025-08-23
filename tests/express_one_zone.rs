@@ -218,6 +218,70 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_local_parallel_listing() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let helper = TestHelper::new().await;
+        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+
+        {
+            let target_bucket_url = format!("s3://{}", &bucket1);
+            helper
+                .create_directory_bucket(&bucket1, EXPRESS_ONE_ZONE_AZ)
+                .await;
+
+            helper
+                .sync_directory_bucket_test_data(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--allow-parallel-listings-in-express-one-zone",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+
+            for entry in dir_entry_list {
+                let path = entry
+                    .path()
+                    .to_string_lossy()
+                    .replace(TEMP_DOWNLOAD_DIR, "");
+
+                assert!(TestHelper::verify_file_md5_digest(
+                    &format!("./test_data/e2e_test/case1/{}", &path),
+                    &TestHelper::md5_digest(&entry.path().to_string_lossy()),
+                ));
+            }
+
+            assert_eq!(
+                helper
+                    .get_object_last_modified(&bucket1, "data1", None)
+                    .await,
+                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+            );
+        }
+
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+    }
+
+    #[tokio::test]
     async fn s3_to_local_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 

@@ -28,14 +28,15 @@ use leaky_bucket::RateLimiter;
 use std::error::Error;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::task;
-use tokio::task::JoinHandle;
-use tracing::{debug, info, trace, warn};
+use tokio::task::{JoinHandle, JoinSet};
+use tracing::{debug, error, info, trace, warn};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::config::ClientConfig;
@@ -1008,6 +1009,178 @@ impl LocalStorage {
 
         Ok(PutObjectOutput::builder().build())
     }
+
+    fn list_objects_with_parallel<'a>(
+        &'a self,
+        prefix: &'a str,
+        sender: &'a Sender<S3syncObject>,
+        _max_keys: i32,
+        warn_as_error: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
+        Box::pin(async move {
+            let is_root_prefix = prefix.is_empty();
+            let path = if is_root_prefix {
+                self.path.clone()
+            } else {
+                prefix.into()
+            };
+
+            trace!(
+                "is_root_prefix: {}, Listing local path: {:?}",
+                is_root_prefix, path
+            );
+
+            // For the root prefix, we set max_depth to 1 to avoid walking into subdirectories.
+            let max_depth = if is_root_prefix {
+                1
+            } else {
+                usize::MAX // effectively unlimited
+            };
+
+            let mut join_set = JoinSet::new();
+            for entry in WalkDir::new(&path)
+                .follow_links(self.config.follow_symlinks)
+                .max_depth(max_depth)
+            {
+                if let Err(e) = entry {
+                    if let Some(inner) = e.io_error() {
+                        if inner.kind() == io::ErrorKind::NotFound {
+                            continue;
+                        }
+                    }
+
+                    let path = e
+                        .path()
+                        .unwrap_or_else(|| Path::new(""))
+                        .to_string_lossy()
+                        .to_string();
+                    self.send_stats(SyncWarning {
+                        key: path.to_string(),
+                    })
+                    .await;
+                    self.set_warning();
+
+                    let error = e.to_string();
+                    let message = "failed to list local files.";
+                    warn!(path = path, error = error, message);
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(path.to_string());
+                    event_data.message = Some(format!("{message}: {error}"));
+                    self.config.event_manager.trigger_event(event_data).await;
+
+                    if warn_as_error {
+                        return Err(anyhow!("failed to local list(): {:?}.", e));
+                    }
+                    continue;
+                }
+
+                if is_root_prefix
+                    && entry.as_ref().unwrap().file_type().is_dir()
+                    && entry.as_ref().unwrap().path() != path
+                {
+                    let storage = self.clone();
+                    let sender = sender.clone();
+                    let entry = entry.as_ref().unwrap().clone();
+
+                    join_set.spawn(async move {
+                        trace!(
+                            "is_root_prefix: {}, child dir: {:?}",
+                            is_root_prefix,
+                            &entry.path().to_string_lossy()
+                        );
+                        return storage
+                            .list_objects_with_parallel(
+                                &entry.path().to_string_lossy(),
+                                &sender,
+                                _max_keys,
+                                warn_as_error,
+                            )
+                            .await;
+                    });
+                }
+
+                if !self
+                    .check_dir_entry(entry.as_ref().unwrap(), warn_as_error)
+                    .await?
+                {
+                    continue;
+                }
+
+                if self.cancellation_token.is_cancelled() {
+                    trace!("list() canceled.");
+                    break;
+                }
+
+                let mut path = remove_local_path_prefix(
+                    entry.as_ref().unwrap().path().to_str().unwrap(),
+                    self.path.to_str().unwrap(),
+                );
+
+                if cfg!(windows) {
+                    path = convert_windows_directory_char_to_slash(&path);
+                }
+
+                let e_tag = if self.config.filter_config.check_etag
+                    && !self.config.transfer_config.auto_chunksize
+                    && !self.config.filter_config.remove_modified_filter
+                    && self.config.filter_config.check_checksum_algorithm.is_none()
+                {
+                    Some(
+                        generate_e_tag_hash_from_path(
+                            &PathBuf::from(entry.as_ref().unwrap().path()),
+                            self.config.transfer_config.multipart_chunksize as usize,
+                            self.config.transfer_config.multipart_threshold as usize,
+                        )
+                        .await?,
+                    )
+                } else {
+                    None
+                };
+
+                let object = S3syncObject::NotVersioning(build_object_from_dir_entry(
+                    entry.as_ref().unwrap(),
+                    &path,
+                    e_tag,
+                    self.config.additional_checksum_algorithm.clone(),
+                ));
+
+                // This is special for test emulation.
+                #[allow(clippy::collapsible_if)]
+                if cfg!(feature = "e2e_test_dangerous_simulations") {
+                    if self.config.allow_e2e_test_dangerous_simulation {
+                        simulate_not_found_test_case().await;
+                    }
+                }
+
+                if let Err(e) = sender
+                    .send(object)
+                    .await
+                    .context("async_channel::Sender::send() failed.")
+                {
+                    return if !sender.is_closed() { Err(e) } else { Ok(()) };
+                }
+            }
+
+            while let Some(join_result) = join_set.join_next().await {
+                if let Err(join_error) = join_result {
+                    error!("Failed to join in local child directory: {}", join_error);
+                    self.cancellation_token.cancel();
+                    return Err(anyhow!(join_error));
+                }
+
+                if let Err(task_error) = join_result.unwrap() {
+                    error!(
+                        "Failed to list local objects in child directory: {}",
+                        task_error
+                    );
+                    self.cancellation_token.cancel();
+                    return Err(anyhow!(task_error));
+                }
+            }
+            Ok(())
+        })
+    }
 }
 
 #[async_trait]
@@ -1026,6 +1199,19 @@ impl StorageTrait for LocalStorage {
         _max_keys: i32,
         warn_as_error: bool,
     ) -> Result<()> {
+        if self.config.max_parallel_listings > 1 {
+            debug!(
+                "Using parallel local listing with {} workers.",
+                self.config.max_parallel_listings
+            );
+
+            return self
+                .list_objects_with_parallel("", sender, _max_keys, warn_as_error)
+                .await;
+        }
+
+        debug!("Disabled parallel local listing.");
+
         for entry in WalkDir::new(&self.path).follow_links(self.config.follow_symlinks) {
             if let Err(e) = entry {
                 if let Some(inner) = e.io_error() {
