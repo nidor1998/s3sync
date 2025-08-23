@@ -638,7 +638,8 @@ But If the source has only one subdirectory under `prefix/`, s3sync does not lis
 You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
 If set to `1`, parallel listing is disabled.
 
-This feature can significantly improve performance with incremental transfer when there are many objects in the source and target bucket/local. 
+This feature can significantly improve performance with incremental transfer when there are many objects in the source and target bucket/local.   
+If you want to improve the performance, you can specify the prefix or directory that has many subdirectories or prefixes that has many objects. 
 
 With express one zone storage class, parallel listing may return in progress multipart upload objects.   
 So, parallel listing is disabled by default when the source or target bucket uses express one zone storage class.   
