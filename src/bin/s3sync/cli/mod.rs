@@ -67,11 +67,15 @@ pub async fn run(mut config: Config) -> Result<()> {
         let start_time = Instant::now();
         trace!("sync pipeline start.");
 
+        // When reporting sync status, a sync summary log is not needed.
+        let log_sync_summary = !config.report_sync_status;
+
         let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
         let indicator_join_handle = indicator::show_indicator(
             pipeline.get_stats_receiver(),
             ui_config::is_progress_indicator_needed(&config),
             ui_config::is_show_result_needed(&config),
+            log_sync_summary,
             config.dry_run,
         );
 

@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.0] - 2025-08-24
+
+### Changed
+- Support sync summary log  
+  At the end of the sync, s3sync logs a summary of the sync statistics.  
+  To log the summary, use `-v` option.
+  ```bash
+  $ s3sync --additional-checksum-algorithm SHA256 -v --json-tracing test_data s3://xxxxx |tail -1 |jq
+  {
+    "timestamp": "2025-08-24T08:36:35.034711Z",
+    "level": "INFO",
+    "fields": {
+      "message": "sync summary",
+      "transferred_byte": 464519168,
+      "transferred_byte_per_sec": 77385200,
+      "transferred_object": 40,
+      "transferred_object_per_sec": 6,
+      "etag_verified": 40,
+      "checksum_verified": 40,
+      "deleted": 0,
+      "skipped": 0,
+      "error": 0,
+      "warning": 0,
+      "duration_sec": 6.002687375
+    }
+  }
+  $
+  ```
+- Updated dependencies.
+
 ## [1.37.0] - 2025-08-24
 
 ### Changed

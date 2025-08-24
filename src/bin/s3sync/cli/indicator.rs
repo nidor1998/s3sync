@@ -3,11 +3,11 @@ use std::io::Write;
 
 use async_channel::Receiver;
 use indicatif::{HumanBytes, HumanCount, HumanDuration, ProgressBar, ProgressStyle};
+use s3sync::types::SyncStatistics;
 use simple_moving_average::{SMA, SumTreeSMA};
 use tokio::task::JoinHandle;
 use tokio::time::Instant;
-
-use s3sync::types::SyncStatistics;
+use tracing::info;
 
 const MOVING_AVERAGE_PERIOD_SECS: usize = 10;
 const REFRESH_INTERVAL: f32 = 1.0;
@@ -16,6 +16,7 @@ pub fn show_indicator(
     stats_receiver: Receiver<SyncStatistics>,
     show_progress: bool,
     show_result: bool,
+    log_sync_summary: bool,
     dry_run: bool,
 ) -> JoinHandle<()> {
     let progress_style = ProgressStyle::with_template("{wide_msg}").unwrap();
@@ -79,24 +80,40 @@ pub fn show_indicator(
                 }
 
                 if stats_receiver.is_closed() {
+                    let elapsed = start_time.elapsed();
+                    let elapsed_secs_f64 = elapsed.as_secs_f64();
+
+                    let mut objects_per_sec = (total_sync_count as f64 / elapsed_secs_f64) as u64;
+                    let mut sync_bytes_per_sec =
+                        (total_sync_bytes as f64 / elapsed_secs_f64) as u64;
+
+                    if elapsed_secs_f64 < REFRESH_INTERVAL as f64 {
+                        objects_per_sec = total_sync_count;
+                        sync_bytes_per_sec = total_sync_bytes;
+                    }
+                    if dry_run {
+                        objects_per_sec = 0;
+                        sync_bytes_per_sec = 0;
+                    }
+
+                    if log_sync_summary {
+                        info!(
+                            message = "sync summary",
+                            transferred_byte = total_sync_bytes,
+                            transferred_byte_per_sec = sync_bytes_per_sec,
+                            transferred_object = total_sync_count,
+                            transferred_object_per_sec = objects_per_sec,
+                            etag_verified = total_e_tag_verified_count,
+                            checksum_verified = total_checksum_verified_count,
+                            deleted = total_delete_count,
+                            skipped = total_skip_count,
+                            error = total_error_count,
+                            warning = total_warning_count,
+                            duration_sec = elapsed.as_secs_f64(),
+                        );
+                    }
+
                     if show_result {
-                        let elapsed = start_time.elapsed();
-                        let elapsed_secs_f64 = elapsed.as_secs_f64();
-
-                        let mut objects_per_sec =
-                            (total_sync_count as f64 / elapsed_secs_f64) as u64;
-                        let mut sync_bytes_per_sec =
-                            (total_sync_bytes as f64 / elapsed_secs_f64) as u64;
-
-                        if elapsed_secs_f64 < REFRESH_INTERVAL as f64 {
-                            objects_per_sec = total_sync_count;
-                            sync_bytes_per_sec = total_sync_bytes;
-                        }
-                        if dry_run {
-                            objects_per_sec = 0;
-                            sync_bytes_per_sec = 0;
-                        }
-
                         progress_text.set_style(ProgressStyle::with_template("{msg}").unwrap());
 
                         progress_text.finish_with_message(format!(
@@ -117,6 +134,7 @@ pub fn show_indicator(
                         println!();
                         io::stdout().flush().unwrap()
                     }
+
                     return;
                 }
 
@@ -160,7 +178,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let (stats_sender, stats_receiver) = async_channel::unbounded();
-        let join_handle = show_indicator(stats_receiver, true, true, false);
+        let join_handle = show_indicator(stats_receiver, true, true, false, false);
 
         stats_sender
             .send(SyncStatistics::SyncBytes(1))
@@ -217,7 +235,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let (stats_sender, stats_receiver) = async_channel::unbounded();
-        let join_handle = show_indicator(stats_receiver, true, false, false);
+        let join_handle = show_indicator(stats_receiver, true, false, true, false);
 
         stats_sender
             .send(SyncStatistics::SyncBytes(1))
@@ -274,7 +292,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let (stats_sender, stats_receiver) = async_channel::unbounded();
-        let join_handle = show_indicator(stats_receiver, true, true, true);
+        let join_handle = show_indicator(stats_receiver, true, true, true, true);
 
         stats_sender
             .send(SyncStatistics::SyncBytes(1))
