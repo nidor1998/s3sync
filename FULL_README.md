@@ -988,6 +988,8 @@ Performance:
           Maximum number of parallel multipart uploads/downloads [env: MAX_PARALLEL_UPLOADS=] [default: 16]
       --max-parallel-listings <MAX_PARALLEL_LISTINGS>
           Maximum number of parallel listings of objects. [env: MAX_PARALLEL_LISTINGS=] [default: 16]
+      --max-parallel-listing-max-depth <MAX_PARALLEL_LISTING_MAX_DEPTH>
+          Maximum depth(sub directroy/prefix) of parallel listings. [env: MAX_PARALLEL_LISTING_MAX_DEPTH=] [default: 2]
       --object-listing-queue-size <OBJECT_LISTING_QUEUE_SIZE>
           Queue size for object listings [env: OBJECT_LISTING_QUEUE_SIZE=] [default: 200000]
       --allow-parallel-listings-in-express-one-zone
