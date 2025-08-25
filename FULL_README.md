@@ -549,7 +549,7 @@ But after `Update check`, you can get more information about the object, such as
 
 Note: `PreprocessCallback(--preprocess-callback-lua-script/UserDefinedPreprocessCallback)` is called just before transferring the object to S3. So dry-run does not call this callback.
 
-### Incremental transfer
+### About incremental transfer (Normal transfer)  
 s3sync transfers only modified objects.It checks `LastModified` timestamp.
 
 If `--check-size` is specified, s3sync only checks the size of the object.
@@ -558,7 +558,7 @@ At first, incremental transfer lists all objects in the target.
 Then, s3sync compares the objects and transfers only modified objects.
 
 Therefore, incremental transfer takes a time to start for large amounts of existing target objects.  
-In my environment, Amazon S3 takes about 1 second per 10,000 objects to list objects in the target.(It depends on remote storage.)
+In my environment, Amazon S3 takes about 1 second per 50,000 objects to list objects in the target.(It depends on remote storage.)
 
 If there are few objects in the target, incremental transfer starts immediately, regardless of the number of source objects.
 
@@ -629,17 +629,16 @@ You can also divide the target objects by filter and run s3sync multiple times.
 The `--head-each-target` option calls the `HeadObject` API for each source object, but it is a trade-off between memory usage and API calls.
 
 ### About parallel object listing
-By default, s3sync lists objects in the source and target buckets/local in parallel (default 16 workers).
-The parallel listing is enabled when the root has subdirectories or prefixes.
+By default, s3sync lists objects in the source and target buckets/local in parallel (default 16 workers).  
+The parallel listing is enabled up to the second level of subdirectories or prefixes.  
+The depth is configurable with `--max-parallel-listing-max-depth` option.
 
 For example, if the source is `s3://bucket-name/prefix` and there are many objects under `prefix/dir1`, `prefix/dir2`, ..., `prefix/dir16`, s3sync lists objects under these prefixes in parallel.
-But If the source has only one subdirectory under `prefix/`, s3sync does not list objects in parallel.
 
 You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
 If set to `1`, parallel listing is disabled.
 
 This feature can significantly improve performance with incremental transfer when there are many objects in the source and target bucket/local.   
-If you want to improve the performance, you can specify the prefix or directory that has many subdirectories or prefixes that has many objects. 
 
 With express one zone storage class, parallel listing may return in progress multipart upload objects.   
 So, parallel listing is disabled by default when the source or target bucket uses express one zone storage class.   
@@ -648,6 +647,14 @@ You can enable it with `--allow-parallel-listings-in-express-one-zone` option.
 When `--enable-versioning` or `--point-in-time` option is specified, parallel listing is disabled.
 
 Note: Parallel listing may use CPU and memory.
+
+### About `--max-parallel-listing-max-depth` option
+By default, s3sync lists objects in the source and target buckets/local files in parallel up to the second level of subdirectories or prefixes.  
+And deeper levels are listed without parallelization.
+This is because parallel listing at deeper levels may not improve incremental transfer performance.   
+
+But in some cases, parallel listing at deeper levels may improve incremental transfer performance.
+You can configure the maximum depth of parallel listing workers with `--max-parallel-listing-max-depth` option.
 
 ### S3 Permissions
 s3sync requires the following permissions.

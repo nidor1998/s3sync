@@ -1125,6 +1125,23 @@ impl LocalStorage {
                     });
                 }
 
+                while let Some(join_result) = join_set.join_next().await {
+                    if let Err(join_error) = join_result {
+                        error!("Failed to join in local child directory: {}", join_error);
+                        self.cancellation_token.cancel();
+                        return Err(anyhow!(join_error));
+                    }
+
+                    if let Err(task_error) = join_result.unwrap() {
+                        error!(
+                            "Failed to list local objects in child directory: {}",
+                            task_error
+                        );
+                        self.cancellation_token.cancel();
+                        return Err(anyhow!(task_error));
+                    }
+                }
+
                 if !self
                     .check_dir_entry(entry.as_ref().unwrap(), warn_as_error)
                     .await?
@@ -1184,23 +1201,6 @@ impl LocalStorage {
                     .context("async_channel::Sender::send() failed.")
                 {
                     return if !sender.is_closed() { Err(e) } else { Ok(()) };
-                }
-            }
-
-            while let Some(join_result) = join_set.join_next().await {
-                if let Err(join_error) = join_result {
-                    error!("Failed to join in local child directory: {}", join_error);
-                    self.cancellation_token.cancel();
-                    return Err(anyhow!(join_error));
-                }
-
-                if let Err(task_error) = join_result.unwrap() {
-                    error!(
-                        "Failed to list local objects in child directory: {}",
-                        task_error
-                    );
-                    self.cancellation_token.cancel();
-                    return Err(anyhow!(task_error));
                 }
             }
 
