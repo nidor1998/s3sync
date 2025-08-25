@@ -19,6 +19,7 @@ use aws_smithy_types_convert::date_time::DateTimeExt;
 use leaky_bucket::RateLimiter;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::str::FromStr;
@@ -328,6 +329,8 @@ impl S3Storage {
         prefix: &'a str,
         sender: &'a Sender<S3syncObject>,
         max_keys: i32,
+        current_depth: usize,
+        permit: tokio::sync::OwnedSemaphorePermit,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let is_root_prefix = prefix.is_empty();
@@ -337,12 +340,15 @@ impl S3Storage {
                 prefix.to_string()
             };
 
-            // For the root prefix, we need to set a delimiter to "/" for parallel listing of sub-prefixes.
-            let delimiter = if is_root_prefix {
+            // Until max_parallel_listing_max_depth, we need to set a delimiter to "/" for parallel listing of sub-prefixes.
+            let delimiter = if current_depth <= self.config.max_parallel_listing_max_depth as usize
+            {
                 Some("/".to_string())
             } else {
                 None
             };
+
+            let mut current_permit = Some(permit);
 
             trace!(
                 root_prefix = self.prefix,
@@ -430,19 +436,29 @@ impl S3Storage {
                                 "Start listing objects in sub-prefix."
                             );
 
-                            let permit = self
+                            if let Some(permit) = current_permit {
+                                drop(permit);
+                                current_permit = None;
+                            }
+
+                            let new_permit = self
                                 .listing_worker_semaphore
                                 .clone()
                                 .acquire_owned()
                                 .await
                                 .unwrap();
+
                             join_set.spawn(async move {
-                                let result = storage
-                                    .list_objects_with_parallel(&sub_prefix, &sender, max_keys)
+                                storage
+                                    .list_objects_with_parallel(
+                                        &sub_prefix,
+                                        &sender,
+                                        max_keys,
+                                        current_depth + 1,
+                                        new_permit,
+                                    )
                                     .await
-                                    .context("Failed to list objects in sub-prefix.");
-                                drop(permit);
-                                result
+                                    .context("Failed to list objects in sub-prefix.")
                             });
                         }
                     }
@@ -469,6 +485,10 @@ impl S3Storage {
                 continuation_token = list_objects_output
                     .next_continuation_token()
                     .map(|token| token.to_string());
+            }
+
+            if let Some(permit) = current_permit {
+                drop(permit);
             }
 
             Ok(())
@@ -498,9 +518,15 @@ impl StorageTrait for S3Storage {
                     "Using parallel listing with {} workers.",
                     self.config.max_parallel_listings
                 );
+                let permit = self
+                    .listing_worker_semaphore
+                    .clone()
+                    .acquire_owned()
+                    .await
+                    .unwrap();
 
                 return self
-                    .list_objects_with_parallel("", sender, max_keys)
+                    .list_objects_with_parallel("", sender, max_keys, 1, permit)
                     .await
                     .context("Failed to parallel object listing.");
             } else if self.config.allow_parallel_listings_in_express_one_zone {
@@ -509,8 +535,15 @@ impl StorageTrait for S3Storage {
                     self.config.max_parallel_listings
                 );
 
+                let permit = self
+                    .listing_worker_semaphore
+                    .clone()
+                    .acquire_owned()
+                    .await
+                    .unwrap();
+
                 return self
-                    .list_objects_with_parallel("", sender, max_keys)
+                    .list_objects_with_parallel("", sender, max_keys, 1, permit)
                     .await
                     .context("Failed to parallel object listing.");
             }

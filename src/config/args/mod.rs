@@ -83,6 +83,7 @@ const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS: u16 = 16;
 const DEFAULT_MAX_PARALLEL_LISTINGS: u16 = 16;
 const DEFAULT_OBJECT_LISTING_QUEUE_SIZE: u32 = 200000;
+const DEFAULT_PARALLEL_LISTING_MAX_DEPTH: u16 = 2;
 const DEFAULT_ALLOW_PARALLEL_LISTINGS_IN_EXPRESS_ONE_ZONE: bool = false;
 const DEFAULT_ACCELERATE: bool = false;
 const DEFAULT_REQUEST_PAYER: bool = false;
@@ -463,6 +464,9 @@ This option cannot be used with SHA1/SHA256 additional checksum."#)]
 
     #[arg(long, env, default_value_t = DEFAULT_MAX_PARALLEL_LISTINGS, value_parser = clap::value_parser!(u16).range(1..), help_heading = "Performance", long_help=r#"Maximum number of parallel listings of objects."#)]
     max_parallel_listings: u16,
+
+    #[arg(long, env, default_value_t = DEFAULT_PARALLEL_LISTING_MAX_DEPTH, value_parser = clap::value_parser!(u16).range(1..), help_heading = "Performance", long_help=r#"Maximum depth(sub directroy/prefix) of parallel listings."#)]
+    max_parallel_listing_max_depth: u16,
 
     /// Queue size for object listings
     #[arg(long, env, default_value_t = DEFAULT_OBJECT_LISTING_QUEUE_SIZE, value_parser = clap::value_parser!(u32).range(1..), help_heading = "Performance")]
@@ -1943,6 +1947,7 @@ impl TryFrom<CLIArgs> for Config {
             rate_limit_bandwidth,
             max_parallel_listings: value.max_parallel_listings,
             object_listing_queue_size: value.object_listing_queue_size,
+            max_parallel_listing_max_depth: value.max_parallel_listing_max_depth,
             allow_parallel_listings_in_express_one_zone: value
                 .allow_parallel_listings_in_express_one_zone,
             cache_control: value.cache_control,
