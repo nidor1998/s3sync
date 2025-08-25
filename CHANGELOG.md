@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.39.0] - 2025-08-25
+
+### Changed
+- Added `--max-parallel-listing-max-depth` option  
+  By default, s3sync lists objects in the source and target buckets/local files in parallel up to the second level of subdirectories or prefixes.  
+  And deeper levels are listed without parallelization.
+  This is because parallel listing at deeper levels may not improve performance.  
+  But in some cases, parallel listing at deeper levels may improve performance.
+  You can configure the maximum depth of parallel listing workers with `--max-parallel-listing-max-depth` option.
+
+- Updated dependencies.
+
 ## [1.38.0] - 2025-08-24
 
 ### Changed
