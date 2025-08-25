@@ -26,6 +26,7 @@ use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use leaky_bucket::RateLimiter;
 use std::error::Error;
+use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -1020,6 +1021,8 @@ impl LocalStorage {
         prefix: &'a str,
         sender: &'a Sender<S3syncObject>,
         _max_keys: i32,
+        current_depth: usize,
+        permit: tokio::sync::OwnedSemaphorePermit,
         warn_as_error: bool,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
@@ -1035,12 +1038,15 @@ impl LocalStorage {
                 is_root_prefix, path
             );
 
-            // For the root prefix, we set max_depth to 1 to avoid walking into subdirectories.
-            let max_depth = if is_root_prefix {
+            // Until max_parallel_listing_max_depth, we set max_depth to 1 to avoid walking into subdirectories.
+            let max_depth = if current_depth <= self.config.max_parallel_listing_max_depth as usize
+            {
                 1
             } else {
                 usize::MAX // effectively unlimited
             };
+
+            let mut current_permit = Some(permit);
 
             let mut join_set = JoinSet::new();
             for entry in WalkDir::new(&path)
@@ -1080,7 +1086,7 @@ impl LocalStorage {
                     continue;
                 }
 
-                if is_root_prefix
+                if current_depth <= self.config.max_parallel_listing_max_depth as usize
                     && entry.as_ref().unwrap().file_type().is_dir()
                     && entry.as_ref().unwrap().path() != path
                 {
@@ -1088,7 +1094,12 @@ impl LocalStorage {
                     let sender = sender.clone();
                     let entry = entry.as_ref().unwrap().clone();
 
-                    let permit = self
+                    if let Some(permit) = current_permit {
+                        drop(permit);
+                        current_permit = None;
+                    }
+
+                    let new_permit = self
                         .listing_worker_semaphore
                         .clone()
                         .acquire_owned()
@@ -1101,16 +1112,16 @@ impl LocalStorage {
                             is_root_prefix,
                             &entry.path().to_string_lossy()
                         );
-                        let result = storage
+                        storage
                             .list_objects_with_parallel(
                                 &entry.path().to_string_lossy(),
                                 &sender,
                                 _max_keys,
+                                current_depth + 1,
+                                new_permit,
                                 warn_as_error,
                             )
-                            .await;
-                        drop(permit);
-                        result
+                            .await
                     });
                 }
 
@@ -1192,6 +1203,11 @@ impl LocalStorage {
                     return Err(anyhow!(task_error));
                 }
             }
+
+            if let Some(permit) = current_permit {
+                drop(permit);
+            }
+
             Ok(())
         })
     }
@@ -1219,8 +1235,15 @@ impl StorageTrait for LocalStorage {
                 self.config.max_parallel_listings
             );
 
+            let permit = self
+                .listing_worker_semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .unwrap();
+
             return self
-                .list_objects_with_parallel("", sender, _max_keys, warn_as_error)
+                .list_objects_with_parallel("", sender, _max_keys, 1, permit, warn_as_error)
                 .await;
         }
 

@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.38.0"
+version = "1.39.0"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, very fast, and powerful synchronization tool for S3."
@@ -50,7 +50,7 @@ indicatif = "0.18.0"
 log = "0.4.27"
 pin-project = "1.1.10"
 percent-encoding = "2.3.2"
-regex = "1.11.1"
+regex = "1.11.2"
 rusty-fork = "0.3.0"
 sha1 = "0.10.6"
 sha2 = "0.10.9"
