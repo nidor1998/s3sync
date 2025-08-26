@@ -303,9 +303,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-ssooidc"
-version = "1.82.0"
+version = "1.83.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43326f724ba2cc957e6f3deac0ca1621a3e5d4146f5970c24c8a108dac33070f"
+checksum = "0b49e8fe57ff100a2f717abfa65bdd94e39702fa5ab3f60cddc6ac7784010c68"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -862,9 +862,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.45"
+version = "4.5.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fc0e74a703892159f5ae7d3aac52c8e6c392f5ae5f359c70b5881d60aaac318"
+checksum = "2c5e4fcf9c21d2e544ca1ee9d8552de13019a42aa7dbf32747fa7aaf1df76e57"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -882,9 +882,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.44"
+version = "4.5.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3e7f4214277f3c7aa526a59dd3fbe306a370daee1f8b7b8c987069cd8e888a8"
+checksum = "fecb53a0e6fcfb055f686001bc2e2592fa527efaf38dbe81a6a9563562e57d41"
 dependencies = [
  "anstream",
  "anstyle",
@@ -2973,7 +2973,7 @@ checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "s3sync"
-version = "1.39.0"
+version = "1.40.0"
 dependencies = [
  "anyhow",
  "async-channel",

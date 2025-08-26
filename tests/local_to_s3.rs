@@ -264,6 +264,133 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn local_to_s3_with_delete_excluded() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--filter-exclude-regex",
+                "dir21/.+",
+                "--delete",
+                "--delete-excluded",
+                "./test_data/e2e_test/case2_1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET1.to_string(), "").await;
+            assert_eq!(object_list.len(), 3);
+
+            assert!(
+                !helper
+                    .is_object_exist(&BUCKET1.to_string(), "dir21/data1", None)
+                    .await
+            );
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_delete_without_excluded() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--filter-exclude-regex",
+                "dir21/.+",
+                "--delete",
+                "./test_data/e2e_test/case2_1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET1.to_string(), "").await;
+            assert_eq!(object_list.len(), 4);
+
+            assert!(
+                helper
+                    .is_object_exist(&BUCKET1.to_string(), "dir21/data1", None)
+                    .await
+            );
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+
+    #[tokio::test]
     async fn local_to_s3_with_delete_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 

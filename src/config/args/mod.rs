@@ -78,6 +78,7 @@ const DEFAULT_PUT_LAST_MODIFIED_METADATA: bool = false;
 const DEFAULT_DISABLE_STALLED_STREAM_PROTECTION: bool = false;
 const DEFAULT_DISABLE_PAYLOAD_SIGNING: bool = false;
 const DEFAULT_DISABLE_CONTENT_MD5_HEADER: bool = false;
+const DEFAULT_DELETE_EXCLUDED: bool = false;
 const DEFAULT_FULL_OBJECT_CHECKSUM: bool = false;
 const DEFAULT_DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_MAX_PARALLEL_MULTIPART_UPLOADS: u16 = 16;
@@ -792,6 +793,11 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
  "#)]
     disable_express_one_zone_additional_checksum: bool,
 
+    #[arg(long, env, requires = "delete", default_value_t = DEFAULT_DELETE_EXCLUDED, help_heading = "Advanced",
+    long_help=r#"When used in combination with --delete options, supplied --filter-exclude-regex patterns will not prevent an object from being deleted.
+"#)]
+    delete_excluded: bool,
+
     #[cfg(feature = "lua_support")]
     #[arg(
         long,
@@ -841,7 +847,8 @@ It allows the Lua script to load unsafe standard libraries or C modules."#)]
 
     #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_SYNC_WITH_DELETE, help_heading = "Dangerous",
     long_help=r#"Delete objects that exist in the target but not in the source.
- [Warning] Since this can cause data loss, test first with the --dry-run option
+Exclude filters other than --filter-exclude-regex will not prevent an object from being deleted.
+[Warning] Since this can cause data loss, test first with the --dry-run option.
  "#)]
     delete: bool,
 
@@ -1987,6 +1994,7 @@ impl TryFrom<CLIArgs> for Config {
             auto_complete_shell: value.auto_complete_shell,
             disable_payload_signing: value.disable_payload_signing,
             disable_content_md5_header: value.disable_content_md5_header,
+            delete_excluded: value.delete_excluded,
             full_object_checksum,
             allow_e2e_test_dangerous_simulation,
             cancellation_point,

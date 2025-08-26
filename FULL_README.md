@@ -272,6 +272,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - `--delete` support  
   Objects that exist in the target but not in the source are deleted during synchronization.  
+  Exclude filters other than `--filter-exclude-regex` will not prevent an object from being deleted.  
   Since this can cause data loss, test first with the `--dry-run` option.
 
 - S3-compatible storage support  
@@ -1149,6 +1150,9 @@ Advanced:
       --disable-express-one-zone-additional-checksum
           Disable default additional checksum verification in Express One Zone storage class.
             [env: DISABLE_EXPRESS_ONE_ZONE_ADDITIONAL_CHECKSUM=]
+      --delete-excluded
+          When used in combination with --delete options, supplied --filter-exclude-regex patterns will not prevent an object from being deleted.
+           [env: DELETE_EXCLUDED=]
 
 Lua scripting support:
       --preprocess-callback-lua-script <PREPROCESS_CALLBACK_LUA_SCRIPT>
@@ -1168,7 +1172,8 @@ Dangerous:
       --allow-lua-unsafe-vm  Allow unsafe Lua VM functions in the Lua script.
                              It allows the Lua script to load unsafe standard libraries or C modules. [env: ALLOW_LUA_UNSAFE_VM=]
       --delete               Delete objects that exist in the target but not in the source.
-                              [Warning] Since this can cause data loss, test first with the --dry-run option
+                             Exclude filters other than --filter-exclude-regex will not prevent an object from being deleted.
+                             [Warning] Since this can cause data loss, test first with the --dry-run option.
                                [env: DELETE=]
 $
 ```
