@@ -73,6 +73,7 @@ pub struct Config {
     pub auto_complete_shell: Option<clap_complete::shells::Shell>,
     pub disable_payload_signing: bool,
     pub disable_content_md5_header: bool,
+    pub delete_excluded: bool,
     pub full_object_checksum: bool,
     pub allow_e2e_test_dangerous_simulation: bool,
     pub cancellation_point: Option<String>,

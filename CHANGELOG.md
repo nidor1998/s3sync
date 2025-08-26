@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.40.0] - 2025-08-27
+
+### Changed
+- [Breaking change] `--delete-excluded` option  
+  Earlier, `--delete` option deleted objects that are not in the source, ignoring exclude filtering options.  
+  Now, `--filter-exclude-regex` filtering option is applied to `--delete` option.  
+  Exclude filters other than `--filter-exclude-regex` will not prevent an object from being deleted.  
+  If you want to delete objects that are not in the source, ignoring `--filter-exclude-regex`, use `--delete-excluded` option.
+
+- Updated dependencies.
 
 ## [1.39.0] - 2025-08-25
 

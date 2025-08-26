@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use aws_sdk_s3::types::Object;
-use tracing::trace;
+use tracing::{debug, trace};
 
 use crate::types::{ObjectKey, ObjectKeyMap, S3syncObject};
 
@@ -30,6 +30,40 @@ impl DiffLister {
             if self.base.cancellation_token.is_cancelled() {
                 trace!("list() canceled.");
                 break;
+            }
+
+            // We don't build a filter pipeline Because a filter pipeline is too complex for this operation.
+            if !self.base.config.delete_excluded
+                && self.base.config.filter_config.exclude_regex.is_some()
+            {
+                let match_result = self
+                    .base
+                    .config
+                    .filter_config
+                    .exclude_regex
+                    .as_ref()
+                    .unwrap()
+                    .is_match(&key)
+                    .unwrap();
+
+                if match_result {
+                    let exclude_regex = self
+                        .base
+                        .config
+                        .filter_config
+                        .exclude_regex
+                        .as_ref()
+                        .unwrap()
+                        .as_str();
+
+                    debug!(
+                        key = key,
+                        exclude_regex = exclude_regex,
+                        "delete object filtered."
+                    );
+
+                    continue;
+                }
             }
 
             let object = S3syncObject::NotVersioning(
