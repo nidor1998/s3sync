@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - [Security] [tracing-subscriber 0.3.20](https://github.com/tokio-rs/tracing/releases/tag/tracing-subscriber-0.3.20)  
-  ANSI Escape Sequence Injection
+  ANSI Escape Sequence Injection (CVE-2025-58160)
 
 ## [1.40.0] - 2025-08-27
 
