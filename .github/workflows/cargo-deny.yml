@@ -1,0 +1,17 @@
+name: cargo-deny
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: '34 1 * * *'
+
+jobs:
+  cargo_deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable && cargo install cargo-deny
+      - run: cargo deny -L error check
