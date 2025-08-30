@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.40.1] - 2025-08-30
+
+### Changed
+- Updated dependencies
+- aws-sdk-s3 = "1.104.0"
+
+### Fixed
+- [Security] [tracing-subscriber 0.3.20](https://github.com/tokio-rs/tracing/releases/tag/tracing-subscriber-0.3.20)  
+  ANSI Escape Sequence Injection
+
 ## [1.40.0] - 2025-08-27
 
 ### Changed
