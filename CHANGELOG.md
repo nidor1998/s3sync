@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.41.0] - 2025-08-31
+
+### Changed
+- Refined release build optimization settings  
+  Setting lto = "fat" and strip = "symbols" in Cargo.toml for `release` build.  
+  This significantly reduces the binary size at the cost of longer build time and higher memory usage during CLI binary release build.  
+  And stripping symbols may make CLI binary debugging more difficult. (rarely needed)
+- Updated dependencies
+
 ## [1.40.1] - 2025-08-30
 
 ### Changed
