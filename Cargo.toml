@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.40.1"
+version = "1.41.0"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, very fast, and powerful synchronization tool for S3."
@@ -84,7 +84,7 @@ webpki-roots = { version = "0.25.4", optional = true }
 ## If you have trouble with third-party Lua libraries, remove `vendored` feature(static linking). This will use the system Lua engine.
 ## But you need to install Lua engine according to your OS.
 ## mlua = { version = "0.11.2", features = ["luajit", "async", "send", "vendored"], optional = true }
-mlua = { version = "0.11.2", features = ["lua54", "async", "send", "vendored"], optional = true }
+mlua = { version = "0.11.3", features = ["lua54", "async", "send", "vendored"], optional = true }
 
 [dev-dependencies]
 nix = { version = "0.30.1", features = ["user", "process", "signal"] }
@@ -109,3 +109,11 @@ version = ["dep:shadow-rs"]
 legacy_hyper014_feature = ["dep:aws-smithy-runtime","dep:headers", "dep:hyper_014", "dep:hyper-proxy", "dep:hyper-rustls", "dep:hyper-util", "dep:rustls", "dep:webpki-roots"]
 
 lua_support = ["dep:mlua"]
+
+[profile.release]
+debug = 1
+panic = "unwind"  # For tempfile::NamedTempFile
+opt-level = "z"
+strip = "symbols"
+lto = "fat"
+codegen-units = 1

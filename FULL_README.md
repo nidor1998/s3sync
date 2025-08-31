@@ -722,11 +722,6 @@ s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support.
 If you want to use `LuaJIT`, `luau-jit`, etc, you can modify the `Cargo.toml` file and set the `mlua` feature.  
 For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
 
-### About binary size
-Since v1.33.0, s3sync is built with `link-args=-rdynamic` option.  
-This is because Lua C libraries require dynamic linking to work properly.  
-But it increases the binary size. If you want to reduce the binary size, you remove the `link-args=-rdynamic` option from the `.cargo/config.toml` file and rebuild the binary. (Some Lua C libraries may not work properly)
-
 ### Advanced options
 
 #### `--worker-size`
