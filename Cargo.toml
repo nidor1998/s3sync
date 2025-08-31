@@ -113,7 +113,7 @@ lua_support = ["dep:mlua"]
 [profile.release]
 debug = 1
 panic = "unwind"  # For tempfile::NamedTempFile
-opt-level = "z"
+opt-level = 3
 strip = "symbols"
 lto = "fat"
 codegen-units = 1
