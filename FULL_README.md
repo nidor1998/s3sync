@@ -1180,6 +1180,7 @@ $
 
 
 ## About testing
+**Supported target: Amazon S3 only.** S3-compatible storage are best-effort and may behave differently.  
 s3sync has been tested with Amazon S3. s3sync have many e2e tests and unit tests and run every time when a new version is released.  
 S3-compatible storages are not tested at all. (I test only when make major changes.)  
 This is because S3-compatible storages may have different behaviors and features.  
