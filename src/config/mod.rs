@@ -35,6 +35,7 @@ pub struct Config {
     pub no_guess_mime_type: bool,
     pub disable_multipart_verify: bool,
     pub disable_etag_verify: bool,
+    pub disable_additional_checksum_verify: bool,
     pub enable_versioning: bool,
     pub point_in_time: Option<DateTime<Utc>>,
     pub storage_class: Option<StorageClass>,

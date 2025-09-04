@@ -70,6 +70,7 @@ const DEFAULT_NO_GUESS_MIME_TYPE: bool = false;
 const DEFAULT_SERVER_SIDE_COPY: bool = false;
 const DEFAULT_DISABLE_MULTIPART_VERIFY: bool = false;
 const DEFAULT_DISABLE_ETAG_VERIFY: bool = false;
+const DEFAULT_DISABLE_ADDITIONAL_CHECKSUM_VERIFY: bool = false;
 const DEFAULT_ENABLE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_DRY_RUN: bool = false;
 const DEFAULT_NO_VERIFY_SSL: bool = false;
@@ -454,6 +455,11 @@ This option cannot be used with SHA1/SHA256 additional checksum."#)]
     /// Disable etag verification.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_ETAG_VERIFY, help_heading = "Verification")]
     disable_etag_verify: bool,
+
+    #[arg(long, env, requires = "additional_checksum_algorithm", default_value_t = DEFAULT_DISABLE_ADDITIONAL_CHECKSUM_VERIFY, help_heading = "Verification",
+    long_help=r#"Disable additional checksum verification 
+But use additional checksum for upload (The hash value is stored in the target object)."#)]
+    disable_additional_checksum_verify: bool,
 
     /// Number of workers for synchronization
     #[arg(long, env, default_value_t = DEFAULT_WORKER_SIZE, value_parser = clap::value_parser!(u16).range(1..), help_heading = "Performance")]
@@ -1929,6 +1935,7 @@ impl TryFrom<CLIArgs> for Config {
             no_guess_mime_type: value.no_guess_mime_type,
             disable_multipart_verify: value.disable_multipart_verify,
             disable_etag_verify: value.disable_etag_verify,
+            disable_additional_checksum_verify: value.disable_additional_checksum_verify,
             enable_versioning: value.enable_versioning,
             point_in_time: value.point_in_time,
             storage_class,

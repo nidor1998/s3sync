@@ -13,6 +13,7 @@ mod delete;
 mod accelerate;
 mod check_mtime_and_additional_checksum;
 mod check_mtime_and_etag;
+mod disable_additional_checksum_verify;
 mod disable_content_md5_header;
 mod disable_etag_verify;
 mod disable_multipart_verify;

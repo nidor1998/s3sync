@@ -545,24 +545,26 @@ impl UploadManager {
             .await;
         }
 
-        let target_checksum = get_additional_checksum_from_multipart_upload_result(
-            &complete_multipart_upload_output,
-            self.config.additional_checksum_algorithm.clone(),
-        );
+        if !self.config.disable_additional_checksum_verify {
+            let target_checksum = get_additional_checksum_from_multipart_upload_result(
+                &complete_multipart_upload_output,
+                self.config.additional_checksum_algorithm.clone(),
+            );
 
-        self.validate_checksum(
-            key,
-            source_checksum,
-            target_checksum,
-            &source_e_tag,
-            source_remote_storage,
-            source_version_id,
-            complete_multipart_upload_output
-                .version_id
-                .clone()
-                .map(|v| v.to_string()),
-        )
-        .await;
+            self.validate_checksum(
+                key,
+                source_checksum,
+                target_checksum,
+                &source_e_tag,
+                source_remote_storage,
+                source_version_id,
+                complete_multipart_upload_output
+                    .version_id
+                    .clone()
+                    .map(|v| v.to_string()),
+            )
+            .await;
+        }
 
         Ok(PutObjectOutput::builder()
             .e_tag(complete_multipart_upload_output.e_tag().unwrap())
@@ -1663,21 +1665,23 @@ impl UploadManager {
             .await;
         }
 
-        let target_checksum = get_additional_checksum_from_put_object_result(
-            &put_object_output,
-            self.config.additional_checksum_algorithm.as_ref().cloned(),
-        );
+        if !self.config.disable_additional_checksum_verify {
+            let target_checksum = get_additional_checksum_from_put_object_result(
+                &put_object_output,
+                self.config.additional_checksum_algorithm.as_ref().cloned(),
+            );
 
-        self.validate_checksum(
-            key,
-            source_checksum,
-            target_checksum,
-            &source_e_tag,
-            source_remote_storage,
-            source_version_id,
-            put_object_output.version_id().map(|v| v.to_string()),
-        )
-        .await;
+            self.validate_checksum(
+                key,
+                source_checksum,
+                target_checksum,
+                &source_e_tag,
+                source_remote_storage,
+                source_version_id,
+                put_object_output.version_id().map(|v| v.to_string()),
+            )
+            .await;
+        }
 
         Ok(put_object_output)
     }

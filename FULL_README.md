@@ -976,6 +976,9 @@ Verification:
           Disable multipart upload verification with ETag/additional checksum [env: DISABLE_MULTIPART_VERIFY=]
       --disable-etag-verify
           Disable etag verification [env: DISABLE_ETAG_VERIFY=]
+      --disable-additional-checksum-verify
+          Disable additional checksum verification
+          But use additional checksum for upload (The hash value is stored in the target object). [env: DISABLE_ADDITIONAL_CHECKSUM_VERIFY=]
 
 Performance:
       --worker-size <WORKER_SIZE>
@@ -1174,6 +1177,14 @@ $
 ```
 
 </details>
+
+
+## About testing
+s3sync has been tested with Amazon S3. s3sync have many e2e tests and unit tests and run every time when a new version is released.  
+S3-compatible storages are not tested at all. (I test only when make major changes.)  
+This is because S3-compatible storages may have different behaviors and features.  
+Since there is no such thing as S3 compatible storage certification, efficient testing is not possible.
+
 
 ## Contributing
 

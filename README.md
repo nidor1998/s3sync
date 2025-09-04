@@ -170,6 +170,14 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
     `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch).
   - Supports all options via environment variables
 
+
+## About testing
+s3sync has been tested with Amazon S3. s3sync have many e2e tests and unit tests and run every time when a new version is released.  
+S3-compatible storages are not tested at all. (I test only when make major changes.)  
+This is because S3-compatible storages may have different behaviors and features.  
+Since there is no such thing as S3 compatible storage certification, efficient testing is not possible.
+
+
 ## More information
 For more information, please refer to the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md)
 
