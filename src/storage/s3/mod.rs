@@ -2,7 +2,6 @@ use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
 use aws_sdk_s3::Client;
-use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
@@ -22,7 +21,6 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use tokio::sync::Semaphore;
@@ -34,8 +32,8 @@ use crate::config::ClientConfig;
 use crate::storage::checksum::AdditionalChecksum;
 use crate::storage::s3::upload_manager::UploadManager;
 use crate::storage::{
-    Storage, StorageFactory, StorageTrait, convert_to_buf_byte_stream_with_callback,
-    get_size_string_from_content_range,
+    Storage, StorageFactory, StorageTrait, convert_head_to_get_object_output,
+    convert_to_buf_byte_stream_with_callback,
 };
 use crate::types::SyncStatistics::{SyncBytes, SyncSkip};
 use crate::types::event_callback::{EventData, EventType};
@@ -259,59 +257,6 @@ impl S3Storage {
         }
 
         Ok(())
-    }
-
-    async fn get_object_first_byte(
-        &self,
-        key: &str,
-        version_id: Option<String>,
-        sse_c: Option<String>,
-        sse_c_key: SseCustomerKey,
-        sse_c_key_md5: Option<String>,
-    ) -> Result<GetObjectOutput> {
-        let result = self
-            .client
-            .as_ref()
-            .unwrap()
-            .get_object()
-            .set_request_payer(self.request_payer.clone())
-            .bucket(&self.bucket)
-            .key(generate_full_key(&self.prefix, key))
-            .set_version_id(version_id.clone())
-            .set_sse_customer_algorithm(sse_c.clone())
-            .set_sse_customer_key(sse_c_key.key.clone())
-            .set_sse_customer_key_md5(sse_c_key_md5.clone())
-            .range("bytes=0-0")
-            .send()
-            .await;
-
-        if let Ok(get_object_output) = result {
-            return Ok(get_object_output);
-        }
-
-        let service_error = result.err().unwrap().into_service_error();
-        if let Some(code) = service_error.code() {
-            // Use normal request for empty object. content-range is not set.
-            if code == "InvalidRange" {
-                return self
-                    .client
-                    .as_ref()
-                    .unwrap()
-                    .get_object()
-                    .set_request_payer(self.request_payer.clone())
-                    .bucket(&self.bucket)
-                    .key(generate_full_key(&self.prefix, key))
-                    .set_version_id(version_id)
-                    .set_sse_customer_algorithm(sse_c)
-                    .set_sse_customer_key(sse_c_key.key.clone())
-                    .set_sse_customer_key_md5(sse_c_key_md5)
-                    .send()
-                    .await
-                    .context("aws_sdk_s3::client::get_object() failed.");
-            }
-        }
-
-        Err(anyhow!(service_error))
     }
 
     async fn exec_rate_limit_objects_per_sec(&self) {
@@ -696,9 +641,25 @@ impl StorageTrait for S3Storage {
         sse_c_key_md5: Option<String>,
     ) -> Result<GetObjectOutput> {
         if self.config.dry_run {
-            return self
-                .get_object_first_byte(key, version_id, sse_c, sse_c_key, sse_c_key_md5)
-                .await;
+            let head_object_result = self
+                .client
+                .as_ref()
+                .unwrap()
+                .head_object()
+                .set_request_payer(self.request_payer.clone())
+                .bucket(&self.bucket)
+                .key(generate_full_key(&self.prefix, key))
+                .set_version_id(version_id)
+                .set_checksum_mode(checksum_mode)
+                .set_range(range)
+                .set_sse_customer_algorithm(sse_c)
+                .set_sse_customer_key(sse_c_key.key.clone())
+                .set_sse_customer_key_md5(sse_c_key_md5)
+                .send()
+                .await
+                .context("aws_sdk_s3::client::head_object() failed.")?;
+
+            return Ok(convert_head_to_get_object_output(head_object_result));
         }
 
         let result = self
@@ -1008,21 +969,14 @@ impl StorageTrait for S3Storage {
         .to_rfc3339();
 
         if self.config.dry_run {
-            // In a dry run, content-range is set.
-            let content_length_string =
-                get_size_string_from_content_range(&get_object_output_first_chunk);
-
-            self.send_stats(SyncBytes(
-                u64::from_str(&content_length_string).unwrap_or_default(),
-            ))
-            .await;
+            self.send_stats(SyncBytes(source_size)).await;
 
             info!(
                 key = key,
                 source_version_id = version_id,
                 source_last_modified = source_last_modified,
                 target_key = target_key,
-                size = content_length_string,
+                size = source_size.to_string(),
                 "[dry-run] sync completed.",
             );
 

@@ -52,7 +52,6 @@ use crate::storage::e_tag_verify::{
 };
 use crate::storage::{
     Storage, StorageFactory, StorageTrait, convert_to_buf_byte_stream_with_callback,
-    get_size_string_from_content_range,
 };
 use crate::types::SyncStatistics::{ChecksumVerified, ETagVerified, SyncBytes, SyncWarning};
 use crate::types::error::S3syncError;
@@ -486,13 +485,8 @@ impl LocalStorage {
         }
 
         if self.config.dry_run {
-            // In a dry run, content-range is set.
-            let content_length_string = get_size_string_from_content_range(&get_object_output);
-
-            self.send_stats(SyncBytes(
-                u64::from_str(&content_length_string).unwrap_or_default(),
-            ))
-            .await;
+            self.send_stats(SyncBytes(get_object_output.content_length().unwrap() as u64))
+                .await;
 
             let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key)
                 .to_string_lossy()
@@ -501,7 +495,7 @@ impl LocalStorage {
                 key = key,
                 real_path = real_path,
                 source_last_modified = source_last_modified,
-                size = content_length_string,
+                size = get_object_output.content_length().unwrap(),
                 "[dry-run] sync completed.",
             );
 
