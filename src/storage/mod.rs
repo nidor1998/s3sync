@@ -196,22 +196,6 @@ where
     ByteStream::new(sdk_body)
 }
 
-pub fn get_size_string_from_content_range(get_object_output: &GetObjectOutput) -> String {
-    let content_length_str = get_object_output.content_length().unwrap().to_string();
-    let size = if get_object_output.content_range().is_some() {
-        // example: bytes 200-1000/67589　67589 will be returned
-        get_object_output
-            .content_range()
-            .unwrap()
-            .split('/')
-            .collect::<Vec<&str>>()[1]
-    } else {
-        &content_length_str
-    };
-
-    size.to_string()
-}
-
 pub fn get_range_from_content_range(get_object_output: &GetObjectOutput) -> Option<(u64, u64)> {
     let content_range = get_object_output.content_range()?;
     let parts: Vec<&str> = content_range.split_whitespace().collect();
@@ -496,29 +480,6 @@ pub fn parse_range_header_string(range: &str) -> Option<(u64, u64)> {
 mod tests {
     use super::*;
     use tracing_subscriber::EnvFilter;
-
-    #[test]
-    fn get_size_string_from_content_range_test() {
-        init_dummy_tracing_subscriber();
-
-        let get_object_output = GetObjectOutput::builder()
-            .set_content_length(Some(67589))
-            .content_range("bytes 200-1000/67589")
-            .build();
-        assert_eq!(
-            get_size_string_from_content_range(&get_object_output),
-            "67589".to_string()
-        );
-
-        let get_object_output = GetObjectOutput::builder()
-            .set_content_length(Some(67589))
-            .content_range("bytes 200-1000/*")
-            .build();
-        assert_eq!(
-            get_size_string_from_content_range(&get_object_output),
-            "*".to_string()
-        );
-    }
 
     #[test]
     fn get_range_from_content_range_test() {
