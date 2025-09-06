@@ -27,12 +27,12 @@ impl UserDefinedPreprocessCallback {
 }
 
 #[async_trait]
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 impl PreprocessCallback for UserDefinedPreprocessCallback {
     // If you want to implement a custom preprocess callback, you can do so by modifying this function.
     // The callbacks are called serially, and the callback function MUST return immediately.
     // If a callback function takes a long time to execute, it may block a whole pipeline.
-    #[cfg_attr(coverage, coverage(off))]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     async fn preprocess_before_upload(
         &mut self,
         _key: &str,                       // The key of the object being uploaded
