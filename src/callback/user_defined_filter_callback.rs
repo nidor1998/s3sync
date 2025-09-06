@@ -26,7 +26,7 @@ impl UserDefinedFilterCallback {
 }
 
 #[async_trait]
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 impl FilterCallback for UserDefinedFilterCallback {
     // If you want to implement a custom filter callback, you can do so by modifying this function.
     // The callbacks are called serially, and the callback function MUST return immediately.
@@ -35,7 +35,7 @@ impl FilterCallback for UserDefinedFilterCallback {
     // This function should return false if the object should be filtered out (not uploaded)
     // and true if the object should be uploaded.
     // If an error occurs, it should be handled gracefully, and the function should return an error, and the pipeline will be cancelled.
-    #[cfg_attr(coverage, coverage(off))]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     async fn filter(&mut self, _source_object: &S3syncObject) -> Result<bool> {
         let _key: &str = _source_object.key();
         // Todo: Implement your custom filtering logic here.

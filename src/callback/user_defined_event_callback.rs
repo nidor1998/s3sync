@@ -21,12 +21,12 @@ impl UserDefinedEventCallback {
 }
 
 #[async_trait]
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 impl EventCallback for UserDefinedEventCallback {
     // If you want to implement a custom event callback, you can do so by modifying this function.
     // The callbacks are called serially, and the callback function MUST return immediately.
     // If a callback function takes a long time to execute, it may block a whole pipeline.
-    #[cfg_attr(coverage, coverage(off))]
+    #[cfg_attr(coverage_nightly, coverage(off))]
     async fn on_event(&mut self, event_data: EventData) {
         // Todo: Implement your custom event handling logic here.
         match event_data.event_type {

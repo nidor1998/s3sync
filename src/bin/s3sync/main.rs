@@ -10,7 +10,7 @@ use s3sync::Config;
 mod cli;
 mod tracing;
 
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = load_config_exit_if_err();
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
     cli::run(config).await
 }
 
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 fn load_config_exit_if_err() -> Config {
     let config = Config::try_from(CLIArgs::parse());
     if let Err(error_message) = config {
