@@ -863,7 +863,7 @@ Exclude filters other than --filter-exclude-regex will not prevent an object fro
     allow_both_local_storage: bool,
 
     /// test purpose only
-    #[cfg(feature = "e2e_test")]
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
     test_user_defined_callback: bool,
 
@@ -1781,7 +1781,7 @@ impl TryFrom<CLIArgs> for Config {
         #[allow(unused_assignments)]
         #[allow(unused_mut)]
         let mut test_user_defined_callback = false;
-        #[cfg(feature = "e2e_test")]
+        #[cfg(feature = "e2e_test_dangerous_simulations")]
         {
             test_user_defined_callback = value.test_user_defined_callback;
         }
