@@ -210,7 +210,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "e2e_test")]
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
     async fn test_user_defined_callback() {
         init_dummy_tracing_subscriber();
 
