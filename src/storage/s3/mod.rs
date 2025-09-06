@@ -1222,7 +1222,7 @@ impl StorageTrait for S3Storage {
         let _ = self.stats_sender.send(stats).await;
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     fn get_local_path(&self) -> PathBuf {
         // S3 storage does not have a local path.
         unimplemented!();
