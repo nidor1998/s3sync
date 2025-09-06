@@ -109,7 +109,7 @@ pub fn show_indicator(
                             skipped = total_skip_count,
                             error = total_error_count,
                             warning = total_warning_count,
-                            duration_sec = elapsed.as_secs_f64(),
+                            duration_sec = elapsed_secs_f64,
                         );
                     }
 
