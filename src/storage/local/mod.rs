@@ -1342,7 +1342,7 @@ impl StorageTrait for LocalStorage {
         Ok(())
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn list_object_versions(
         &self,
         _sender: &Sender<S3syncObject>,
@@ -1505,13 +1505,13 @@ impl StorageTrait for LocalStorage {
             .build())
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn get_object_versions(&self, _key: &str, _max_keys: i32) -> Result<Vec<ObjectVersion>> {
         // local storage does not support versioning.
         unimplemented!();
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn get_object_tagging(
         &self,
         _key: &str,
@@ -1588,7 +1588,7 @@ impl StorageTrait for LocalStorage {
         unimplemented!();
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn get_object_parts(
         &self,
         _key: &str,
@@ -1601,7 +1601,7 @@ impl StorageTrait for LocalStorage {
         unimplemented!();
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn get_object_parts_attributes(
         &self,
         _key: &str,
@@ -1648,7 +1648,7 @@ impl StorageTrait for LocalStorage {
         }
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn put_object_tagging(
         &self,
         _key: &str,
@@ -1684,7 +1684,7 @@ impl StorageTrait for LocalStorage {
         Ok(DeleteObjectOutput::builder().build())
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn delete_object_tagging(
         &self,
         _key: &str,
@@ -1694,7 +1694,7 @@ impl StorageTrait for LocalStorage {
         unimplemented!();
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     async fn is_versioning_enabled(&self) -> Result<bool> {
         unimplemented!();
     }
@@ -1718,7 +1718,7 @@ impl StorageTrait for LocalStorage {
         self.rate_limit_bandwidth.clone()
     }
 
-    #[cfg(not(tarpaulin_include))]
+    #[cfg_attr(coverage, coverage(off))]
     fn generate_full_key_with_bucket(&self, _: &str, _: Option<String>) -> String {
         unimplemented!()
     }

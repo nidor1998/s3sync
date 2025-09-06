@@ -862,6 +862,11 @@ Exclude filters other than --filter-exclude-regex will not prevent an object fro
     #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
     allow_both_local_storage: bool,
 
+    /// test purpose only
+    #[cfg(feature = "e2e_test")]
+    #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
+    test_user_defined_callback: bool,
+
     /// [dangerous] Disable to verify SSL certificates.
     #[cfg(feature = "legacy_hyper014_feature")]
     #[arg(long, env, conflicts_with_all = ["https_proxy", "http_proxy"], default_value_t = DEFAULT_NO_VERIFY_SSL, help_heading = "Dangerous")]
@@ -1767,11 +1772,18 @@ impl TryFrom<CLIArgs> for Config {
         #[allow(unused_assignments)]
         #[allow(unused_mut)]
         let mut cancellation_point = None;
-
         #[cfg(feature = "e2e_test_dangerous_simulations")]
         {
             allow_e2e_test_dangerous_simulation = value.allow_e2e_test_dangerous_simulation;
             cancellation_point = value.cancellation_point
+        }
+
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut test_user_defined_callback = false;
+        #[cfg(feature = "e2e_test")]
+        {
+            test_user_defined_callback = value.test_user_defined_callback;
         }
 
         // If point-in-time is specified, we need to remove the modified filter.
@@ -2004,6 +2016,7 @@ impl TryFrom<CLIArgs> for Config {
             delete_excluded: value.delete_excluded,
             full_object_checksum,
             allow_e2e_test_dangerous_simulation,
+            test_user_defined_callback,
             cancellation_point,
             source_accelerate: value.source_accelerate,
             target_accelerate: value.target_accelerate,

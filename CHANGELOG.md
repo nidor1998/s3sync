@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.42.1] - 2025-09-07
+
+### Changed
+- Improved tests
+- Changed the coverage analysis tool used from cargo-tarpaulin (ptrace) to cargo-llvm-cov  
+  This is because recently analysis with cargo-tarpaulin (ptrace) started to fail with this binary.  
+  But the LLVM-based coverage result is significantly different from the ptrace-based one.  
+  LLVM-based coverage analysis ignores some codes regardless of their execution status.  
+  So, the coverage percentage may be lower than before.
+- Updated dependencies
+
+
 ## [1.42.0] - 2025-09-04
 
 ### Changed

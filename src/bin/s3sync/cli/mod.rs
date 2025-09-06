@@ -32,7 +32,11 @@ pub async fn run(mut config: Config) -> Result<()> {
 
         // Note: Each type of callback is registered only once.
         // The user-defined event callback is disabled by default.
-        let user_defined_event_callback = UserDefinedEventCallback::new();
+        let mut user_defined_event_callback = UserDefinedEventCallback::new();
+        // This is for testing purpose only.
+        if config.test_user_defined_callback {
+            user_defined_event_callback.enable = true;
+        }
         if user_defined_event_callback.is_enabled() {
             // By default, the user-defined event callback notifies all events.
             // You can modify EventType::ALL_EVENTS to filter specific events (e.g., EventType::SYNC_START | EventType::SYNC_COMPLETE)
@@ -44,7 +48,11 @@ pub async fn run(mut config: Config) -> Result<()> {
         // The user-defined filter callback is disabled by default.
         // But you can modify the `UserDefinedFilterCallback` to enable it.
         // User-defined filter callback allows us to filter objects while listing them in the source.
-        let user_defined_filter_callback = UserDefinedFilterCallback::new();
+        let mut user_defined_filter_callback = UserDefinedFilterCallback::new();
+        // This is for testing purpose only.
+        if config.test_user_defined_callback {
+            user_defined_filter_callback.enable = true;
+        }
         if user_defined_filter_callback.is_enabled() {
             config
                 .filter_config
@@ -55,7 +63,11 @@ pub async fn run(mut config: Config) -> Result<()> {
         // The user-defined preprocess callback is disabled by default.
         // But you can modify the `UserDefinedPreprocessCallback` to enable it.
         // User-defined preprocess callback allows us to modify the object attributes dynamically before uploading to S3.
-        let user_defined_preprocess_callback = UserDefinedPreprocessCallback::new();
+        let mut user_defined_preprocess_callback = UserDefinedPreprocessCallback::new();
+        // This is for testing purpose only.
+        if config.test_user_defined_callback {
+            user_defined_preprocess_callback.enable = true;
+        }
         if user_defined_preprocess_callback.is_enabled() {
             config
                 .preprocess_manager
@@ -195,6 +207,23 @@ mod tests {
         let config = Config::try_from(parse_from_args(args).unwrap());
 
         assert!(config.is_err());
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "e2e_test")]
+    async fn test_user_defined_callback() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--test-user-defined-callback",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let _ = run(config).await;
     }
 
     #[tokio::test]
