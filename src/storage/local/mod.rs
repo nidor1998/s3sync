@@ -30,7 +30,6 @@ use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::io::BufReader;
@@ -645,14 +644,6 @@ impl LocalStorage {
             None
         };
         let source_storage_class = get_object_output_first_chunk.storage_class().cloned();
-        let source_last_modified = DateTime::from_millis(
-            get_object_output_first_chunk
-                .last_modified
-                .unwrap()
-                .to_millis()?,
-        )
-        .to_chrono_utc()?
-        .to_rfc3339();
         let source_last_modified_seconds = get_object_output_first_chunk
             .last_modified()
             .as_ref()
@@ -670,23 +661,7 @@ impl LocalStorage {
         }
 
         if self.config.dry_run {
-            self.send_stats(SyncBytes(
-                u64::from_str(&source_size.to_string()).unwrap_or_default(),
-            ))
-            .await;
-
-            let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key)
-                .to_string_lossy()
-                .to_string();
-            info!(
-                key = key,
-                real_path = real_path,
-                source_last_modified = source_last_modified,
-                size = source_size,
-                "[dry-run] sync completed.",
-            );
-
-            return Ok(PutObjectOutput::builder().build());
+            panic!("dry-run is not supported for multipart upload.");
         }
 
         if fs_util::is_key_a_directory(key) {
@@ -1626,6 +1601,7 @@ impl StorageTrait for LocalStorage {
         object_checksum: Option<ObjectChecksum>,
     ) -> Result<PutObjectOutput> {
         if get_object_output_first_chunk.content_range.is_none() {
+            // with --dry-run, it always goes to a single part upload.
             self.put_object_single_part(
                 key,
                 source,
