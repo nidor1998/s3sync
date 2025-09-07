@@ -32,6 +32,7 @@ Supports multipart upload, versioning, metadata.
 - Flexible filtering
   - key, `ContentType`, user-defined metadata, tagging, by regular expression.
   - size, modified time
+  - custom filtering with a Lua script or User-defined callback function(Rust)
 
 - Callbacks support
   - Event callback: You can register a callback to handle events, such as logging, monitoring, or custom actions.
