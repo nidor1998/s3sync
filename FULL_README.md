@@ -156,11 +156,9 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Amazon S3 Express One Zone(Directory bucket) support  
   s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).  
-  AWS CLI does not support `aws s3 sync` with Amazon S3 Express One Zone. see [AWS S3 sync operations do not work with S3 directory buckets (S3 Express One Zone)](https://github.com/aws/aws-cli/issues/8470).
 
   s3sync does not depend on the sorting order of returned objects of ListObjectsV2 API.  
   s3sync gathers all objects in the target bucket at first step(not concurrently) and store the information with Map.  
-  If you want to sync object with Amazon S3 Express One Zone, s3sync is one of the strong candidates.
 
   In S3 Express One Zone, ETag is not MD5. So, s3sync uses additional checksum algorithm for verification by default(CRC64NVME).
 
@@ -277,7 +275,6 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - S3-compatible storage support  
   s3sync uses the AWS SDK for Rust. s3sync can be used with any S3-compatible storage.  
-  Originally, it was developed for S3-Compatible to S3-Compatible.
 
 - Multi-platform support  
   All features are supported on supported platforms.
@@ -1178,14 +1175,13 @@ $
 
 </details>
 
-
 ## About testing
-**Supported target: Amazon S3 only.** S3-compatible storages are best-effort and may behave differently.  
+**Supported target: Amazon S3 only.**  
+S3-compatible storages are best-effort and may behave differently.  
 s3sync has been tested with Amazon S3. s3sync has many e2e tests and unit tests and runs every time when a new version is released.  
-S3-compatible storages are not tested at all. (I test only when make major changes.)  
+S3-compatible storages are not tested when a new version is released (I test only when make major changes).  
 This is because S3-compatible storages may have different behaviors and features.  
 Since there is no such thing as S3 compatible storage certification, efficient testing is not possible.
-
 
 ## Contributing
 
