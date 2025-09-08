@@ -1,20 +1,20 @@
 /*!
 # Overview
-s3sync is a reliable, very fast, and powerful synchronization tool for S3.
-It can be used to synchronize local directories with S3 bucket, and also to synchronize S3 to s3 bucket.
-Supports multipart upload, versioning, metadata.
+s3sync is a reliable, flexible, and fast synchronization tool for S3.
+It can be used to synchronize local directories with an S3 bucket and synchronize between S3 buckets as well.
+It supports multipart uploads, versioning, and metadata.
 
 ## Features
 - Reliable: In-depth end-to-end object integrity check
   s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.
-  An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.
-  Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.
+  An object on the local disk is read from the disk and compared with the checksum in the source or target.
+  Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.
   s3sync always shows the integrity check result, so you can verify that the synchronization was successful.
 
-- Very fast
-  s3sync implemented in Rust, using AWS SDK for Rust that uses multithreaded asynchronous I/O.
-  In my environment(`c7a.large`, with 256 workers), Local to S3, about 3,900 objects/sec (small objects 10KiB) and Local to S3 16 objects(6GiB objects, `--max-parallel-uploads 64`) 96.00 GiB, about 280 MiB/sec.
-  Large objects are transferred in parallel using multipart upload (or get-range request for download), so it can transfer large objects very fast.
+- Fast
+  s3sync is implemented in Rust and uses the AWS SDK for Rust, which supports multithreaded asynchronous I/O.
+  In my environment(`c7a.large`, with 256 workers), uploading from local to S3 achieved about 3,900 objects/sec (small objects 10KiB) and Local to S3 16 objects(6GiB objects, `--max-parallel-uploads 64`) 96.00 GiB, about 280 MiB/sec.
+  Large objects are transferred in parallel using multipart upload (or get-range request for download), so it can transfer large objects fast.
   Note: The default s3sync setting uses `--worker-size 16` and `--max-parallel-uploads 16`. This is a moderate setting for most cases. If you want to improve performance, you can increase `--worker-size` and `--max-parallel-uploads`. But it will increase CPU and memory usage.
 
 - Multiple ways
@@ -32,7 +32,7 @@ Supports multipart upload, versioning, metadata.
 - Flexible filtering
   - key, `ContentType`, user-defined metadata, tagging, by regular expression.
   - size, modified time
-  - Custom filtering with a Lua script or User-defined callback function(Rust)
+  - Custom filtering with a Lua script or User-defined callback function (Rust)
 
 - Callbacks support
   - Event callback: You can register a callback to handle events, such as logging, monitoring, or custom actions.
@@ -42,14 +42,13 @@ Supports multipart upload, versioning, metadata.
   You can use these callbacks via Lua scripting or implement your own callback in Rust.
 
 - Robust retry logic
-  For long time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
+  For long-time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
 
 For more information, see [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).
 
 ## As a library
-s3sync can be used as a library.
-
-s3sync CLI is a very thin wrapper of the s3sync library. You can use all features of s3sync CLI in the library.
+s3sync can be used as a Rust library.
+The s3sync CLI is a very thin wrapper over the s3sync library. All CLI features are available in the library.
 
 s3sync library has many features that are not documented. You can refer to the s3sync CLI help(`s3sync -h`) for the features and pass the arguments to the library.
 

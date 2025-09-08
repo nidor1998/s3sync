@@ -80,11 +80,11 @@
     * [S3 Permissions](#S3-Permissions)
         + [Source bucket](#Source-Bucket)
         + [Target bucket](#Target-Bucket)
-    * [CLI process exit codes](#CLI-process-exit-codes)
     * [Lua VM](#Lua-VM)
     * [Lua VM security](#Lua-VM-security)
     * [Lua script error](#Lua-script-error)
     * [Lua version](#Lua-version)
+    * [CLI process exit codes](#CLI-process-exit-codes)
 
 - [Advanced options](#Advanced-options)
     * [--worker-size](#--worker-size)
@@ -127,7 +127,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 ### Object integrity check
 
 s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
-An object on the local disk is read from disk and compared with the checksum in the source or
+An object on the local disk is read from the disk and compared with the checksum in the source or
 target.  
 Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and
 the entire object (with `--auto-chunksize`).  
@@ -960,13 +960,6 @@ s3sync requires the following permissions.
 ]
 ```
 
-### CLI process exit codes
-
-- 0: Exit without error
-- 1: Exit with error
-- 2: Invalid arguments
-- 3: Exit with warning
-
 ### Lua VM
 
 Each type of callback has its own Lua VM and memory limit.  
@@ -996,6 +989,13 @@ But an event callback Lua script does not stop the operation, just shows the war
 s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.4.  
 If you want to use `LuaJIT`, `luau-jit`, etc, you can modify the `Cargo.toml` file and set the `mlua` feature.  
 For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
+
+### CLI process exit codes
+
+- 0: Exit without error
+- 1: Exit with error
+- 2: Invalid arguments
+- 3: Exit with warning
 
 ## Advanced options
 
