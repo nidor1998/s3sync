@@ -30,8 +30,8 @@
     * [User-defined metadata filtering](#User-defined-metadata-filtering)
     * [Tagging filtering](#Tagging-filtering)
     * [Incremental transfer](#Incremental-transfer)
-    * [ETag based incremental transfer](#Etag-based-incremental-transfer)
-    * [Additional checksum based incremental transfer](#Additional-checksum-based-incremental-transfer)
+    * [ETag-based incremental transfer](#Etag-based-incremental-transfer)
+    * [Additional checksum-based incremental transfer](#Additional-checksum-based-incremental-transfer)
     * [Amazon S3 Express One Zone support](#Amazon-S3-Express-One-Zone-support)
     * [Versioning support](#Versioning-support)
     * [Point-in-time snapshot](#Point-in-time-snapshot)
@@ -291,7 +291,7 @@ transferred.
 Incremental transfer can be resumed from the last checkpoint.
 Checking of modified objects is fast.
 
-### ETag based incremental transfer
+### ETag-based incremental transfer
 
 If you want ETag-based incremental transfer, you can use `--check-etag` option.  
 It compares the ETag of the source object with the ETag of the target object and transfers only modified objects.  
@@ -316,7 +316,7 @@ With `--json-tracing`, you can output the tracing information in JSON format.
 With `--check-mtime-and-etag` option, s3sync checks the modification time and ETag of the source and target objects. It
 is useful if you want to transfer only modified objects based on the modification time and ETag.
 
-### Additional checksum based incremental transfer
+### Additional checksum-based incremental transfer
 
 If you use Amazon S3 with additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME), you can use
 `--check-additional-checksum` option.  
