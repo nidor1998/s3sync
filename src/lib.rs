@@ -30,9 +30,9 @@ It supports multipart uploads, versioning, and metadata.
     - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
 
 - Flexible filtering
-  - key, `ContentType`, user-defined metadata, tagging, by regular expression.
-  - size, modified time
-  - Custom filtering with a Lua script or User-defined callback function (Rust)
+    - Key, `ContentType`, user-defined metadata and tagging by regular expression.
+    - Size and modified time
+    - Custom filtering with a Lua script or User-defined callback function (Rust)
 
 - Callbacks support
   - Event callback: You can register a callback to handle events, such as logging, monitoring, or custom actions.

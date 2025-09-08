@@ -256,9 +256,9 @@ The following SSE modes are supported.
 
 ### Flexible filtering
 
-- key, `ContentType`, user-defined metadata, tagging, by regular expression.
-- size, modified time
-- Custom filtering with a Lua script or User-defined callback function(Rust)
+- Key, `ContentType`, user-defined metadata and tagging by regular expression.
+- Size and modified time
+- Custom filtering with a Lua script or User-defined callback function (Rust)
 
 ### User-defined metadata filtering
 
