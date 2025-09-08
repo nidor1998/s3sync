@@ -91,6 +91,7 @@
     * [--max-parallel-uploads](#--max-parallel-uploads)
     * [--force-retry-count](#--force-retry-count)
     * [--remove-modified-filter](#--remove-modified-filter)
+    * [--filter-include-regex/--filter-exclude-regex](#--filter-include-regex--filter-exclude-regex)
     * [--check-etag](#--check-etag)
     * [--put-last-modified-metadata](#--put-last-modified-metadata)
     * [--additional-checksum-algorithm](#--additional-checksum-algorithm)
@@ -99,7 +100,6 @@
     * [--disable-multipart-verify](#--disable-multipart-verify)
     * [-v](#-v)
     * [--aws-sdk-tracing](#--aws-sdk-tracing)
-    * [--filter-include-regex/--filter-exclude-regex](#--filter-include-regex--filter-exclude-regex)
     * [--auto-complete-shell](#--auto-complete-shell)
     * [-h/--help](#-h--help)
 
@@ -131,7 +131,7 @@ An object on the local disk is read from the disk and compared with the checksum
 target.  
 Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and
 the entire object (with `--auto-chunksize`).  
-In the case of S3 to S3, s3sync simply compares ETags and additional checksums that are calculated by S3.    
+In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.  
 Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
 object.  
 If you want to obtain evidence of the integrity check, you can use `-vvv` option to output the verification information.
@@ -273,11 +273,11 @@ Note: When using this option, Additional API calls may be required to get the me
 
 You can filter objects based on tags.  
 The regular expression syntax is the same as [fancy_regex](https://docs.rs/fancy-regex/latest/fancy_regex/#syntax).  
-This crate supports lookaround assertions.
+This crate supports lookaround features.
 
 For example, `'^(?!.*&test=true).*stage=first'` can be used to filter objects that do not contain `test=true` and that
 contain `stage=first` in the tags.  
-And you can also create regular expressions that combine multiple logical conditions with look-around features.  
+And you can also create regular expressions that combine multiple logical conditions with lookaround features.  
 This feature reduces the need for Lua scripts or custom callback Rust codes (see below) to filter objects with complex
 patterns.
 
@@ -1024,6 +1024,11 @@ For example, in the case of `connection reset by peer`, s3sync will retry the op
 
 If you want to overwrite the existing objects, specify the option.
 
+### --filter-include-regex/--filter-exclude-regex
+
+You can specify the regular expression to filter the source objects.  
+The regular expression syntax is the same as [fancy_regex](https://docs.rs/fancy-regex/latest/fancy_regex/#syntax).
+
 ### --check-etag
 
 For incremental transfer, s3sync compares the ETag of the source object with the ETag of the target object. If the ETag
@@ -1095,11 +1100,6 @@ Instead of `-v`, you can use `RUST_LOG` environment variable.
 
 For troubleshooting, s3sync can output the AWS SDK for Rust's tracing information.  
 Instead of `--aws-sdk-tracing`, you can use `RUST_LOG` environment variable.
-
-### --filter-include-regex/--filter-exclude-regex
-
-You can specify the regular expression to filter the source objects.  
-The regular expression syntax is the same as [fancy_regex](https://docs.rs/fancy-regex/latest/fancy_regex/#syntax).
 
 ### --auto-complete-shell
 
