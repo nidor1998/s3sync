@@ -61,9 +61,9 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
     - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
 
 - Flexible filtering
-    - key, `ContentType`, user-defined metadata, tagging, by regular expression.
-    - size, modified time
-    - Custom filtering with a Lua script or User-defined callback function(Rust)
+    - Key, `ContentType`, user-defined metadata and tagging by regular expression.
+    - Size and modified time
+    - Custom filtering with a Lua script or User-defined callback function (Rust)
 
 - Incremental transfer  
   There are many ways to transfer objects:
@@ -97,7 +97,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Point-in-time snapshot  
   With a versioning-enabled S3 bucket, you can transfer objects at a specific point in time.
 
-- [Lua](https://www.lua.org) scripting support   
+- Lua scripting support   
   You can use a [Lua](https://www.lua.org) (5.4) script to implement custom filtering, event handling, preprocessing
   before transferring objects to S3.  
   `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are
@@ -110,7 +110,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
   See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
 
-- Amazon S3 Express One Zone(Directory bucket) support  
+- Amazon S3 Express One Zone support  
   s3sync can be used
   with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
 
@@ -199,7 +199,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 **Supported target: Amazon S3 only.**
 
 Support for S3-compatible storage is on a best-effort basis and may behave differently.   
-s3sync has been tested with Amazon S3. s3sync has many end-to-end tests and unit tests and runs every time when a new version
+s3sync has been tested with Amazon S3. s3sync has many end-to-end tests and unit tests and runs every time when a new
+version
 is released.  
 S3-compatible storage is not tested when a new version is released (I test only when making major changes).  
 This is because S3-compatible storage may have different behaviors and features.  
