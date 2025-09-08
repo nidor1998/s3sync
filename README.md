@@ -9,19 +9,25 @@
 [![DeepSource](https://app.deepsource.com/gh/nidor1998/s3sync.svg/?label=active+issues&show_trend=true&token=Q3EjeUmx8Fu-ndXKEG133W-t)](https://app.deepsource.com/gh/nidor1998/s3sync/?ref=repository-badge)
 
 ## Overview
+
 s3sync is a reliable, flexible, and fast synchronization tool for S3.
 
-**This document is a summary of s3sync. For more detailed information, please refer to the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).**
+**This document is a summary of s3sync. For more detailed information, please refer to
+the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).**
 
 ## Who is this for?
 
 s3sync is designed for users who need to synchronize data with S3 or S3-compatible object storage.  
-This tool is specifically tailored for those who require reliable synchronization capabilities and evidence of data integrity.
+This tool is specifically tailored for those who require reliable synchronization capabilities and evidence of data
+integrity.
 
-If you don't use s3sync for synchronization, you can use s3sync for checking the integrity of objects that have been transferred by other tools, such as AWS CLI, Rclone, s5cmd, and other S3 storage tools.  
-In general, it is recommended to verify with other tools if you want to ensure that the objects have been transferred correctly.
+If you don't use s3sync for synchronization, you can use s3sync for checking the integrity of objects that have been
+transferred by other tools, such as AWS CLI, Rclone, s5cmd, and other S3 storage tools.  
+In general, it is recommended to verify with other tools if you want to ensure that the objects have been transferred
+correctly.
 
 ## As a Rust library
+
 s3sync can be used as a Rust library.  
 s3sync CLI is a very thin wrapper of the s3sync library. You can use all features of s3sync CLI in the library.
 
@@ -31,8 +37,10 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Reliable: In-depth end-to-end object integrity check  
   s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
-  An object that exists in the local disk is read from the disk and compared with the checksum in the source or target.  
-  Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.  
+  An object that exists in the local disk is read from the disk and compared with the checksum in the source or
+  target.  
+  Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
+  object.
 
   s3sync always shows the integrity check result, so you can verify that the synchronization was successful.
 
@@ -40,33 +48,36 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   $ s3sync --additional-checksum-algorithm SHA256 test_data s3://xxxxx
   772.00 KiB | 772.00 KiB/sec,  transferred 100 objects | 100 objects/sec,  etag verified 100 objects,  checksum verified 100 objects ...(omitted)
   ```
-  
-  `transferred 100 objects | 100 objects/sec,  etag verified 100 objects,  checksum verified 100 objects` means that all objects have been transferred and ETag(MD5 or equivalent) and additional checksum(SHA256 in this case) have been verified successfully.  
+
+  `transferred 100 objects | 100 objects/sec,  etag verified 100 objects,  checksum verified 100 objects` means that all
+  objects have been transferred and ETag(MD5 or equivalent) and additional checksum(SHA256 in this case) have been
+  verified successfully.  
   If you want to get detailed evidence of the integrity check, you can use `Sync statistics report` feature(see below).
 
 - Multiple ways
-  - Local to S3(S3-compatible storage)
-  - S3(S3-compatible storage) to Local
-  - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
+    - Local to S3(S3-compatible storage)
+    - S3(S3-compatible storage) to Local
+    - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
 
 - Flexible filtering
-  - key, `ContentType`, user-defined metadata, tagging, by regular expression.
-  - size, modified time
-  - Custom filtering with a Lua script or User-defined callback function(Rust)
+    - key, `ContentType`, user-defined metadata, tagging, by regular expression.
+    - size, modified time
+    - Custom filtering with a Lua script or User-defined callback function(Rust)
 
 - Incremental transfer  
   There are many ways to transfer objects:
-  - Modified time based (default)
-  - Size-based
-  - ETag(MD5 or equivalent) based
-  - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
+    - Modified time based (default)
+    - Size-based
+    - ETag(MD5 or equivalent) based
+    - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
 
 - Easy to use  
   s3sync is designed to be easy to use.  
   s3sync has over 100 command line options, this is because there are many use cases.  
   But the default settings are reasonable for most cases of reliable synchronization.
 
-  For example, In the IAM role environment, the following command will transfer all objects from the local directory to the S3 bucket and verify the integrity of the transferred objects using ETag(MD5 or equivalent).  
+  For example, In an IAM role environment, the following command will transfer all objects from the local directory to
+  the S3 bucket and verify the integrity of the transferred objects using ETag(MD5 or equivalent).  
   If something goes wrong, s3sync will display a warning or error message to help you understand the issue.
 
   ```bash
@@ -75,7 +86,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Fast  
   s3sync is implemented in Rust and uses the AWS SDK for Rust, which supports multithreaded asynchronous I/O.  
-  In my environment(`c7a.large`, with 256 workers), uploading from local to S3 achieved about 3,900 objects/sec (small objects 10KiB),  
+  In my environment(`c7a.large`, with 256 workers), uploading from local to S3 achieved about 3,900 objects/sec (small
+  objects 10KiB),  
   in the case of large objects(6GiB object, total 96GiB, `--max-parallel-uploads 64`), about 280MB/sec, 5.5 minutes,
 
 - Versioning support  
@@ -85,24 +97,32 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   With versioning enabled S3 bucket, you can transfer objects at a specific point in time.
 
 - [Lua](https://www.lua.org) scripting support   
-  You can use a Lua(5.4) script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
-  `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
-  Lua is widely recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use a Lua script without any additional dependencies.  
-  For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object attributes(e.g., metadata, tagging) before transferring it to S3.  
-  By default, Lua script run in safe mode, so it cannot use Lua os library functions.   
+  You can use a [Lua](https://www.lua.org) (5.4) script to implement custom filtering, event handling, preprocessing
+  before transferring objects to S3.  
+  `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are
+  available for this purpose.  
+  Lua is widely recognized as a fast scripting language. The Lua engine is embedded in s3sync, so you can use Lua script
+  without any additional dependencies.  
+  For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object
+  attributes(e.g., metadata, tagging) before transferring it to S3.  
+  By default, Lua scripts run in safe mode, so they cannot use Lua’s OS or I/O library functions.  
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
   See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
 
 - Amazon S3 Express One Zone(Directory bucket) support  
-  s3sync can be used with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
+  s3sync can be used
+  with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
 
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
-  Sync statistics report feature supports objects that any tools have transferred, such as AWS CLI, Rclone, s5cmd, and other S3 storage tools.  
-  And s3sync supports multipart upload and guesses chunk size automatically and verifies the integrity of the uploaded objects. (`--auto-chunksize` option).  
+  Sync statistics report feature supports objects that any tools have transferred, such as AWS CLI, Rclone, s5cmd, and
+  other S3 storage tools.  
+  And s3sync supports multipart upload and guesses chunk size automatically and verifies the integrity of the uploaded
+  objects. (`--auto-chunksize` option).  
   `--auto-chunksize` option is useful for S3 compatible storage that does not support additional checksum.
 
-  For example, If you want to know all the objects transferred by AWS CLI(of course, you can use s3sync) have been transferred correctly(checksum based), the following command will show the report.
+  For example, If you want to know all the objects transferred by AWS CLI(of course, you can use s3sync) have been
+  transferred correctly(checksum based), the following command will show the report.
   ```bash
   aws s3 sync test_data s3://xxxx/
   s3sync --check-additional-checksum CRC64NVME --json-tracing --report-sync-status test_data s3://xxxx/ |tail -2 |jq
@@ -156,32 +176,36 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
   </details>
 
-  You can check the synchronization status of the object's tagging and metadata with `--report-metadata-sync-status` and `--report-tagging-sync-status` option.
+  You can check the synchronization status of the object's tagging and metadata with `--report-metadata-sync-status` and
+  `--report-tagging-sync-status` option.
 
 - Robust retry logic  
   For long-time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
 
 - CI/CD friendly  
   s3sync is designed to be used in CI/CD pipelines.
-  - JSON tracing(logging) support(`--json-tracing` option)
-  - Explicit exit code  
-    `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch).
-  - Supports all options via environment variables
+    - JSON tracing(logging) support(`--json-tracing` option)
+    - Explicit exit code  
+      `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch).
+    - Supports all options via environment variables
 
 - Multiple platforms support  
   On Linux(x86_64, aarch64), macOS(aarch64) and Windows(x86_64, aarch64) are fully tested and supported.  
   s3sync is distributed as a single binary with no dependencies, so it can be easily run on the above platforms.
 
 ## About testing
-**Supported target: Amazon S3 only.**  
+
+**Supported target: Amazon S3 only.**
 
 Support for S3-compatible storage is on a best-effort basis and may behave differently.   
-s3sync has been tested with Amazon S3. s3sync has many e2e tests and unit tests and runs every time when a new version is released.  
+s3sync has been tested with Amazon S3. s3sync has many e2e tests and unit tests and runs every time when a new version
+is released.  
 S3-compatible storage is not tested when a new version is released (I test only when making major changes).  
 This is because S3-compatible storage may have different behaviors and features.  
 Since there is no official certification for S3-compatible storage, comprehensive testing is not possible.
 
 ## More information
+
 For more information, please refer to the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md)
 
 ## Contributing
