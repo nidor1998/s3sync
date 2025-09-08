@@ -39,6 +39,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
   An object that exists in the local disk is read from the disk and compared with the checksum in the source or
   target.  
+  In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.  
   Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
   object.
 
@@ -94,7 +95,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   All versions of the object can be synchronized. (Except intermediate delete markers)
 
 - Point-in-time snapshot  
-  With versioning enabled S3 bucket, you can transfer objects at a specific point in time.
+  With a versioning-enabled S3 bucket, you can transfer objects at a specific point in time.
 
 - [Lua](https://www.lua.org) scripting support   
   You can use a [Lua](https://www.lua.org) (5.4) script to implement custom filtering, event handling, preprocessing
@@ -198,7 +199,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 **Supported target: Amazon S3 only.**
 
 Support for S3-compatible storage is on a best-effort basis and may behave differently.   
-s3sync has been tested with Amazon S3. s3sync has many e2e tests and unit tests and runs every time when a new version
+s3sync has been tested with Amazon S3. s3sync has many end-to-end tests and unit tests and runs every time when a new version
 is released.  
 S3-compatible storage is not tested when a new version is released (I test only when making major changes).  
 This is because S3-compatible storage may have different behaviors and features.  
