@@ -1,8 +1,14 @@
-FROM rust:latest AS builder
+FROM debian:bookworm AS builder
 WORKDIR /s3sync
 COPY . ./
-RUN cargo build --release
-
+RUN apt-get update \
+&& apt-get install --no-install-recommends -y ca-certificates curl build-essential \
+&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs >./rust_install.sh \
+&& chmod +x rust_install.sh \
+&& ./rust_install.sh -y \
+&& . "$HOME/.cargo/env" \
+&& rustup update \
+&& cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update \
