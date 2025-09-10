@@ -210,9 +210,6 @@ mod tests {
                 connect_timeout_milliseconds: None,
                 read_timeout_milliseconds: None,
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -277,9 +274,6 @@ mod tests {
                 connect_timeout_milliseconds: Some(3000),
                 read_timeout_milliseconds: Some(4000),
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -339,9 +333,6 @@ mod tests {
                 connect_timeout_milliseconds: None,
                 read_timeout_milliseconds: None,
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -387,9 +378,6 @@ mod tests {
                 connect_timeout_milliseconds: None,
                 read_timeout_milliseconds: None,
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -445,9 +433,6 @@ mod tests {
                 connect_timeout_milliseconds: Some(1000),
                 read_timeout_milliseconds: None,
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -500,9 +485,6 @@ mod tests {
                 connect_timeout_milliseconds: None,
                 read_timeout_milliseconds: None,
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -550,9 +532,6 @@ mod tests {
                 connect_timeout_milliseconds: None,
                 read_timeout_milliseconds: None,
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -586,9 +565,6 @@ mod tests {
                 connect_timeout_milliseconds: None,
                 read_timeout_milliseconds: None,
             },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: false,
             disable_stalled_stream_protection: false,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
@@ -609,114 +585,6 @@ mod tests {
             client.config().region().unwrap().to_string(),
             "my-region2".to_string()
         );
-    }
-
-    #[tokio::test]
-    async fn create_client_with_no_verify_ssl() {
-        init_dummy_tracing_subscriber();
-
-        let client_config = ClientConfig {
-            client_config_location: ClientConfigLocation {
-                aws_config_file: Some("./test_data/test_config/config".into()),
-                aws_shared_credentials_file: Some("./test_data/test_config/credentials".into()),
-            },
-            credential: crate::types::S3Credentials::Profile("aws".to_string()),
-            region: Some("my-region".to_string()),
-            endpoint_url: Some("https://my.endpoint.local".to_string()),
-            force_path_style: false,
-            retry_config: crate::config::RetryConfig {
-                aws_max_attempts: 10,
-                initial_backoff_milliseconds: 100,
-            },
-            cli_timeout_config: crate::config::CLITimeoutConfig {
-                operation_timeout_milliseconds: None,
-                operation_attempt_timeout_milliseconds: None,
-                connect_timeout_milliseconds: None,
-                read_timeout_milliseconds: None,
-            },
-            https_proxy: None,
-            http_proxy: None,
-            no_verify_ssl: true,
-            disable_stalled_stream_protection: false,
-            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
-            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
-            accelerate: false,
-            request_payer: None,
-        };
-
-        client_config.create_client().await;
-    }
-
-    #[tokio::test]
-    async fn create_client_with_proxy() {
-        init_dummy_tracing_subscriber();
-
-        let client_config = ClientConfig {
-            client_config_location: ClientConfigLocation {
-                aws_config_file: Some("./test_data/test_config/config".into()),
-                aws_shared_credentials_file: Some("./test_data/test_config/credentials".into()),
-            },
-            credential: crate::types::S3Credentials::Profile("aws".to_string()),
-            region: Some("my-region".to_string()),
-            endpoint_url: Some("https://my.endpoint.local".to_string()),
-            force_path_style: false,
-            retry_config: crate::config::RetryConfig {
-                aws_max_attempts: 10,
-                initial_backoff_milliseconds: 100,
-            },
-            cli_timeout_config: crate::config::CLITimeoutConfig {
-                operation_timeout_milliseconds: None,
-                operation_attempt_timeout_milliseconds: None,
-                connect_timeout_milliseconds: None,
-                read_timeout_milliseconds: None,
-            },
-            https_proxy: Some("https://localhost:8080".to_string()),
-            http_proxy: Some("http://localhost:8080".to_string()),
-            no_verify_ssl: false,
-            disable_stalled_stream_protection: false,
-            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
-            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
-            accelerate: false,
-            request_payer: None,
-        };
-
-        client_config.create_client().await;
-    }
-
-    #[tokio::test]
-    async fn create_client_with_auth_proxy() {
-        init_dummy_tracing_subscriber();
-
-        let client_config = ClientConfig {
-            client_config_location: ClientConfigLocation {
-                aws_config_file: Some("./test_data/test_config/config".into()),
-                aws_shared_credentials_file: Some("./test_data/test_config/credentials".into()),
-            },
-            credential: crate::types::S3Credentials::Profile("aws".to_string()),
-            region: Some("my-region".to_string()),
-            endpoint_url: Some("https://my.endpoint.local".to_string()),
-            force_path_style: false,
-            retry_config: crate::config::RetryConfig {
-                aws_max_attempts: 10,
-                initial_backoff_milliseconds: 100,
-            },
-            cli_timeout_config: crate::config::CLITimeoutConfig {
-                operation_timeout_milliseconds: None,
-                operation_attempt_timeout_milliseconds: None,
-                connect_timeout_milliseconds: None,
-                read_timeout_milliseconds: None,
-            },
-            https_proxy: Some("https://user:password@localhost:8080".to_string()),
-            http_proxy: Some("http://user:password@localhost:8080".to_string()),
-            no_verify_ssl: false,
-            disable_stalled_stream_protection: false,
-            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
-            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
-            accelerate: false,
-            request_payer: None,
-        };
-
-        client_config.create_client().await;
     }
 
     fn init_dummy_tracing_subscriber() {

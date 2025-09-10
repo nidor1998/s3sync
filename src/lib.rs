@@ -8,6 +8,7 @@ It supports multipart uploads, versioning, and metadata.
 - Reliable: In-depth end-to-end object integrity check
   s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.
   An object on the local disk is read from the disk and compared with the checksum in the source or target.
+  In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.
   Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.
   s3sync always shows the integrity check result, so you can verify that the synchronization was successful.
 

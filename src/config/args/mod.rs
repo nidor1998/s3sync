@@ -73,7 +73,6 @@ const DEFAULT_DISABLE_ETAG_VERIFY: bool = false;
 const DEFAULT_DISABLE_ADDITIONAL_CHECKSUM_VERIFY: bool = false;
 const DEFAULT_ENABLE_ADDITIONAL_CHECKSUM: bool = false;
 const DEFAULT_DRY_RUN: bool = false;
-const DEFAULT_NO_VERIFY_SSL: bool = false;
 const DEFAULT_MAX_KEYS: i32 = 1000;
 const DEFAULT_PUT_LAST_MODIFIED_METADATA: bool = false;
 const DEFAULT_DISABLE_STALLED_STREAM_PROTECTION: bool = false;
@@ -1527,18 +1526,6 @@ impl CLIArgs {
             Some(S3Credentials::FromEnvironment)
         };
 
-        #[allow(unused_assignments)]
-        #[allow(unused_mut)]
-        let mut https_proxy = None;
-
-        #[allow(unused_assignments)]
-        #[allow(unused_mut)]
-        let mut http_proxy = None;
-
-        #[allow(unused_assignments)]
-        #[allow(unused_mut)]
-        let mut no_verify_ssl = DEFAULT_NO_VERIFY_SSL;
-
         let parallel_upload_semaphore =
             Arc::new(Semaphore::new(self.max_parallel_uploads as usize));
 
@@ -1567,9 +1554,6 @@ impl CLIArgs {
                 connect_timeout_milliseconds: self.connect_timeout_milliseconds,
                 read_timeout_milliseconds: self.read_timeout_milliseconds,
             },
-            https_proxy: https_proxy.clone(),
-            http_proxy: http_proxy.clone(),
-            no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
             parallel_upload_semaphore: parallel_upload_semaphore.clone(),
@@ -1602,9 +1586,6 @@ impl CLIArgs {
                 connect_timeout_milliseconds: self.connect_timeout_milliseconds,
                 read_timeout_milliseconds: self.read_timeout_milliseconds,
             },
-            https_proxy,
-            http_proxy,
-            no_verify_ssl,
             disable_stalled_stream_protection: self.disable_stalled_stream_protection,
             request_checksum_calculation,
             parallel_upload_semaphore,
