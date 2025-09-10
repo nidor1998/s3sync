@@ -168,7 +168,8 @@ Note: The default s3sync setting uses `--worker-size 16` and `--max-parallel-upl
 most cases. If you want to improve performance, you can increase `--worker-size` and `--max-parallel-uploads`. But it
 will increase CPU and memory usage.
 
-Note: Increasing `--worker-size` and `--max-parallel-uploads` is not always beneficial. This depends on factors such as instance type, network, data size, and number of objects.
+Note: Increasing `--worker-size` and `--max-parallel-uploads` is not always beneficial. This depends on factors such as
+instance type, network, data size, and number of objects.
 
 Local to S3, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects), 976.56 MiB | 38.88 MiB/sec, 25 seconds, and all
 objects are end-to-end integrity verified(MD5, SHA256).
@@ -357,7 +358,8 @@ with [Amazon S3 Express One Zone](https://docs.aws.amazon.com/AmazonS3/latest/us
 s3sync does not depend on the sorting order of returned objects of ListObjectsV2 API.  
 s3sync gathers all objects in the target bucket at first step (not concurrently) and stores the information with Map.
 
-In S3 Express One Zone, ETag is not MD5. So, s3sync uses additional checksum algorithm for verification by default(CRC64NVME).
+In S3 Express One Zone, ETag is not MD5. So, s3sync uses additional checksum algorithm for verification by default(
+CRC64NVME).
 
 ### Versioning support
 
@@ -675,7 +677,7 @@ Even if multipart upload is used, s3sync can calculate and compare ETag for each
 If the object is uploaded with SSE-KMS/SSE-C/DSSE-KMS, ETag is not MD5. In this case, s3sync cannot calculate and
 compare checksums for the object.
 
-s3sync always uses the following elements to verify the integrity of the object.
+s3sync uses the following elements to verify the integrity of the object.
 
 - `Content-MD5` header(End-to-end API level integrity check, without `--disable-content-md5` option)  
   Amazon S3 recommends using `Content-MD5` header for end-to-end integrity check.  
@@ -685,16 +687,17 @@ s3sync always uses the following elements to verify the integrity of the object.
   This header is SHA256 digest of the request payload.    
   Note: Some S3-compatible storage ignores this header.
 
-- Additional checksum algorithm(Optional)  
-  Even if the object is uploaded with SSE-KMS/SSE-C/DSSE-KMS, s3sync can calculate and compare additional checksum
-  algorithm.  
+- Additional checksum algorithm (Optional)  
+  Amazon S3 uses this header to verify the integrity of the object and denies the request if the checksum does not
+  match.   
+  And s3sync can calculate and compare additional checksum algorithm that S3 returns.
+
   Note: As of writing this document, some S3-compatible storages do not support additional checksum algorithm.
 
 - TLS(If not explicitly disabled)
 
 The multipart ETag does not always match that of the source object. But with the above elements, it is almost safe to
-assume
-that the object is not corrupted.  
+assume that the object is not corrupted.  
 With `--auto-chunksize`, s3sync can calculate and compare ETag/checksum for each part and the entire object.   
 If you want strict integrity check, use `--auto-chunksize`, but it will need more API calls and time.
 
@@ -741,12 +744,14 @@ Note: In the case of S3 to S3, the same checksum algorithm must be used for both
 If `--auto-chunksize` is specified, s3sync automatically calculates the correct chunk size for multipart upload.  
 This is done by `HeadObject` API with `partNumber` parameter.
 `--auto-chunksize` requires extra API calls(one per part).  
-Remember that not all S3-compatible storage supports `HeadObject` API with `partNumber` request parameter and `x-amz-mp-parts-count` response header.  
+Remember that not all S3-compatible storage supports `HeadObject` API with `partNumber` request parameter and
+`x-amz-mp-parts-count` response header.  
 If S3-compatible storage does not support these parameters, s3sync will show a warning message in the terminal.
 
 See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
 
-Note: If the chunk size for a multipart upload is unknown, verifying object integrity using ETag or composite checksums is impossible (this applies to tools other than s3sync as well).
+Note: If the chunk size for a multipart upload is unknown, verifying object integrity using ETag or composite checksums
+is impossible (this applies to tools other than s3sync as well).
 
 **Warning: In the case of S3 to S3, if the source object is uploaded with a large chunk size, s3sync will consume a lot
 of
@@ -907,7 +912,8 @@ For example, if the source is `s3://bucket-name/prefix` and there are many objec
 You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
 If set to `1`, parallel listing is disabled.
 
-This feature can significantly improve performance with incremental transfer when there are many objects in the source and target.
+This feature can significantly improve performance with incremental transfer when there are many objects in the source
+and target.
 
 With express one zone storage class, parallel listing may return in progress multipart upload objects.   
 So, parallel listing is disabled by default when the source or target bucket uses express one zone storage class.   
