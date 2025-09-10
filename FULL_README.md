@@ -130,8 +130,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
 An object on the local disk is read from the disk and compared with the checksum in the source or
 target.  
-Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and
-the entire object (with `--auto-chunksize`).  
+Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.   
+With `--auto-chunksize` option, s3sync automatically calculates the correct chunk size for multipart upload (But it will need more API calls and time).  
 In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.  
 Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
 object.  
