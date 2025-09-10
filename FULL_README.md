@@ -742,10 +742,9 @@ Note: In the case of S3 to S3, the same checksum algorithm must be used for both
 ### --auto-chunksize option
 
 If `--auto-chunksize` is specified, s3sync automatically calculates the correct chunk size for multipart upload.  
-This is done by `HeadObject` API with `partNumber` parameter.
+This is done by `HeadObject` API with `partNumber` request parameter and `x-amz-mp-parts-count` response header.
 `--auto-chunksize` requires extra API calls(one per part).  
-Remember that not all S3-compatible storage supports `HeadObject` API with `partNumber` request parameter and
-`x-amz-mp-parts-count` response header.  
+Remember that not all S3-compatible storage supports these parameters.  
 If S3-compatible storage does not support these parameters, s3sync will show a warning message in the terminal.
 
 See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
