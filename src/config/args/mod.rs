@@ -312,16 +312,6 @@ Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTEL
                DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE"#)]
     storage_class: Option<String>,
 
-    /// Proxy server to use for HTTPS
-    #[cfg(feature = "legacy_hyper014_feature")]
-    #[arg(long, env, value_parser = url::check_scheme, help_heading = "Proxy Settings")]
-    https_proxy: Option<String>,
-
-    /// Proxy server to use for HTTP
-    #[cfg(feature = "legacy_hyper014_feature")]
-    #[arg(long, env, value_parser = url::check_scheme_and_no_authority_exist, help_heading = "Proxy Settings")]
-    http_proxy: Option<String>,
-
     #[arg(
         long,
         env,
@@ -866,11 +856,6 @@ Exclude filters other than --filter-exclude-regex will not prevent an object fro
     #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
     test_user_defined_callback: bool,
-
-    /// [dangerous] Disable to verify SSL certificates.
-    #[cfg(feature = "legacy_hyper014_feature")]
-    #[arg(long, env, conflicts_with_all = ["https_proxy", "http_proxy"], default_value_t = DEFAULT_NO_VERIFY_SSL, help_heading = "Dangerous")]
-    no_verify_ssl: bool,
 
     /// [dangerous] Test purpose only
     #[cfg(feature = "e2e_test_dangerous_simulations")]
@@ -1553,13 +1538,6 @@ impl CLIArgs {
         #[allow(unused_assignments)]
         #[allow(unused_mut)]
         let mut no_verify_ssl = DEFAULT_NO_VERIFY_SSL;
-
-        #[cfg(feature = "legacy_hyper014_feature")]
-        {
-            https_proxy.clone_from(&self.https_proxy);
-            http_proxy.clone_from(&self.http_proxy);
-            no_verify_ssl = self.no_verify_ssl;
-        }
 
         let parallel_upload_semaphore =
             Arc::new(Semaphore::new(self.max_parallel_uploads as usize));
