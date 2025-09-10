@@ -746,6 +746,8 @@ If S3-compatible storage does not support these parameters, s3sync will show a w
 
 See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
 
+Note: If the chunk size for a multipart upload is unknown, verifying object integrity using ETag or composite checksums is impossible (this applies to tools other than s3sync as well).
+
 **Warning: In the case of S3 to S3, if the source object is uploaded with a large chunk size, s3sync will consume a lot
 of
 memory.**
