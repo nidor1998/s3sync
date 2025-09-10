@@ -507,9 +507,6 @@ for more information.
 
 All features are tested on the above platforms.
 
-NOTE: ARM64 Windows 11 cannot build with `legacy_hyper014_feature` due dependency build issue. If you want to use
-`legacy_hyper014_feature`, you need to build with x86_64 Windows.
-
 ## License
 
 This project is licensed under the Apache-2.0 License.
@@ -1059,18 +1056,6 @@ If you want to use additional checksums for download, specify the option.
 
 Warning: Even if the object was uploaded with additional checksum, without this option, s3sync does not verify
 additional checksum.
-
-### --https-proxy
-
-This option is disabled by default for security reasons.
-To enable this, build with the `--features legacy_hyper014_feature` option.
-
-You can specify the proxy server for https.
-
-Proxy authentication is supported. Like `http(s)://user:password@proxy:port`.
-
-**Warning: Proxy support is achieved by older version crates(hyper0.14/rustls/webpki/ring). So, It should be used with
-caution, especially from a security perspective.**
 
 ### --disable-multipart-verify
 
