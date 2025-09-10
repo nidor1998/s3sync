@@ -6,6 +6,7 @@
 ![MSRV](https://img.shields.io/badge/msrv-1.86.0-red)
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
+[![dependency status](https://deps.rs/crate/s3sync/latest/status.svg)](https://deps.rs/crate/s3sync/)
 [![DeepSource](https://app.deepsource.com/gh/nidor1998/s3sync.svg/?label=active+issues&show_trend=true&token=Q3EjeUmx8Fu-ndXKEG133W-t)](https://app.deepsource.com/gh/nidor1998/s3sync/?ref=repository-badge)
 
 ## Table of contents
@@ -32,6 +33,7 @@
     * [Incremental transfer](#Incremental-transfer)
     * [ETag-based incremental transfer](#Etag-based-incremental-transfer)
     * [Additional checksum-based incremental transfer](#Additional-checksum-based-incremental-transfer)
+    * [Proxy support](#Proxy-support)
     * [Amazon S3 Express One Zone support](#Amazon-S3-Express-One-Zone-support)
     * [Versioning support](#Versioning-support)
     * [Point-in-time snapshot](#Point-in-time-snapshot)
@@ -96,7 +98,6 @@
     * [--put-last-modified-metadata](#--put-last-modified-metadata)
     * [--additional-checksum-algorithm](#--additional-checksum-algorithm)
     * [--enable-additional-checksum](#--enable-additional-checksum)
-    * [--https-proxy](#--https-proxy)
     * [--disable-multipart-verify](#--disable-multipart-verify)
     * [-v](#-v)
     * [--aws-sdk-tracing](#--aws-sdk-tracing)
@@ -167,6 +168,8 @@ Note: The default s3sync setting uses `--worker-size 16` and `--max-parallel-upl
 most cases. If you want to improve performance, you can increase `--worker-size` and `--max-parallel-uploads`. But it
 will increase CPU and memory usage.
 
+Note: Increasing `--worker-size` and `--max-parallel-uploads` is not always beneficial. This depends on factors such as instance type, network, data size, and number of objects.
+
 Local to S3, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects), 976.56 MiB | 38.88 MiB/sec, 25 seconds, and all
 objects are end-to-end integrity verified(MD5, SHA256).
 
@@ -235,6 +238,8 @@ If something goes wrong, s3sync will display a warning or error message to help 
 ### Robust retry logic
 
 For long-running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.
+
+For more information, see [Retry logic detail](#Retry-logic-detail).
 
 ### Metadata support
 
@@ -337,6 +342,13 @@ With `--check-mtime-and-additional-checksum` option, s3sync checks the modificat
 source and target objects. It is useful if you want to transfer only modified objects based on the modification time and
 additional checksum.
 
+### Proxy support
+
+s3sync supports for proxy environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`).   
+s3sync automatically respects these proxy environment variables.
+
+Proxy authentication is supported. Like `http(s)://user:password@proxy:port` .
+
 ### Amazon S3 Express One Zone support
 
 s3sync can be used
@@ -345,8 +357,7 @@ with [Amazon S3 Express One Zone](https://docs.aws.amazon.com/AmazonS3/latest/us
 s3sync does not depend on the sorting order of returned objects of ListObjectsV2 API.  
 s3sync gathers all objects in the target bucket at first step (not concurrently) and stores the information with Map.
 
-In S3 Express One Zone, ETag is not MD5. So, s3sync uses additional checksum algorithm for verification by default(
-CRC64NVME).
+In S3 Express One Zone, ETag is not MD5. So, s3sync uses additional checksum algorithm for verification by default(CRC64NVME).
 
 ### Versioning support
 
@@ -516,8 +527,6 @@ This project is licensed under the Apache-2.0 License.
 Download the latest binary from [Releases](https://github.com/nidor1998/s3sync/releases)  
 This binary cannot be run on a glibc version less than or equal to 2.17. (i.e., CentOS 7, etc.)
 
-This binary is built without proxy support for security reasons.
-
 You can also build from source following the instructions below.
 
 ### Install Rust
@@ -679,7 +688,7 @@ s3sync always uses the following elements to verify the integrity of the object.
 - Additional checksum algorithm(Optional)  
   Even if the object is uploaded with SSE-KMS/SSE-C/DSSE-KMS, s3sync can calculate and compare additional checksum
   algorithm.  
-  Note: As of writing this document, few S3-compatible storage support additional checksum algorithm.
+  Note: As of writing this document, some S3-compatible storages do not support additional checksum algorithm.
 
 - TLS(If not explicitly disabled)
 
@@ -732,8 +741,8 @@ Note: In the case of S3 to S3, the same checksum algorithm must be used for both
 If `--auto-chunksize` is specified, s3sync automatically calculates the correct chunk size for multipart upload.  
 This is done by `HeadObject` API with `partNumber` parameter.
 `--auto-chunksize` requires extra API calls(one per part).  
-Remember that not all S3-compatible storage supports `HeadObject` API with `partNumber` parameter.  
-If S3-compatible storage does not support it, s3sync will show a warning message in the terminal.
+Remember that not all S3-compatible storage supports `HeadObject` API with `partNumber` request parameter and `x-amz-mp-parts-count` response header.  
+If S3-compatible storage does not support these parameters, s3sync will show a warning message in the terminal.
 
 See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
 
@@ -886,7 +895,7 @@ usage and API calls.
 
 ### Parallel object listing
 
-By default, s3sync lists objects in the source and target buckets/local in parallel (default 16 workers).  
+By default, s3sync lists objects in the source and target in parallel (default 16 workers).  
 The parallel listing is enabled up to the second level of subdirectories or prefixes.  
 The depth is configurable with `--max-parallel-listing-max-depth` option.
 
@@ -896,8 +905,7 @@ For example, if the source is `s3://bucket-name/prefix` and there are many objec
 You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
 If set to `1`, parallel listing is disabled.
 
-This feature can significantly improve performance with incremental transfer when there are many objects in the source
-and target bucket/local.
+This feature can significantly improve performance with incremental transfer when there are many objects in the source and target.
 
 With express one zone storage class, parallel listing may return in progress multipart upload objects.   
 So, parallel listing is disabled by default when the source or target bucket uses express one zone storage class.   
@@ -909,7 +917,7 @@ Note: Parallel listing may use CPU and memory.
 
 ### --max-parallel-listing-max-depth option
 
-By default, s3sync lists objects in the source and target buckets/local files in parallel up to the second level of
+By default, s3sync lists objects in the source and target in parallel up to the second level of
 subdirectories or prefixes.  
 And deeper levels are listed without parallelization.
 This is because parallel listing at deeper levels may not improve incremental transfer performance.
