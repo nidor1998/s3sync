@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   s3sync automatically respects these proxy environment variables.
 - [Breaking change] Removed `legacy_hyper014_feature`  
   This feature is no longer needed because AWS SDK for Rust natively supports proxy.
+- aws-sdk-s3 = "1.105.0"
 - Updated dependencies
 - Updated docs
 
