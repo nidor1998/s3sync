@@ -1770,7 +1770,7 @@ impl ObjectSyncer {
             return Err(e);
         }
 
-        let target_head_object_output = target_head_object_output.unwrap();
+        let target_head_object_output = target_head_object_output?;
         let mut mismatched_metadata = false;
 
         let source_content_disposition = source_get_object_output.content_disposition();
@@ -2065,8 +2065,7 @@ impl ObjectSyncer {
             return Err(e);
         }
 
-        let target_get_object_tagging_output =
-            target_get_object_tagging_output_result.unwrap().clone();
+        let target_get_object_tagging_output = target_get_object_tagging_output_result?.clone();
         let target_tagging = target_get_object_tagging_output.tag_set();
 
         let source_tagging_string = format_tags(source_tagging.unwrap_or_default());

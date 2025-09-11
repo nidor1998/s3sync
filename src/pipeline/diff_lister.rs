@@ -43,8 +43,7 @@ impl DiffLister {
                     .exclude_regex
                     .as_ref()
                     .unwrap()
-                    .is_match(&key)
-                    .unwrap();
+                    .is_match(&key)?;
 
                 if match_result {
                     let exclude_regex = self

@@ -12,7 +12,7 @@ It supports multipart uploads, versioning, and metadata.
   Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.
   s3sync always shows the integrity check result, so you can verify that the synchronization was successful.
 
-- Fast
+- Fast:
   s3sync is implemented in Rust and uses the AWS SDK for Rust, which supports multithreaded asynchronous I/O.
   In my environment(`c7a.large`, with 256 workers), uploading from local to S3 achieved about 3,900 objects/sec (small objects 10KiB) and Local to S3 16 objects(6GiB objects, `--max-parallel-uploads 64`) 96.00 GiB, about 280 MiB/sec.
   Large objects are transferred in parallel using multipart upload (or get-range request for download), so it can transfer large objects fast.

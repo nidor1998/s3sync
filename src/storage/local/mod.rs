@@ -281,7 +281,7 @@ impl LocalStorage {
                         );
                     } else {
                         let message = if source_content_length
-                            == fs_util::get_file_size(real_path).await
+                            == fs_util::get_file_size(real_path).await?
                             && is_multipart_upload_e_tag(source_e_tag)
                             && object_checksum
                                 .clone()
@@ -536,7 +536,7 @@ impl LocalStorage {
                 warn!(key = &key, "Failed to read data from the body: {e:?}");
                 return Err(anyhow!(S3syncError::DownloadForceRetryableError));
             }
-            let buffer = result.unwrap();
+            let buffer = result?;
             if buffer.is_empty() {
                 break;
             }
@@ -571,7 +571,7 @@ impl LocalStorage {
             None
         };
 
-        let target_content_length = fs_util::get_file_size(&real_path).await;
+        let target_content_length = fs_util::get_file_size(&real_path).await?;
 
         let mut event_data = EventData::new(EventType::SYNC_WRITE);
         event_data.key = Some(key.to_string());
@@ -699,7 +699,7 @@ impl LocalStorage {
                 warn!(key = &key, "Failed to read data from the body: {e:?}");
                 return Err(anyhow!(S3syncError::DownloadForceRetryableError));
             }
-            let tmp_buffer = result.unwrap();
+            let tmp_buffer = result?;
 
             if tmp_buffer.is_empty() {
                 if read_data_size != first_chunk_content_length {
@@ -946,7 +946,7 @@ impl LocalStorage {
             )));
         }
 
-        let target_content_length = fs_util::get_file_size(&real_path).await;
+        let target_content_length = fs_util::get_file_size(&real_path).await?;
 
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
@@ -1380,11 +1380,11 @@ impl StorageTrait for LocalStorage {
                 "bytes {}-{}/{}",
                 file_range.offset,
                 file_range.offset + file_range.size - 1,
-                fs_util::get_file_size(&path).await
+                fs_util::get_file_size(&path).await?
             ));
         } else {
             body = Some(ByteStream::from_path(path.clone()).await?);
-            content_length = fs_util::get_file_size(&path).await as i64;
+            content_length = fs_util::get_file_size(&path).await? as i64;
             content_range = None;
         }
 
@@ -1470,7 +1470,7 @@ impl StorageTrait for LocalStorage {
             .set_content_length(Some(content_length))
             .set_content_type(content_type)
             .set_content_range(content_range)
-            .last_modified(fs_util::get_last_modified(&path).await)
+            .last_modified(fs_util::get_last_modified(&path).await?)
             .set_body(body)
             .set_checksum_sha256(checksum_sha256)
             .set_checksum_sha1(checksum_sha1)
@@ -1546,8 +1546,8 @@ impl StorageTrait for LocalStorage {
         }
 
         Ok(HeadObjectOutputBuilder::default()
-            .set_content_length(Some(fs_util::get_file_size(&path).await as i64))
-            .last_modified(fs_util::get_last_modified(&path).await)
+            .set_content_length(Some(fs_util::get_file_size(&path).await? as i64))
+            .last_modified(fs_util::get_last_modified(&path).await?)
             .build())
     }
 
