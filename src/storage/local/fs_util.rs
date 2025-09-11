@@ -781,12 +781,16 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         set_last_modified(".\\test_data\\".into(), "5byte.dat", 0, 0).unwrap();
-        let mtime = get_last_modified(&"./test_data/5byte.dat".into()).await;
+        let mtime = get_last_modified(&"./test_data/5byte.dat".into())
+            .await
+            .unwrap();
         assert_eq!(mtime.secs(), 0);
         assert_eq!(mtime.subsec_nanos(), 0);
 
         set_last_modified(".\\test_data\\".into(), "5byte.dat", 777, 999).unwrap();
-        let mtime = get_last_modified(&"./test_data/5byte.dat".into()).await;
+        let mtime = get_last_modified(&"./test_data/5byte.dat".into())
+            .await
+            .unwrap();
         assert_eq!(mtime.secs(), 777);
     }
 
