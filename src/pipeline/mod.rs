@@ -313,15 +313,23 @@ impl Pipeline {
         let object_lister = ObjectLister::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
         let max_keys = self.config.max_keys;
 
         tokio::spawn(async move {
-            let result = object_lister.list_source(max_keys).await;
-            match result {
-                Ok(()) => {}
-                Err(e) => {
-                    log_error(has_error, error_list, e, "list source objects failed.");
-                }
+            let join_result =
+                tokio::spawn(async move { object_lister.list_source(max_keys).await }).await;
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(has_error, error_list, e, "list source objects failed.");
             }
         });
 
@@ -333,15 +341,23 @@ impl Pipeline {
         let object_lister = ObjectLister::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
         let max_keys = self.config.max_keys;
 
         tokio::spawn(async move {
-            let result = object_lister.list_target(max_keys).await;
-            match result {
-                Ok(()) => {}
-                Err(e) => {
-                    log_error(has_error, error_list, e, "list target objects failed.");
-                }
+            let join_result =
+                tokio::spawn(async move { object_lister.list_target(max_keys).await }).await;
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(has_error, error_list, e, "list target objects failed.");
             }
         });
 
@@ -363,13 +379,23 @@ impl Pipeline {
 
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
+
         tokio::spawn(async move {
-            let result = key_aggregator.aggregate(&key_map.unwrap()).await;
-            match result {
-                Ok(()) => {}
-                Err(e) => {
-                    log_error(has_error, error_list, e, "keys aggregation failed.");
-                }
+            let join_result =
+                tokio::spawn(async move { key_aggregator.aggregate(&key_map.unwrap()).await })
+                    .await;
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(has_error, error_list, e, "keys aggregation failed.");
             }
         });
 
@@ -473,14 +499,22 @@ impl Pipeline {
     fn spawn_filter(&self, filter: Box<dyn ObjectFilter + Send + Sync>) {
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
 
         tokio::spawn(async move {
-            let result = filter.filter().await;
-            match result {
-                Ok(_) => {}
-                Err(e) => {
-                    log_error(has_error, error_list, e, "filter objects failed.");
-                }
+            let join_result = tokio::spawn(async move { filter.filter().await }).await;
+
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(has_error, error_list, e, "filter objects failed.");
             }
         });
     }
@@ -488,16 +522,28 @@ impl Pipeline {
     fn spawn_user_defined_filter(&self, stage: Stage) {
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
 
         let mut user_defined_filter = UserDefinedFilter::new(stage);
 
         tokio::spawn(async move {
-            let result = user_defined_filter.filter().await;
-            match result {
-                Ok(_) => {}
-                Err(e) => {
-                    log_error(has_error, error_list, e, "filter objects failed.");
-                }
+            let join_result = tokio::spawn(async move { user_defined_filter.filter().await }).await;
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(
+                    has_error,
+                    error_list,
+                    e,
+                    "filter objects(user defined) failed.",
+                );
             }
         });
     }
@@ -517,14 +563,21 @@ impl Pipeline {
                 ObjectSyncer::new(stage, worker_index, self.get_sync_stats_report());
             let has_error = self.has_error.clone();
             let error_list = self.errors.clone();
+            let cancellation_token = self.cancellation_token.clone();
 
             tokio::spawn(async move {
-                let result = object_syncer.sync().await;
-                match result {
-                    Ok(_) => {}
-                    Err(e) => {
-                        log_error(has_error, error_list, e, "sync objects failed.");
-                    }
+                let join_result = tokio::spawn(async move { object_syncer.sync().await }).await;
+                if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                    cancellation_token.cancel();
+
+                    let e = if join_result.is_err() {
+                        join_result.err().unwrap().into()
+                    } else {
+                        #[allow(clippy::unnecessary_unwrap)]
+                        join_result.unwrap().err().unwrap()
+                    };
+
+                    log_error(has_error, error_list, e, "sync objects failed.");
                 }
             });
         }
@@ -541,13 +594,20 @@ impl Pipeline {
         let packer = ObjectVersionsPacker::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
         tokio::spawn(async move {
-            let result = packer.pack().await;
-            match result {
-                Ok(_) => {}
-                Err(e) => {
-                    log_error(has_error, error_list, e, "pack objects failed.");
-                }
+            let join_result = tokio::spawn(async move { packer.pack().await }).await;
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(has_error, error_list, e, "pack objects failed.");
             }
         });
 
@@ -563,18 +623,25 @@ impl Pipeline {
         let packer = ObjectPointInTimePacker::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
         tokio::spawn(async move {
-            let result = packer.pack().await;
-            match result {
-                Ok(_) => {}
-                Err(e) => {
-                    log_error(
-                        has_error,
-                        error_list,
-                        e,
-                        "object point-in-time packer failed.",
-                    );
-                }
+            let join_result = tokio::spawn(async move { packer.pack().await }).await;
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(
+                    has_error,
+                    error_list,
+                    e,
+                    "object point-in-time packer failed.",
+                );
             }
         });
 
@@ -600,16 +667,27 @@ impl Pipeline {
         let diff_lister = DiffLister::new(stage);
         let has_error = self.has_error.clone();
         let error_list = self.errors.clone();
+        let cancellation_token = self.cancellation_token.clone();
 
         let source_key_map = self.source_key_map.clone().unwrap();
         let target_key_map = self.target_key_map.clone().unwrap();
         tokio::spawn(async move {
-            let result = diff_lister.list(&source_key_map, &target_key_map).await;
-            match result {
-                Ok(()) => {}
-                Err(e) => {
-                    log_error(has_error, error_list, e, "difference detection failed.");
-                }
+            let join_result =
+                tokio::spawn(
+                    async move { diff_lister.list(&source_key_map, &target_key_map).await },
+                )
+                .await;
+            if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                cancellation_token.cancel();
+
+                let e = if join_result.is_err() {
+                    join_result.err().unwrap().into()
+                } else {
+                    #[allow(clippy::unnecessary_unwrap)]
+                    join_result.unwrap().err().unwrap()
+                };
+
+                log_error(has_error, error_list, e, "difference detection failed.");
             }
         });
 
@@ -632,14 +710,22 @@ impl Pipeline {
             let object_deleter = ObjectDeleter::new(stage, worker_index);
             let has_error = self.has_error.clone();
             let error_list = self.errors.clone();
+            let cancellation_token = self.cancellation_token.clone();
 
             tokio::spawn(async move {
-                let result = object_deleter.delete_target().await;
-                match result {
-                    Ok(_) => {}
-                    Err(e) => {
-                        log_error(has_error, error_list, e, "delete target objects failed.");
-                    }
+                let join_result =
+                    tokio::spawn(async move { object_deleter.delete_target().await }).await;
+                if join_result.is_err() || join_result.as_ref().unwrap().is_err() {
+                    cancellation_token.cancel();
+
+                    let e = if join_result.is_err() {
+                        join_result.err().unwrap().into()
+                    } else {
+                        #[allow(clippy::unnecessary_unwrap)]
+                        join_result.unwrap().err().unwrap()
+                    };
+
+                    log_error(has_error, error_list, e, "delete target objects failed.");
                 }
             });
         }
