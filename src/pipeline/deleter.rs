@@ -3,7 +3,7 @@ use crate::types::event_callback::{EventData, EventType};
 use anyhow::{Result, anyhow};
 use tracing::{error, info, trace};
 
-use super::stage::Stage;
+use super::stage::{SendResult, Stage};
 
 pub struct ObjectDeleter {
     worker_index: u16,
@@ -41,6 +41,10 @@ impl ObjectDeleter {
                                 .event_manager
                                 .trigger_event(event_data.clone())
                                 .await;
+
+                            if self.base.send(object).await? == SendResult::Closed {
+                                return Ok(());
+                            }
                         },
                         Err(_) => {
                             // normal shutdown

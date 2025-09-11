@@ -41,7 +41,7 @@ impl UserDefinedFilter {
                                 return Err(anyhow!("user defined filter worker has been cancelled with error: {}", e));
                             }
 
-                            if !need_sync.unwrap() {
+                            if !need_sync? {
                                 if self.base.config.event_manager.is_callback_registered() {
                                     let mut event_data = EventData::new(EventType::SYNC_FILTERED);
                                     event_data.key = Some(object.key().to_string());

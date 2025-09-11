@@ -533,7 +533,7 @@ You can also build from source following the instructions below.
 
 ### Install Rust
 
-See [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
+See [Install Rust](https://www.rust-lang.org/tools/install)
 
 ### Build
 
@@ -747,9 +747,9 @@ This is done by `HeadObject` API with `partNumber` request parameter and `x-amz-
 Remember that not all S3-compatible storage supports these parameters.  
 If S3-compatible storage does not support these parameters, s3sync will show a warning message in the terminal.
 
-See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax
+See: [HeadObject Reference](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html#API_HeadObject_RequestSyntax)
 
-Note: If the chunk size for a multipart upload is unknown, verifying object integrity using ETag or composite checksums
+Note: If the chunk size for a multipart upload is unknown, verifying object integrity using ETag or composite checksum
 is impossible (this applies to tools other than s3sync as well).
 
 **Warning: In the case of S3 to S3, if the source object is uploaded with a large chunk size, s3sync will consume a lot

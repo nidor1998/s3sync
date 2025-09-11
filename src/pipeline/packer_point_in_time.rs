@@ -40,9 +40,8 @@ impl ObjectPointInTimePacker {
                             }
 
                             let last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-                                object.last_modified().to_millis().unwrap(),
-                            ))
-                            .unwrap();
+                                object.last_modified().to_millis()?,
+                            ))?;
 
                             let version_id = if !object.is_delete_marker() {
                                 object.version_id().unwrap().to_string()

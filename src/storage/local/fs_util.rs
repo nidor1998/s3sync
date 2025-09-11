@@ -13,31 +13,18 @@ pub fn check_directory_traversal(key: &str) -> bool {
     re.is_match(key)
 }
 
-pub async fn get_file_size(path: &PathBuf) -> u64 {
-    File::open(path)
-        .await
-        .unwrap()
-        .metadata()
-        .await
-        .unwrap()
-        .len()
+pub async fn get_file_size(path: &PathBuf) -> Result<u64> {
+    Ok(File::open(path).await?.metadata().await?.len())
 }
 
 pub async fn is_regular_file(path: &PathBuf) -> Result<bool> {
     Ok(File::open(path).await?.metadata().await?.is_file())
 }
 
-pub async fn get_last_modified(path: &PathBuf) -> DateTime {
-    DateTime::from(
-        File::open(path)
-            .await
-            .unwrap()
-            .metadata()
-            .await
-            .unwrap()
-            .modified()
-            .unwrap(),
-    )
+pub async fn get_last_modified(path: &PathBuf) -> Result<DateTime> {
+    Ok(DateTime::from(
+        File::open(path).await?.metadata().await?.modified()?,
+    ))
 }
 
 pub fn set_last_modified(
@@ -170,7 +157,9 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         assert_eq!(
-            get_file_size(&PathBuf::from("test_data/5byte.dat")).await,
+            get_file_size(&PathBuf::from("test_data/5byte.dat"))
+                .await
+                .unwrap(),
             TEST_DATA_SIZE
         );
     }
@@ -179,7 +168,9 @@ mod tests {
     async fn get_file_last_modified_test() {
         init_dummy_tracing_subscriber();
 
-        get_last_modified(&PathBuf::from("test_data/5byte.dat")).await;
+        get_last_modified(&PathBuf::from("test_data/5byte.dat"))
+            .await
+            .unwrap();
     }
 
     #[test]
@@ -770,12 +761,16 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         set_last_modified("./test_data/".into(), "5byte.dat", 0, 0).unwrap();
-        let mtime = get_last_modified(&"./test_data/5byte.dat".into()).await;
+        let mtime = get_last_modified(&"./test_data/5byte.dat".into())
+            .await
+            .unwrap();
         assert_eq!(mtime.secs(), 0);
         assert_eq!(mtime.subsec_nanos(), 0);
 
         set_last_modified("./test_data/".into(), "5byte.dat", 777, 999).unwrap();
-        let mtime = get_last_modified(&"./test_data/5byte.dat".into()).await;
+        let mtime = get_last_modified(&"./test_data/5byte.dat".into())
+            .await
+            .unwrap();
         assert_eq!(mtime.secs(), 777);
         assert_eq!(mtime.subsec_nanos(), 999);
     }
