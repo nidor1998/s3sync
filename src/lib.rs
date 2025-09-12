@@ -5,7 +5,7 @@ It can be used to synchronize local directories with an S3 bucket and synchroniz
 It supports multipart uploads, versioning, and metadata.
 
 ## Features
-- Reliable: In-depth end-to-end object integrity check
+- Reliable:
   s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.
   An object on the local disk is read from the disk and compared with the checksum in the source or target.
   In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.

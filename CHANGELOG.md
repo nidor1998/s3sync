@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Added dry_run info to an event callback
+- [Breaking change] `EventManager::register_callback()` now takes the dry_run parameter  
+  This is because the above feature requires it.
 - Improved error handling in async functions  
   Even if an async function fails with Rust panic, s3sync can handle it as an error.
 - Updated dependencies
