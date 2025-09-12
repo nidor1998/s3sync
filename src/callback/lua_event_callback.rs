@@ -35,6 +35,7 @@ impl EventCallback for LuaEventCallback {
         event_data_lua
             .set("event_type", event_data.event_type.bits())
             .unwrap();
+        event_data_lua.set("dry_run", event_data.dry_run).unwrap();
         event_data_lua.set("key", event_data.key.clone()).unwrap();
         event_data_lua
             .set("source_version_id", event_data.source_version_id.clone())

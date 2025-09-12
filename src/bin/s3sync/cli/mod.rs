@@ -40,9 +40,11 @@ pub async fn run(mut config: Config) -> Result<()> {
         if user_defined_event_callback.is_enabled() {
             // By default, the user-defined event callback notifies all events.
             // You can modify EventType::ALL_EVENTS to filter specific events (e.g., EventType::SYNC_START | EventType::SYNC_COMPLETE)
-            config
-                .event_manager
-                .register_callback(EventType::ALL_EVENTS, user_defined_event_callback);
+            config.event_manager.register_callback(
+                EventType::ALL_EVENTS,
+                user_defined_event_callback,
+                config.dry_run,
+            );
         }
 
         // The user-defined filter callback is disabled by default.
@@ -234,6 +236,7 @@ mod tests {
             "s3sync",
             "--allow-both-local-storage",
             "--report-sync-status",
+            "-vvv",
             "./test_data/source/dir1/",
             "./test_data/target/dir1/",
         ];
@@ -273,7 +276,7 @@ mod tests {
 
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
-            .with_env_filter("s3sync=trace")
+            .with_env_filter("trace")
             .try_init();
     }
 }

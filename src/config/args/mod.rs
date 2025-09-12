@@ -865,6 +865,16 @@ Exclude filters other than --filter-exclude-regex will not prevent an object fro
     #[cfg(feature = "e2e_test_dangerous_simulations")]
     #[arg(long, hide = true, help_heading = "Dangerous")]
     cancellation_point: Option<String>,
+
+    /// [dangerous] Test purpose only
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[arg(long, hide = true, help_heading = "Dangerous")]
+    panic_simulation_point: Option<String>,
+
+    /// [dangerous] Test purpose only
+    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[arg(long, hide = true, help_heading = "Dangerous")]
+    error_simulation_point: Option<String>,
 }
 
 pub fn parse_from_args<I, T>(args: I) -> Result<CLIArgs, clap::Error>
@@ -1731,10 +1741,18 @@ impl TryFrom<CLIArgs> for Config {
         #[allow(unused_assignments)]
         #[allow(unused_mut)]
         let mut cancellation_point = None;
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut panic_simulation_point = None;
+        #[allow(unused_assignments)]
+        #[allow(unused_mut)]
+        let mut error_simulation_point = None;
         #[cfg(feature = "e2e_test_dangerous_simulations")]
         {
             allow_e2e_test_dangerous_simulation = value.allow_e2e_test_dangerous_simulation;
-            cancellation_point = value.cancellation_point
+            cancellation_point = value.cancellation_point;
+            panic_simulation_point = value.panic_simulation_point;
+            error_simulation_point = value.error_simulation_point;
         }
 
         #[allow(unused_assignments)]
@@ -1849,7 +1867,7 @@ impl TryFrom<CLIArgs> for Config {
                         return Err(LUA_SCRIPT_LOAD_ERROR.to_string() + &e.to_string());
                     }
                     // Lua event callback is registered for all events.
-                    event_manager.register_callback(EventType::ALL_EVENTS, lua_event_callback);
+                    event_manager.register_callback(EventType::ALL_EVENTS, lua_event_callback, dry_run);
                 }
             }
         }
@@ -1977,6 +1995,8 @@ impl TryFrom<CLIArgs> for Config {
             allow_e2e_test_dangerous_simulation,
             test_user_defined_callback,
             cancellation_point,
+            panic_simulation_point,
+            error_simulation_point,
             source_accelerate: value.source_accelerate,
             target_accelerate: value.target_accelerate,
             source_request_payer: value.source_request_payer,

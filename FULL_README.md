@@ -112,7 +112,7 @@
 
 s3sync is a reliable, flexible, and fast synchronization tool for S3.  
 It can be used to synchronize local directories with an S3 bucket and synchronize between S3 buckets as well.  
-It supports multipart uploads, versioning, and metadata.
+It supports multipart uploads, versioning, metadata, and tagging.
 
 This tool is designed solely for object storage (S3 or S3-compatible) data synchronization.
 
@@ -1008,6 +1008,7 @@ For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#f
 - 1: Exit with error
 - 2: Invalid arguments
 - 3: Exit with warning
+- 101: Abnormal termination (Rust panic, it's a bug of s3sync)
 
 ## Advanced options
 

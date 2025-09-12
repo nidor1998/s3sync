@@ -188,7 +188,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   s3sync is designed to be used in CI/CD pipelines.
     - JSON tracing(logging) support(`--json-tracing` option)
     - Explicit exit code  
-      `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch).
+      `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch), `101` for abnormal termination (e.g., Rust panic, it's a bug of s3sync)
     - Supports all options via environment variables
 
 - Multiple platforms support  

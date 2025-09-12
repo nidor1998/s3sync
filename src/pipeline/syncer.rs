@@ -73,6 +73,20 @@ impl ObjectSyncer {
 
     async fn receive_and_sync(&self) -> Result<()> {
         loop {
+            // This is special for test emulation.
+            #[allow(clippy::collapsible_if)]
+            if cfg!(feature = "e2e_test_dangerous_simulations") {
+                panic_simulation(&self.base.config, "ObjectSyncer::receive_and_filter");
+
+                if is_error_simulation_point(&self.base.config, "ObjectSyncer::receive_and_filter")
+                {
+                    error!("error simulation point has been triggered.");
+                    return Err(anyhow::anyhow!(
+                        "error simulation point has been triggered."
+                    ));
+                }
+            }
+
             tokio::select! {
                 recv_result = self.base.receiver.as_ref().unwrap().recv() => {
                     match recv_result {
@@ -2283,6 +2297,37 @@ fn build_tagging(tag_set: &[Tag]) -> Tagging {
 
 fn is_object_with_directory_name_suffix_and_none_zero_size(object: &S3syncObject) -> bool {
     object.key().ends_with('/') && object.size() != 0
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
+    const PANIC_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_PANIC_DANGEROUS_SIMULATION";
+    const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    if std::env::var(PANIC_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == PANIC_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .panic_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == panic_simulation_point)
+    {
+        panic!(
+            "panic simulation has been triggered. This message should not be shown in the production.",
+        );
+    }
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &str) -> bool {
+    const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
+    const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    std::env::var(ERROR_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == ERROR_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .error_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == error_simulation_point)
 }
 
 #[cfg(test)]

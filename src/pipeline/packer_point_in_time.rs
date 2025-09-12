@@ -1,7 +1,7 @@
 use anyhow::Result;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::trace;
+use tracing::{error, trace};
 
 use crate::types;
 use crate::types::ObjectVersions;
@@ -20,6 +20,25 @@ impl ObjectPointInTimePacker {
     }
 
     pub async fn pack(&self) -> Result<()> {
+        // This is special for test emulation.
+        #[allow(clippy::collapsible_if)]
+        if cfg!(feature = "e2e_test_dangerous_simulations") {
+            panic_simulation(
+                &self.base.config,
+                "ObjectPointInTimePacker::receive_and_filter",
+            );
+
+            if is_error_simulation_point(
+                &self.base.config,
+                "ObjectPointInTimePacker::receive_and_filter",
+            ) {
+                error!("error simulation point has been triggered.");
+                return Err(anyhow::anyhow!(
+                    "error simulation point has been triggered."
+                ));
+            }
+        }
+
         trace!("object point-in-time packer has started.");
 
         let mut object_versions = ObjectVersions::new();
@@ -108,4 +127,35 @@ impl ObjectPointInTimePacker {
         self.base.send(packed_versions).await?;
         Ok(())
     }
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
+    const PANIC_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_PANIC_DANGEROUS_SIMULATION";
+    const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    if std::env::var(PANIC_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == PANIC_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .panic_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == panic_simulation_point)
+    {
+        panic!(
+            "panic simulation has been triggered. This message should not be shown in the production.",
+        );
+    }
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &str) -> bool {
+    const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
+    const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    std::env::var(ERROR_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == ERROR_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .error_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == error_simulation_point)
 }

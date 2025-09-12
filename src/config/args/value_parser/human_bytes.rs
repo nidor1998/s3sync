@@ -179,17 +179,11 @@ mod tests {
 
         let result = check_human_bytes("5368709121");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, OVER_MAX_VALUE);
-        }
+        assert_eq!(result.err().unwrap(), OVER_MAX_VALUE);
 
         let result = check_human_bytes("5Eib");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, OVER_MAX_VALUE);
-        }
+        assert_eq!(result.err().unwrap(), OVER_MAX_VALUE);
     }
 
     #[test]
@@ -198,10 +192,7 @@ mod tests {
 
         let result = check_human_bandwidth("1048575");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, UNDER_MIN_BANDWIDTH);
-        }
+        assert_eq!(result.err().unwrap(), UNDER_MIN_BANDWIDTH);
     }
 
     #[test]
@@ -210,16 +201,11 @@ mod tests {
 
         let result = check_human_bandwidth("107374182401");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, OVER_MAX_BANDWIDTH);
-        }
+        assert_eq!(result.err().unwrap(), OVER_MAX_BANDWIDTH);
 
         let result = check_human_bandwidth("5Eib");
         assert!(result.is_err());
-        if let Err(e) = result {
-            assert_eq!(e, OVER_MAX_BANDWIDTH);
-        }
+        assert_eq!(result.err().unwrap(), OVER_MAX_BANDWIDTH);
     }
 
     #[test]
@@ -276,10 +262,7 @@ mod tests {
 
         let result = parse_human_bytes("5242879");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, UNDER_MIN_VALUE);
-        }
+        assert_eq!(result.err().unwrap(), UNDER_MIN_VALUE);
     }
 
     #[test]
@@ -305,10 +288,7 @@ mod tests {
 
         let result = parse_human_bytes("5368709121");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, OVER_MAX_VALUE);
-        }
+        assert_eq!(result.err().unwrap(), OVER_MAX_VALUE);
     }
 
     #[test]
@@ -336,10 +316,7 @@ mod tests {
 
         let result = parse_human_bandwidth("1048575");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, UNDER_MIN_BANDWIDTH);
-        }
+        assert_eq!(result.err().unwrap(), UNDER_MIN_BANDWIDTH);
     }
 
     #[test]
@@ -348,10 +325,7 @@ mod tests {
 
         let result = parse_human_bandwidth("107374182401");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, OVER_MAX_BANDWIDTH);
-        }
+        assert_eq!(result.err().unwrap(), OVER_MAX_BANDWIDTH);
     }
 
     fn init_dummy_tracing_subscriber() {

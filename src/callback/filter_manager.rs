@@ -54,6 +54,7 @@ impl fmt::Debug for FilterManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aws_sdk_s3::types::ObjectVersion;
 
     #[tokio::test]
     async fn create_preprocess_manager() {
@@ -64,5 +65,15 @@ mod tests {
 
         let filter_manager = FilterManager::default();
         assert!(!filter_manager.is_callback_registered());
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn execute_filter_test_panic() {
+        let mut filter_manager = FilterManager::default();
+        filter_manager
+            .execute_filter(&S3syncObject::Versioning(ObjectVersion::builder().build()))
+            .await
+            .unwrap();
     }
 }

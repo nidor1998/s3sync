@@ -192,6 +192,7 @@ async fn main() {
     config.event_manager.register_callback(
         EventType::SYNC_START | EventType::SYNC_COMPLETE | EventType::SYNC_CANCEL,
         DebugEventCallback {},
+        config.dry_run,
     );
 
     // This is a filter manager that manages the filter callbacks.(optional)

@@ -39,9 +39,11 @@ mod tests {
                 &target_bucket_url,
             ];
             let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-            config
-                .event_manager
-                .register_callback(EventType::ALL_EVENTS, DebugEventCallback {});
+            config.event_manager.register_callback(
+                EventType::PIPELINE_START | EventType::PIPELINE_END,
+                DebugEventCallback {},
+                false,
+            );
             let cancellation_token = create_pipeline_cancellation_token();
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 

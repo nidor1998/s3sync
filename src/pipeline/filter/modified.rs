@@ -132,7 +132,7 @@ fn is_modified_from_size(
                 name = FILTER_NAME,
                 content_length = entry.content_length,
                 key = key,
-                "object filtered."
+                "object filtered(same size)."
             );
         }
         return modified;
@@ -146,7 +146,7 @@ fn is_modified_from_size(
                 name = FILTER_NAME,
                 content_length = entry.content_length,
                 key = key,
-                "object filtered."
+                "object filtered(same size)."
             );
         }
         return modified;
@@ -659,7 +659,7 @@ mod tests {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(
                 EnvFilter::try_from_default_env()
-                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .or_else(|_| EnvFilter::try_new("trace"))
                     .unwrap(),
             )
             .try_init();

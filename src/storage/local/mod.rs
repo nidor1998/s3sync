@@ -1551,6 +1551,7 @@ impl StorageTrait for LocalStorage {
             .build())
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     async fn head_object_first_part(
         &self,
         _key: &str,
