@@ -2299,7 +2299,6 @@ fn is_object_with_directory_name_suffix_and_none_zero_size(object: &S3syncObject
     object.key().ends_with('/') && object.size() != 0
 }
 
-#[cfg_attr(coverage_nightly, coverage(off))]
 fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
     const PANIC_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_PANIC_DANGEROUS_SIMULATION";
     const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
@@ -2317,7 +2316,6 @@ fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
     }
 }
 
-#[cfg_attr(coverage_nightly, coverage(off))]
 fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &str) -> bool {
     const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
     const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";

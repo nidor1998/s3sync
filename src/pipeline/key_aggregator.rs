@@ -83,7 +83,6 @@ fn build_object_key_entry(object: &S3syncObject) -> ObjectEntry {
     }
 }
 
-#[cfg_attr(coverage_nightly, coverage(off))]
 fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
     const PANIC_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_PANIC_DANGEROUS_SIMULATION";
     const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
@@ -101,7 +100,6 @@ fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
     }
 }
 
-#[cfg_attr(coverage_nightly, coverage(off))]
 fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &str) -> bool {
     const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
     const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
