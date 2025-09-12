@@ -31,6 +31,13 @@ mod tests {
         check_scheme("http://endpoint_url.local/bucket/").unwrap();
     }
 
+    #[test]
+    fn invalid_url() {
+        init_dummy_tracing_subscriber();
+
+        assert!(check_scheme("ftp://endpoint_url.local").is_err())
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

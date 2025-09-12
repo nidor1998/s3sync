@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing::trace;
+use tracing::{error, trace};
 
 use crate::types::{ObjectEntry, ObjectKey, ObjectKeyMap, S3syncObject, sha1_digest_from_key};
 
@@ -15,6 +15,19 @@ impl KeyAggregator {
     }
 
     pub async fn aggregate(&self, key_map: &ObjectKeyMap) -> Result<()> {
+        // This is special for test emulation.
+        #[allow(clippy::collapsible_if)]
+        if cfg!(feature = "e2e_test_dangerous_simulations") {
+            panic_simulation(&self.base.config, "KeyAggregator::aggregate");
+
+            if is_error_simulation_point(&self.base.config, "KeyAggregator::aggregate") {
+                error!("error simulation point has been triggered.");
+                return Err(anyhow::anyhow!(
+                    "error simulation point has been triggered."
+                ));
+            }
+        }
+
         let sha1_digest_required = self.base.config.is_sha1_digest_listing_required();
 
         loop {
@@ -68,6 +81,37 @@ fn build_object_key_entry(object: &S3syncObject) -> ObjectEntry {
         content_length: object.size(),
         e_tag: object.e_tag().map(|e_tag| e_tag.to_string()),
     }
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
+    const PANIC_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_PANIC_DANGEROUS_SIMULATION";
+    const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    if std::env::var(PANIC_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == PANIC_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .panic_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == panic_simulation_point)
+    {
+        panic!(
+            "panic simulation has been triggered. This message should not be shown in the production.",
+        );
+    }
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &str) -> bool {
+    const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
+    const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    std::env::var(ERROR_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == ERROR_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .error_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == error_simulation_point)
 }
 
 #[cfg(test)]

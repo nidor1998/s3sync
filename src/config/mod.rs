@@ -79,6 +79,8 @@ pub struct Config {
     pub allow_e2e_test_dangerous_simulation: bool,
     pub test_user_defined_callback: bool,
     pub cancellation_point: Option<String>,
+    pub panic_simulation_point: Option<String>,
+    pub error_simulation_point: Option<String>,
     pub source_accelerate: bool,
     pub target_accelerate: bool,
     pub source_request_payer: bool,

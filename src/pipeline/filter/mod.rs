@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use tracing::trace;
+use tracing::{error, trace};
 
 use super::stage::{SendResult, Stage};
 use crate::config::FilterConfig;
@@ -64,6 +64,25 @@ impl ObjectFilterBase<'_> {
             if self.base.cancellation_token.is_cancelled() {
                 trace!(name = self.name, "filter has been cancelled.");
                 return Ok(());
+            }
+
+            // This is special for test emulation.
+            #[allow(clippy::collapsible_if)]
+            if cfg!(feature = "e2e_test_dangerous_simulations") {
+                panic_simulation(&self.base.config, "ObjectFilterBase::receive_and_filter");
+
+                if is_error_simulation_point(
+                    &self.base.config,
+                    "ObjectFilterBase::receive_and_filter",
+                ) {
+                    error!(
+                        name = self.name,
+                        "error simulation point has been triggered."
+                    );
+                    return Err(anyhow::anyhow!(
+                        "error simulation point has been triggered."
+                    ));
+                }
             }
 
             tokio::task::yield_now().await;
@@ -134,6 +153,37 @@ impl ObjectFilterBase<'_> {
             }
         }
     }
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn panic_simulation(config: &crate::Config, panic_simulation_point: &str) {
+    const PANIC_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_PANIC_DANGEROUS_SIMULATION";
+    const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    if std::env::var(PANIC_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == PANIC_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .panic_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == panic_simulation_point)
+    {
+        panic!(
+            "panic simulation has been triggered. This message should not be shown in the production.",
+        );
+    }
+}
+
+#[cfg_attr(coverage_nightly, coverage(off))]
+fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &str) -> bool {
+    const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
+    const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+    std::env::var(ERROR_DANGEROUS_SIMULATION_ENV)
+        .is_ok_and(|v| v == ERROR_DANGEROUS_SIMULATION_ENV_ALLOW)
+        && config
+            .error_simulation_point
+            .as_ref()
+            .is_some_and(|point| point == error_simulation_point)
 }
 
 #[cfg(test)]

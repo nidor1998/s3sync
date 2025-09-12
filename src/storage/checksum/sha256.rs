@@ -139,6 +139,7 @@ mod tests {
         assert_eq!(checksum.finalize_all(), CHECKSUM_TOTAL.to_string());
     }
 
+    #[cfg_attr(coverage_nightly, coverage(off))]
     async fn create_large_file() {
         if PathBuf::from(LARGE_FILE_PATH).try_exists().unwrap() {
             return;

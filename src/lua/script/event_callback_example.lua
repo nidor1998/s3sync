@@ -36,6 +36,7 @@ function on_event(event_data)
     end
 
     print("key:", event_data.key)
+    print("dry_run:", event_data.dry_run)
     print("source_version_id:", event_data.source_version_id)
     print("target_version_id:", event_data.target_version_id)
     print("source_last_modified:", event_data.source_last_modified)

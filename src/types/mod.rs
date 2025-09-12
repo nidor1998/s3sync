@@ -857,6 +857,119 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn last_modified_test_should_panic() {
+        init_dummy_tracing_subscriber();
+
+        let object_versions = vec![S3syncObject::Versioning(ObjectVersion::builder().build())];
+
+        let packed = S3syncObject::PackedVersions(PackedObjectVersions {
+            key: "test".to_string(),
+            packed_object_versions: object_versions.clone(),
+        });
+
+        let _ = packed.last_modified();
+    }
+
+    #[test]
+    #[should_panic]
+    fn size_test_should_panic() {
+        init_dummy_tracing_subscriber();
+
+        let object_versions = vec![S3syncObject::Versioning(ObjectVersion::builder().build())];
+
+        let packed = S3syncObject::PackedVersions(PackedObjectVersions {
+            key: "test".to_string(),
+            packed_object_versions: object_versions.clone(),
+        });
+
+        let _ = packed.size();
+    }
+
+    #[test]
+    #[should_panic]
+    fn version_id_test_should_panic() {
+        init_dummy_tracing_subscriber();
+
+        let object_versions = vec![S3syncObject::Versioning(ObjectVersion::builder().build())];
+
+        let packed = S3syncObject::PackedVersions(PackedObjectVersions {
+            key: "test".to_string(),
+            packed_object_versions: object_versions.clone(),
+        });
+
+        let _ = packed.version_id();
+    }
+
+    #[test]
+    #[should_panic]
+    fn checksum_algorithm_test_should_panic() {
+        init_dummy_tracing_subscriber();
+
+        let object_versions = vec![S3syncObject::Versioning(ObjectVersion::builder().build())];
+
+        let packed = S3syncObject::PackedVersions(PackedObjectVersions {
+            key: "test".to_string(),
+            packed_object_versions: object_versions.clone(),
+        });
+
+        let _ = packed.checksum_algorithm();
+    }
+
+    #[test]
+    #[should_panic]
+    fn checksum_type_packed_test_should_panic() {
+        init_dummy_tracing_subscriber();
+
+        let object_versions = vec![S3syncObject::Versioning(ObjectVersion::builder().build())];
+
+        let packed = S3syncObject::PackedVersions(PackedObjectVersions {
+            key: "test".to_string(),
+            packed_object_versions: object_versions.clone(),
+        });
+
+        let _ = packed.checksum_type();
+    }
+
+    #[test]
+    #[should_panic]
+    fn checksum_type_delete_marker_test_should_panic() {
+        init_dummy_tracing_subscriber();
+
+        let delete_marker = S3syncObject::DeleteMarker(DeleteMarkerEntry::builder().build());
+        let _ = delete_marker.checksum_type();
+    }
+
+    #[test]
+    fn is_latest_test() {
+        init_dummy_tracing_subscriber();
+
+        let object_versions = vec![S3syncObject::Versioning(ObjectVersion::builder().build())];
+
+        let packed = S3syncObject::PackedVersions(PackedObjectVersions {
+            key: "test".to_string(),
+            packed_object_versions: object_versions.clone(),
+        });
+
+        assert_eq!(packed.is_latest(), false)
+    }
+
+    #[test]
+    #[should_panic]
+    fn e_tag_test_should_panic() {
+        init_dummy_tracing_subscriber();
+
+        let object_versions = vec![S3syncObject::Versioning(ObjectVersion::builder().build())];
+
+        let packed = S3syncObject::PackedVersions(PackedObjectVersions {
+            key: "test".to_string(),
+            packed_object_versions: object_versions.clone(),
+        });
+
+        let _ = packed.e_tag();
+    }
+
+    #[test]
     fn unpack_object_versions_test() {
         init_dummy_tracing_subscriber();
 

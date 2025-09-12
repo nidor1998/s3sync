@@ -137,6 +137,10 @@ const NOT_FOUND_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_NOT_FOUND_DANGEROUS_SIM
 const NOT_FOUND_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
 const CANCEL_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_CANCEL_DANGEROUS_SIMULATION";
 const CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+const PANIC_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_PANIC_DANGEROUS_SIMULATION";
+const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
+const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
 
 #[cfg(feature = "e2e_test")]
 pub struct TestHelper {
@@ -1874,5 +1878,35 @@ impl TestHelper {
     pub fn disable_cancel_dangerous_simulation() {
         // This code is used to test purpose only and run within a critical section test.
         unsafe { std::env::remove_var(CANCEL_DANGEROUS_SIMULATION_ENV) };
+    }
+
+    pub fn enable_panic_dangerous_simulation() {
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe {
+            std::env::set_var(
+                PANIC_DANGEROUS_SIMULATION_ENV,
+                PANIC_DANGEROUS_SIMULATION_ENV_ALLOW,
+            )
+        };
+    }
+
+    pub fn disable_panic_dangerous_simulation() {
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe { std::env::remove_var(PANIC_DANGEROUS_SIMULATION_ENV) };
+    }
+
+    pub fn enable_error_dangerous_simulation() {
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe {
+            std::env::set_var(
+                ERROR_DANGEROUS_SIMULATION_ENV,
+                ERROR_DANGEROUS_SIMULATION_ENV_ALLOW,
+            )
+        };
+    }
+
+    pub fn disable_error_dangerous_simulation() {
+        // This code is used to test purpose only and run within a critical section test.
+        unsafe { std::env::remove_var(ERROR_DANGEROUS_SIMULATION_ENV) };
     }
 }

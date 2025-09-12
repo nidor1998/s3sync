@@ -215,7 +215,7 @@ mod tests {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(
                 EnvFilter::try_from_default_env()
-                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .or_else(|_| EnvFilter::try_new("trace"))
                     .unwrap(),
             )
             .try_init();

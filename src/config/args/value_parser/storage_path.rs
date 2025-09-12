@@ -470,10 +470,7 @@ mod tests {
 
         let result = check_storage_path("");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, NO_PATH_SPECIFIED);
-        }
+        assert_eq!(result.unwrap_err(), NO_PATH_SPECIFIED);
     }
 
     #[test]
@@ -482,10 +479,7 @@ mod tests {
 
         let result = check_storage_path("https://my-bucket");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, INVALID_SCHEME);
-        }
+        assert_eq!(result.unwrap_err(), INVALID_SCHEME);
     }
 
     #[test]
@@ -494,10 +488,7 @@ mod tests {
 
         let result = check_storage_path("s3://");
         assert!(result.is_err());
-
-        if let Err(e) = result {
-            assert_eq!(e, NO_BUCKET_NAME_SPECIFIED);
-        }
+        assert_eq!(result.unwrap_err(), NO_BUCKET_NAME_SPECIFIED);
     }
 
     #[test]

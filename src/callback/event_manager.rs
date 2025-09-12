@@ -8,6 +8,7 @@ use crate::types::event_callback::{EventCallback, EventData, EventType};
 pub struct EventManager {
     pub event_callback: Option<Arc<Mutex<Box<dyn EventCallback + Send + Sync>>>>,
     pub event_flags: EventType,
+    pub dry_run: bool,
 }
 
 // RS-A1008 is not applicable here as this is intentional implementation
@@ -24,6 +25,7 @@ impl EventManager {
         Self {
             event_callback: None,
             event_flags: EventType::ALL_EVENTS,
+            dry_run: false,
         }
     }
 
@@ -31,18 +33,21 @@ impl EventManager {
         &mut self,
         events_flag: EventType,
         callback: T,
+        dry_run: bool,
     ) {
         self.event_callback = Some(Arc::new(Mutex::new(Box::new(callback))));
         self.event_flags = events_flag;
+        self.dry_run = dry_run;
     }
 
     pub fn is_callback_registered(&self) -> bool {
         self.event_callback.is_some()
     }
 
-    pub async fn trigger_event(&self, event_data: EventData) {
+    pub async fn trigger_event(&self, mut event_data: EventData) {
         if let Some(callback) = &self.event_callback {
             if self.event_flags.contains(event_data.event_type) {
+                event_data.dry_run = self.dry_run;
                 callback.lock().await.on_event(event_data).await;
             }
         }

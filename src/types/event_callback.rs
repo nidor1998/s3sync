@@ -48,6 +48,7 @@ bitflags! {
 #[derive(Default, Debug, Clone)]
 pub struct EventData {
     pub event_type: EventType,
+    pub dry_run: bool,
     pub key: Option<String>,
     pub source_version_id: Option<String>,
     pub target_version_id: Option<String>,
