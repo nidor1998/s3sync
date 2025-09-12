@@ -951,7 +951,7 @@ mod tests {
             packed_object_versions: object_versions.clone(),
         });
 
-        assert_eq!(packed.is_latest(), false)
+        assert!(!packed.is_latest())
     }
 
     #[test]
