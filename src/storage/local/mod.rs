@@ -1006,6 +1006,15 @@ impl LocalStorage {
                 prefix.into()
             };
 
+            // This is special for test emulation.
+            #[allow(clippy::collapsible_if)]
+            if cfg!(feature = "e2e_test_dangerous_simulations") {
+                self.do_cancel_simulation("LocalStorage::list_objects_target");
+                if self.cancellation_token.is_cancelled() {
+                    return Err(anyhow!(S3syncError::Cancelled));
+                }
+            }
+
             trace!(
                 "is_root_prefix: {}, Listing local path: {:?}",
                 is_root_prefix, path
@@ -1136,6 +1145,12 @@ impl LocalStorage {
                     path = convert_windows_directory_char_to_slash(&path);
                 }
 
+                // This is special for test emulation.
+                #[allow(clippy::collapsible_if)]
+                if cfg!(feature = "e2e_test_dangerous_simulations") {
+                    self.do_cancel_simulation("LocalStorage::list_objects")
+                }
+
                 let e_tag = if self.config.filter_config.check_etag
                     && !self.config.transfer_config.auto_chunksize
                     && !self.config.filter_config.remove_modified_filter
@@ -1188,6 +1203,25 @@ impl LocalStorage {
 
             Ok(())
         })
+    }
+
+    fn do_cancel_simulation(&self, cancellation_point: &str) {
+        const CANCEL_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_CANCEL_DANGEROUS_SIMULATION";
+        const CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+        if std::env::var(CANCEL_DANGEROUS_SIMULATION_ENV)
+            .is_ok_and(|v| v == CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW)
+            && self
+                .config
+                .cancellation_point
+                .as_ref()
+                .is_some_and(|point| point == cancellation_point)
+        {
+            error!(
+                "cancel simulation has been triggered. This message should not be shown in the production.",
+            );
+            self.cancellation_token.cancel();
+        }
     }
 }
 
