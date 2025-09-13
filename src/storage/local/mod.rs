@@ -232,6 +232,7 @@ impl LocalStorage {
                         generate_e_tag_hash_from_path_with_auto_chunksize(
                             real_path,
                             parts.iter().map(|part| part.size().unwrap()).collect(),
+                            self.cancellation_token.clone(),
                         )
                         .await?,
                     )
@@ -242,6 +243,7 @@ impl LocalStorage {
                             real_path,
                             source_content_length as usize + 1,
                             source_content_length as usize + 1,
+                            self.cancellation_token.clone(),
                         )
                         .await?,
                     )
@@ -252,6 +254,7 @@ impl LocalStorage {
                         real_path,
                         self.config.transfer_config.multipart_chunksize as usize,
                         self.config.transfer_config.multipart_threshold as usize,
+                        self.cancellation_token.clone(),
                     )
                     .await?,
                 )
@@ -409,6 +412,7 @@ impl LocalStorage {
                 parts,
                 multipart_threshold,
                 is_full_object_checksum(&Some(source_final_checksum.clone())),
+                self.cancellation_token.clone(),
             )
             .await?;
 
@@ -1142,6 +1146,7 @@ impl LocalStorage {
                             &PathBuf::from(entry.as_ref().unwrap().path()),
                             self.config.transfer_config.multipart_chunksize as usize,
                             self.config.transfer_config.multipart_threshold as usize,
+                            self.cancellation_token.clone(),
                         )
                         .await?,
                     )
@@ -1283,6 +1288,7 @@ impl StorageTrait for LocalStorage {
                         &PathBuf::from(entry.as_ref().unwrap().path()),
                         self.config.transfer_config.multipart_chunksize as usize,
                         self.config.transfer_config.multipart_threshold as usize,
+                        self.cancellation_token.clone(),
                     )
                     .await?,
                 )
@@ -1404,6 +1410,7 @@ impl StorageTrait for LocalStorage {
                     self.config.transfer_config.multipart_chunksize as usize,
                     self.config.transfer_config.multipart_threshold as usize,
                     self.config.full_object_checksum,
+                    self.cancellation_token.clone(),
                 )
                 .await?,
             )

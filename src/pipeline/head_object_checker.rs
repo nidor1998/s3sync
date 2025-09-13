@@ -16,6 +16,7 @@ use crate::pipeline::diff_detector::standard_diff_detector::StandardDiffDetector
 use crate::Config;
 use crate::storage::Storage;
 use crate::types::SyncStatistics::SyncError;
+use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     S3syncObject, SYNC_REPORT_EXISTENCE_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_NOT_FOUND,
     SyncStatsReport,
@@ -27,6 +28,7 @@ pub struct HeadObjectChecker {
     source: Storage,
     target: Storage,
     sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+    cancellation_token: PipelineCancellationToken,
 }
 
 impl HeadObjectChecker {
@@ -36,6 +38,7 @@ impl HeadObjectChecker {
         target: Storage,
         worker_index: u16,
         sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+        cancellation_token: PipelineCancellationToken,
     ) -> Self {
         Self {
             config,
@@ -43,6 +46,7 @@ impl HeadObjectChecker {
             target,
             worker_index,
             sync_stats_report,
+            cancellation_token,
         }
     }
 
@@ -112,6 +116,7 @@ impl HeadObjectChecker {
                     dyn_clone::clone_box(self.source.as_ref()),
                     dyn_clone::clone_box(self.target.as_ref()),
                     self.sync_stats_report.clone(),
+                    self.cancellation_token.clone(),
                 )
             } else if self.config.filter_config.check_etag {
                 // ETag has been checked by modified filter
@@ -128,6 +133,7 @@ impl HeadObjectChecker {
                     dyn_clone::clone_box(self.source.as_ref()),
                     dyn_clone::clone_box(self.target.as_ref()),
                     self.sync_stats_report.clone(),
+                    self.cancellation_token.clone(),
                 )
             } else {
                 StandardDiffDetector::boxed_new(self.config.clone())
@@ -354,6 +360,7 @@ mod tests {
             dyn_clone::clone_box(&*(target)),
             1,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let source_object = S3syncObject::NotVersioning(
@@ -416,6 +423,7 @@ mod tests {
             dyn_clone::clone_box(&*(target)),
             1,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let source_object =

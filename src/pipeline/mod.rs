@@ -20,6 +20,7 @@ use crate::pipeline::syncer::ObjectSyncer;
 use crate::pipeline::terminator::Terminator;
 use crate::pipeline::user_defined_filter::UserDefinedFilter;
 use crate::storage::{Storage, StoragePair};
+use crate::types::error::is_cancelled_error;
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics, SyncStatsReport};
@@ -329,6 +330,10 @@ impl Pipeline {
                     join_result.unwrap().err().unwrap()
                 };
 
+                if is_cancelled_error(&e) {
+                    return;
+                }
+
                 log_error(has_error, error_list, e, "list source objects failed.");
             }
         });
@@ -356,6 +361,10 @@ impl Pipeline {
                     #[allow(clippy::unnecessary_unwrap)]
                     join_result.unwrap().err().unwrap()
                 };
+
+                if is_cancelled_error(&e) {
+                    return;
+                }
 
                 log_error(has_error, error_list, e, "list target objects failed.");
             }
