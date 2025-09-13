@@ -111,6 +111,8 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
   See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
 
+  Note: `--preprocess-callback-lua-script` can not modify the object's key or content itself.
+
 - Amazon S3 Express One Zone support  
   s3sync can be used
   with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
