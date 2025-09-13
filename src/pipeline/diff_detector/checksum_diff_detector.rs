@@ -15,6 +15,7 @@ use crate::storage::additional_checksum_verify::{
 use crate::storage::local::fs_util;
 use crate::types::SyncStatistics::SyncWarning;
 use crate::types::event_callback::{EventData, EventType};
+use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     S3syncObject, SYNC_REPORT_CHECKSUM_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES,
     SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN, SyncStatsReport, is_full_object_checksum,
@@ -27,6 +28,7 @@ pub struct ChecksumDiffDetector {
     source: Storage,
     target: Storage,
     sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+    cancellation_token: PipelineCancellationToken,
 }
 
 #[async_trait]
@@ -66,12 +68,14 @@ impl ChecksumDiffDetector {
         source: Storage,
         target: Storage,
         sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+        cancellation_token: PipelineCancellationToken,
     ) -> DiffDetector {
         Box::new(ChecksumDiffDetector {
             config,
             source,
             target,
             sync_stats_report,
+            cancellation_token,
         })
     }
 
@@ -489,6 +493,7 @@ impl ChecksumDiffDetector {
                     .map(|part| part.size().unwrap())
                     .collect(),
                 full_object_checksum,
+                self.cancellation_token.clone(),
             )
             .await?
         } else {
@@ -499,6 +504,7 @@ impl ChecksumDiffDetector {
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
                 full_object_checksum,
+                self.cancellation_token.clone(),
             )
             .await?
         };
@@ -781,6 +787,7 @@ impl ChecksumDiffDetector {
                     .map(|part| part.size().unwrap())
                     .collect(),
                 full_object_checksum,
+                self.cancellation_token.clone(),
             )
             .await?
         } else {
@@ -791,6 +798,7 @@ impl ChecksumDiffDetector {
                 self.config.transfer_config.multipart_chunksize as usize,
                 self.config.transfer_config.multipart_threshold as usize,
                 full_object_checksum,
+                self.cancellation_token.clone(),
             )
             .await?
         };
@@ -975,6 +983,7 @@ mod tests {
             source: dyn_clone::clone_box(&*(source)),
             target: dyn_clone::clone_box(&*(target)),
             sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
         };
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1023,6 +1032,7 @@ mod tests {
             source: dyn_clone::clone_box(&*(source)),
             target: dyn_clone::clone_box(&*(target)),
             sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
         };
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()

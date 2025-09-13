@@ -247,6 +247,10 @@ impl S3Storage {
         });
 
         for object in object_versions {
+            debug!(
+                key = object.key(),
+                "list_object_versions(): sending remote object."
+            );
             if let Err(e) = sender
                 .send(object.clone())
                 .await
@@ -351,6 +355,7 @@ impl S3Storage {
                         &key_without_prefix,
                     );
 
+                    debug!(key = object.key(), "list_objects(): sending remote object.");
                     if let Err(e) = sender
                         .send(non_versioning_object.clone())
                         .await
@@ -542,6 +547,7 @@ impl StorageTrait for S3Storage {
                 let non_versioning_object =
                     S3syncObject::clone_non_versioning_object_with_key(object, &key_without_prefix);
 
+                debug!(key = object.key(), "list_objects(): sending remote object.");
                 if let Err(e) = sender
                     .send(non_versioning_object.clone())
                     .await

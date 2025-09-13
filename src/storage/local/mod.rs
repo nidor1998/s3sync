@@ -232,6 +232,7 @@ impl LocalStorage {
                         generate_e_tag_hash_from_path_with_auto_chunksize(
                             real_path,
                             parts.iter().map(|part| part.size().unwrap()).collect(),
+                            self.cancellation_token.clone(),
                         )
                         .await?,
                     )
@@ -242,6 +243,7 @@ impl LocalStorage {
                             real_path,
                             source_content_length as usize + 1,
                             source_content_length as usize + 1,
+                            self.cancellation_token.clone(),
                         )
                         .await?,
                     )
@@ -252,6 +254,7 @@ impl LocalStorage {
                         real_path,
                         self.config.transfer_config.multipart_chunksize as usize,
                         self.config.transfer_config.multipart_threshold as usize,
+                        self.cancellation_token.clone(),
                     )
                     .await?,
                 )
@@ -409,6 +412,7 @@ impl LocalStorage {
                 parts,
                 multipart_threshold,
                 is_full_object_checksum(&Some(source_final_checksum.clone())),
+                self.cancellation_token.clone(),
             )
             .await?;
 
@@ -1002,6 +1006,15 @@ impl LocalStorage {
                 prefix.into()
             };
 
+            // This is special for test emulation.
+            #[allow(clippy::collapsible_if)]
+            if cfg!(feature = "e2e_test_dangerous_simulations") {
+                self.do_cancel_simulation("LocalStorage::list_objects_target");
+                if self.cancellation_token.is_cancelled() {
+                    return Err(anyhow!(S3syncError::Cancelled));
+                }
+            }
+
             trace!(
                 "is_root_prefix: {}, Listing local path: {:?}",
                 is_root_prefix, path
@@ -1132,6 +1145,12 @@ impl LocalStorage {
                     path = convert_windows_directory_char_to_slash(&path);
                 }
 
+                // This is special for test emulation.
+                #[allow(clippy::collapsible_if)]
+                if cfg!(feature = "e2e_test_dangerous_simulations") {
+                    self.do_cancel_simulation("LocalStorage::list_objects")
+                }
+
                 let e_tag = if self.config.filter_config.check_etag
                     && !self.config.transfer_config.auto_chunksize
                     && !self.config.filter_config.remove_modified_filter
@@ -1142,6 +1161,7 @@ impl LocalStorage {
                             &PathBuf::from(entry.as_ref().unwrap().path()),
                             self.config.transfer_config.multipart_chunksize as usize,
                             self.config.transfer_config.multipart_threshold as usize,
+                            self.cancellation_token.clone(),
                         )
                         .await?,
                     )
@@ -1164,6 +1184,10 @@ impl LocalStorage {
                     }
                 }
 
+                debug!(
+                    key = path.to_string(),
+                    "list_objects(): sending local object."
+                );
                 if let Err(e) = sender
                     .send(object)
                     .await
@@ -1179,6 +1203,25 @@ impl LocalStorage {
 
             Ok(())
         })
+    }
+
+    fn do_cancel_simulation(&self, cancellation_point: &str) {
+        const CANCEL_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_CANCEL_DANGEROUS_SIMULATION";
+        const CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+        if std::env::var(CANCEL_DANGEROUS_SIMULATION_ENV)
+            .is_ok_and(|v| v == CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW)
+            && self
+                .config
+                .cancellation_point
+                .as_ref()
+                .is_some_and(|point| point == cancellation_point)
+        {
+            error!(
+                "cancel simulation has been triggered. This message should not be shown in the production.",
+            );
+            self.cancellation_token.cancel();
+        }
     }
 }
 
@@ -1283,6 +1326,7 @@ impl StorageTrait for LocalStorage {
                         &PathBuf::from(entry.as_ref().unwrap().path()),
                         self.config.transfer_config.multipart_chunksize as usize,
                         self.config.transfer_config.multipart_threshold as usize,
+                        self.cancellation_token.clone(),
                     )
                     .await?,
                 )
@@ -1305,6 +1349,10 @@ impl StorageTrait for LocalStorage {
                 }
             }
 
+            debug!(
+                key = path.to_string(),
+                "list_objects(): sending local object."
+            );
             if let Err(e) = sender
                 .send(object)
                 .await
@@ -1388,7 +1436,7 @@ impl StorageTrait for LocalStorage {
             content_range = None;
         }
 
-        if self.config.dry_run {
+        if self.config.dry_run || self.config.disable_additional_checksum_verify {
             need_checksum = false;
         }
 
@@ -1404,6 +1452,7 @@ impl StorageTrait for LocalStorage {
                     self.config.transfer_config.multipart_chunksize as usize,
                     self.config.transfer_config.multipart_threshold as usize,
                     self.config.full_object_checksum,
+                    self.cancellation_token.clone(),
                 )
                 .await?,
             )

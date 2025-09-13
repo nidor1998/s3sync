@@ -17,6 +17,7 @@ use crate::storage::e_tag_verify::{
 use crate::storage::local::fs_util;
 use crate::types::SyncStatistics::SyncWarning;
 use crate::types::event_callback::{EventData, EventType};
+use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     S3syncObject, SYNC_REPORT_ETAG_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_MATCHES,
     SYNC_STATUS_MISMATCH, SYNC_STATUS_UNKNOWN, SyncStatsReport,
@@ -29,6 +30,7 @@ pub struct ETagDiffDetector {
     source: Storage,
     target: Storage,
     sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+    cancellation_token: PipelineCancellationToken,
 }
 
 #[async_trait]
@@ -63,12 +65,14 @@ impl ETagDiffDetector {
         source: Storage,
         target: Storage,
         sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+        cancellation_token: PipelineCancellationToken,
     ) -> DiffDetector {
         Box::new(ETagDiffDetector {
             config,
             source,
             target,
             sync_stats_report,
+            cancellation_token,
         })
     }
 
@@ -389,6 +393,7 @@ impl ETagDiffDetector {
                                 &local_path,
                                 self.config.transfer_config.multipart_chunksize as usize,
                                 self.config.transfer_config.multipart_threshold as usize,
+                                self.cancellation_token.clone(),
                             )
                             .await?
                         } else {
@@ -398,6 +403,7 @@ impl ETagDiffDetector {
                                     .iter()
                                     .map(|part| part.size().unwrap())
                                     .collect(),
+                                self.cancellation_token.clone(),
                             )
                             .await?
                         }
@@ -411,6 +417,7 @@ impl ETagDiffDetector {
                     &local_path,
                     self.config.transfer_config.multipart_chunksize as usize,
                     self.config.transfer_config.multipart_threshold as usize,
+                    self.cancellation_token.clone(),
                 )
                 .await?
             }
@@ -659,6 +666,7 @@ impl ETagDiffDetector {
                                 &local_path,
                                 self.config.transfer_config.multipart_chunksize as usize,
                                 self.config.transfer_config.multipart_threshold as usize,
+                                self.cancellation_token.clone(),
                             )
                             .await?
                         } else {
@@ -668,6 +676,7 @@ impl ETagDiffDetector {
                                     .iter()
                                     .map(|part| part.size().unwrap())
                                     .collect(),
+                                self.cancellation_token.clone(),
                             )
                             .await?
                         }
@@ -681,6 +690,7 @@ impl ETagDiffDetector {
                     &local_path,
                     self.config.transfer_config.multipart_chunksize as usize,
                     self.config.transfer_config.multipart_threshold as usize,
+                    self.cancellation_token.clone(),
                 )
                 .await?
             }
@@ -942,6 +952,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -993,6 +1004,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1043,6 +1055,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1094,6 +1107,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1145,6 +1159,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1195,6 +1210,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1246,6 +1262,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
@@ -1298,6 +1315,7 @@ mod tests {
             dyn_clone::clone_box(&*(source)),
             dyn_clone::clone_box(&*(target)),
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
         );
 
         let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()

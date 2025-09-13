@@ -184,8 +184,9 @@ objects are end-to-end integrity verified(MD5, SHA256).
   ```
 
 Local to S3, `c7a.large(2vCPU, 4GB)` 16 objects(6GiB objects), 96.00 GiB | 287.91 MiB/sec, 5.41 minutes, and all objects
-are end-to-end integrity verified(MD5, SHA256).
+are end-to-end integrity verified(MD5, SHA256). 
 
+Note: SHA256, SHA1 algorithms are slow, especially for verifying large local objects.
   ```
   [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 64 --additional-checksum-algorithm SHA256 ~/testdata s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/testdata/
   96.00 GiB | 287.91 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 6 minutes
@@ -201,6 +202,8 @@ ETag/additional checksum verification is costly in the case of S3 to Local. Beca
 downloaded object from the local disk to calculate ETag/checksum.   
 You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`. Without all verifications,
 the result was 96.00 GiB | 125.42 MiB/sec, 14 minutes.
+
+Note: SHA256, SHA1 algorithms are slow, especially for verifying large local objects. 
 
   ```
   [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 64 --enable-additional-checksum s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/ ./download/
@@ -1066,12 +1069,17 @@ user-defined metadata: `s3sync_origin_last_modified`
 
 If you want to use additional checksum for upload, specify the algorithm.
 
+SHA256, SHA1 algorithms are slow, especially for verifying large local objects. CRC64NVME is the default algorithm Amazon S3 uses.  
+If you want high performance with large objects, you may use other algorithms.
+
 ### --enable-additional-checksum
 
 If you want to use additional checksums for download, specify the option.
 
-Warning: Even if the object was uploaded with additional checksum, without this option, s3sync does not verify
-additional checksum.
+SHA256, SHA1 algorithms are slow, especially for verifying large local objects. CRC64NVME is the default algorithm Amazon S3 uses.  
+If you want high performance with large objects, you may use other algorithms.
+
+Warning: Even if the object was uploaded with additional checksum, without this option, s3sync does not verify additional checksum.
 
 ### --disable-multipart-verify
 

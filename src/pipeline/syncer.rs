@@ -16,8 +16,9 @@ use crate::types::{
     SYNC_REPORT_CONTENT_TYPE_METADATA_KEY, SYNC_REPORT_EXPIRES_METADATA_KEY,
     SYNC_REPORT_METADATA_TYPE, SYNC_REPORT_TAGGING_TYPE, SYNC_REPORT_USER_DEFINED_METADATA_KEY,
     SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH,
-    SseCustomerKey, SyncStatsReport, TAGGING_SYNC_REPORT_LOG_NAME, format_metadata, format_tags,
-    get_additional_checksum, get_additional_checksum_with_head_object, is_full_object_checksum,
+    SseCustomerKey, SyncStatsReport, TAGGING_SYNC_REPORT_LOG_NAME, error, format_metadata,
+    format_tags, get_additional_checksum, get_additional_checksum_with_head_object,
+    is_full_object_checksum,
 };
 use anyhow::{Context, Error, Result, anyhow};
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
@@ -326,6 +327,7 @@ impl ObjectSyncer {
             dyn_clone::clone_box(&*(*self.base.target.as_ref().unwrap())),
             self.worker_index,
             self.get_sync_stats_report(),
+            self.base.cancellation_token.clone(),
         );
 
         if self.base.config.report_sync_status {
@@ -876,7 +878,7 @@ impl ObjectSyncer {
             .await;
         self.base.set_warning();
 
-        if is_cancelled_error(&e) {
+        if error::is_cancelled_error(&e) {
             let message = "put_object() has been cancelled.";
             warn!(worker_index = self.worker_index, key = key, message);
 
@@ -2246,14 +2248,6 @@ fn is_directory_traversal_error(e: &Error) -> bool {
     false
 }
 
-fn is_cancelled_error(e: &Error) -> bool {
-    if let Some(err) = e.downcast_ref::<S3syncError>() {
-        return *err == S3syncError::Cancelled;
-    }
-
-    false
-}
-
 fn tag_set_to_map(tag_set: &[Tag]) -> HashMap<String, String> {
     let mut map = HashMap::<_, _>::new();
     for tag in tag_set {
@@ -2343,11 +2337,10 @@ mod tests {
     use aws_smithy_runtime_api::http::{Response, StatusCode};
     use aws_smithy_types::body::SdkBody;
 
+    use super::*;
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
     use tracing_subscriber::EnvFilter;
-
-    use super::*;
 
     #[test]
     fn is_force_retry_available_test() {
@@ -2413,20 +2406,6 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         assert!(is_directory_traversal_error(&anyhow!(
-            S3syncError::DirectoryTraversalError
-        )));
-        assert!(!is_directory_traversal_error(&anyhow!("Error")));
-        assert!(!is_directory_traversal_error(&anyhow!(
-            build_head_object_service_not_found_error()
-        )));
-    }
-
-    #[test]
-    fn is_cancelled_error_test() {
-        init_dummy_tracing_subscriber();
-
-        assert!(is_cancelled_error(&anyhow!(S3syncError::Cancelled)));
-        assert!(!is_cancelled_error(&anyhow!(
             S3syncError::DirectoryTraversalError
         )));
         assert!(!is_directory_traversal_error(&anyhow!("Error")));
