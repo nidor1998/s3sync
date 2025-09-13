@@ -1402,7 +1402,7 @@ impl StorageTrait for LocalStorage {
             content_range = None;
         }
 
-        if self.config.dry_run {
+        if self.config.dry_run || self.config.disable_additional_checksum_verify {
             need_checksum = false;
         }
 
