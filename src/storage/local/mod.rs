@@ -1169,6 +1169,10 @@ impl LocalStorage {
                     }
                 }
 
+                debug!(
+                    key = path.to_string(),
+                    "list_objects(): sending local object."
+                );
                 if let Err(e) = sender
                     .send(object)
                     .await
@@ -1311,6 +1315,10 @@ impl StorageTrait for LocalStorage {
                 }
             }
 
+            debug!(
+                key = path.to_string(),
+                "list_objects(): sending local object."
+            );
             if let Err(e) = sender
                 .send(object)
                 .await

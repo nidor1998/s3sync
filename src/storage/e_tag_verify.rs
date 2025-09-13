@@ -6,7 +6,8 @@ use anyhow::{Result, anyhow};
 use aws_sdk_s3::types::ServerSideEncryption;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
-use tracing::{debug, trace};
+use tokio::time::Instant;
+use tracing::debug;
 
 const UNKNOWN_E_TAG_VALUE: &str = "UNKNOWN";
 
@@ -74,10 +75,12 @@ pub async fn generate_e_tag_hash_from_path(
     multipart_threshold: usize,
     cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
-    trace!(
+    debug!(
         path = path.to_str(),
-        "generate_e_tag_hash_from_path() start"
+        "generate_e_tag_hash_from_path() start."
     );
+
+    let etag_generate_start_time = Instant::now();
 
     let mut file = File::open(path).await?;
 
@@ -88,7 +91,13 @@ pub async fn generate_e_tag_hash_from_path(
         buffer.resize_with(remaining_bytes as usize, Default::default);
         file.read_exact(buffer.as_mut_slice()).await?;
 
-        return Ok(generate_e_tag_hash(md5::compute(&buffer).as_slice(), 0));
+        let final_etag = Ok(generate_e_tag_hash(md5::compute(&buffer).as_slice(), 0));
+        debug!(
+            path = path.to_str().unwrap(),
+            duration_ms = etag_generate_start_time.elapsed().as_millis(),
+            "generate_e_tag_hash_from_path() end."
+        );
+        return final_etag;
     }
 
     let mut parts_count = 0;
@@ -119,7 +128,11 @@ pub async fn generate_e_tag_hash_from_path(
     }
 
     let hash = Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count));
-    trace!(path = path.to_str(), "generate_e_tag_hash_from_path() end");
+    debug!(
+        path = path.to_str().unwrap(),
+        duration_ms = etag_generate_start_time.elapsed().as_millis(),
+        "generate_e_tag_hash_from_path() end."
+    );
 
     hash
 }
@@ -129,14 +142,16 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
     object_parts: Vec<i64>,
     cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
-    trace!(
+    debug!(
         path = path.to_str(),
-        "generate_e_tag_hash_from_path_with_auto_chunksize() start"
+        "generate_e_tag_hash_from_path_with_auto_chunksize() start."
     );
 
     if object_parts.is_empty() {
         panic!("object_parts is empty");
     }
+
+    let etag_generate_start_time = Instant::now();
 
     let mut file = File::open(path).await?;
     let file_size = file.metadata().await?.len();
@@ -164,7 +179,10 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
         parts_count += 1;
 
         if cancellation_token.is_cancelled() {
-            debug!("generate_e_tag_hash_from_path_with_auto_chunksize() cancelled");
+            debug!(
+                path = path.to_str().unwrap(),
+                "generate_e_tag_hash_from_path_with_auto_chunksize() cancelled."
+            );
             return Err(anyhow!(S3syncError::Cancelled));
         }
     }
@@ -174,9 +192,10 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
     }
 
     let hash = Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count));
-    trace!(
-        path = path.to_str(),
-        "generate_e_tag_hash_from_path_with_auto_chunksize() end"
+    debug!(
+        path = path.to_str().unwrap(),
+        duration_ms = etag_generate_start_time.elapsed().as_millis(),
+        "generate_e_tag_hash_from_path_with_auto_chunksize() end."
     );
 
     hash

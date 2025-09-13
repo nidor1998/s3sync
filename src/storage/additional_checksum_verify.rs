@@ -7,6 +7,7 @@ use anyhow::{Result, anyhow};
 use aws_sdk_s3::types::ChecksumAlgorithm;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
+use tokio::time::Instant;
 use tracing::debug;
 
 const UNKNOWN_CHECKSUM_VALUE: &str = "UNKNOWN";
@@ -31,6 +32,13 @@ pub async fn generate_checksum_from_path(
     if object_parts.is_empty() {
         panic!("parts_size is empty");
     }
+
+    debug!(
+        path = path.to_str().unwrap(),
+        "generate_checksum_from_path() start."
+    );
+
+    let checksum_generate_start_time = Instant::now();
 
     let mut file = File::open(path).await?;
     let mut checksum = AdditionalChecksum::new(checksum_algorithm, full_object_checksum);
@@ -57,7 +65,7 @@ pub async fn generate_checksum_from_path(
         if cancellation_token.is_cancelled() {
             debug!(
                 path = path.to_str().unwrap(),
-                "generate_checksum_from_path() is cancelled"
+                "generate_checksum_from_path() is cancelled."
             );
             return Err(anyhow!(S3syncError::Cancelled));
         }
@@ -71,10 +79,22 @@ pub async fn generate_checksum_from_path(
     }
 
     if !multipart {
+        debug!(
+            path = path.to_str().unwrap(),
+            duration_ms = checksum_generate_start_time.elapsed().as_millis(),
+            "generate_checksum_from_path() end."
+        );
         return Ok(last_hash);
     }
 
-    Ok(checksum.finalize_all())
+    let final_checksum = Ok(checksum.finalize_all());
+    debug!(
+        path = path.to_str().unwrap(),
+        duration_ms = checksum_generate_start_time.elapsed().as_millis(),
+        "generate_checksum_from_path() end."
+    );
+
+    final_checksum
 }
 
 pub async fn generate_checksum_from_path_for_check(
@@ -91,6 +111,13 @@ pub async fn generate_checksum_from_path_for_check(
     if !multipart && 2 <= object_parts.len() {
         panic!("multipart is false but object_parts has more than 1 element");
     }
+
+    debug!(
+        path = path.to_str().unwrap(),
+        "generate_checksum_from_path_for_check() start."
+    );
+
+    let checksum_generate_start_time = Instant::now();
 
     let mut file = File::open(path).await?;
     let file_size = file.metadata().await?.len();
@@ -116,7 +143,7 @@ pub async fn generate_checksum_from_path_for_check(
         if cancellation_token.is_cancelled() {
             debug!(
                 path = path.to_str().unwrap(),
-                "generate_checksum_from_path_for_check() is cancelled"
+                "generate_checksum_from_path_for_check() is cancelled."
             );
             return Err(anyhow!(S3syncError::Cancelled));
         }
@@ -130,10 +157,22 @@ pub async fn generate_checksum_from_path_for_check(
     }
 
     if !multipart {
+        debug!(
+            path = path.to_str().unwrap(),
+            duration_ms = checksum_generate_start_time.elapsed().as_millis(),
+            "generate_checksum_from_path_for_check() end."
+        );
         return Ok(last_hash);
     }
 
-    Ok(checksum.finalize_all())
+    let final_checksum = Ok(checksum.finalize_all());
+    debug!(
+        path = path.to_str().unwrap(),
+        duration_ms = checksum_generate_start_time.elapsed().as_millis(),
+        "generate_checksum_from_path_for_check() end."
+    );
+
+    final_checksum
 }
 
 pub async fn generate_checksum_from_path_with_chunksize(
@@ -144,6 +183,12 @@ pub async fn generate_checksum_from_path_with_chunksize(
     full_object_checksum: bool,
     cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
+    let checksum_generate_start_time = Instant::now();
+    debug!(
+        path = path.to_str().unwrap(),
+        "generate_checksum_from_path_with_chunksize() start."
+    );
+
     let mut file = File::open(path).await?;
     let mut remaining_bytes = file.metadata().await?.len();
 
@@ -155,7 +200,13 @@ pub async fn generate_checksum_from_path_with_chunksize(
         file.read_exact(buffer.as_mut_slice()).await?;
         checksum.update(buffer.as_slice());
 
-        return Ok(checksum.finalize());
+        let final_checksum = Ok(checksum.finalize());
+        debug!(
+            path = path.to_str().unwrap(),
+            duration_ms = checksum_generate_start_time.elapsed().as_millis(),
+            "generate_checksum_from_path_with_chunksize() end."
+        );
+        return final_checksum;
     }
 
     while 0 < remaining_bytes {
@@ -174,7 +225,7 @@ pub async fn generate_checksum_from_path_with_chunksize(
         if cancellation_token.is_cancelled() {
             debug!(
                 path = path.to_str().unwrap(),
-                "generate_checksum_from_path_with_chunksize() is cancelled"
+                "generate_checksum_from_path_with_chunksize() is cancelled."
             );
             return Err(anyhow!(S3syncError::Cancelled));
         }
@@ -182,7 +233,14 @@ pub async fn generate_checksum_from_path_with_chunksize(
         remaining_bytes -= real_chunksize as u64;
     }
 
-    Ok(checksum.finalize_all())
+    let final_checksum = Ok(checksum.finalize_all());
+    debug!(
+        path = path.to_str().unwrap(),
+        duration_ms = checksum_generate_start_time.elapsed().as_millis(),
+        "generate_checksum_from_path_for_check() end."
+    );
+
+    final_checksum
 }
 
 #[cfg(test)]
