@@ -1,9 +1,12 @@
 use std::path::Path;
 
+use crate::types::error::S3syncError;
+use crate::types::token::PipelineCancellationToken;
 use anyhow::{Result, anyhow};
 use aws_sdk_s3::types::ServerSideEncryption;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
+use tracing::{debug, trace};
 
 const UNKNOWN_E_TAG_VALUE: &str = "UNKNOWN";
 
@@ -69,7 +72,13 @@ pub async fn generate_e_tag_hash_from_path(
     path: &Path,
     multipart_chunksize: usize,
     multipart_threshold: usize,
+    cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
+    trace!(
+        path = path.to_str(),
+        "generate_e_tag_hash_from_path() start"
+    );
+
     let mut file = File::open(path).await?;
 
     let mut remaining_bytes = file.metadata().await?.len();
@@ -99,15 +108,32 @@ pub async fn generate_e_tag_hash_from_path(
         concatnated_md5_hash.append(&mut md5_digest);
         remaining_bytes -= real_chunksize as u64;
         parts_count += 1;
+
+        if cancellation_token.is_cancelled() {
+            debug!(
+                path = path.to_str(),
+                "generate_e_tag_hash_from_path() cancelled"
+            );
+            return Err(anyhow!(S3syncError::Cancelled));
+        }
     }
 
-    Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count))
+    let hash = Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count));
+    trace!(path = path.to_str(), "generate_e_tag_hash_from_path() end");
+
+    hash
 }
 
 pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
     path: &Path,
     object_parts: Vec<i64>,
+    cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
+    trace!(
+        path = path.to_str(),
+        "generate_e_tag_hash_from_path_with_auto_chunksize() start"
+    );
+
     if object_parts.is_empty() {
         panic!("object_parts is empty");
     }
@@ -136,13 +162,24 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
         let mut md5_digest = md5::compute(&buffer).as_slice().to_vec();
         concatnated_md5_hash.append(&mut md5_digest);
         parts_count += 1;
+
+        if cancellation_token.is_cancelled() {
+            debug!("generate_e_tag_hash_from_path_with_auto_chunksize() cancelled");
+            return Err(anyhow!(S3syncError::Cancelled));
+        }
     }
 
     if read_bytes != file_size as usize {
         return Ok(UNKNOWN_E_TAG_VALUE.to_string());
     }
 
-    Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count))
+    let hash = Ok(generate_e_tag_hash(&concatnated_md5_hash, parts_count));
+    trace!(
+        path = path.to_str(),
+        "generate_e_tag_hash_from_path_with_auto_chunksize() end"
+    );
+
+    hash
 }
 pub fn normalize_e_tag(e_tag: &Option<String>) -> Option<String> {
     if e_tag.is_none() {
@@ -162,6 +199,7 @@ fn is_verification_supported_sse(sse: &Option<ServerSideEncryption>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::token::create_pipeline_cancellation_token;
     use std::path::PathBuf;
     use tracing_subscriber::EnvFilter;
 
@@ -573,7 +611,8 @@ mod tests {
             generate_e_tag_hash_from_path(
                 &PathBuf::from(LARGE_FILE_PATH),
                 8 * 1024 * 1024,
-                8 * 1024 * 1024
+                8 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
@@ -584,7 +623,8 @@ mod tests {
             generate_e_tag_hash_from_path(
                 &PathBuf::from(LARGE_FILE_PATH),
                 100 * 1024 * 1024,
-                100 * 1024 * 1024
+                100 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
@@ -595,12 +635,34 @@ mod tests {
             generate_e_tag_hash_from_path(
                 &PathBuf::from(LARGE_FILE_PATH),
                 5 * 1024 * 1024,
-                10 * 1024 * 1024
+                10 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
             LARGE_FILE_S3_CHUNK_5MB_ETAG.to_string()
         );
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_cancel_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        assert!(
+            generate_e_tag_hash_from_path(
+                &PathBuf::from(LARGE_FILE_PATH),
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                cancel_token,
+            )
+            .await
+            .is_err()
+        )
     }
 
     #[tokio::test]
@@ -613,6 +675,7 @@ mod tests {
             generate_e_tag_hash_from_path_with_auto_chunksize(
                 &PathBuf::from(LARGE_FILE_PATH),
                 vec![17179870, 17179870, 17179870, 889190],
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
@@ -623,6 +686,7 @@ mod tests {
             generate_e_tag_hash_from_path_with_auto_chunksize(
                 &PathBuf::from(LARGE_FILE_PATH),
                 vec![17179870, 17179870, 17179870, 889191],
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
@@ -633,6 +697,7 @@ mod tests {
             generate_e_tag_hash_from_path_with_auto_chunksize(
                 &PathBuf::from(LARGE_FILE_PATH),
                 vec![17179870, 17179870, 17179870, 889189],
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
@@ -643,6 +708,7 @@ mod tests {
             generate_e_tag_hash_from_path_with_auto_chunksize(
                 &PathBuf::from(LARGE_FILE_PATH),
                 vec![17179870, 17179870, 889189],
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
@@ -653,6 +719,7 @@ mod tests {
             generate_e_tag_hash_from_path_with_auto_chunksize(
                 &PathBuf::from(LARGE_FILE_PATH),
                 vec![17179870, 17179870, 17179870, 889190, 32],
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
@@ -663,10 +730,31 @@ mod tests {
             generate_e_tag_hash_from_path_with_auto_chunksize(
                 &PathBuf::from(LARGE_FILE_PATH),
                 vec![17179870, 17179870],
+                create_pipeline_cancellation_token(),
             )
             .await
             .unwrap(),
             UNKNOWN_E_TAG_VALUE
+        );
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_auto_chunksize_cancel_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        assert!(
+            generate_e_tag_hash_from_path_with_auto_chunksize(
+                &PathBuf::from(LARGE_FILE_PATH),
+                vec![17179870, 17179870, 17179870, 889190],
+                cancel_token,
+            )
+            .await
+            .is_err()
         );
     }
 

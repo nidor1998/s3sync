@@ -1,10 +1,13 @@
 use std::path::Path;
 
 use crate::storage::checksum::AdditionalChecksum;
+use crate::types::error::S3syncError;
+use crate::types::token::PipelineCancellationToken;
 use anyhow::{Result, anyhow};
 use aws_sdk_s3::types::ChecksumAlgorithm;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
+use tracing::debug;
 
 const UNKNOWN_CHECKSUM_VALUE: &str = "UNKNOWN";
 
@@ -23,6 +26,7 @@ pub async fn generate_checksum_from_path(
     object_parts: Vec<i64>,
     multipart_threshold: usize,
     full_object_checksum: bool,
+    cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
     if object_parts.is_empty() {
         panic!("parts_size is empty");
@@ -50,6 +54,14 @@ pub async fn generate_checksum_from_path(
         }
         read_bytes += read_result?;
 
+        if cancellation_token.is_cancelled() {
+            debug!(
+                path = path.to_str().unwrap(),
+                "generate_checksum_from_path() is cancelled"
+            );
+            return Err(anyhow!(S3syncError::Cancelled));
+        }
+
         checksum.update(buffer.as_slice());
         last_hash = checksum.finalize()
     }
@@ -71,6 +83,7 @@ pub async fn generate_checksum_from_path_for_check(
     multipart: bool,
     object_parts: Vec<i64>,
     full_object_checksum: bool,
+    cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
     if object_parts.is_empty() {
         panic!("parts_size is empty");
@@ -100,6 +113,14 @@ pub async fn generate_checksum_from_path_for_check(
         }
         read_bytes += read_result?;
 
+        if cancellation_token.is_cancelled() {
+            debug!(
+                path = path.to_str().unwrap(),
+                "generate_checksum_from_path_for_check() is cancelled"
+            );
+            return Err(anyhow!(S3syncError::Cancelled));
+        }
+
         checksum.update(buffer.as_slice());
         last_hash = checksum.finalize()
     }
@@ -121,6 +142,7 @@ pub async fn generate_checksum_from_path_with_chunksize(
     multipart_chunksize: usize,
     multipart_threshold: usize,
     full_object_checksum: bool,
+    cancellation_token: PipelineCancellationToken,
 ) -> Result<String> {
     let mut file = File::open(path).await?;
     let mut remaining_bytes = file.metadata().await?.len();
@@ -149,6 +171,14 @@ pub async fn generate_checksum_from_path_with_chunksize(
         checksum.update(buffer.as_slice());
         let _ = checksum.finalize();
 
+        if cancellation_token.is_cancelled() {
+            debug!(
+                path = path.to_str().unwrap(),
+                "generate_checksum_from_path_with_chunksize() is cancelled"
+            );
+            return Err(anyhow!(S3syncError::Cancelled));
+        }
+
         remaining_bytes -= real_chunksize as u64;
     }
 
@@ -163,6 +193,7 @@ mod tests {
         UNKNOWN_CHECKSUM_VALUE, generate_checksum_from_path, generate_checksum_from_path_for_check,
         generate_checksum_from_path_with_chunksize, is_multipart_upload_checksum,
     };
+    use crate::types::token::create_pipeline_cancellation_token;
     use aws_sdk_s3::types::ChecksumAlgorithm;
     use tracing_subscriber::EnvFilter;
 
@@ -210,6 +241,7 @@ mod tests {
             vec![5],
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -229,6 +261,7 @@ mod tests {
             vec![8 * 1024 * 1024, 1048576],
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -240,6 +273,7 @@ mod tests {
             vec![8 * 1024 * 1024, 1048575],
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -251,6 +285,7 @@ mod tests {
             vec![8 * 1024 * 1024, 1048577],
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -262,6 +297,7 @@ mod tests {
             vec![8 * 1024 * 1024, 1048576, 5],
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -273,10 +309,33 @@ mod tests {
             vec![7 * 1024 * 1024],
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
         assert_eq!(checksum, UNKNOWN_CHECKSUM_VALUE.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_multipart_cancel_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        assert!(
+            generate_checksum_from_path(
+                PathBuf::from(LARGE_FILE_PATH).as_path(),
+                ChecksumAlgorithm::Sha256,
+                vec![8 * 1024 * 1024, 1048576],
+                8 * 1024 * 1024,
+                false,
+                cancel_token,
+            )
+            .await
+            .is_err()
+        );
     }
 
     #[tokio::test]
@@ -291,6 +350,7 @@ mod tests {
             vec![8 * 1024 * 1024, 1048576],
             8 * 1024 * 1024,
             true,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -305,6 +365,7 @@ mod tests {
             vec![8 * 1024 * 1024, 1048575],
             8 * 1024 * 1024,
             true,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -323,6 +384,7 @@ mod tests {
             vec![9 * 1024 * 1024],
             9 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -340,11 +402,35 @@ mod tests {
             8 * 1024 * 1024,
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
 
         assert_eq!(checksum, TEST_SHA256_BASE64_DIGEST.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_chunksize_cancel_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        assert!(
+            generate_checksum_from_path_with_chunksize(
+                PathBuf::from(LARGE_FILE_PATH).as_path(),
+                ChecksumAlgorithm::Sha256,
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                false,
+                cancel_token,
+            )
+            .await
+            .is_err()
+        );
     }
 
     #[tokio::test]
@@ -357,6 +443,7 @@ mod tests {
             8 * 1024 * 1024,
             8 * 1024 * 1024,
             true,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -376,6 +463,7 @@ mod tests {
             8 * 1024 * 1024,
             8 * 1024 * 1024,
             true,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -398,6 +486,7 @@ mod tests {
             8 * 1024 * 1024,
             8 * 1024 * 1024,
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -415,6 +504,7 @@ mod tests {
             false,
             vec![5],
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -433,6 +523,7 @@ mod tests {
             true,
             vec![8 * 1024 * 1024, 1048576],
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -444,6 +535,7 @@ mod tests {
             true,
             vec![8 * 1024 * 1024, 1048575],
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -455,6 +547,7 @@ mod tests {
             true,
             vec![8 * 1024 * 1024, 1048577],
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -466,6 +559,7 @@ mod tests {
             true,
             vec![8 * 1024 * 1024, 1048576, 5],
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -477,10 +571,34 @@ mod tests {
             true,
             vec![7 * 1024 * 1024],
             false,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
         assert_eq!(checksum, UNKNOWN_CHECKSUM_VALUE.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_for_check_multipart_cancel_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file().await;
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        assert!(
+            generate_checksum_from_path_for_check(
+                PathBuf::from(LARGE_FILE_PATH).as_path(),
+                ChecksumAlgorithm::Sha256,
+                true,
+                vec![8 * 1024 * 1024, 1048576],
+                false,
+                cancel_token
+            )
+            .await
+            .is_err()
+        );
     }
 
     #[tokio::test]
@@ -495,6 +613,7 @@ mod tests {
             true,
             vec![8 * 1024 * 1024, 1048576],
             true,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -509,6 +628,7 @@ mod tests {
             true,
             vec![8 * 1024 * 1024, 1048576],
             true,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
@@ -523,6 +643,7 @@ mod tests {
             true,
             vec![8 * 1024 * 1024, 1048576],
             true,
+            create_pipeline_cancellation_token(),
         )
         .await
         .unwrap();
