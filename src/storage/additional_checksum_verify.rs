@@ -35,7 +35,7 @@ pub async fn generate_checksum_from_path(
 
     debug!(
         path = path.to_str().unwrap(),
-        "generate_checksum_from_path() start."
+        "generate_checksum_from_path() start. It will take a time if the file is large."
     );
 
     let checksum_generate_start_time = Instant::now();
@@ -114,7 +114,7 @@ pub async fn generate_checksum_from_path_for_check(
 
     debug!(
         path = path.to_str().unwrap(),
-        "generate_checksum_from_path_for_check() start."
+        "generate_checksum_from_path_for_check() start. It will take a time if the file is large."
     );
 
     let checksum_generate_start_time = Instant::now();
@@ -186,7 +186,7 @@ pub async fn generate_checksum_from_path_with_chunksize(
     let checksum_generate_start_time = Instant::now();
     debug!(
         path = path.to_str().unwrap(),
-        "generate_checksum_from_path_with_chunksize() start."
+        "generate_checksum_from_path_with_chunksize() start. It will take a time if the file is large."
     );
 
     let mut file = File::open(path).await?;

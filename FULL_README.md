@@ -158,9 +158,9 @@ for verification by default(CRC64NVME).
 ### Fast
 
 s3sync is implemented in Rust and uses the AWS SDK for Rust, which supports multithreaded asynchronous I/O.  
-In my environment(`c7a.large`, with 256 workers), uploading from local to S3 achieved about 3,900 objects/sec (small
+In my environment(`c7a.xlarge`, with 160 workers), uploading from local to S3 achieved about 4,300 objects/sec (small
 objects 10KiB),  
-The following are benchmark results on a `c7a.large(2vCPU, 4GB)/Amazon Linux 2023 AMI` instance on AWS in
+The following are benchmark results on a `c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)/Amazon Linux 2023 AMI` instance on AWS in
 `ap-northeast-1`. No special optimizations were applied to the instance, the network, or the S3 topology.  
 You can reproduce the benchmark with the following commands.
 
@@ -171,46 +171,46 @@ will increase CPU and memory usage.
 Note: Increasing `--worker-size` and `--max-parallel-uploads` is not always beneficial. This depends on factors such as
 instance type, network, data size, and number of objects.
 
-Local to S3, `c7a.large(2vCPU, 4GB)` 100,000 objects(10KiB objects), 976.56 MiB | 38.88 MiB/sec, 25 seconds, and all
+Local to S3, `c7a.xlarge(4vCPU, 8GB)` 100,000 objects(10KiB objects), 976.56 MiB | 41.96 MiB/sec, 23 seconds, and all
 objects are end-to-end integrity verified(MD5, SHA256).
 
   ```
-  [ec2-user@aws-c7a-large s3sync]$ time s3sync --worker-size 256 --additional-checksum-algorithm SHA256 ~/testdata s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/testdata/
-  976.56 MiB | 38.88 MiB/sec,  transferred 100000 objects | 3,981 objects/sec,  etag verified 100000 objects,  checksum verified 100000 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 25 seconds
-  
-  real	0m25.135s
-  user	0m29.255s
-  sys	0m19.745s
+  [ec2-user@aws-c7a-xlarge s3sync]$ time s3sync --worker-size 160 --additional-checksum-algorithm SHA256 ./test_data s3://2ef073f2-f779-4361-956d-052ad0e6e79b/test_data
+  976.56 MiB | 41.96 MiB/sec,  transferred 100000 objects | 4,297 objects/sec,  etag verified 100000 objects,  checksum verified 100000 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 23 seconds
+
+  real    0m23.287s
+  user    0m31.859s
+  sys     0m22.800s
   ```
 
-Local to S3, `c7a.large(2vCPU, 4GB)` 16 objects(6GiB objects), 96.00 GiB | 287.91 MiB/sec, 5.41 minutes, and all objects
-are end-to-end integrity verified(MD5, SHA256). 
+Local to S3, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 256.72 MiB/sec, 6.23 minutes, and all objects are end-to-end integrity verified(MD5, SHA256). 
 
-Note: Calculating ETag/additional checksum is costly with large local objects.
+Note: Calculating ETag/additional checksum is costly with large local objects. 
 
-  ```
-  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 64 --additional-checksum-algorithm SHA256 ~/testdata s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/testdata/
-  96.00 GiB | 287.91 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 6 minutes
-  
-  real	5m41.643s
-  user	9m36.389s
-  sys	1m37.730s
-  ```
-
-S3 to Local, `c7a.large(2vCPU, 4GB)` 16 objects(6GiB objects), 96.00 GiB | 41.67 MiB/sec, 39 minutes, and all objects
-are end-to-end integrity verified(MD5, SHA256).  
-ETag/additional checksum verification is costly in the case of S3 to Local. Because s3sync needs to read the entire
-downloaded object from the local disk to calculate ETag/checksum.   
-You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`. Without all verifications,
-the result was 96.00 GiB | 125.42 MiB/sec, 14 minutes.
+Note: Above the case, the bottleneck is the disk I/O (Maximum throughput is 500MB/s).
 
   ```
-  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 64 --enable-additional-checksum s3://c1b01a9a-5cea-4650-b3d6-16ac37aad03a/ ./download/
-  96.00 GiB | 41.67 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 39 minutes
-  
-  real	39m19.500s
-  user	9m30.455s
-  sys	2m33.711s
+  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 48 --additional-checksum-algorithm SHA256 ./test_data s3://2ef073f2-f779-4361-956d-052ad0e6e79b/test_data
+  96.00 GiB | 256.72 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 6 minutes
+
+  real    6m23.024s
+  user    7m26.504s
+  sys     1m45.131s
+  ```
+
+S3 to Local, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 166.63 MiB/sec, 10 minutes, and all objects are end-to-end integrity verified(MD5, SHA256).  
+ETag/additional checksum verification is costly in the case of S3 to Local. Because s3sync needs to read the entire downloaded object from the local disk to calculate ETag/checksum.   
+You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`. Without all verifications, the result was 96.00 GiB | 505.33 MiB/sec, 3.2 minutes.
+
+Note: Above the case, the bottleneck is the disk I/O (Maximum throughput is 500MB/s).
+
+  ```
+  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 48 --enable-additional-checksum s3://2ef073f2-f779-4361-956d-052ad0e6e79b/ ./download/
+  96.00 GiB | 166.63 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 10 minutes
+
+  real    9m50.060s
+  user    7m55.742s
+  sys     2m23.921s
   ```
 
 ### Any object size support
