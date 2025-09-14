@@ -6,7 +6,7 @@ use filetime::{FileTime, set_file_mtime};
 use regex::Regex;
 use tempfile::NamedTempFile;
 use tokio::fs::File;
-use tracing::trace;
+use tracing::debug;
 
 pub fn check_directory_traversal(key: &str) -> bool {
     let re = Regex::new(r"\.\.[/\\]").unwrap();
@@ -69,7 +69,7 @@ pub async fn create_directory_hierarchy_from_key(path: PathBuf, key: &str) -> Re
         .context("tokio::fs::create_dir_all() failed.")?;
 
     let directory = directory_path.to_string_lossy().to_string();
-    trace!(key = key, directory = directory, "directory created.");
+    debug!(key = key, directory = directory, "directory created.");
 
     Ok(true)
 }

@@ -68,7 +68,7 @@ impl ObjectSyncer {
     }
 
     pub async fn sync(&self) -> Result<()> {
-        trace!(worker_index = self.worker_index, "sync worker has started.");
+        debug!(worker_index = self.worker_index, "sync worker has started.");
         self.receive_and_sync().await
     }
 
@@ -100,7 +100,7 @@ impl ObjectSyncer {
                         },
                         Err(_) => {
                             // normal shutdown
-                            trace!(worker_index = self.worker_index, "sync worker has been completed.");
+                            debug!(worker_index = self.worker_index, "sync worker has been completed.");
                             break;
                         }
                     }
@@ -1457,7 +1457,7 @@ impl ObjectSyncer {
             .is_match(&formatted)
             .unwrap();
 
-        debug!(
+        trace!(
             name = INCLUDE_METADATA_REGEX_FILTER_NAME,
             worker_index = self.worker_index,
             key = key,
@@ -1493,7 +1493,7 @@ impl ObjectSyncer {
         }
 
         if metadata.is_none() || metadata.as_ref().unwrap().is_empty() {
-            debug!(
+            trace!(
                 name = EXCLUDE_METADATA_REGEX_FILTER_NAME,
                 worker_index = self.worker_index,
                 key = key,
@@ -1514,7 +1514,7 @@ impl ObjectSyncer {
             .is_match(&formatted)
             .unwrap();
 
-        debug!(
+        trace!(
             name = EXCLUDE_METADATA_REGEX_FILTER_NAME,
             worker_index = self.worker_index,
             key = key,
@@ -1544,7 +1544,7 @@ impl ObjectSyncer {
         }
 
         if tags.is_none() {
-            debug!(
+            trace!(
                 name = INCLUDE_TAG_REGEX_FILTER_NAME,
                 worker_index = self.worker_index,
                 key = key,
@@ -1570,7 +1570,7 @@ impl ObjectSyncer {
             .is_match(&formatted)
             .unwrap();
 
-        debug!(
+        trace!(
             name = INCLUDE_TAG_REGEX_FILTER_NAME,
             worker_index = self.worker_index,
             key = key,
@@ -1600,7 +1600,7 @@ impl ObjectSyncer {
         }
 
         if tags.is_none() {
-            debug!(
+            trace!(
                 name = EXCLUDE_TAG_REGEX_FILTER_NAME,
                 worker_index = self.worker_index,
                 key = key,
@@ -1621,7 +1621,7 @@ impl ObjectSyncer {
             .is_match(&formatted)
             .unwrap();
 
-        debug!(
+        trace!(
             name = EXCLUDE_TAG_REGEX_FILTER_NAME,
             worker_index = self.worker_index,
             key = key,
@@ -1657,7 +1657,7 @@ impl ObjectSyncer {
         }
 
         if content_type.is_none() {
-            debug!(
+            trace!(
                 name = INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
                 worker_index = self.worker_index,
                 key = key,
@@ -1682,7 +1682,7 @@ impl ObjectSyncer {
             .is_match(content_type.unwrap())
             .unwrap();
 
-        debug!(
+        trace!(
             name = INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
             worker_index = self.worker_index,
             key = key,
@@ -1718,7 +1718,7 @@ impl ObjectSyncer {
         }
 
         if content_type.is_none() {
-            debug!(
+            trace!(
                 name = EXCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
                 worker_index = self.worker_index,
                 key = key,
@@ -1738,7 +1738,7 @@ impl ObjectSyncer {
             .is_match(content_type.unwrap())
             .unwrap();
 
-        debug!(
+        trace!(
             name = EXCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME,
             worker_index = self.worker_index,
             key = key,

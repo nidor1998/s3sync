@@ -608,7 +608,7 @@ impl UploadManager {
                     && is_multipart_upload_e_tag(source_e_tag)
                     && self.config.disable_multipart_verify
                 {
-                    trace!(
+                    debug!(
                         key = &key,
                         source_e_tag = source_e_tag,
                         target_e_tag = target_e_tag,
@@ -652,7 +652,7 @@ impl UploadManager {
                 event_data.event_type = EventType::SYNC_ETAG_VERIFIED;
                 self.config.event_manager.trigger_event(event_data).await;
 
-                trace!(
+                debug!(
                     key = &key,
                     source_e_tag = source_e_tag,
                     target_e_tag = target_e_tag,
@@ -1743,7 +1743,7 @@ impl UploadManager {
                     && is_multipart_upload_e_tag(source_e_tag)
                     && self.config.disable_multipart_verify
                 {
-                    trace!(
+                    debug!(
                         key = &key,
                         additional_checksum_algorithm = additional_checksum_algorithm,
                         target_checksum = target_checksum,
@@ -1787,7 +1787,7 @@ impl UploadManager {
                 event_data.event_type = EventType::SYNC_CHECKSUM_VERIFIED;
                 self.config.event_manager.trigger_event(event_data).await;
 
-                trace!(
+                debug!(
                     key = &key,
                     additional_checksum_algorithm = additional_checksum_algorithm,
                     target_checksum = target_checksum,

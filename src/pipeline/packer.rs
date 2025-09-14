@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing::{error, trace};
+use tracing::{debug, error};
 
 use crate::types;
 use crate::types::ObjectVersions;
@@ -35,7 +35,7 @@ impl ObjectVersionsPacker {
             }
         }
 
-        trace!("object versions packer has started.");
+        debug!("object versions packer has started.");
 
         let mut object_versions = ObjectVersions::new();
         let mut previous_key = "".to_string();
@@ -61,13 +61,13 @@ impl ObjectVersionsPacker {
                                 self.send_object_versions(&key, &object_versions).await?;
                             }
 
-                            trace!("object versions packer has been completed.");
+                            debug!("object versions packer has been completed.");
                             return Ok(());
                         }
                     }
                 },
                 _ = self.base.cancellation_token.cancelled() => {
-                    trace!("object versions packer has been cancelled.");
+                    debug!("object versions packer has been cancelled.");
                     return Ok(());
                 }
             }

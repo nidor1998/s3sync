@@ -218,7 +218,7 @@ impl LocalStorage {
 
         let key = key.to_string();
         if !self.config.disable_etag_verify && !source_express_onezone_storage {
-            trace!(
+            debug!(
                 key = key,
                 size = source_content_length,
                 "download completed. start to etag verify. depends on the size, this may take a while.",
@@ -276,7 +276,7 @@ impl LocalStorage {
                         && (is_multipart_upload_e_tag(source_e_tag)
                             && self.config.disable_multipart_verify)
                     {
-                        trace!(
+                        debug!(
                             key = &key,
                             source_e_tag = source_e_tag,
                             target_e_tag = target_e_tag,
@@ -330,7 +330,7 @@ impl LocalStorage {
                     let source_e_tag = source_e_tag.clone().unwrap();
                     let target_e_tag = target_e_tag.clone().unwrap();
 
-                    trace!(
+                    debug!(
                         key = &key,
                         source_e_tag = source_e_tag,
                         target_e_tag = target_e_tag,
@@ -377,7 +377,7 @@ impl LocalStorage {
         event_data.source_checksum = source_final_checksum.clone();
 
         if let Some(source_final_checksum) = source_final_checksum {
-            trace!(
+            debug!(
                 key = &key,
                 size = source_content_length,
                 "start to additional checksum verify. depends on the size, this may take a while.",
@@ -439,7 +439,7 @@ impl LocalStorage {
                 event_data.target_checksum = Some(target_final_checksum.clone());
                 self.config.event_manager.trigger_event(event_data).await;
 
-                trace!(
+                debug!(
                     key = &key,
                     additional_checksum_algorithm = additional_checksum_algorithm,
                     source_final_checksum = source_final_checksum,
@@ -1133,7 +1133,7 @@ impl LocalStorage {
                 }
 
                 if self.cancellation_token.is_cancelled() {
-                    trace!("list() canceled.");
+                    debug!("list() canceled.");
                     break;
                 }
 
@@ -1307,7 +1307,7 @@ impl StorageTrait for LocalStorage {
             }
 
             if self.cancellation_token.is_cancelled() {
-                trace!("list() canceled.");
+                debug!("list() canceled.");
                 break;
             }
 

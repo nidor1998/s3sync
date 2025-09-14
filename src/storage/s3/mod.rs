@@ -25,7 +25,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info};
 
 use crate::Config;
 use crate::config::ClientConfig;
@@ -299,7 +299,7 @@ impl S3Storage {
 
             let mut current_permit = Some(permit);
 
-            trace!(
+            debug!(
                 root_prefix = self.prefix,
                 prefix = prefix.as_str(),
                 "Start listing objects."
@@ -323,7 +323,7 @@ impl S3Storage {
                     .max_keys(max_keys);
 
                 if self.cancellation_token.is_cancelled() {
-                    trace!("list_objects() canceled.");
+                    debug!("list_objects() canceled.");
                     break;
                 }
 
@@ -370,7 +370,7 @@ impl S3Storage {
                     let mut join_set = JoinSet::new();
                     for common_prefix in common_prefixes {
                         if self.cancellation_token.is_cancelled() {
-                            trace!("list_objects() canceled.");
+                            debug!("list_objects() canceled.");
                             break;
                         }
 
@@ -379,7 +379,7 @@ impl S3Storage {
                             let sub_prefix = sub_prefix.to_string();
                             let sender = sender.clone();
 
-                            trace!(
+                            debug!(
                                 root_prefix = self.prefix,
                                 prefix = prefix.as_str(),
                                 sub_prefix = sub_prefix.as_str(),
@@ -515,7 +515,7 @@ impl StorageTrait for S3Storage {
                 .max_keys(max_keys);
 
             if self.cancellation_token.is_cancelled() {
-                trace!("list_objects() canceled.");
+                debug!("list_objects() canceled.");
                 break;
             }
 
@@ -594,7 +594,7 @@ impl StorageTrait for S3Storage {
                 .max_keys(max_keys);
 
             if self.cancellation_token.is_cancelled() {
-                trace!("list_object_versions() canceled.");
+                debug!("list_object_versions() canceled.");
                 break;
             }
 
@@ -712,7 +712,7 @@ impl StorageTrait for S3Storage {
                 .max_keys(max_keys);
 
             if self.cancellation_token.is_cancelled() {
-                trace!("list_object_versions() canceled.");
+                debug!("list_object_versions() canceled.");
                 break;
             }
 

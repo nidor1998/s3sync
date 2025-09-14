@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::{Error, anyhow};
 use async_channel::{Receiver, Sender};
 use tokio::task::JoinHandle;
-use tracing::{error, trace};
+use tracing::{debug, error};
 
 use crate::Config;
 use crate::pipeline::deleter::ObjectDeleter;
@@ -419,7 +419,7 @@ impl Pipeline {
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::MtimeBeforeFilter::new(stage, None)));
-            trace!("MtimeBeforeFilter has been started.");
+            debug!("MtimeBeforeFilter has been started.");
 
             previous_stage_receiver = new_receiver;
         }
@@ -429,7 +429,7 @@ impl Pipeline {
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::MtimeAfterFilter::new(stage, None)));
-            trace!("MtimeAfterFilter has been started.");
+            debug!("MtimeAfterFilter has been started.");
 
             previous_stage_receiver = new_receiver;
         }
@@ -439,7 +439,7 @@ impl Pipeline {
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::SmallerSizeFilter::new(stage, None)));
-            trace!("SmallerSizeFilter has been started.");
+            debug!("SmallerSizeFilter has been started.");
 
             previous_stage_receiver = new_receiver;
         }
@@ -449,7 +449,7 @@ impl Pipeline {
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(filter::LargerSizeFilter::new(stage, None)));
-            trace!("LargerSizeFilter has been started.");
+            debug!("LargerSizeFilter has been started.");
 
             previous_stage_receiver = new_receiver;
         }
@@ -459,7 +459,7 @@ impl Pipeline {
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(IncludeRegexFilter::new(stage, None)));
-            trace!("IncludeRegexFilter has been started.");
+            debug!("IncludeRegexFilter has been started.");
 
             previous_stage_receiver = new_receiver;
         }
@@ -469,7 +469,7 @@ impl Pipeline {
                 self.create_spsc_stage(Some(previous_stage_receiver), self.has_warning.clone());
 
             self.spawn_filter(Box::new(ExcludeRegexFilter::new(stage, None)));
-            trace!("ExcludeRegexFilter has been started.");
+            debug!("ExcludeRegexFilter has been started.");
 
             previous_stage_receiver = new_receiver;
         }
@@ -485,7 +485,7 @@ impl Pipeline {
 
             // Lua filter callback is implemented as a user-defined filter
             self.spawn_user_defined_filter(stage);
-            trace!("UserDefinedFilter has been started.");
+            debug!("UserDefinedFilter has been started.");
 
             previous_stage_receiver = new_receiver;
         }
@@ -497,7 +497,7 @@ impl Pipeline {
                 stage,
                 self.target_key_map.clone(),
             )));
-            trace!("TargetModifiedFilter has started.");
+            debug!("TargetModifiedFilter has started.");
 
             previous_stage_receiver = new_receiver;
         }

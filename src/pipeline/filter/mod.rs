@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use tracing::{error, trace};
+use tracing::{debug, error};
 
 use super::stage::{SendResult, Stage};
 use crate::config::FilterConfig;
@@ -62,7 +62,7 @@ impl ObjectFilterBase<'_> {
         loop {
             tokio::task::yield_now().await;
             if self.base.cancellation_token.is_cancelled() {
-                trace!(name = self.name, "filter has been cancelled.");
+                debug!(name = self.name, "filter has been cancelled.");
                 return Ok(());
             }
 
@@ -147,7 +147,7 @@ impl ObjectFilterBase<'_> {
                     }
                 }
                 Err(_) => {
-                    trace!(name = self.name, "filter has been completed.");
+                    debug!(name = self.name, "filter has been completed.");
                     return Ok(());
                 }
             }
