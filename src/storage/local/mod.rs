@@ -1009,9 +1009,10 @@ impl LocalStorage {
             // This is special for test emulation.
             #[allow(clippy::collapsible_if)]
             if cfg!(feature = "e2e_test_dangerous_simulations") {
-                self.do_cancel_simulation("LocalStorage::list_objects_target");
-                if self.cancellation_token.is_cancelled() {
-                    return Err(anyhow!(S3syncError::Cancelled));
+                if self.do_cancel_simulation("LocalStorage::list_objects_target") {
+                    if self.cancellation_token.is_cancelled() {
+                        return Err(anyhow!(S3syncError::Cancelled));
+                    }
                 }
             }
 
@@ -1148,7 +1149,7 @@ impl LocalStorage {
                 // This is special for test emulation.
                 #[allow(clippy::collapsible_if)]
                 if cfg!(feature = "e2e_test_dangerous_simulations") {
-                    self.do_cancel_simulation("LocalStorage::list_objects")
+                    let _ = self.do_cancel_simulation("LocalStorage::list_objects");
                 }
 
                 let e_tag = if self.config.filter_config.check_etag
@@ -1205,7 +1206,7 @@ impl LocalStorage {
         })
     }
 
-    fn do_cancel_simulation(&self, cancellation_point: &str) {
+    fn do_cancel_simulation(&self, cancellation_point: &str) -> bool {
         const CANCEL_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_CANCEL_DANGEROUS_SIMULATION";
         const CANCEL_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
 
@@ -1221,7 +1222,10 @@ impl LocalStorage {
                 "cancel simulation has been triggered. This message should not be shown in the production.",
             );
             self.cancellation_token.cancel();
+            return true;
         }
+
+        false
     }
 }
 

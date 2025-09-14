@@ -77,7 +77,7 @@ pub async fn generate_e_tag_hash_from_path(
 ) -> Result<String> {
     debug!(
         path = path.to_str(),
-        "generate_e_tag_hash_from_path() start."
+        "generate_e_tag_hash_from_path() start. It will take a time if the file is large."
     );
 
     let etag_generate_start_time = Instant::now();
@@ -144,7 +144,7 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
 ) -> Result<String> {
     debug!(
         path = path.to_str(),
-        "generate_e_tag_hash_from_path_with_auto_chunksize() start."
+        "generate_e_tag_hash_from_path_with_auto_chunksize() start. It will take a time if the file is large."
     );
 
     if object_parts.is_empty() {
