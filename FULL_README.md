@@ -130,8 +130,10 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.  
 An object on the local disk is read from the disk and compared with the checksum in the source or
 target.  
-Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and the entire object.   
-With `--auto-chunksize` option, s3sync automatically calculates the correct chunk size for multipart upload (But it will need more API calls and time).  
+Even if the source object was uploaded with multipart upload, s3sync can calculate and compare ETag for each part and
+the entire object.   
+With `--auto-chunksize` option, s3sync automatically calculates the correct chunk size for multipart upload (But it will
+need more API calls and time).  
 In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.  
 Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
 object.  
@@ -160,7 +162,8 @@ for verification by default(CRC64NVME).
 s3sync is implemented in Rust and uses the AWS SDK for Rust, which supports multithreaded asynchronous I/O.  
 In my environment(`c7a.xlarge`, with 160 workers), uploading from local to S3 achieved about 4,300 objects/sec (small
 objects 10KiB),  
-The following are benchmark results on a `c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)/Amazon Linux 2023 AMI` instance on AWS in
+The following are benchmark results on a
+`s3sync 1.45.0(glibc)/c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)/Amazon Linux 2023 AMI` instance on AWS in
 `ap-northeast-1`. No special optimizations were applied to the instance, the network, or the S3 topology.  
 You can reproduce the benchmark with the following commands.
 
@@ -183,14 +186,15 @@ objects are end-to-end integrity verified(MD5, SHA256).
   sys     0m22.800s
   ```
 
-Local to S3, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 256.72 MiB/sec, 6.23 minutes, and all objects are end-to-end integrity verified(MD5, SHA256). 
+Local to S3, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 256.72 MiB/sec, 6.23 minutes, and all
+objects are end-to-end integrity verified(MD5, SHA256).
 
-Note: Calculating ETag/additional checksum is costly with large local objects. 
+Note: Calculating ETag/additional checksum is costly with large local objects.
 
 Note: Above the case, the bottleneck is the disk I/O (Maximum throughput is 500MB/s).
 
   ```
-  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 48 --additional-checksum-algorithm SHA256 ./test_data s3://2ef073f2-f779-4361-956d-052ad0e6e79b/test_data
+  [ec2-user@aws-c7a-xlarge s3sync]$ time s3sync --max-parallel-uploads 48 --additional-checksum-algorithm SHA256 ./test_data s3://2ef073f2-f779-4361-956d-052ad0e6e79b/test_data
   96.00 GiB | 256.72 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 6 minutes
 
   real    6m23.024s
@@ -198,14 +202,17 @@ Note: Above the case, the bottleneck is the disk I/O (Maximum throughput is 500M
   sys     1m45.131s
   ```
 
-S3 to Local, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 166.63 MiB/sec, 10 minutes, and all objects are end-to-end integrity verified(MD5, SHA256).  
-ETag/additional checksum verification is costly in the case of S3 to Local. Because s3sync needs to read the entire downloaded object from the local disk to calculate ETag/checksum.   
-You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`. Without all verifications, the result was 96.00 GiB | 505.33 MiB/sec, 3.2 minutes.
+S3 to Local, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 166.63 MiB/sec, 10 minutes, and all objects
+are end-to-end integrity verified(MD5, SHA256).  
+ETag/additional checksum verification is costly in the case of S3 to Local. Because s3sync needs to read the entire
+downloaded object from the local disk to calculate ETag/checksum.   
+You can disable it with `--disable-etag-verify` and remove `--enable-additional-checksum`. Without all verifications,
+the result was 96.00 GiB | 505.33 MiB/sec, 3.2 minutes.
 
 Note: Above the case, the bottleneck is the disk I/O (Maximum throughput is 500MB/s).
 
   ```
-  [ec2-user@aws-c7a-large s3sync]$ time s3sync --max-parallel-uploads 48 --enable-additional-checksum s3://2ef073f2-f779-4361-956d-052ad0e6e79b/ ./download/
+  [ec2-user@aws-c7a-xlarge s3sync]$ time s3sync --max-parallel-uploads 48 --enable-additional-checksum s3://2ef073f2-f779-4361-956d-052ad0e6e79b/ ./download/
   96.00 GiB | 166.63 MiB/sec,  transferred  16 objects | 0 objects/sec,  etag verified 16 objects,  checksum verified 16 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 10 minutes
 
   real    9m50.060s
@@ -518,8 +525,8 @@ for more information.
 
 ## Requirements
 
-- x86_64 Linux (kernel 3.2 or later, glibc 2.17 or later)
-- ARM64 Linux (kernel 4.1 or later, glibc 2.17 or later)
+- x86_64 Linux (kernel 3.2 or later)
+- ARM64 Linux (kernel 4.1 or later)
 - x86_64 Windows 10 or later
 - ARM64 Windows 11
 - macOS 11.0 or later
@@ -532,8 +539,15 @@ This project is licensed under the Apache-2.0 License.
 
 ## Installation
 
-Download the latest binary from [Releases](https://github.com/nidor1998/s3sync/releases)  
-This binary cannot be run on a glibc version less than or equal to 2.17. (i.e., CentOS 7, etc.)
+Download the latest binary from [Releases](https://github.com/nidor1998/s3sync/releases)
+
+`s3sync-linux-glibc2.28` binary cannot be run on a glibc version less than or equal to 2.17. (i.e., CentOS 7, etc.)  
+`s3sync-linux-musl` binary is statically linked version and can be run on any Linux distribution.  
+The statically linked version is optimized for size and portability, but it may have slightly lower performance than the
+glibc version.  
+The glibc version is recommended if you don't have a specific requirement.
+
+Note: The statically linked version cannot be load Lua C libraries.
 
 You can also build from source following the instructions below.
 
@@ -1082,7 +1096,8 @@ If you want to use additional checksums for download, specify the option.
 Calculating an additional checksum is costly with large local objects.  
 SHA256/SHA1 additional checksum, in particular, may require significant processing time.
 
-Warning: Even if the object was uploaded with additional checksum, without this option, s3sync does not verify additional checksum.
+Warning: Even if the object was uploaded with additional checksum, without this option, s3sync does not verify
+additional checksum.
 
 ### --disable-multipart-verify
 
