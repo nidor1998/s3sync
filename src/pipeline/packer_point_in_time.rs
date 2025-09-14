@@ -1,7 +1,7 @@
 use anyhow::Result;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
-use tracing::{error, trace};
+use tracing::{debug, error};
 
 use crate::types;
 use crate::types::ObjectVersions;
@@ -39,7 +39,7 @@ impl ObjectPointInTimePacker {
             }
         }
 
-        trace!("object point-in-time packer has started.");
+        debug!("object point-in-time packer has started.");
 
         let mut object_versions = ObjectVersions::new();
         let mut previous_key = "".to_string();
@@ -69,7 +69,7 @@ impl ObjectPointInTimePacker {
                             };
 
                             if self.base.config.point_in_time.unwrap() < last_modified {
-                                trace!(
+                                debug!(
                                     name = FILTER_NAME,
                                     key = key,
                                     version_id = version_id,
@@ -83,7 +83,7 @@ impl ObjectPointInTimePacker {
 
                             object_versions.clear();
                             if object.is_delete_marker() {
-                                trace!(
+                                debug!(
                                     name = FILTER_NAME,
                                     key = key,
                                     version_id = version_id,
@@ -104,13 +104,13 @@ impl ObjectPointInTimePacker {
                                 self.send_object_versions(&key, &object_versions).await?;
                             }
 
-                            trace!("object point-in-time packer has been completed.");
+                            debug!("object point-in-time packer has been completed.");
                             return Ok(());
                         }
                     }
                 },
                 _ = self.base.cancellation_token.cancelled() => {
-                    trace!("object point-in-time packer has been cancelled.");
+                    debug!("object point-in-time packer has been cancelled.");
                     return Ok(());
                 }
             }

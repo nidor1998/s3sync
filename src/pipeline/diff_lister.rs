@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use aws_sdk_s3::types::Object;
-use tracing::{debug, error, trace};
+use tracing::{debug, error};
 
 use crate::types::{ObjectKey, ObjectKeyMap, S3syncObject};
 
@@ -35,13 +35,13 @@ impl DiffLister {
             }
         }
 
-        trace!("diff generator has started.");
+        debug!("diff generator has started.");
 
         let diff_set = generate_diff(source_key_map, target_key_map);
 
         for key in diff_set {
             if self.base.cancellation_token.is_cancelled() {
-                trace!("list() canceled.");
+                debug!("list() canceled.");
                 break;
             }
 
@@ -86,7 +86,7 @@ impl DiffLister {
                 return Ok(());
             }
         }
-        trace!("diff list has been completed.");
+        debug!("diff list has been completed.");
 
         Ok(())
     }

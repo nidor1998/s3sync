@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing::{error, trace};
+use tracing::{debug, error};
 
 use super::stage::Stage;
 
@@ -26,7 +26,7 @@ impl ObjectLister {
             }
         }
 
-        trace!("list source objects has started.");
+        debug!("list source objects has started.");
 
         if self.base.config.enable_versioning || self.base.config.point_in_time.is_some() {
             self.base
@@ -52,7 +52,7 @@ impl ObjectLister {
                 .await?;
         }
 
-        trace!("list source objects has been completed.");
+        debug!("list source objects has been completed.");
         Ok(())
     }
 
@@ -70,7 +70,7 @@ impl ObjectLister {
             }
         }
 
-        trace!("list target objects has started.");
+        debug!("list target objects has started.");
         self.base
             .target
             .as_ref()
@@ -81,7 +81,7 @@ impl ObjectLister {
                 self.base.config.warn_as_error,
             )
             .await?;
-        trace!("list target objects has been completed.");
+        debug!("list target objects has been completed.");
         Ok(())
     }
 }

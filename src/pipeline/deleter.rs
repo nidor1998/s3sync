@@ -1,7 +1,7 @@
 use crate::types::SyncStatistics::SyncDelete;
 use crate::types::event_callback::{EventData, EventType};
 use anyhow::{Result, anyhow};
-use tracing::{error, info, trace};
+use tracing::{debug, error, info};
 
 use super::stage::{SendResult, Stage};
 
@@ -16,7 +16,7 @@ impl ObjectDeleter {
     }
 
     pub async fn delete_target(&self) -> Result<()> {
-        trace!(
+        debug!(
             worker_index = self.worker_index,
             "delete target objects process started."
         );
@@ -62,7 +62,7 @@ impl ObjectDeleter {
                         },
                         Err(_) => {
                             // normal shutdown
-                            trace!(worker_index = self.worker_index, "delete worker has been completed.");
+                            debug!(worker_index = self.worker_index, "delete worker has been completed.");
                             break;
                         }
                     }

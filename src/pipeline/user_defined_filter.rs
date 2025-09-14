@@ -3,7 +3,7 @@ use crate::storage::e_tag_verify::normalize_e_tag;
 use crate::types::SyncStatistics;
 use crate::types::event_callback::{EventData, EventType};
 use anyhow::{Result, anyhow};
-use tracing::{error, info, trace};
+use tracing::{debug, error, info};
 
 pub struct UserDefinedFilter {
     base: Stage,
@@ -15,7 +15,7 @@ impl UserDefinedFilter {
     }
 
     pub async fn filter(&mut self) -> Result<()> {
-        trace!("user defined filter worker started.");
+        debug!("user defined filter worker started.");
         self.receive_and_filter().await
     }
 
@@ -97,7 +97,7 @@ impl UserDefinedFilter {
                         },
                         Err(_) => {
                             // normal shutdown
-                            trace!("user defined filter worker has been completed.");
+                            debug!("user defined filter worker has been completed.");
                             break;
                         }
                     }

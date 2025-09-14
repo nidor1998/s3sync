@@ -1,5 +1,5 @@
 use async_channel::Receiver;
-use tracing::trace;
+use tracing::debug;
 
 #[derive(Debug)]
 pub struct Terminator<T> {
@@ -12,10 +12,10 @@ impl<T> Terminator<T> {
     }
 
     pub async fn terminate(&self) {
-        trace!("terminator has started.");
+        debug!("terminator has started.");
 
         while self.receiver.recv().await.is_ok() {}
 
-        trace!("terminator has been completed.");
+        debug!("terminator has been completed.");
     }
 }

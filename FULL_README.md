@@ -140,9 +140,9 @@ object.
 If you want to obtain evidence of the integrity check, you can use `-vvv` option to output the verification information.
 
   ```bash
-  $ s3sync -vvv --additional-checksum-algorithm SHA256 ./30 s3://xxxxx |rg '(verified|sync completed)'
-  2025-07-11T00:48:43.946290Z TRACE e_tag verified. key="30/30Mib.dat" source_e_tag="\"a81230a7666d413e511f9c2c2523947a-4\"" target_e_tag="\"a81230a7666d413e511f9c2c2523947a-4\""
-  2025-07-11T00:48:43.946298Z TRACE additional checksum verified. key="30/30Mib.dat" additional_checksum_algorithm="SHA256" target_checksum="5NrHBc0Z1wNCbADRDy8mJaIvc53oxncCrw/Fa48VhxY=-4" source_checksum="5NrHBc0Z1wNCbADRDy8mJaIvc53oxncCrw/Fa48VhxY=-4"
+  $ s3sync -vv --additional-checksum-algorithm SHA256 ./30 s3://xxxxx |rg '(verified|sync completed)'
+  2025-07-11T00:48:43.946290Z DEBUG e_tag verified. key="30/30Mib.dat" source_e_tag="\"a81230a7666d413e511f9c2c2523947a-4\"" target_e_tag="\"a81230a7666d413e511f9c2c2523947a-4\""
+  2025-07-11T00:48:43.946298Z DEBUG additional checksum verified. key="30/30Mib.dat" additional_checksum_algorithm="SHA256" target_checksum="5NrHBc0Z1wNCbADRDy8mJaIvc53oxncCrw/Fa48VhxY=-4" source_checksum="5NrHBc0Z1wNCbADRDy8mJaIvc53oxncCrw/Fa48VhxY=-4"
   2025-07-11T00:48:43.946319Z  INFO sync completed. key="30Mib.dat" source_version_id="" source_last_modified="2025-06-17T06:19:54.483+00:00" target_key="30/30Mib.dat" size=31457280
   30.00 MiB | 22.47 MiB/sec,  transferred   1 objects | 0 objects/sec,  etag verified 1 objects,  checksum verified 1 objects,  deleted 0 objects,  skipped 0 objects,  error 0 objects, warning 0 objects,  duration 1 second
   $

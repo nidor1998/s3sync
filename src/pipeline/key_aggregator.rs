@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing::{error, trace};
+use tracing::{debug, error};
 
 use crate::types::{ObjectEntry, ObjectKey, ObjectKeyMap, S3syncObject, sha1_digest_from_key};
 
@@ -41,13 +41,13 @@ impl KeyAggregator {
                             }
                         },
                         Err(_) => {
-                            trace!("key aggregator has been completed.");
+                            debug!("key aggregator has been completed.");
                             return Ok(());
                         }
                     }
                 },
                 _ = self.base.cancellation_token.cancelled() => {
-                    trace!("key aggregator has been cancelled.");
+                    debug!("key aggregator has been cancelled.");
                     return Ok(());
                 }
             }

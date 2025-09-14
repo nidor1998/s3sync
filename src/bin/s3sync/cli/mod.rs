@@ -9,7 +9,7 @@ use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::{SYNC_REPORT_SUMMERY_NAME, SyncStatsReport};
 use std::sync::MutexGuard;
 use tokio::time::Instant;
-use tracing::{error, info, trace};
+use tracing::{debug, error, info};
 
 mod ctrl_c_handler;
 mod indicator;
@@ -79,7 +79,7 @@ pub async fn run(mut config: Config) -> Result<()> {
         ctrl_c_handler::spawn_ctrl_c_handler(cancellation_token.clone());
 
         let start_time = Instant::now();
-        trace!("sync pipeline start.");
+        debug!("sync pipeline start.");
 
         // When reporting sync status, a sync summary log is not needed.
         let log_sync_summary = !config.report_sync_status;
@@ -109,7 +109,7 @@ pub async fn run(mut config: Config) -> Result<()> {
             show_sync_report_summary(pipeline.get_sync_stats_report().lock().unwrap());
         }
 
-        trace!(duration_sec = duration_sec, "s3sync has been completed.");
+        debug!(duration_sec = duration_sec, "s3sync has been completed.");
     }
 
     if has_warning {
