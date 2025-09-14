@@ -106,4 +106,6 @@ codegen-units = 1
 
 [profile.release-min-size]
 inherits = "release"
+debug = 0
+panic = "abort"
 opt-level = "z"
