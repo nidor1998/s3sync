@@ -103,3 +103,7 @@ opt-level = 3
 strip = "symbols"
 lto = "fat"
 codegen-units = 1
+
+[profile.release-min-size]
+inherits = "release"
+opt-level = "z"
