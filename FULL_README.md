@@ -137,7 +137,7 @@ need more API calls and time).
 In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.  
 Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
 object.  
-If you want to obtain evidence of the integrity check, you can use `-vvv` option to output the verification information.
+If you want to obtain evidence of the integrity check, you can use `-vv` option to output the verification information.
 
   ```bash
   $ s3sync -vv --additional-checksum-algorithm SHA256 ./30 s3://xxxxx |rg '(verified|sync completed)'
@@ -547,7 +547,7 @@ The statically linked version is optimized for size and portability, but it may 
 glibc version.  
 The glibc version is recommended if you don't have a specific requirement.
 
-Note: The statically linked version cannot be load Lua C libraries.
+Note: The statically linked version cannot load Lua C modules.
 
 You can also build from source following the instructions below.
 
@@ -1010,6 +1010,8 @@ Also, Lua VM is not allowed to load unsafe standard libraries or C modules.
 
 If these restrictions are too strict, you can use `--allow-lua-os-library` or `--allow-lua-unsafe-vm` options to allow
 Lua's OS facilities and unsafe standard libraries or C modules.
+
+Note: The statically linked binary cannot load C modules.
 
 ### Lua script error
 

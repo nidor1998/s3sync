@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.46.0] - 2025-09-15
 
 ### Changed
-- Added statically linked binary build
+- Added Linux musl statically linked binary build to release assets
 - Improved debug/trace tracing messages
 - Updated dependencies
 - Updated docs
