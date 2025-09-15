@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Added Linux musl statically linked binary build to release assets
+- Added `--show-no-progress` option
 - Improved debug/trace tracing messages
 - Updated dependencies
 - Updated docs
