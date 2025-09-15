@@ -93,12 +93,11 @@ const DEFAULT_REPORT_METADATA_SYNC_STATUS: bool = false;
 const DEFAULT_REPORT_TAGGING_SYNC_STATUS: bool = false;
 #[allow(dead_code)]
 const DEFAULT_ALLOW_LUA_OS_LIBRARY: bool = false;
-
 #[allow(dead_code)]
 const DEFAULT_ALLOW_LUA_UNSAFE_VM: bool = false;
-
 #[allow(dead_code)]
 const DEFAULT_LUA_VM_MEMORY_LIMIT: &str = "64MiB";
+const DEFAULT_SHOW_NO_PROGRESS: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str =
@@ -219,6 +218,10 @@ pub struct CLIArgs {
     /// A simulation mode. No actions will be performed.
     #[arg(long, env, default_value_t = DEFAULT_DRY_RUN, help_heading = "General")]
     dry_run: bool,
+
+    /// Don't show the progress bar.
+    #[arg(long, env, default_value_t = DEFAULT_SHOW_NO_PROGRESS, help_heading = "General")]
+    show_no_progress: bool,
 
     #[arg(long, env, default_value_t = DEFAULT_SERVER_SIDE_COPY, help_heading = "General",
     long_help = r#"Use server-side copy. This option is only available both source and target are S3 storage.
@@ -1895,6 +1898,8 @@ impl TryFrom<CLIArgs> for Config {
         Ok(Config {
             source: storage_path::parse_storage_path(&value.source),
             target: storage_path::parse_storage_path(&value.target),
+
+            show_no_progress: value.show_no_progress,
 
             source_client_config,
             target_client_config,

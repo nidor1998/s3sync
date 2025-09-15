@@ -1174,6 +1174,7 @@ Options:
 
 General:
       --dry-run           A simulation mode. No actions will be performed [env: DRY_RUN=]
+      --show-no-progress  Don't show the progress bar [env: SHOW_NO_PROGRESS=]
       --server-side-copy  Use server-side copy. This option is only available both source and target are S3 storage.
                           It cannot work with between different object storages or regions. [env: SERVER_SIDE_COPY=]
 

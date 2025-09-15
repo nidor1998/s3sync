@@ -19,6 +19,7 @@ pub mod args;
 pub struct Config {
     pub source: StoragePath,
     pub target: StoragePath,
+    pub show_no_progress: bool,
     pub source_client_config: Option<ClientConfig>,
     pub target_client_config: Option<ClientConfig>,
     pub force_retry_config: ForceRetryConfig,

@@ -1,6 +1,10 @@
 use s3sync::Config;
 
 pub fn is_progress_indicator_needed(config: &Config) -> bool {
+    if config.show_no_progress {
+        return false;
+    }
+
     if config.tracing_config.is_none() {
         return true;
     }
@@ -13,6 +17,10 @@ pub fn is_progress_indicator_needed(config: &Config) -> bool {
 }
 
 pub fn is_show_result_needed(config: &Config) -> bool {
+    if config.show_no_progress {
+        return false;
+    }
+
     if config.tracing_config.is_none() {
         return true;
     }

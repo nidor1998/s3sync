@@ -139,10 +139,10 @@ fn show_sync_report_summary(sync_stats_report: MutexGuard<'_, SyncStatsReport>) 
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::cli::ui_config::{is_progress_indicator_needed, is_show_result_needed};
     use s3sync::config::args::parse_from_args;
     use std::time::Duration;
-
-    use super::*;
 
     #[tokio::test]
     async fn run_pipeline() {
@@ -155,6 +155,8 @@ mod tests {
             "./test_data/target/dir1/",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        assert!(is_show_result_needed(&config));
+        assert!(is_progress_indicator_needed(&config));
 
         let _ = run(config).await;
     }
@@ -241,6 +243,25 @@ mod tests {
             "./test_data/target/dir1/",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let _ = run(config).await;
+    }
+
+    #[tokio::test]
+    async fn run_pipeline_with_show_no_progress() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--show-no-progress",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        assert!(!is_show_result_needed(&config));
+        assert!(!is_progress_indicator_needed(&config));
 
         let _ = run(config).await;
     }
