@@ -188,7 +188,7 @@ jobs:
 
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
           if [[ ${{ runner.os }} == 'Windows' ]]; then
-            certutil -hashfile $RELEASE_NAME.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
+            certutil -hashfile $RELEASE_NAME.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.tar.gz.sha256
           else
             shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
           fi
