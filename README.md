@@ -88,7 +88,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Fast  
   s3sync is implemented in Rust and uses the AWS SDK for Rust, which supports multithreaded asynchronous I/O.  
-  In my environment(`c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)`, with 160 workers), uploading from local to S3 achieved about 4,300 objects/sec (small
+  In my environment(`s3sync 1.45.0(glibc)/c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)`, with 160 workers), uploading from local to S3 achieved about 4,300 objects/sec (small
   objects 10KiB),  
   in the case of a large objects(6GiB object, total 96GiB, `--max-parallel-uploads 48`), about 256.72 MiB/sec, 6.5 minutes,
 
