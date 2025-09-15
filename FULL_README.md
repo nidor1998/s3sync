@@ -304,7 +304,7 @@ This is the default behavior.
 Transfer only modified objects. If the object modification time is newer than the target object, the object is
 transferred.
 Incremental transfer can be resumed from the last checkpoint.
-Checking of modified objects is fast.
+Checking of modified objects is fast (In my environment, it takes about 1 second per 25,000 objects).
 
 ### ETag-based incremental transfer
 
@@ -331,6 +331,8 @@ With `--json-tracing`, you can output the tracing information in JSON format.
 With `--check-mtime-and-etag` option, s3sync checks the modification time and ETag of the source and target objects. It
 is useful if you want to transfer only modified objects based on the modification time and ETag.
 
+Note: Calculating ETag is costly with local objects. Because s3sync needs to read the entire object from the local disk to calculate ETag.
+
 ### Additional checksum-based incremental transfer
 
 If you use Amazon S3 with additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME), you can use
@@ -351,6 +353,8 @@ with `--json-tracing`, you can output the tracing information in JSON format.
 With `--check-mtime-and-additional-checksum` option, s3sync checks the modification time and additional checksum of the
 source and target objects. It is useful if you want to transfer only modified objects based on the modification time and
 additional checksum.
+
+Note: Calculating additional checksum is costly with local objects. Because s3sync needs to read the entire object from the local disk to calculate the checksum.
 
 ### Proxy support
 
@@ -1114,6 +1118,11 @@ However, please note that not all S3-compatible storage supports this option.
 of
 memory.**
 
+### --disable-additional-checksum-verify
+When `--additional-checksum-algorithm` is specified, s3sync verifies the additional checksum of the target object.  
+But if source S3-compatible storage does not support additional checksum, s3sync cannot verify the additional checksum.  
+In this case, you can disable the verification with this option, while keeping the additional checksum in the target object.
+
 ### -v
 
 s3sync uses [tracing-subscriber](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/) for tracing.    
@@ -1124,6 +1133,8 @@ By default, s3sync shows warning and error messages.
 `info` and `debug` messages are useful for troubleshooting. `trace` messages are useful for debugging.
 
 Instead of `-v`, you can use `RUST_LOG` environment variable.
+
+On the other hand, you can use `-q`, `-qq` to reduce the verbosity.
 
 ### --aws-sdk-tracing
 
