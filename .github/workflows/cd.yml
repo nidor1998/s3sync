@@ -56,7 +56,7 @@ jobs:
         run: |
           BINARY_NAME=$APP_NAME
           VERSION=${GITHUB_REF_NAME#v}
-          RELEASE_NAME=$APP_NAME-$VERSION-musl-x86_64
+          RELEASE_NAME=$APP_NAME-$VERSION-linux-musl-x86_64
 
           sudo apt update && sudo apt install -y curl musl-dev musl-tools build-essential
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs >./rust_install.sh
