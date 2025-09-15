@@ -33,13 +33,13 @@ jobs:
 
           cd target/x86_64-unknown-linux-gnu/release
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
-          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: releasing assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/x86_64-unknown-linux-gnu/release/$RELEASE_NAME.tar.gz
-            target/x86_64-unknown-linux-gnu/release/$RELEASE_NAME.sha256
+            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-glibc2.28-x86_64.tar.gz
+            target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-glibc2.28-x86_64.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -67,13 +67,13 @@ jobs:
 
           cd target/x86_64-unknown-linux-musl/release-min-size
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
-          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: releasing assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/x86_64-unknown-linux-musl/release-min-size/$RELEASE_NAME.tar.gz
-            target/x86_64-unknown-linux-musl/release-min-size/$RELEASE_NAME.sha256
+            target/x86_64-unknown-linux-musl/release-min-size/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-musl-x86_64.tar.gz
+            target/x86_64-unknown-linux-musl/release-min-size/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-musl-x86_64.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -101,13 +101,13 @@ jobs:
 
           cd target/aarch64-unknown-linux-gnu/release
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
-          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: releasing assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/aarch64-unknown-linux-gnu/release/$RELEASE_NAME.tar.gz
-            target/aarch64-unknown-linux-gnu/release/$RELEASE_NAME.sha256
+            target/aarch64-unknown-linux-gnu/release/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-glibc2.28-aarch64.tar.gz
+            target/aarch64-unknown-linux-gnu/release/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-glibc2.28-aarch64.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -135,13 +135,13 @@ jobs:
 
           cd target/aarch64-unknown-linux-musl/release-min-size
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
-          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+          sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: releasing assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/aarch64-unknown-linux-musl/release-min-size/$RELEASE_NAME.tar.gz
-            target/aarch64-unknown-linux-musl/release-min-size/$RELEASE_NAME.sha256
+            target/aarch64-unknown-linux-musl/release-min-size/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-musl-aarch64.tar.gz
+            target/aarch64-unknown-linux-musl/release-min-size/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-musl-aarch64.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -182,13 +182,13 @@ jobs:
           if [[ ${{ runner.os }} == 'Windows' ]]; then
             certutil -hashfile $RELEASE_NAME.tar.gz sha256 | grep -E [A-Fa-f0-9]{64} > $RELEASE_NAME.sha256
           else
-            shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.sha256
+            shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
           fi
       - name: releasing assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            target/${{ matrix.target }}/release/$RELEASE_NAME.tar.gz
-            target/${{ matrix.target }}/release/$RELEASE_NAME.sha256
+            target/${{ matrix.target }}/release/${{ env.APP_NAME }}-${{ env.VERSION }}-${{ matrix.artifact_suffix }}.tar.gz
+            target/${{ matrix.target }}/release/${{ env.APP_NAME }}-${{ env.VERSION }}-${{ matrix.artifact_suffix }}.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
