@@ -192,8 +192,16 @@ jobs:
           else
             shasum -a 256 $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
           fi
-      - name: set version without v
+      - name: set VERSION (bash)
+        if: runner.os != 'Windows'
+        shell: bash
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: set VERSION (pwsh)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v',''
+          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
       - name: releasing assets
         uses: softprops/action-gh-release@v2
         with:
