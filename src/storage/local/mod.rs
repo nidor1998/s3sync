@@ -1653,6 +1653,8 @@ impl StorageTrait for LocalStorage {
         get_object_output_first_chunk: GetObjectOutput,
         _tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
+        _if_match: Option<String>,
+        _copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput> {
         if get_object_output_first_chunk.content_range.is_none() {
             // with --dry-run, it always goes to a single part upload.
@@ -1693,6 +1695,7 @@ impl StorageTrait for LocalStorage {
         &self,
         key: &str,
         _version_id: Option<String>,
+        _if_match: Option<String>,
     ) -> Result<DeleteObjectOutput> {
         let file_to_delete = fs_util::key_to_file_path(self.path.to_path_buf(), key);
         let lossy_path = file_to_delete.to_string_lossy().to_string();
@@ -3286,6 +3289,8 @@ mod tests {
                 get_object_output,
                 None,
                 None,
+                None,
+                None,
             )
             .await
             .unwrap();
@@ -3342,6 +3347,8 @@ mod tests {
                     .build(),
                 None,
                 None,
+                None,
+                None,
             )
             .await
             .unwrap();
@@ -3396,6 +3403,8 @@ mod tests {
                     .set_content_length(Some(1))
                     .last_modified(DateTime::from_secs(1))
                     .build(),
+                None,
+                None,
                 None,
                 None,
             )

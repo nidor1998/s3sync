@@ -65,6 +65,8 @@ pub struct UploadManager {
     source_key: String,
     source_total_size: u64,
     source_additional_checksum: Option<String>,
+    if_match: Option<String>,
+    copy_source_if_match: Option<String>,
     has_warning: Arc<AtomicBool>,
 }
 
@@ -83,6 +85,8 @@ impl UploadManager {
         source_key: String,
         source_total_size: u64,
         source_additional_checksum: Option<String>,
+        if_match: Option<String>,
+        copy_source_if_match: Option<String>,
         has_warning: Arc<AtomicBool>,
     ) -> Self {
         UploadManager {
@@ -99,6 +103,8 @@ impl UploadManager {
             source_key,
             source_total_size,
             source_additional_checksum,
+            if_match,
+            copy_source_if_match,
             has_warning,
         }
     }
@@ -488,6 +494,7 @@ impl UploadManager {
             .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
             .set_checksum_type(checksum_type)
+            .set_if_match(self.if_match.clone())
             .send()
             .await
             .context("aws_sdk_s3::client::Client complete_multipart_upload() failed.")?;
@@ -495,6 +502,7 @@ impl UploadManager {
         trace!(
             key = key,
             upload_id = upload_id,
+            if_match = self.if_match.clone(),
             "{complete_multipart_upload_output:?}"
         );
 
@@ -701,6 +709,7 @@ impl UploadManager {
             } else {
                 "".to_string()
             };
+            let copy_source_if_match = self.copy_source_if_match.clone();
             let source_version_id = shared_source_version_id.clone();
             let source_sse_c = self.config.source_sse_c.clone();
             let source_sse_c_key = self.config.source_sse_c_key.clone();
@@ -917,12 +926,14 @@ impl UploadManager {
                         .set_sse_customer_algorithm(target_sse_c)
                         .set_sse_customer_key(target_sse_c_key)
                         .set_sse_customer_key_md5(target_sse_c_key_md5)
+                        .set_copy_source_if_match(copy_source_if_match.clone())
                         .send()
                         .await?;
 
                     debug!(
                         key = &target_key,
                         part_number = part_number,
+                        copy_source_if_match = copy_source_if_match,
                         "upload_part_copy() complete",
                     );
 
@@ -1068,6 +1079,7 @@ impl UploadManager {
             } else {
                 "".to_string()
             };
+            let copy_source_if_match = self.copy_source_if_match.clone();
             let source_version_id = shared_source_version_id.clone();
             let source_sse_c = self.config.source_sse_c.clone();
             let source_sse_c_key = self.config.source_sse_c_key.clone();
@@ -1288,12 +1300,14 @@ impl UploadManager {
                         .set_sse_customer_algorithm(target_sse_c)
                         .set_sse_customer_key(target_sse_c_key)
                         .set_sse_customer_key_md5(target_sse_c_key_md5)
+                        .set_copy_source_if_match(copy_source_if_match.clone())
                         .send()
                         .await?;
 
                     debug!(
                         key = &target_key,
                         part_number = part_number,
+                        copy_source_if_match = copy_source_if_match,
                         "upload_part_copy() complete",
                     );
 
@@ -1569,6 +1583,7 @@ impl UploadManager {
                 .set_copy_source_sse_customer_key_md5(self.config.source_sse_c_key_md5.clone())
                 .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
+                .set_copy_source_if_match(self.copy_source_if_match.clone())
                 .send()
                 .await?;
             let _ = self
@@ -1601,9 +1616,8 @@ impl UploadManager {
                 .set_sse_customer_key(self.config.target_sse_c_key.clone().key.clone())
                 .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
                 .set_acl(upload_metadata.acl)
-                .set_checksum_algorithm(
-                    self.config.additional_checksum_algorithm.as_ref().cloned(),
-                );
+                .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
+                .set_if_match(self.if_match.clone());
 
             if self.config.disable_payload_signing {
                 builder
@@ -1619,6 +1633,13 @@ impl UploadManager {
                     .context("aws_sdk_s3::client::Client put_object() failed.")?
             }
         };
+
+        debug!(
+            key = &key,
+            if_match = &self.if_match.clone(),
+            copy_source_if_match = self.copy_source_if_match.clone(),
+            "put_object() complete",
+        );
 
         let mut event_data = EventData::new(EventType::SYNC_WRITE);
         event_data.key = Some(key.to_string());

@@ -42,6 +42,7 @@
     * [Rate limiting by objects/bandwidth](#Rate-limiting-by-objectsbandwidth)
     * [Sync statistics report](#Sync-statistics-report)
     * [--delete support](#--delete-support)
+    * [Conditional writedelete support](#Conditional-writedelete-support)
     * [Lua scripting support](#Lua-scripting-support)
     * [User-defined preprocessing callback](#User-defined-preprocessing-callback)
     * [User-defined event callback](#User-defined-event-callback)
@@ -474,6 +475,20 @@ Note: It needs additional API calls to get the metadata, checksum, and tags of e
 Objects that exist in the target but not in the source are deleted during synchronization.  
 Exclude filters other than `--filter-exclude-regex` will not prevent an object from being deleted.  
 Since this can cause data loss, test first with the `--dry-run` option.
+
+With `--max-delete`, you can limit the maximum number of deletions for safety.
+
+### Etag-based conditional write/delete support
+
+You can use `--if-match` for conditional write and delete operations(PutObject/CompleteMultipartUpload/DeleteObject) with `If-Match` header.  
+And you can use `--copy-source-if-match` for conditional copy operations(CopyObject/UploadPartCopy) with `x-amz-copy-source-if-match` header.
+
+Actually, it serves as like optimistic locking.  
+This prevents race conditions that s3sync overwrites or deletes an object that has been modified by another process after s3sync checks the object.
+
+It is a challenging topic to understand, please refer to [AWS document](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-requests.html)
+
+Note: few S3-compatible storage supports conditional requests.
 
 ### Lua scripting support
 
@@ -1491,6 +1506,14 @@ Advanced:
       --delete-excluded
           When used in combination with --delete options, supplied --filter-exclude-regex patterns will not prevent an object from being deleted.
            [env: DELETE_EXCLUDED=]
+      --if-match
+          Add an If-Match header for PutObject/CompleteMultipartUpload/DeleteObject requests.
+          This is for like an optimistic lock. [env: IF_MATCH=]
+      --copy-source-if-match
+          Add an x-amz-copy-source-if-match header for CopyObject/UploadPartCopy requests.
+          This is for like an optimistic lock. [env: COPY_SOURCE_IF_MATCH=]
+      --max-delete <MAX_DELETE>
+          Don't delete more than a specified number of objects [env: MAX_DELETE=]
 
 Lua scripting support:
       --preprocess-callback-lua-script <PREPROCESS_CALLBACK_LUA_SCRIPT>

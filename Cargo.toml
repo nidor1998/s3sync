@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.46.0"
+version = "1.47.0"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, flexible, and fast synchronization tool for S3."
@@ -29,7 +29,7 @@ base64 = "0.22.1"
 byte-unit = "5.1.6"
 cfg-if = "1.0.3"
 clap = { version = "4.5.47", features = ["derive", "env", "cargo", "string"] }
-clap_complete = "4.5.57"
+clap_complete = "4.5.58"
 clap-verbosity-flag = "3.0.4"
 chrono = "0.4.42"
 crc32c = "0.6.8"

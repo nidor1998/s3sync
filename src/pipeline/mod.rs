@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use anyhow::{Error, anyhow};
@@ -568,8 +568,12 @@ impl Pipeline {
                 self.has_warning.clone(),
             );
 
-            let object_syncer =
-                ObjectSyncer::new(stage, worker_index, self.get_sync_stats_report());
+            let object_syncer = ObjectSyncer::new(
+                stage,
+                worker_index,
+                self.get_sync_stats_report(),
+                self.target_key_map.clone(),
+            );
             let has_error = self.has_error.clone();
             let error_list = self.errors.clone();
             let cancellation_token = self.cancellation_token.clone();
@@ -710,13 +714,19 @@ impl Pipeline {
         let (sender, next_stage_receiver) =
             async_channel::bounded::<S3syncObject>(self.config.object_listing_queue_size as usize);
 
+        let delete_counter = Arc::new(AtomicU64::new(0));
         for worker_index in 0..(self.config.worker_size) {
             let stage = self.create_mpmc_stage(
                 sender.clone(),
                 target_objects.clone(),
                 self.has_warning.clone(),
             );
-            let object_deleter = ObjectDeleter::new(stage, worker_index);
+            let object_deleter = ObjectDeleter::new(
+                stage,
+                worker_index,
+                self.target_key_map.clone(),
+                delete_counter.clone(),
+            );
             let has_error = self.has_error.clone();
             let error_list = self.errors.clone();
             let cancellation_token = self.cancellation_token.clone();
