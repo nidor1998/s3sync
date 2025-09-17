@@ -97,6 +97,9 @@ pub struct Config {
     pub allow_lua_os_library: bool,
     pub allow_lua_unsafe_vm: bool,
     pub lua_vm_memory_limit: usize,
+    pub if_match: bool,
+    pub copy_source_if_match: bool,
+    pub max_delete: Option<u64>,
 }
 
 impl Config {

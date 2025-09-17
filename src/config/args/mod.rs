@@ -98,10 +98,11 @@ const DEFAULT_ALLOW_LUA_UNSAFE_VM: bool = false;
 #[allow(dead_code)]
 const DEFAULT_LUA_VM_MEMORY_LIMIT: &str = "64MiB";
 const DEFAULT_SHOW_NO_PROGRESS: bool = false;
+const DEFAULT_IF_MATCH: bool = false;
+const DEFAULT_COPY_SOURCE_IF_MATCH: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
-const LOCAL_STORAGE_SPECIFIED: &str =
-    "with --enable-versioning/--sync-latest-tagging, both storage must be s3://\n";
+const LOCAL_STORAGE_SPECIFIED: &str = "with --enable-versioning/--sync-latest-tagging/--copy-source-if-match, both storage must be s3://\n";
 const VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--enable-versioning is not supported with express onezone storage class\n";
 const LOCAL_STORAGE_SPECIFIED_WITH_STORAGE_CLASS: &str =
@@ -202,6 +203,10 @@ const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
 #[allow(dead_code)]
 const LUA_SCRIPT_LOAD_ERROR: &str = "Failed to load and compile Lua script callback: ";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_IF_MATCH: &str =
+    "with --if-match, target storage must be s3://\n";
+const IF_MATCH_CONFLICT: &str =
+    "--head-each-target is required for --if-match, or remove --remove-modified-filter\n";
 
 #[cfg(feature = "version")]
 shadow!(build);
@@ -796,6 +801,18 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
 "#)]
     delete_excluded: bool,
 
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time"], default_value_t = DEFAULT_IF_MATCH, help_heading = "Advanced", long_help=r#"Add an If-Match header for PutObject/CompleteMultipartUpload/DeleteObject requests.
+This is for like an optimistic lock."#)]
+    if_match: bool,
+
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time"], requires = "server_side_copy", default_value_t = DEFAULT_COPY_SOURCE_IF_MATCH, help_heading = "Advanced", long_help=r#"Add an x-amz-copy-source-if-match header for CopyObject/UploadPartCopy requests.
+This is for like an optimistic lock."#)]
+    copy_source_if_match: bool,
+
+    /// Don't delete more than a specified number of objects
+    #[arg(long, env, value_parser = clap::value_parser!(u64).range(1..), help_heading = "Advanced")]
+    max_delete: Option<u64>,
+
     #[cfg(feature = "lua_support")]
     #[arg(
         long,
@@ -935,6 +952,8 @@ impl CLIArgs {
         self.check_point_in_time_conflict()?;
         self.check_report_metadata_sync_status_conflict()?;
         self.check_report_tagging_sync_status_conflict()?;
+        self.check_if_match_conflict()?;
+        self.check_copy_source_if_match_conflict()?;
 
         Ok(())
     }
@@ -1495,6 +1514,38 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_if_match_conflict(&self) -> Result<(), String> {
+        if !self.if_match {
+            return Ok(());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_IF_MATCH.to_string());
+        }
+
+        if self.remove_modified_filter && !self.head_each_target {
+            return Err(IF_MATCH_CONFLICT.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_copy_source_if_match_conflict(&self) -> Result<(), String> {
+        if !self.copy_source_if_match {
+            return Ok(());
+        }
+
+        let source = storage_path::parse_storage_path(&self.source);
+        let target = storage_path::parse_storage_path(&self.target);
+
+        if !storage_path::is_both_storage_s3(&source, &target) {
+            return Err(LOCAL_STORAGE_SPECIFIED.to_string());
+        }
+
+        Ok(())
+    }
+
     fn build_client_configs(
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
@@ -2017,6 +2068,9 @@ impl TryFrom<CLIArgs> for Config {
             allow_lua_os_library,
             allow_lua_unsafe_vm,
             lua_vm_memory_limit,
+            if_match: value.if_match,
+            copy_source_if_match: value.copy_source_if_match,
+            max_delete: value.max_delete,
         })
     }
 }

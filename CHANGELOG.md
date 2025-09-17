@@ -5,9 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.0] - 2025-09-18
+
+### Changed
+
+- Added `--if-match` and `--copy-source-if-match` options  
+  These options allow conditional operations based on ETag matching.
+- Added `--max-delete'` option  
+  This option is like rsync's `--max-delete` option.
+- Updated dependencies
+- Updated docs
+
 ## [1.46.0] - 2025-09-15
 
 ### Changed
+
 - Added Linux musl statically linked binary build to release assets
 - Added `--show-no-progress` option
 - Improved debug/trace tracing messages
@@ -17,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.45.0] - 2025-09-14
 
 ### Changed
+
 - Improved error/cancel handling
 - aws-sdk-s3 = "1.105.0"
 - Updated dependencies
@@ -25,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.44.0] - 2025-09-12
 
 ### Changed
+
 - Added dry_run info to an event callback
 - [Breaking change] `EventManager::register_callback()` now takes the dry_run parameter  
   This is because the above feature requires it.
@@ -36,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.43.1] - 2025-09-11
 
 ### Changed
+
 - Improved error handling in async functions
 - Updated dependencies
 - Updated docs
@@ -43,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.43.0] - 2025-09-10
 
 ### Changed
+
 - Added proxy support  
   s3sync supports for proxy environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`).  
   s3sync automatically respects these proxy environment variables.
@@ -55,13 +71,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.42.2] - 2025-09-08
 
 ### Changed
+
 - Updated docs
 - Updated dependencies
-
 
 ## [1.42.1] - 2025-09-07
 
 ### Changed
+
 - Improved tests
 - Changed the coverage analysis tool used from cargo-tarpaulin (ptrace) to cargo-llvm-cov  
   This is because recently analysis with cargo-tarpaulin (ptrace) started to fail with this binary.  
@@ -70,52 +87,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   So, the coverage percentage may be lower than before.
 - Updated dependencies
 
-
 ## [1.42.0] - 2025-09-04
 
 ### Changed
+
 - Added `--disable-additional-checksum-verify` option  
-This option disables additional checksum verification after uploading to S3.   
-But the hash of the object has been stored in the metadata of the object.
+  This option disables additional checksum verification after uploading to S3.   
+  But the hash of the object has been stored in the metadata of the object.
 - Improve dry-run logic for some S3 compatible storage
 - Updated dependencies
-
 
 ## [1.41.0] - 2025-08-31
 
 ### Changed
+
 - Refined release build optimization settings  
   Setting lto = "fat" and strip = "symbols" in Cargo.toml for `release` build.  
-  This significantly reduces the binary size at the cost of longer build time and higher memory usage during CLI binary release build.  
+  This significantly reduces the binary size at the cost of longer build time and higher memory usage during CLI binary
+  release build.  
   And stripping symbols may make CLI binary debugging more difficult. (rarely needed)
 - Updated dependencies
 
 ## [1.40.1] - 2025-08-30
 
 ### Changed
+
 - Updated dependencies
 - aws-sdk-s3 = "1.104.0"
 
 ### Fixed
+
 - [Security] [tracing-subscriber 0.3.20](https://github.com/tokio-rs/tracing/releases/tag/tracing-subscriber-0.3.20)  
   ANSI Escape Sequence Injection (CVE-2025-58160)
 
 ## [1.40.0] - 2025-08-27
 
 ### Changed
+
 - [Breaking change] `--delete-excluded` option  
   Earlier, `--delete` option deleted objects that are not in the source, ignoring exclude filtering options.  
   Now, `--filter-exclude-regex` filtering option is applied to `--delete` option.  
   Exclude filters other than `--filter-exclude-regex` will not prevent an object from being deleted.  
-  If you want to delete objects that are not in the source, ignoring `--filter-exclude-regex`, use `--delete-excluded` option.
+  If you want to delete objects that are not in the source, ignoring `--filter-exclude-regex`, use `--delete-excluded`
+  option.
 
 - Updated dependencies.
 
 ## [1.39.0] - 2025-08-25
 
 ### Changed
+
 - Added `--max-parallel-listing-max-depth` option  
-  By default, s3sync lists objects in the source and target buckets/local files in parallel up to the second level of subdirectories or prefixes.  
+  By default, s3sync lists objects in the source and target buckets/local files in parallel up to the second level of
+  subdirectories or prefixes.  
   And deeper levels are listed without parallelization.
   This is because parallel listing at deeper levels may not improve performance.  
   But in some cases, parallel listing at deeper levels may improve performance.
@@ -126,6 +150,7 @@ But the hash of the object has been stored in the metadata of the object.
 ## [1.38.0] - 2025-08-24
 
 ### Changed
+
 - Support sync summary log  
   At the end of the sync, s3sync logs a summary of the sync statistics.  
   To log the summary, use `-v` option.
@@ -156,32 +181,37 @@ But the hash of the object has been stored in the metadata of the object.
 ## [1.37.0] - 2025-08-24
 
 ### Changed
+
 - Support parallel object listing  
   By default, s3sync lists objects in the source and target buckets/local in parallel (default 16 workers).  
   The parallel listing is enabled when the root has subdirectories or prefixes.  
-  For example, if the source is `s3://bucket-name/prefix` and there are many objects under `prefix/dir1`, `prefix/dir2`, ..., `prefix/dir16`, s3sync lists objects under these prefixes in parallel.
+  For example, if the source is `s3://bucket-name/prefix` and there are many objects under `prefix/dir1`,
+  `prefix/dir2`, ..., `prefix/dir16`, s3sync lists objects under these prefixes in parallel.
   But If the source has only one subdirectory under `prefix/`, s3sync does not list objects in parallel.
-  
+
   You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
   If set to `1`, parallel listing is disabled.
 
-  This feature can significantly improve performance with incremental transfer when there are many objects in the source and target bucket/local.
+  This feature can significantly improve performance with incremental transfer when there are many objects in the source
+  and target bucket/local.
 
   With express one zone storage class, parallel listing may return in progress multipart upload objects.   
   So, parallel listing is disabled by default when the source or target bucket uses express one zone storage class.   
-  You can enable it with `--allow-parallel-listings-in-express-one-zone` option.  
-  
+  You can enable it with `--allow-parallel-listings-in-express-one-zone` option.
+
   When `--enable-versioning` or `--point-in-time` option is specified, parallel listing is disabled.  
   Note: Parallel listing may use CPU and memory.
 
 - Updated dependencies.
 
 ### Fixed
+
 - Fixed a bug that does not log sync complete message.
 
 ## [1.36.0] - 2025-08-17
 
 ### Changed
+
 - Support `SYNC_WRITE` event in the event callback system.  
   This event is triggered when an object (or part of an object) is written to a target.
 - Support `SYNC_FILTERED` event in the event callback system.  
@@ -191,12 +221,15 @@ But the hash of the object has been stored in the metadata of the object.
 ## [1.35.0] - 2025-08-15
 
 ### Changed
+
 - Support Look-around with regular expressions.   
   Look-around features are invaluable for filtering objects with complex patterns.  
-  For example, `'^(?!.*&test=true).*stage=first'` can be used to filter objects that do not contain `test=true` in the tag and contain `stage=first` in the tag.  
+  For example, `'^(?!.*&test=true).*stage=first'` can be used to filter objects that do not contain `test=true` in the
+  tag and contain `stage=first` in the tag.  
   And you can also create regular expressions that combine multiple logical conditions with look-around features.  
   This feature reduces the need for Lua scripts or custom callback Rust codes to filter objects with complex patterns.  
-  Note: This feature has been implemented with [fancy-regex](https://github.com/fancy-regex/fancy-regex) crate, which falls back to regex crate if a given regex is not `fancy`.
+  Note: This feature has been implemented with [fancy-regex](https://github.com/fancy-regex/fancy-regex) crate, which
+  falls back to regex crate if a given regex is not `fancy`.
 - Updated documentation.
 - Updated dependencies.
 - aws-sdk-s3 = "1.103.0"
@@ -204,13 +237,17 @@ But the hash of the object has been stored in the metadata of the object.
 ## [1.34.1] - 2025-08-14
 
 ### Changed
+
 - Improved x86_64 linux performance in the highly loaded environment.
 - Updated documentation.
 - Updated dependencies.
 
 ### Fixed
-- [Security] Fixed a bug that caused the `--allow-lua-os-library` is not enough to disable command execution in a Lua script.  
-  Now, `--allow-lua-os-library` limits the use of Lua [Input and Output Facilities](https://www.lua.org/manual/5.4/manual.html#6.8).
+
+- [Security] Fixed a bug that caused the `--allow-lua-os-library` is not enough to disable command execution in a Lua
+  script.  
+  Now, `--allow-lua-os-library` limits the use of
+  Lua [Input and Output Facilities](https://www.lua.org/manual/5.4/manual.html#6.8).
 
 ## [1.34.0] - 2025-08-13
 
@@ -222,16 +259,19 @@ But the hash of the object has been stored in the metadata of the object.
 - Updated documentation.
 - Updated dependencies.
 
-
 ## [1.33.0] - 2025-08-12
 
 ### Changed
 
 - Lua scripting support  
-  You can use Lua script to implement custom filtering, event handling, preprocessing before transferring objects to S3.  
-  `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available for this purpose.  
-  Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script without any additional dependencies.  
-  For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object attributes(e.g., metadata, tagging) before transferring it to S3.  
+  You can use Lua script to implement custom filtering, event handling, preprocessing before transferring objects to
+  S3.  
+  `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are
+  available for this purpose.  
+  Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script
+  without any additional dependencies.  
+  For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object
+  attributes(e.g., metadata, tagging) before transferring it to S3.  
   By default, Lua script run as safe mode, so it cannot use Lua os library functions.   
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
   See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
@@ -241,9 +281,8 @@ But the hash of the object has been stored in the metadata of the object.
 
 ### Changed
 
-- Support a user defined callback while listing the source 
+- Support a user defined callback while listing the source
 - Updated dependencies.
-
 
 ## [1.31.0] - 2025-08-08
 
@@ -254,16 +293,16 @@ But the hash of the object has been stored in the metadata of the object.
 - aws-sdk-s3 = "1.101.0"
 - Updated dependencies.
 
-
 ## [1.30.0] - 2025-08-06
 
 ### Changed
 
 - Support user-defined event callback within s3sync CLI  
-  If you are familiar with Rust, you can use `UserDefinedEventCallback` to implement custom event handling logic, such as logging or monitoring and custom actions before and after synchronization.  
-  Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with the language can implement it easily.  
+  If you are familiar with Rust, you can use `UserDefinedEventCallback` to implement custom event handling logic, such
+  as logging or monitoring and custom actions before and after synchronization.  
+  Thanks to Rust's clear compiler error messages and robust language features, even software engineers unfamiliar with
+  the language can implement it easily.  
   To use `UserDefinedEventCallback`, you need to implement the `EventCallback` trait and rebuild the s3sync binary.
-
 
 ## [1.29.0] - 2025-08-04
 
@@ -273,7 +312,6 @@ But the hash of the object has been stored in the metadata of the object.
   We can use this to modify the object attributes(e.g. metadata, tagging) dynamically before uploading to s3.  
   See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Updated dependencies.
-
 
 ## [1.28.0] - 2025-08-03
 
@@ -291,13 +329,11 @@ But the hash of the object has been stored in the metadata of the object.
 - aws-sdk-s3 = "1.100.0"
 - Updated dependencies.
 
-
 ## [1.26.1] - 2025-07-21
 
 ### Changed
 
 - Updated documentation.
-
 
 ## [1.26.0] - 2025-07-20
 
@@ -307,13 +343,11 @@ But the hash of the object has been stored in the metadata of the object.
 - Updated documentation.
 - Updated dependencies.
 
-
 ## [1.25.2] - 2025-07-20
 
 ### Changed
 
 - Updated help message.
-
 
 ## [1.25.1] - 2025-07-19
 
@@ -321,7 +355,6 @@ But the hash of the object has been stored in the metadata of the object.
 
 - Updated documentation.
 - MSRV = 1.86.0(From 1.25.0)
-
 
 ## [1.25.0] - 2025-07-18
 
@@ -333,7 +366,6 @@ But the hash of the object has been stored in the metadata of the object.
 - aws-sdk-s3 = "1.98.0"
 - Updated dependencies.
 
-
 ## [1.24.0] - 2025-07-16
 
 ### Changed
@@ -344,7 +376,6 @@ But the hash of the object has been stored in the metadata of the object.
 ### Fixed
 
 - Fixed statistics issue when `--server-side-copy`.
-
 
 ## [1.23.0] - 2025-07-15
 
@@ -361,6 +392,7 @@ But the hash of the object has been stored in the metadata of the object.
 - Updated dependencies.
 
 ### Fixed
+
 - Fixed the skip statistics issue when tag/metadata-based filtering is used.
 
 ## [1.22.0] - 2025-07-12
@@ -399,7 +431,6 @@ But the hash of the object has been stored in the metadata of the object.
   https://github.com/nidor1998/s3sync/issues/90
 - updated dependencies.
 
-
 ## [1.19.0] - 2025-07-10
 
 ### Changed
@@ -412,7 +443,6 @@ But the hash of the object has been stored in the metadata of the object.
 ### Fixed
 
 - Fixed `--tagging` option bug that does not work with `--server-side-copy` option.
-
 
 ## [1.18.0] - 2025-07-09
 
@@ -431,7 +461,6 @@ But the hash of the object has been stored in the metadata of the object.
 - Added `--source-request-payer`, `--target-request-payer` options.
 - updated dependencies.
 
-
 ## [1.16.0] - 2025-07-03
 
 ### Changed
@@ -444,7 +473,6 @@ But the hash of the object has been stored in the metadata of the object.
 ### Fixed
 
 - Fixed unnecessary etag check in dry-run mode.
-
 
 ## [1.15.0] - 2025-06-22
 
@@ -463,7 +491,8 @@ But the hash of the object has been stored in the metadata of the object.
 ### Fixed
 
 - Fixed `--auto-chunksize` bug that warn E-tag mismatch.
-- Fixed an issue where bandwidth restrictions did not function correctly during high loads, causing applications to freeze.
+- Fixed an issue where bandwidth restrictions did not function correctly during high loads, causing applications to
+  freeze.
 
 ## [1.13.4] - 2025-06-08
 
@@ -490,6 +519,7 @@ But the hash of the object has been stored in the metadata of the object.
 ## [1.13.1] - 2025-05-21
 
 ### Fixed
+
 - fixed exit code when s3sync fails. https://github.com/nidor1998/s3sync/issues/68
 - fixed latest version of clippy warnings.
 
@@ -497,7 +527,6 @@ But the hash of the object has been stored in the metadata of the object.
 
 - MSRV = 1.82.0
 - aws-sdk-s3 = "1.86.0"
-
 
 ## [1.13.0] - 2025-04-07
 
@@ -518,7 +547,6 @@ see https://github.com/nidor1998/s3sync/issues/65
 - Improved tests.
 - Refactored
 
-
 ## [1.12.2] - 2025-03-24
 
 ### Changed
@@ -536,9 +564,11 @@ Improved e2e test.
 
 ### Changed
 
-Changed to using Hyper 1.x internally, Some features are not available in Hyper 1.x, so separated as `legacy_hyper014_feature` feature.
+Changed to using Hyper 1.x internally, Some features are not available in Hyper 1.x, so separated as
+`legacy_hyper014_feature` feature.
 
-`--no-verify-ssl`, `--http-proxy` `--https-proxy` options require `legacy_hyper014_feature` feature.It is enabled by default.
+`--no-verify-ssl`, `--http-proxy` `--https-proxy` options require `legacy_hyper014_feature` feature.It is enabled by
+default.
 
 see https://github.com/nidor1998/s3sync/issues/59.
 
@@ -556,7 +586,7 @@ Support DSSE-KMS encryption with `--sse aws:kms:dsse` option.
 
 ### Fixed
 
-- Fix: `--auto-chunksize` bug.　#55
+- Fix: `--auto-chunksize` bug. #55
 
 ### Changed
 
@@ -595,7 +625,7 @@ Added `--disable-content-md5-header` option. It disables the ETag verification f
 ### Added
 
 - Added CRC64NVME checksum support.
-  - Currently, Only CRC64NVME checksum is supported for full object checksum. 
+    - Currently, Only CRC64NVME checksum is supported for full object checksum.
 
 ### Changed
 
@@ -630,14 +660,12 @@ Added `--disable-content-md5-header` option. It disables the ETag verification f
 
 - aws-sdk-s3 = "1.62.0"
 
-
 ## [1.6.1] - 2024-09-23
 
 ### Changed
 
 - aws-sdk-s3 = "1.51.0"
 - Supported Rust Versions (MSRV) = 1.78.0
-
 
 ## [1.6.0] - 2024-07-20
 
@@ -649,7 +677,6 @@ Added `--disable-content-md5-header` option. It disables the ETag verification f
 ### Changed
 
 - aws-sdk-s3 = "1.41.0"
-
 
 ## [1.5.0] - 2024-06-15
 
@@ -677,7 +704,8 @@ Added `--disable-content-md5-header` option. It disables the ETag verification f
 
 ### Added
 
-- Added [Stalled-stream protection](https://github.com/awslabs/aws-sdk-rust/discussions/956) support(enabled by default).
+- Added [Stalled-stream protection](https://github.com/awslabs/aws-sdk-rust/discussions/956) support(enabled by
+  default).
 - Added Express One Zone integration tests.
 
 ### Changed

@@ -143,6 +143,8 @@ pub trait StorageTrait: DynClone {
         get_object_output_first_chunk: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
+        if_match: Option<String>,
+        copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput>;
     async fn put_object_tagging(
         &self,
@@ -154,6 +156,7 @@ pub trait StorageTrait: DynClone {
         &self,
         key: &str,
         version_id: Option<String>,
+        if_match: Option<String>,
     ) -> Result<DeleteObjectOutput>;
     async fn delete_object_tagging(
         &self,

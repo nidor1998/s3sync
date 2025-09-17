@@ -50,16 +50,19 @@ impl HeadObjectChecker {
         }
     }
 
-    pub(crate) async fn is_sync_required(&self, source_object: &S3syncObject) -> Result<bool> {
+    pub(crate) async fn is_sync_required(
+        &self,
+        source_object: &S3syncObject,
+    ) -> (Result<bool>, Option<String>) {
         if !self.config.report_sync_status {
             if !self.is_head_object_check_required() {
-                return Ok(true);
+                return (Ok(true), None);
             }
 
             if self.config.filter_config.check_checksum_algorithm.is_none()
                 && self.check_target_local_storage_allow_overwrite()
             {
-                return Ok(true);
+                return (Ok(true), None);
             }
         }
 
@@ -77,7 +80,7 @@ impl HeadObjectChecker {
         }
     }
 
-    async fn is_old_object(&self, source_object: &S3syncObject) -> Result<bool> {
+    async fn is_old_object(&self, source_object: &S3syncObject) -> (Result<bool>, Option<String>) {
         let checksum_mode = if self.config.filter_config.check_checksum_algorithm.is_some()
             || self
                 .config
@@ -103,6 +106,17 @@ impl HeadObjectChecker {
                 self.config.target_sse_c_key_md5.clone(),
             )
             .await;
+
+        #[allow(clippy::unnecessary_unwrap)]
+        let target_etag = if head_target_object_output.is_ok() {
+            head_target_object_output
+                .as_ref()
+                .unwrap()
+                .e_tag()
+                .map(|s| s.to_string())
+        } else {
+            None
+        };
 
         if let Ok(target_object) = head_target_object_output {
             let diff_detector = if self.config.filter_config.check_size {
@@ -139,9 +153,12 @@ impl HeadObjectChecker {
                 StandardDiffDetector::boxed_new(self.config.clone())
             };
 
-            return diff_detector
-                .is_different(source_object, &target_object)
-                .await;
+            return (
+                diff_detector
+                    .is_different(source_object, &target_object)
+                    .await,
+                target_etag,
+            );
         }
 
         if is_head_object_not_found_error(head_target_object_output.as_ref().err().unwrap()) {
@@ -161,7 +178,7 @@ impl HeadObjectChecker {
                 self.target.set_warning();
             }
 
-            return Ok(true);
+            return (Ok(true), None);
         }
 
         self.target
@@ -183,7 +200,7 @@ impl HeadObjectChecker {
             "head_object() failed."
         );
 
-        Err(anyhow!("head_object() failed. key={}.", key,))
+        (Err(anyhow!("head_object() failed. key={}.", key,)), None)
     }
 
     fn is_head_object_check_required(&self) -> bool {
@@ -370,12 +387,8 @@ mod tests {
                 .last_modified(DateTime::from_secs(1))
                 .build(),
         );
-        assert!(
-            !head_object_checker
-                .is_old_object(&source_object)
-                .await
-                .unwrap()
-        );
+        let (result, _) = head_object_checker.is_old_object(&source_object).await;
+        assert!(!result.unwrap(),);
 
         let source_object = S3syncObject::NotVersioning(
             Object::builder()
@@ -384,12 +397,8 @@ mod tests {
                 .last_modified(DateTime::from_secs(1))
                 .build(),
         );
-        assert!(
-            head_object_checker
-                .is_old_object(&source_object)
-                .await
-                .unwrap()
-        );
+        let (result, _) = head_object_checker.is_old_object(&source_object).await;
+        assert!(result.unwrap(),);
     }
 
     #[tokio::test]
@@ -428,10 +437,8 @@ mod tests {
 
         let source_object =
             S3syncObject::NotVersioning(Object::builder().key("6byte.dat").size(6).build());
-        head_object_checker
-            .is_old_object(&source_object)
-            .await
-            .unwrap();
+        let (result, _) = head_object_checker.is_old_object(&source_object).await;
+        result.unwrap();
     }
 
     fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {

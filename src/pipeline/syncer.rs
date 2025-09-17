@@ -9,7 +9,7 @@ use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip
 use crate::types::error::S3syncError;
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::{
-    METADATA_SYNC_REPORT_LOG_NAME, MINIMUM_CHUNKSIZE, ObjectChecksum,
+    METADATA_SYNC_REPORT_LOG_NAME, MINIMUM_CHUNKSIZE, ObjectChecksum, ObjectKey, ObjectKeyMap,
     S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, S3syncObject,
     SYNC_REPORT_CACHE_CONTROL_METADATA_KEY, SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY,
     SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY, SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY,
@@ -18,9 +18,11 @@ use crate::types::{
     SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH,
     SseCustomerKey, SyncStatsReport, TAGGING_SYNC_REPORT_LOG_NAME, error, format_metadata,
     format_tags, get_additional_checksum, get_additional_checksum_with_head_object,
-    is_full_object_checksum,
+    is_full_object_checksum, sha1_digest_from_key,
 };
 use anyhow::{Context, Error, Result, anyhow};
+use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadError;
+use aws_sdk_s3::operation::copy_object::CopyObjectError;
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingError;
 use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
@@ -30,10 +32,11 @@ use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
+use aws_sdk_s3::operation::upload_part_copy::UploadPartCopyError;
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
 use aws_smithy_runtime_api::client::result::SdkError;
-use aws_smithy_runtime_api::http::Response;
+use aws_smithy_runtime_api::http::{Response, StatusCode};
 use aws_smithy_types::body::SdkBody;
 use std::collections::HashMap;
 use std::ops::Add;
@@ -52,6 +55,7 @@ pub struct ObjectSyncer {
     worker_index: u16,
     base: Stage,
     sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+    target_key_map: Option<ObjectKeyMap>,
 }
 
 impl ObjectSyncer {
@@ -59,11 +63,13 @@ impl ObjectSyncer {
         base: Stage,
         worker_index: u16,
         sync_stats_report: Arc<Mutex<SyncStatsReport>>,
+        target_key_map: Option<ObjectKeyMap>,
     ) -> Self {
         Self {
             worker_index,
             base,
             sync_stats_report,
+            target_key_map,
         }
     }
 
@@ -258,6 +264,41 @@ impl ObjectSyncer {
                     return Ok(());
                 }
 
+                if is_precondition_failed_error(&e) {
+                    self.base
+                        .send_stats(SyncWarning {
+                            key: key.to_string(),
+                        })
+                        .await;
+                    self.base.set_warning();
+
+                    let message = "precondition(if-match/copy-source-if-match) failed. skipping.";
+                    warn!(
+                        worker_index = self.worker_index,
+                        key = key,
+                        error = error,
+                        source = e.source(),
+                        message
+                    );
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(object.key().to_string());
+                    event_data.source_version_id =
+                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.message = Some(message.to_string());
+                    self.base
+                        .config
+                        .event_manager
+                        .trigger_event(event_data)
+                        .await;
+
+                    if self.base.config.warn_as_error {
+                        return Err(e);
+                    }
+
+                    return Ok(());
+                }
+
                 self.base
                     .send_stats(SyncError {
                         key: key.to_string(),
@@ -341,16 +382,24 @@ impl ObjectSyncer {
             && !self.base.config.report_metadata_sync_status
             && !self.base.config.report_tagging_sync_status
         {
-            head_object_checker.is_sync_required(&object).await?;
+            let (result, _) = head_object_checker.is_sync_required(&object).await;
+            result?;
             return Ok(());
         } else {
-            let sync_required = head_object_checker
-                .is_sync_required(&object)
-                .await
-                .context("pipeline::syncer::sync_object() failed.")?;
+            let (result, target_etag) = head_object_checker.is_sync_required(&object).await;
+            let sync_required =
+                result.context("pipeline::syncer::sync_object() -> is_sync_required() failed.")?;
+            trace!(
+                worker_index = self.worker_index,
+                key = key,
+                target_etag = target_etag,
+                sync_required = sync_required,
+                "head_object_checker.is_sync_required() ended.",
+            );
+
             // Even if the object is not required to sync, we need to check tagging and metadata if report_sync_status is enabled.
             if sync_required || self.base.config.report_sync_status {
-                return self.sync_or_delete_object(object).await;
+                return self.sync_or_delete_object(object, target_etag).await;
             }
         }
 
@@ -397,7 +446,7 @@ impl ObjectSyncer {
 
         for object in objects_to_sync {
             if self.base.config.enable_versioning {
-                self.sync_or_delete_object(object).await?;
+                self.sync_or_delete_object(object, None).await?;
             } else {
                 // If point-in-time is enabled, head_object_checker may be used.
                 self.sync_object(object).await?;
@@ -408,7 +457,11 @@ impl ObjectSyncer {
     }
 
     // skipcq: RS-R1000
-    async fn sync_or_delete_object(&self, object: S3syncObject) -> Result<()> {
+    async fn sync_or_delete_object(
+        &self,
+        object: S3syncObject,
+        target_etag: Option<String>,
+    ) -> Result<()> {
         let key = object.key();
 
         let mut event_data = EventData::new(EventType::UNDEFINED);
@@ -448,6 +501,13 @@ impl ObjectSyncer {
             .await;
 
         let size = object.size();
+
+        #[cfg(feature = "e2e_test_dangerous_simulations")]
+        {
+            self.do_precondition_error_simulation(
+                "ObjectSyncer::sync_or_delete_object-precondition",
+            )?;
+        }
 
         // Get the first chunk range if multipart upload is required.
         // If not, the whole object will be downloaded.
@@ -767,6 +827,22 @@ impl ObjectSyncer {
                     )
                     .await?;
 
+                let if_match = if self.base.config.if_match {
+                    if target_etag.is_none() {
+                        self.get_etag_from_target_key_map(key)
+                    } else {
+                        target_etag
+                    }
+                } else {
+                    None
+                };
+
+                let copy_source_if_match = if self.base.config.copy_source_if_match {
+                    object.e_tag().map(|etag| etag.to_string())
+                } else {
+                    None
+                };
+
                 let put_object_output = self
                     .put_object(
                         key,
@@ -775,6 +851,8 @@ impl ObjectSyncer {
                         get_object_output,
                         tagging,
                         object_checksum,
+                        if_match,
+                        copy_source_if_match,
                     )
                     .await;
                 if let Err(e) = put_object_output {
@@ -963,6 +1041,7 @@ impl ObjectSyncer {
             .context("pipeline::syncer::get_object() failed.")
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn put_object(
         &self,
         key: &str,
@@ -971,6 +1050,8 @@ impl ObjectSyncer {
         get_object_output: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
+        if_match: Option<String>,
+        copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput> {
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
@@ -990,6 +1071,8 @@ impl ObjectSyncer {
                 get_object_output,
                 tagging,
                 object_checksum,
+                if_match,
+                copy_source_if_match,
             )
             .await
             .context("pipeline::syncer::put_object() failed.")
@@ -1000,7 +1083,7 @@ impl ObjectSyncer {
             .target
             .as_ref()
             .unwrap()
-            .delete_object(key, None)
+            .delete_object(key, None, None)
             .await
             .context("pipeline::syncer::delete_object() failed.")
     }
@@ -1413,6 +1496,38 @@ impl ObjectSyncer {
             );
             self.base.cancellation_token.cancel();
         }
+    }
+
+    #[allow(dead_code)]
+    fn do_precondition_error_simulation(&self, error_simulation_point: &str) -> Result<()> {
+        const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
+        const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
+
+        if std::env::var(ERROR_DANGEROUS_SIMULATION_ENV)
+            .is_ok_and(|v| v == ERROR_DANGEROUS_SIMULATION_ENV_ALLOW)
+            && self
+                .base
+                .config
+                .error_simulation_point
+                .as_ref()
+                .is_some_and(|point| point == error_simulation_point)
+        {
+            error!(
+                "precondition error simulation has been triggered. This message should not be shown in the production.",
+            );
+
+            let unhandled_error = PutObjectError::generic(
+                aws_sdk_s3::error::ErrorMetadata::builder()
+                    .code("PreconditionFailed")
+                    .build(),
+            );
+
+            let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
+
+            return Err(anyhow!(SdkError::service_error(unhandled_error, response)));
+        }
+
+        Ok(())
     }
 
     async fn decide_sync_target_by_include_metadata_regex(
@@ -2125,6 +2240,24 @@ impl ObjectSyncer {
     pub fn get_sync_stats_report(&self) -> Arc<Mutex<SyncStatsReport>> {
         self.sync_stats_report.clone()
     }
+
+    pub fn get_etag_from_target_key_map(&self, key: &str) -> Option<String> {
+        if let Some(target_key_map) = self.target_key_map.as_ref() {
+            let target_key_map_map = target_key_map.lock().unwrap();
+            let result =
+                target_key_map_map.get(&ObjectKey::KeySHA1Digest(sha1_digest_from_key(key)));
+            if let Some(entry) = result {
+                return entry.e_tag.clone();
+            }
+
+            let result = target_key_map_map.get(&ObjectKey::KeyString(key.to_string()));
+            if let Some(entry) = result {
+                return entry.e_tag.clone();
+            }
+        }
+
+        None
+    }
 }
 
 fn is_force_retryable_error(e: &Error) -> bool {
@@ -2198,6 +2331,42 @@ fn is_not_found_error(result: &Error) -> bool {
     {
         if e.raw().status().as_u16() == 404 {
             return true;
+        }
+    }
+
+    false
+}
+
+fn is_precondition_failed_error(result: &Error) -> bool {
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<PutObjectError, Response<SdkBody>>>()
+    {
+        if let Some(code) = e.err().meta().code() {
+            return code == "PreconditionFailed";
+        }
+    }
+
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<CopyObjectError, Response<SdkBody>>>()
+    {
+        if let Some(code) = e.err().meta().code() {
+            return code == "PreconditionFailed";
+        }
+    }
+
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<UploadPartCopyError, Response<SdkBody>>>()
+    {
+        if let Some(code) = e.err().meta().code() {
+            return code == "PreconditionFailed";
+        }
+    }
+
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<CompleteMultipartUploadError, Response<SdkBody>>>()
+    {
+        if let Some(code) = e.err().meta().code() {
+            return code == "PreconditionFailed";
         }
     }
 
@@ -2462,6 +2631,7 @@ mod tests {
             ),
             0,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
         )
         .sync()
         .await;
@@ -2524,6 +2694,7 @@ mod tests {
             ),
             0,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
         )
         .sync()
         .await;
@@ -2600,6 +2771,7 @@ mod tests {
             ),
             0,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
         )
         .sync()
         .await;
@@ -2670,6 +2842,7 @@ mod tests {
             ),
             0,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
         )
         .sync()
         .await;
@@ -2734,6 +2907,7 @@ mod tests {
             ),
             0,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
         )
         .sync()
         .await;
@@ -2789,6 +2963,7 @@ mod tests {
             ),
             0,
             Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
         )
         .sync()
         .await;
@@ -2846,6 +3021,36 @@ mod tests {
             build_get_object_timeout_error()
         )));
         assert!(!is_access_denied_error(&anyhow!("test error")));
+    }
+
+    #[test]
+    fn is_precondition_failed_error_test() {
+        init_dummy_tracing_subscriber();
+
+        assert!(is_precondition_failed_error(&anyhow!(
+            build_put_object_precondition_failed_error()
+        )));
+
+        assert!(is_precondition_failed_error(&anyhow!(
+            build_copy_object_precondition_failed_error()
+        )));
+
+        assert!(is_precondition_failed_error(&anyhow!(
+            build_upload_part_copy_precondition_failed_error()
+        )));
+
+        assert!(is_precondition_failed_error(&anyhow!(
+            build_complete_multipart_upload_precondition_failed_error()
+        )));
+
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_delete_object_precondition_failed_error()
+        )));
+
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_get_object_timeout_error()
+        )));
+        assert!(!is_precondition_failed_error(&anyhow!("test error")));
     }
 
     #[test]
@@ -3111,6 +3316,70 @@ mod tests {
     fn build_list_object_versions_timeout_error()
     -> SdkError<ListObjectVersionsError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_put_object_precondition_failed_error() -> SdkError<PutObjectError, Response<SdkBody>> {
+        let unhandled_error = PutObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("PreconditionFailed")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_copy_object_precondition_failed_error() -> SdkError<CopyObjectError, Response<SdkBody>>
+    {
+        let unhandled_error = CopyObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("PreconditionFailed")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_upload_part_copy_precondition_failed_error()
+    -> SdkError<UploadPartCopyError, Response<SdkBody>> {
+        let unhandled_error = UploadPartCopyError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("PreconditionFailed")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_complete_multipart_upload_precondition_failed_error()
+    -> SdkError<CompleteMultipartUploadError, Response<SdkBody>> {
+        let unhandled_error = CompleteMultipartUploadError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("PreconditionFailed")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_delete_object_precondition_failed_error()
+    -> SdkError<DeleteObjectError, Response<SdkBody>> {
+        let unhandled_error = DeleteObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("PreconditionFailed")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
     }
 
     fn init_dummy_tracing_subscriber() {

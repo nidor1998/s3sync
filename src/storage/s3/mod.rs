@@ -958,6 +958,8 @@ impl StorageTrait for S3Storage {
         mut get_object_output_first_chunk: GetObjectOutput,
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
+        if_match: Option<String>,
+        copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput> {
         let mut version_id = "".to_string();
         if let Some(source_version_id) = get_object_output_first_chunk.version_id().as_ref() {
@@ -983,6 +985,8 @@ impl StorageTrait for S3Storage {
                 source_last_modified = source_last_modified,
                 target_key = target_key,
                 size = source_size.to_string(),
+                if_match = if_match.clone(),
+                copy_source_if_match = copy_source_if_match.clone(),
                 "[dry-run] sync completed.",
             );
 
@@ -1041,6 +1045,8 @@ impl StorageTrait for S3Storage {
             source_key.to_string(),
             source_size,
             source_additional_checksum,
+            if_match,
+            copy_source_if_match,
             self.has_warning.clone(),
         );
 
@@ -1115,6 +1121,7 @@ impl StorageTrait for S3Storage {
         &self,
         key: &str,
         version_id: Option<String>,
+        if_match: Option<String>,
     ) -> Result<DeleteObjectOutput> {
         let target_key = generate_full_key(&self.prefix, key);
         let version_id_str = version_id.clone().unwrap_or_default();
@@ -1124,6 +1131,7 @@ impl StorageTrait for S3Storage {
                 key = key,
                 target_version_id = version_id_str,
                 target_key = target_key,
+                if_match = if_match.clone(),
                 "[dry-run] delete completed.",
             );
 
@@ -1141,6 +1149,7 @@ impl StorageTrait for S3Storage {
             .bucket(&self.bucket)
             .key(&target_key)
             .set_version_id(version_id.clone())
+            .set_if_match(if_match.clone())
             .send()
             .await
             .context("aws_sdk_s3::client::delete_object() failed.")?;
@@ -1149,6 +1158,7 @@ impl StorageTrait for S3Storage {
             key = key,
             target_version_id = version_id_str,
             target_key = target_key,
+            if_match = if_match.clone(),
             "delete completed.",
         );
 
