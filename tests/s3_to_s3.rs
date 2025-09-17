@@ -278,6 +278,154 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_with_copy_source_if_match() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        const TEST_PREFIX: &str = "mydir";
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+
+        {
+            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET2.to_string(), "").await;
+            assert_eq!(object_list.len(), 5);
+
+            for object in object_list {
+                let key_set = HashSet::from([
+                    format!("{}/dir2/data2", TEST_PREFIX),
+                    format!("{}/dir5/data3", TEST_PREFIX),
+                    format!("{}/data1", TEST_PREFIX),
+                    format!("{}/dir21/data1", TEST_PREFIX),
+                    format!("{}/dir1/data1", TEST_PREFIX),
+                ]);
+
+                assert!(key_set.get(object.key.as_ref().unwrap()).is_some())
+            }
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
+                "--copy-source-if-match",
+                "--if-match",
+                "--remove-modified-filter",
+                "--head-each-target",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET2.to_string(), "").await;
+            assert_eq!(object_list.len(), 5);
+
+            for object in object_list {
+                let key_set = HashSet::from([
+                    format!("{}/dir2/data2", TEST_PREFIX),
+                    format!("{}/dir5/data3", TEST_PREFIX),
+                    format!("{}/data1", TEST_PREFIX),
+                    format!("{}/dir21/data1", TEST_PREFIX),
+                    format!("{}/dir1/data1", TEST_PREFIX),
+                ]);
+
+                assert!(key_set.get(object.key.as_ref().unwrap()).is_some())
+            }
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
+                "--copy-source-if-match",
+                "--if-match",
+                "--remove-modified-filter",
+                "--head-each-target",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_list = helper.list_objects(&BUCKET2.to_string(), "").await;
+            assert_eq!(object_list.len(), 5);
+
+            for object in object_list {
+                let key_set = HashSet::from([
+                    format!("{}/dir2/data2", TEST_PREFIX),
+                    format!("{}/dir5/data3", TEST_PREFIX),
+                    format!("{}/data1", TEST_PREFIX),
+                    format!("{}/dir21/data1", TEST_PREFIX),
+                    format!("{}/dir1/data1", TEST_PREFIX),
+                ]);
+
+                assert!(key_set.get(object.key.as_ref().unwrap()).is_some())
+            }
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_with_prefix_server_side_copy() {
         TestHelper::init_dummy_tracing_subscriber();
 

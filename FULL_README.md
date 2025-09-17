@@ -42,7 +42,7 @@
     * [Rate limiting by objects/bandwidth](#Rate-limiting-by-objectsbandwidth)
     * [Sync statistics report](#Sync-statistics-report)
     * [--delete support](#--delete-support)
-    * [Conditional writedelete support](#Conditional-writedelete-support)
+    * [Etag-based conditional write/delete support](#Etag-based-conditional-writedelete-support)
     * [Lua scripting support](#Lua-scripting-support)
     * [User-defined preprocessing callback](#User-defined-preprocessing-callback)
     * [User-defined event callback](#User-defined-event-callback)

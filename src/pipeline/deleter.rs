@@ -1,7 +1,7 @@
 use super::stage::{SendResult, Stage};
 use crate::types::SyncStatistics::{SyncDelete, SyncWarning};
 use crate::types::event_callback::{EventData, EventType};
-use crate::types::{ObjectKey, ObjectKeyMap, sha1_digest_from_key};
+use crate::types::{ObjectKey, ObjectKeyMap};
 use anyhow::{Error, Result, anyhow};
 use aws_sdk_s3::operation::delete_object::DeleteObjectError;
 use aws_smithy_runtime_api::client::result::SdkError;
@@ -203,12 +203,6 @@ impl ObjectDeleter {
 
         if let Some(target_key_map) = self.target_key_map.as_ref() {
             let target_key_map_map = target_key_map.lock().unwrap();
-            let result =
-                target_key_map_map.get(&ObjectKey::KeySHA1Digest(sha1_digest_from_key(key)));
-            if let Some(entry) = result {
-                return entry.e_tag.clone();
-            }
-
             let result = target_key_map_map.get(&ObjectKey::KeyString(key.to_string()));
             if let Some(entry) = result {
                 return entry.e_tag.clone();
