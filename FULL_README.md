@@ -486,6 +486,9 @@ And you can use `--copy-source-if-match` for conditional copy operations(CopyObj
 Actually, it serves as like optimistic locking.  
 This prevents race conditions that s3sync overwrites or deletes an object that has been modified by another process after s3sync checks the object.
 
+If precondition fails, s3sync skips the object and outputs a warning message.  
+If you want to treat it as an error, you can use `--warn-as-error` option.
+
 It is a challenging topic to understand, please refer to [AWS document](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-requests.html)
 
 Note: few S3-compatible storage supports conditional requests.

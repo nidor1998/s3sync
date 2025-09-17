@@ -2991,6 +2991,18 @@ mod tests {
             build_get_object_timeout_error()
         )));
         assert!(!is_not_found_error(&anyhow!("test error")));
+
+        assert!(!is_not_found_error(&anyhow!(
+            build_get_object_access_denied_error()
+        )));
+
+        assert!(!is_not_found_error(&anyhow!(
+            build_head_object_timeout_error()
+        )));
+
+        assert!(!is_not_found_error(&anyhow!(
+            build_get_object_tagging_access_denied_error()
+        )));
     }
 
     #[test]
@@ -3021,6 +3033,18 @@ mod tests {
             build_get_object_timeout_error()
         )));
         assert!(!is_access_denied_error(&anyhow!("test error")));
+
+        assert!(!is_access_denied_error(&anyhow!(
+            build_get_object_tagging_not_found_error()
+        )));
+
+        assert!(!is_access_denied_error(&anyhow!(
+            build_put_object_precondition_failed_error()
+        )));
+
+        assert!(!is_access_denied_error(&anyhow!(
+            build_put_object_tagging_not_found_error()
+        )));
     }
 
     #[test]
@@ -3051,6 +3075,22 @@ mod tests {
             build_get_object_timeout_error()
         )));
         assert!(!is_precondition_failed_error(&anyhow!("test error")));
+
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_put_object_access_denied_error()
+        )));
+
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_copy_object_access_denied_error()
+        )));
+
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_upload_part_copy_access_denied_error()
+        )));
+
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_complete_multipart_upload_access_denied()
+        )));
     }
 
     #[test]
@@ -3193,6 +3233,15 @@ mod tests {
     fn build_get_object_tagging_not_found_error()
     -> SdkError<GetObjectTaggingError, Response<SdkBody>> {
         let unhandled_error = GetObjectTaggingError::unhandled("Not Found");
+
+        let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_put_object_tagging_not_found_error()
+    -> SdkError<PutObjectTaggingError, Response<SdkBody>> {
+        let unhandled_error = PutObjectTaggingError::unhandled("Not Found");
 
         let response = Response::new(StatusCode::try_from(404).unwrap(), SdkBody::from(r#""#));
 
@@ -3343,6 +3392,18 @@ mod tests {
         SdkError::service_error(unhandled_error, response)
     }
 
+    fn build_copy_object_access_denied_error() -> SdkError<CopyObjectError, Response<SdkBody>> {
+        let unhandled_error = CopyObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("AccessDenied")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
     fn build_upload_part_copy_precondition_failed_error()
     -> SdkError<UploadPartCopyError, Response<SdkBody>> {
         let unhandled_error = UploadPartCopyError::generic(
@@ -3356,6 +3417,19 @@ mod tests {
         SdkError::service_error(unhandled_error, response)
     }
 
+    fn build_upload_part_copy_access_denied_error()
+    -> SdkError<UploadPartCopyError, Response<SdkBody>> {
+        let unhandled_error = UploadPartCopyError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("AccessDenied")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
     fn build_complete_multipart_upload_precondition_failed_error()
     -> SdkError<CompleteMultipartUploadError, Response<SdkBody>> {
         let unhandled_error = CompleteMultipartUploadError::generic(
@@ -3365,6 +3439,19 @@ mod tests {
         );
 
         let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_complete_multipart_upload_access_denied()
+    -> SdkError<CompleteMultipartUploadError, Response<SdkBody>> {
+        let unhandled_error = CompleteMultipartUploadError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("AccessDenied")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(unhandled_error, response)
     }

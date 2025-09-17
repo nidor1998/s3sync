@@ -312,6 +312,8 @@ mod tests {
                 "s3sync-e2e-test",
                 "--target-profile",
                 "s3sync-e2e-test",
+                "--server-side-copy",
+                "--copy-source-if-match",
                 &source_bucket_url,
                 &target_bucket_url,
             ];

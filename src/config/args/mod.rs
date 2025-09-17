@@ -810,7 +810,7 @@ This is for like an optimistic lock."#)]
     copy_source_if_match: bool,
 
     /// Don't delete more than a specified number of objects
-    #[arg(long, env, value_parser = clap::value_parser!(u64).range(1..), help_heading = "Advanced")]
+    #[arg(long, env, requires = "delete", value_parser = clap::value_parser!(u64).range(1..), help_heading = "Advanced")]
     max_delete: Option<u64>,
 
     #[cfg(feature = "lua_support")]
