@@ -1248,16 +1248,18 @@ impl StorageTrait for S3Storage {
         self.rate_limit_bandwidth.clone()
     }
 
-    fn generate_full_key_with_bucket(&self, key: &str, version_id: Option<String>) -> String {
+    fn generate_copy_source_key(&self, key: &str, version_id: Option<String>) -> String {
+        let full_key = generate_full_key(&self.prefix, key);
+
         if version_id.is_some() {
             return format!(
                 "{}/{}?versionId={}",
                 &self.bucket,
-                generate_full_key(&self.prefix, key),
+                full_key,
                 version_id.unwrap()
             );
         }
-        format!("{}/{}", &self.bucket, generate_full_key(&self.prefix, key))
+        format!("{}/{}", &self.bucket, full_key)
     }
 
     fn set_warning(&self) {

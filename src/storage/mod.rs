@@ -169,7 +169,7 @@ pub trait StorageTrait: DynClone {
     async fn send_stats(&self, stats: SyncStatistics);
     fn get_local_path(&self) -> PathBuf;
     fn get_rate_limit_bandwidth(&self) -> Option<Arc<RateLimiter>>;
-    fn generate_full_key_with_bucket(&self, key: &str, version_id: Option<String>) -> String;
+    fn generate_copy_source_key(&self, key: &str, version_id: Option<String>) -> String;
     fn set_warning(&self);
 }
 

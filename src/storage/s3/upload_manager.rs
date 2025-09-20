@@ -705,7 +705,7 @@ impl UploadManager {
             let source_key = self.source_key.clone();
             let copy_source = if self.config.server_side_copy {
                 self.source
-                    .generate_full_key_with_bucket(source_key.as_ref(), source_version_id.clone())
+                    .generate_copy_source_key(source_key.as_ref(), source_version_id.clone())
             } else {
                 "".to_string()
             };
@@ -913,7 +913,7 @@ impl UploadManager {
                 } else {
                     let upload_part_copy_output = target
                         .upload_part_copy()
-                        .copy_source(urlencoding::encode(&copy_source))
+                        .copy_source(copy_source)
                         .set_request_payer(request_payer)
                         .set_copy_source_range(Some(range))
                         .bucket(&target_bucket)
@@ -1075,7 +1075,7 @@ impl UploadManager {
             let source_total_size = self.source_total_size as usize;
             let copy_source = if self.config.server_side_copy {
                 self.source
-                    .generate_full_key_with_bucket(source_key.as_ref(), source_version_id.clone())
+                    .generate_copy_source_key(source_key.as_ref(), source_version_id.clone())
             } else {
                 "".to_string()
             };
@@ -1287,7 +1287,7 @@ impl UploadManager {
                 } else {
                     let upload_part_copy_output = target
                         .upload_part_copy()
-                        .copy_source(urlencoding::encode(&copy_source))
+                        .copy_source(copy_source)
                         .set_request_payer(request_payer)
                         .set_copy_source_range(Some(range))
                         .bucket(&target_bucket)
@@ -1553,11 +1553,11 @@ impl UploadManager {
         let put_object_output = if self.config.server_side_copy {
             let copy_source = self
                 .source
-                .generate_full_key_with_bucket(self.source_key.as_ref(), source_version_id.clone());
+                .generate_copy_source_key(self.source_key.as_ref(), source_version_id.clone());
             let copy_object_output = self
                 .client
                 .copy_object()
-                .copy_source(urlencoding::encode(&copy_source))
+                .copy_source(copy_source)
                 .set_request_payer(upload_metadata.request_payer)
                 .set_storage_class(upload_metadata.storage_class)
                 .bucket(bucket)
