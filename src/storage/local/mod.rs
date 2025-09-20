@@ -1752,7 +1752,7 @@ impl StorageTrait for LocalStorage {
     }
 
     #[cfg_attr(coverage_nightly, coverage(off))]
-    fn generate_full_key_with_bucket(&self, _: &str, _: Option<String>) -> String {
+    fn generate_copy_source_key(&self, _: &str, _: Option<String>) -> String {
         unimplemented!()
     }
 

@@ -329,7 +329,7 @@ With `--json-tracing`, you can output the tracing information in JSON format.
   0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
   ```
 
-With `--check-mtime-and-etag` option, s3sync checks the modification time and ETag of the source and target objects. It
+With `--check-mtime-and-etag` option, s3sync first checks the modification time, then ETag of the source and target objects. It
 is useful if you want to transfer only modified objects based on the modification time and ETag.
 
 Note: Calculating ETag is costly with local objects. Because s3sync needs to read the entire object from the local disk to calculate ETag.
@@ -351,7 +351,7 @@ with `--json-tracing`, you can output the tracing information in JSON format.
   0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
   ```
 
-With `--check-mtime-and-additional-checksum` option, s3sync checks the modification time and additional checksum of the
+With `--check-mtime-and-additional-checksum` option, s3sync first checks the modification time, then additional checksum of the
 source and target objects. It is useful if you want to transfer only modified objects based on the modification time and
 additional checksum.
 
@@ -1098,7 +1098,7 @@ If both sides are S3, s3sync only compares the ETag of the source object with th
 side is not S3, s3sync calculates ETag of the local object.
 
 You will need to know about Amazon S3 ETag.  
-See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html
+See: [API Reference](https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html)
 
 ### --put-last-modified-metadata
 

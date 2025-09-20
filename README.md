@@ -195,7 +195,7 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Multiple platforms support  
   On Linux(x86_64, aarch64), macOS(aarch64) and Windows(x86_64, aarch64) are fully tested and supported.  
-  s3sync is distributed as a single binary with no dependencies, so it can be easily run on the above platforms.  
+  s3sync is distributed as a single binary with no dependencies (except glibc), so it can be easily run on the above platforms.  
   Linux musl statically linked binary is also available.
 
 ## About testing
