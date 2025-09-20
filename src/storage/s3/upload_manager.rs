@@ -913,7 +913,7 @@ impl UploadManager {
                 } else {
                     let upload_part_copy_output = target
                         .upload_part_copy()
-                        .copy_source(copy_source)
+                        .copy_source(urlencoding::encode(&copy_source))
                         .set_request_payer(request_payer)
                         .set_copy_source_range(Some(range))
                         .bucket(&target_bucket)
@@ -1287,7 +1287,7 @@ impl UploadManager {
                 } else {
                     let upload_part_copy_output = target
                         .upload_part_copy()
-                        .copy_source(copy_source)
+                        .copy_source(urlencoding::encode(&copy_source))
                         .set_request_payer(request_payer)
                         .set_copy_source_range(Some(range))
                         .bucket(&target_bucket)
@@ -1557,7 +1557,7 @@ impl UploadManager {
             let copy_object_output = self
                 .client
                 .copy_object()
-                .copy_source(copy_source)
+                .copy_source(urlencoding::encode(&copy_source))
                 .set_request_payer(upload_metadata.request_payer)
                 .set_storage_class(upload_metadata.storage_class)
                 .bucket(bucket)

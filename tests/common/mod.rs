@@ -48,11 +48,14 @@ pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
 pub const TEMP_DOWNLOAD_DIR: &str = "./playground/download/";
 
 pub const LARGE_FILE_PATH: &str = "./playground/large_data_e2e_test/large_file";
+pub const LARGE_FILE_PATH_WITH_SPECIAL_CHARACTERS: &str =
+    "./playground/large_data_special_chars/c++☃test";
 pub const LARGE_FILE_PATH_CASE2: &str = "./playground/large_data_e2e_test_case2/large_file";
 pub const LARGE_FILE_PATH_CASE3: &str = "./playground/large_data_e2e_test_case3/large_file";
 pub const LARGE_FILE_DIR: &str = "./playground/large_data_e2e_test/";
 pub const LARGE_FILE_DIR_CASE2: &str = "./playground/large_data_e2e_test_case2/";
 pub const LARGE_FILE_DIR_CASE3: &str = "./playground/large_data_e2e_test_case3/";
+pub const LARGE_FILE_WITH_SPECIAL_CHARS_DIR: &str = "./playground/large_data_special_chars/";
 pub const RANDOM_DATA_FILE_DIR: &str = "./playground/random_data_file_dir/";
 
 pub const RANDOM_DATA_SEED_FILE: &str = "./test_data/random_data_seed";
@@ -1644,6 +1647,17 @@ impl TestHelper {
 
         let data = vec![0_u8; LARGE_FILE_SIZE];
         std::fs::write(LARGE_FILE_PATH, data.as_slice()).unwrap();
+    }
+
+    pub fn create_large_file_with_special_characters() {
+        if Self::is_file_exist(LARGE_FILE_PATH_WITH_SPECIAL_CHARACTERS) {
+            return;
+        }
+
+        std::fs::create_dir_all(LARGE_FILE_WITH_SPECIAL_CHARS_DIR).unwrap();
+
+        let data = vec![0_u8; LARGE_FILE_SIZE];
+        std::fs::write(LARGE_FILE_PATH_WITH_SPECIAL_CHARACTERS, data.as_slice()).unwrap();
     }
 
     pub fn create_large_file_for_preprocess_test() {
