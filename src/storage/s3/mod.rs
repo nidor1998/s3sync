@@ -1250,6 +1250,7 @@ impl StorageTrait for S3Storage {
 
     fn generate_copy_source_key(&self, key: &str, version_id: Option<String>) -> String {
         let full_key = generate_full_key(&self.prefix, key);
+        let full_key = urlencoding::encode(&full_key);
 
         if version_id.is_some() {
             return format!(
