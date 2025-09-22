@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.48.0] - 2025-09-23
+
+### Changed
+
+- Added `--ignore-glacier-warnings` option  
+Previously, when getting an object that needs to be restored from Glacier, s3sync fails with an error.
+Now by default, s3sync shows a warning message and skips to transfer the object.  
+With this option, s3sync ignores the warning and continues to transfer the object.
+- Updated dependencies
+
 ## [1.47.1] - 2025-09-20
 
 ### Changed

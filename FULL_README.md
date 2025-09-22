@@ -1517,6 +1517,8 @@ Advanced:
           This is for like an optimistic lock. [env: COPY_SOURCE_IF_MATCH=]
       --max-delete <MAX_DELETE>
           Don't delete more than a specified number of objects [env: MAX_DELETE=]
+      --ignore-glacier-warnings
+          Suppress warnings related to Amazon S3 Glacier storage class objects during GetObject requests [env: IGNORE_GLACIER_WARNINGS=]
 
 Lua scripting support:
       --preprocess-callback-lua-script <PREPROCESS_CALLBACK_LUA_SCRIPT>

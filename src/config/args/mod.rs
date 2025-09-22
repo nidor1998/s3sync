@@ -100,6 +100,7 @@ const DEFAULT_LUA_VM_MEMORY_LIMIT: &str = "64MiB";
 const DEFAULT_SHOW_NO_PROGRESS: bool = false;
 const DEFAULT_IF_MATCH: bool = false;
 const DEFAULT_COPY_SOURCE_IF_MATCH: bool = false;
+const DEFAULT_IGNORE_GLACIER_WARNINGS: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str = "with --enable-versioning/--sync-latest-tagging/--copy-source-if-match, both storage must be s3://\n";
@@ -812,6 +813,10 @@ This is for like an optimistic lock."#)]
     /// Don't delete more than a specified number of objects
     #[arg(long, env, requires = "delete", value_parser = clap::value_parser!(u64).range(1..), help_heading = "Advanced")]
     max_delete: Option<u64>,
+
+    /// Suppress warnings related to Amazon S3 Glacier storage class objects during GetObject requests
+    #[arg(long, env, default_value_t = DEFAULT_IGNORE_GLACIER_WARNINGS, help_heading = "Advanced")]
+    ignore_glacier_warnings: bool,
 
     #[cfg(feature = "lua_support")]
     #[arg(
@@ -2071,6 +2076,7 @@ impl TryFrom<CLIArgs> for Config {
             if_match: value.if_match,
             copy_source_if_match: value.copy_source_if_match,
             max_delete: value.max_delete,
+            ignore_glacier_warnings: value.ignore_glacier_warnings,
         })
     }
 }
