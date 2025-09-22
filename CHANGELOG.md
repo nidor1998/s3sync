@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `--ignore-glacier-warnings` option  
 Previously, when getting an object that needs to be restored from Glacier, s3sync fails with an error.
 Now by default, s3sync shows a warning message and skips to transfer the object.  
-With this option, s3sync ignores the warning and continues to transfer the object.
+With this option, s3sync ignores the warning and skips to transfer the object.
 - Updated dependencies
 
 ## [1.47.1] - 2025-09-20
