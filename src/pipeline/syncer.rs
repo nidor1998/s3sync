@@ -299,6 +299,49 @@ impl ObjectSyncer {
                     return Ok(());
                 }
 
+                if is_invalid_object_state_error(&e) {
+                    if !self.base.config.ignore_glacier_warnings {
+                        let message = "Glacier InvalidObjectState. Skipping.";
+                        warn!(
+                            worker_index = self.worker_index,
+                            key = key,
+                            error = error,
+                            source = e.source(),
+                            message
+                        );
+
+                        let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                        event_data.key = Some(object.key().to_string());
+                        event_data.source_version_id =
+                            object.version_id().map(|version_id| version_id.to_string());
+                        event_data.message = Some(message.to_string());
+                        self.base
+                            .config
+                            .event_manager
+                            .trigger_event(event_data)
+                            .await;
+
+                        self.base
+                            .send_stats(SyncWarning {
+                                key: key.to_string(),
+                            })
+                            .await;
+                        self.base.set_warning();
+
+                        if self.base.config.warn_as_error {
+                            return Err(e);
+                        }
+                    } else {
+                        debug!(
+                            worker_index = self.worker_index,
+                            key = key,
+                            "Ignoring Glacier InvalidObjectState. Skipping."
+                        );
+                    }
+
+                    return Ok(());
+                }
+
                 self.base
                     .send_stats(SyncError {
                         key: key.to_string(),
@@ -507,6 +550,13 @@ impl ObjectSyncer {
             self.do_precondition_error_simulation(
                 "ObjectSyncer::sync_or_delete_object-precondition",
             )?;
+
+            if crate::pipeline::syncer::is_error_simulation_point(
+                &self.base.config,
+                "ObjectSyncer::receive_and_filter-invalid_object_state_error",
+            ) {
+                return Err(anyhow!(build_get_object_invalid_object_state_error()));
+            }
         }
 
         // Get the first chunk range if multipart upload is required.
@@ -2417,6 +2467,18 @@ fn is_directory_traversal_error(e: &Error) -> bool {
     false
 }
 
+fn is_invalid_object_state_error(result: &Error) -> bool {
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<GetObjectError, Response<SdkBody>>>()
+    {
+        if let Some(code) = e.err().meta().code() {
+            return code == "InvalidObjectState";
+        }
+    }
+
+    false
+}
+
 fn tag_set_to_map(tag_set: &[Tag]) -> HashMap<String, String> {
     let mut map = HashMap::<_, _>::new();
     for tag in tag_set {
@@ -2489,6 +2551,19 @@ fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &st
             .error_simulation_point
             .as_ref()
             .is_some_and(|point| point == error_simulation_point)
+}
+
+#[allow(dead_code)]
+fn build_get_object_invalid_object_state_error() -> SdkError<GetObjectError, Response<SdkBody>> {
+    let unhandled_error = GetObjectError::generic(
+        aws_sdk_s3::error::ErrorMetadata::builder()
+            .code("InvalidObjectState")
+            .build(),
+    );
+
+    let response = Response::new(StatusCode::try_from(403).unwrap(), SdkBody::from(r#""#));
+
+    SdkError::service_error(unhandled_error, response)
 }
 
 #[cfg(test)]
@@ -3090,6 +3165,19 @@ mod tests {
 
         assert!(!is_precondition_failed_error(&anyhow!(
             build_complete_multipart_upload_access_denied()
+        )));
+    }
+
+    #[test]
+    fn is_invalid_object_state_error_test() {
+        init_dummy_tracing_subscriber();
+
+        assert!(is_invalid_object_state_error(&anyhow!(
+            build_get_object_invalid_object_state_error()
+        )));
+
+        assert!(!is_invalid_object_state_error(&anyhow!(
+            build_copy_object_precondition_failed_error()
         )));
     }
 

@@ -100,6 +100,7 @@ pub struct Config {
     pub if_match: bool,
     pub copy_source_if_match: bool,
     pub max_delete: Option<u64>,
+    pub ignore_glacier_warnings: bool,
 }
 
 impl Config {

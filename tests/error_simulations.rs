@@ -711,4 +711,124 @@ mod tests {
             .delete_bucket_with_cascade(&BUCKET1.to_string())
             .await;
     }
+
+    #[tokio::test]
+    async fn error_invalid_object_state_syncer() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--error-simulation-point",
+                "ObjectSyncer::receive_and_filter-invalid_object_state_error",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            TestHelper::enable_error_dangerous_simulation();
+            pipeline.run().await;
+            TestHelper::disable_error_dangerous_simulation();
+
+            assert!(!pipeline.has_error());
+            assert!(pipeline.has_warning());
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
+
+    #[tokio::test]
+    async fn error_invalid_object_state_as_error_syncer() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        let helper = TestHelper::new().await;
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+
+        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+        {
+            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--error-simulation-point",
+                "ObjectSyncer::receive_and_filter-invalid_object_state_error",
+                "--warn-as-error",
+                &source_bucket_url,
+                TEMP_DOWNLOAD_DIR,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            TestHelper::enable_error_dangerous_simulation();
+            pipeline.run().await;
+            TestHelper::disable_error_dangerous_simulation();
+
+            assert!(pipeline.has_error());
+        }
+
+        helper
+            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .await;
+    }
 }
