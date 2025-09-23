@@ -3,6 +3,7 @@
 -- If a callback function takes a long time to execute, it may block a whole pipeline.
 function preprocess_callback(source_object, upload_metadata)
     -- The following code prints the source object attributes.
+    print("source_object.key: ", source_object.key)
     print("source_object.accept_ranges: ", source_object.accept_ranges)
     print("source_object.bucket_key_enabled: ", source_object.bucket_key_enabled)
     print("source_object.cache_control: ", source_object.cache_control)
@@ -71,6 +72,7 @@ function preprocess_callback(source_object, upload_metadata)
     for key, value in pairs(upload_metadata.metadata) do
         print("upload_metadata.metadata:", key, value)
     end
+    print("")
 
     -- If an error occurs, you can call error() to stop the upload and whole pipeline will fail.
     -- error("This is a test error to demonstrate error handling in preprocess_callback.")
