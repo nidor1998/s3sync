@@ -141,8 +141,9 @@ const CHECK_MTIME_AND_ETAG_CONFLICT_SSE_KMS: &str =
     "--check-mtime-and-etag is not supported with --sse aws:kms | aws:kms:dsse \n";
 const CHECK_MTIME_AND_ETAG_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--check-mtime-and-etag is not supported with express onezone storage class\n";
-
-const SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND: &str = "directory must be specified as a source\n";
+const SOURCE_LOCAL_STORAGE_FILE_WITH_DELETE_OPTION: &str =
+    "with --delete, source storage must be directory\n";
+const SOURCE_LOCAL_STORAGE_PATH_NOT_FOUND: &str = "source file/directory not found\n";
 const TARGET_LOCAL_STORAGE_INVALID: &str = "invalid target path\n";
 const SSE_KMS_KEY_ID_ARGUMENTS_CONFLICT: &str =
     "--sse-kms-key-id must be used with --sse aws:kms | aws:kms:dsse\n";
@@ -967,8 +968,11 @@ impl CLIArgs {
         let source = storage_path::parse_storage_path(&self.source);
 
         if let StoragePath::Local(path) = source {
-            if !path.is_dir() {
-                return Err(SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND.to_string());
+            if !path.is_dir() && self.delete {
+                return Err(SOURCE_LOCAL_STORAGE_FILE_WITH_DELETE_OPTION.to_string());
+            }
+            if !path.exists() {
+                return Err(SOURCE_LOCAL_STORAGE_PATH_NOT_FOUND.to_string());
             }
         }
 

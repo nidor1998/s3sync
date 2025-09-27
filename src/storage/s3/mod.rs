@@ -62,6 +62,7 @@ impl StorageFactory for S3StorageFactory {
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
         has_warning: Arc<AtomicBool>,
+        _object_to_list: Option<String>,
     ) -> Storage {
         S3Storage::boxed_new(
             config,
@@ -1341,6 +1342,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -1382,6 +1384,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -1431,6 +1434,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -1469,6 +1473,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
     }
@@ -1503,6 +1508,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 

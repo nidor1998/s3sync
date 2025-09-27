@@ -102,7 +102,7 @@ fn key_to_directory_without_filename(path: PathBuf, key: &str) -> PathBuf {
     format!("{lossy_path}{directory_from_key}").into()
 }
 
-fn remove_file_name_if_exist(path: PathBuf) -> PathBuf {
+pub fn remove_file_name_if_exist(path: PathBuf) -> PathBuf {
     let mut path_str = path.to_str().unwrap().to_string();
     if path_str.ends_with(std::path::MAIN_SEPARATOR) {
         path_str.pop();

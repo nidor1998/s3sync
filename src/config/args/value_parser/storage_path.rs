@@ -22,10 +22,6 @@ pub fn check_storage_path(path: &str) -> Result<String, String> {
             return Err(NO_PATH_SPECIFIED.to_string());
         }
 
-        if !path.ends_with(std::path::MAIN_SEPARATOR) {
-            return Ok(format!("{}{}", path, std::path::MAIN_SEPARATOR));
-        }
-
         return Ok(path.to_string());
     }
 

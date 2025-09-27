@@ -41,6 +41,22 @@ mod tests {
         assert!(config.sync_with_delete);
     }
 
+    #[test]
+    fn with_custom_value_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "target_profile",
+            "--delete",
+            "./test_data/source/dir1/6byte.dat",
+            "s3://target-bucket/target_key",
+        ];
+
+        assert!(build_config_from_args(args).is_err());
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

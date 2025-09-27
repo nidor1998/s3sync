@@ -318,6 +318,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
