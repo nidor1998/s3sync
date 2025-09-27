@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update stable && rustup default stable
+      - run: rustup update stable && rustup default stable && rustup component add rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check --verbose
 
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update stable && rustup default stable
+      - run: rustup update stable && rustup default stable && rustup component add clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy -- -D warnings
 
