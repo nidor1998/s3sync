@@ -46,7 +46,7 @@ pub const REGION: &str = "ap-northeast-1";
 pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
 
 pub const TEMP_DOWNLOAD_DIR: &str = "./playground/download/";
-
+pub const TEMP_DOWNLOAD_DIR_WITHOUT_SLASH: &str = "./playground/download";
 pub const LARGE_FILE_PATH: &str = "./playground/large_data_e2e_test/large_file";
 pub const LARGE_FILE_PATH_WITH_SPECIAL_CHARACTERS: &str =
     "./playground/large_data_special_chars/c++☃test";

@@ -396,7 +396,7 @@ mod tests {
         }
 
         if let StoragePath::Local(path) = config.target {
-            assert_eq!(path.to_str().unwrap(), "target-dir/".to_string());
+            assert_eq!(path.to_str().unwrap(), "target-dir".to_string());
         } else {
             // skipcq: RS-W1021
             assert!(false, "local path not found");
@@ -419,7 +419,7 @@ mod tests {
         let config = build_config_from_args(args).unwrap();
 
         if let StoragePath::Local(path) = config.source {
-            assert_eq!(path.to_str().unwrap(), "./test_data/source/".to_string());
+            assert_eq!(path.to_str().unwrap(), "./test_data/source".to_string());
         } else {
             // skipcq: RS-W1021
             assert!(false, "local path not found");
@@ -616,60 +616,8 @@ mod tests {
         if let Err(error_message) = build_config_from_args(args) {
             assert_eq!(
                 error_message,
-                SOURCE_LOCAL_STORAGE_DIR_NOT_FOUND.to_string()
+                SOURCE_LOCAL_STORAGE_PATH_NOT_FOUND.to_string()
             );
-            return;
-        }
-
-        // skipcq: RS-W1021
-        assert!(false, "no error occurred");
-    }
-
-    #[test]
-    fn build_from_invalid_local_target() {
-        init_dummy_tracing_subscriber();
-
-        let args = vec![
-            "s3sync",
-            "--source-profile",
-            "source_profile",
-            "s3://source-bucket",
-            "./test_data/source/dir1/6byte.dat",
-        ];
-        if let Err(error_message) = build_config_from_args(args) {
-            assert_eq!(error_message, TARGET_LOCAL_STORAGE_INVALID.to_string());
-            return;
-        }
-
-        // skipcq: RS-W1021
-        assert!(false, "no error occurred");
-    }
-    #[test]
-    #[cfg(target_family = "unix")]
-    fn build_from_invalid_denied_target() {
-        init_dummy_tracing_subscriber();
-
-        use std::fs;
-        use std::os::unix::fs::PermissionsExt;
-
-        let args = vec![
-            "s3sync",
-            "--source-profile",
-            "source_profile",
-            "s3://source-bucket",
-            "./test_data/denied/denied",
-        ];
-        let mut permissions = fs::metadata("./test_data/denied/denied")
-            .unwrap()
-            .permissions();
-        permissions.set_mode(0o000);
-        fs::set_permissions("./test_data/denied/denied", permissions.clone()).unwrap();
-
-        if let Err(error_message) = build_config_from_args(args) {
-            permissions.set_mode(0o644);
-            fs::set_permissions("./test_data/denied/denied", permissions).unwrap();
-
-            assert_eq!(error_message, TARGET_LOCAL_STORAGE_INVALID.to_string());
             return;
         }
 

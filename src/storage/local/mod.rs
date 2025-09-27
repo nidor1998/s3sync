@@ -83,6 +83,7 @@ impl StorageFactory for LocalStorageFactory {
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
         has_warning: Arc<AtomicBool>,
+        object_to_list: Option<String>,
     ) -> Storage {
         LocalStorage::create(
             config,
@@ -92,6 +93,7 @@ impl StorageFactory for LocalStorageFactory {
             rate_limit_objects_per_sec,
             rate_limit_bandwidth,
             has_warning,
+            object_to_list,
         )
         .await
     }
@@ -107,9 +109,11 @@ struct LocalStorage {
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     has_warning: Arc<AtomicBool>,
     listing_worker_semaphore: Arc<Semaphore>,
+    object_to_list: Option<String>,
 }
 
 impl LocalStorage {
+    #[allow(clippy::too_many_arguments)]
     async fn create(
         config: Config,
         path: StoragePath,
@@ -118,6 +122,7 @@ impl LocalStorage {
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
         has_warning: Arc<AtomicBool>,
+        object_to_list: Option<String>,
     ) -> Storage {
         let local_path = if let StoragePath::Local(local_path) = path {
             local_path
@@ -135,6 +140,7 @@ impl LocalStorage {
             rate_limit_bandwidth,
             has_warning,
             listing_worker_semaphore: Arc::new(Semaphore::new(max_parallel_listings)),
+            object_to_list,
         };
 
         Box::new(storage)
@@ -1245,7 +1251,7 @@ impl StorageTrait for LocalStorage {
         _max_keys: i32,
         warn_as_error: bool,
     ) -> Result<()> {
-        if self.config.max_parallel_listings > 1 {
+        if self.object_to_list.is_none() && self.config.max_parallel_listings > 1 {
             debug!(
                 "Using parallel local listing with {} workers.",
                 self.config.max_parallel_listings
@@ -1265,7 +1271,15 @@ impl StorageTrait for LocalStorage {
 
         debug!("Disabled parallel local listing.");
 
-        for entry in WalkDir::new(&self.path).follow_links(self.config.follow_symlinks) {
+        let walk_path = if let Some(object) = &self.object_to_list {
+            let mut tmp_path = self.path.clone();
+            tmp_path.push(object.as_str());
+            tmp_path
+        } else {
+            self.path.clone()
+        };
+
+        for entry in WalkDir::new(&walk_path).follow_links(self.config.follow_symlinks) {
             if let Err(e) = entry {
                 if let Some(inner) = e.io_error() {
                     if inner.kind() == io::ErrorKind::NotFound {
@@ -1969,6 +1983,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
     }
@@ -1999,6 +2014,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2036,6 +2052,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
     }
@@ -2066,6 +2083,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2101,6 +2119,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2143,6 +2162,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2177,6 +2197,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2211,6 +2232,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2245,6 +2267,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2279,6 +2302,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2320,6 +2344,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2372,6 +2397,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2422,6 +2448,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2472,6 +2499,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2509,6 +2537,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2559,6 +2588,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2731,6 +2761,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2801,6 +2832,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2871,6 +2903,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -2941,6 +2974,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3011,6 +3045,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3078,6 +3113,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3123,6 +3159,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3193,6 +3230,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3251,6 +3289,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3277,6 +3316,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3319,6 +3359,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3332,6 +3373,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3377,6 +3419,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3390,6 +3433,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3466,6 +3510,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 
@@ -3499,6 +3544,7 @@ mod tests {
             None,
             None,
             Arc::new(AtomicBool::new(false)),
+            None,
         )
         .await;
 

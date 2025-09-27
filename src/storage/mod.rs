@@ -59,6 +59,7 @@ pub trait StorageFactory {
         rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
         rate_limit_bandwidth: Option<Arc<RateLimiter>>,
         has_warning: Arc<AtomicBool>,
+        object_to_list: Option<String>,
     ) -> Storage;
 }
 

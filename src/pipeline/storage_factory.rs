@@ -1,16 +1,15 @@
+use crate::Config;
+use crate::config::ClientConfig;
+use crate::storage::local::{LocalStorageFactory, fs_util};
+use crate::storage::s3::S3StorageFactory;
+use crate::storage::{Storage, StorageFactory, StoragePair};
+use crate::types::token::PipelineCancellationToken;
+use crate::types::{StoragePath, SyncStatistics};
 use async_channel::Sender;
 use aws_sdk_s3::types::RequestPayer;
 use leaky_bucket::RateLimiter;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-
-use crate::Config;
-use crate::config::ClientConfig;
-use crate::storage::local::LocalStorageFactory;
-use crate::storage::s3::S3StorageFactory;
-use crate::storage::{Storage, StorageFactory, StoragePair};
-use crate::types::token::PipelineCancellationToken;
-use crate::types::{StoragePath, SyncStatistics};
 
 // default refill interval 100ms
 const REFILL_PER_INTERVAL_DIVIDER: usize = 10;
@@ -56,29 +55,75 @@ pub async fn create_storage_pair(
         None
     };
 
+    let mut source_path = config.source.clone();
+    let mut object_to_list = None;
+    if let StoragePath::Local(path) = config.source.clone() {
+        if path.is_dir() {
+            let mut source_dir = path;
+            if !source_dir
+                .to_string_lossy()
+                .ends_with(std::path::MAIN_SEPARATOR_STR)
+            {
+                source_dir = (source_dir.to_string_lossy().to_string()
+                    + std::path::MAIN_SEPARATOR_STR)
+                    .into();
+            }
+            source_path = StoragePath::Local(source_dir);
+        } else {
+            object_to_list = Some(path.file_name().unwrap().to_str().unwrap().to_string());
+            let mut source_dir = fs_util::remove_file_name_if_exist(path);
+            if source_dir.as_os_str().is_empty() {
+                source_dir = ".".into();
+            }
+            if !source_dir
+                .to_string_lossy()
+                .ends_with(std::path::MAIN_SEPARATOR_STR)
+            {
+                source_dir = (source_dir.to_string_lossy().to_string()
+                    + std::path::MAIN_SEPARATOR_STR)
+                    .into();
+            }
+            source_path = StoragePath::Local(source_dir);
+        }
+    }
+
     let source = create_storage(
         config.clone(),
         config.source_client_config.clone(),
         config.source_client_config.clone().unwrap().request_payer,
-        config.source.clone(),
+        source_path,
         cancellation_token.clone(),
         stats_sender.clone(),
         rate_limit_objects_per_sec.clone(),
         rate_limit_bandwidth.clone(),
         has_warning.clone(),
+        object_to_list,
     )
     .await;
 
+    let mut target_path = config.target.clone();
+    if let StoragePath::Local(path) = config.target.clone() {
+        let mut tmp_path = path;
+        if !tmp_path
+            .to_string_lossy()
+            .ends_with(std::path::MAIN_SEPARATOR_STR)
+        {
+            tmp_path =
+                (tmp_path.to_string_lossy().to_string() + std::path::MAIN_SEPARATOR_STR).into();
+        }
+        target_path = StoragePath::Local(tmp_path);
+    }
     let target = create_storage(
         config.clone(),
         config.target_client_config.clone(),
         config.target_client_config.clone().unwrap().request_payer,
-        config.target,
+        target_path,
         cancellation_token,
         stats_sender.clone(),
         rate_limit_objects_per_sec.clone(),
         rate_limit_bandwidth.clone(),
         has_warning.clone(),
+        None,
     )
     .await;
 
@@ -96,6 +141,7 @@ async fn create_storage(
     rate_limit_objects_per_sec: Option<Arc<RateLimiter>>,
     rate_limit_bandwidth: Option<Arc<RateLimiter>>,
     has_warning: Arc<AtomicBool>,
+    object_to_list: Option<String>,
 ) -> Storage {
     let factory_fn = match storage_path {
         StoragePath::S3 { .. } => S3StorageFactory::create,
@@ -112,6 +158,7 @@ async fn create_storage(
         rate_limit_objects_per_sec,
         rate_limit_bandwidth,
         has_warning,
+        object_to_list,
     )
     .await
 }
