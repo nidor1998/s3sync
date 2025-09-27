@@ -450,7 +450,7 @@ mod tests {
         let config = build_config_from_args(args).unwrap();
 
         if let StoragePath::Local(path) = config.source {
-            assert_eq!(path.to_str().unwrap(), ".\\test_data\\source\\".to_string());
+            assert_eq!(path.to_str().unwrap(), ".\\test_data\\source".to_string());
         } else {
             // skipcq: RS-W1021
             assert!(false, "local path not found");
