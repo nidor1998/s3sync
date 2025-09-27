@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.49.0] - 2025-09-28
+
+### Changed
+
+- Added a single file upload functionality from local to S3  
+  Previously, you could specify a directory path as the source to upload files from local to S3.  
+  Now, you can upload a single file from local to S3 with `s3sync <local-file-path> s3://bucket-name/prefix/`  command.  
+  This command uploads the specified local file to the specified S3 bucket and prefix.  
+  The local file name is preserved in the S3 object name.
+- Improved error messages when deleting objects from S3
+- Updated dependencies
+
 ## [1.48.0] - 2025-09-23
 
 ### Changed

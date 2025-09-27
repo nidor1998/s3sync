@@ -137,7 +137,12 @@ impl ObjectDeleter {
                                 }
 
                                 self.base.cancellation_token.cancel();
-                                error!(worker_index = self.worker_index, "delete worker has been cancelled with error.");
+
+                                let error = result.err().unwrap();
+                                error!(worker_index = self.worker_index,
+                                    error = error.to_string(),
+                                    source = &error.source(),
+                                    "delete worker has been cancelled with error.");
                                 return Err(anyhow!("delete worker has been cancelled with error."));
                             }
 
