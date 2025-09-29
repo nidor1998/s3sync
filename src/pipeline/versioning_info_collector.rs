@@ -110,10 +110,12 @@ impl VersioningInfoCollector {
                 event_data.source_size = Some(source_object.size() as u64);
                 // skipcq: RS-W1070
                 event_data.source_etag = source_object.e_tag().map(|s| s.to_string());
+                // skipcq: RS-W1070
                 event_data.target_version_id = target_head_object_output.version_id.clone();
                 event_data.target_last_modified = target_head_object_output.last_modified;
                 // skipcq: RS-W1070
                 event_data.target_size = target_head_object_output.content_length.map(|c| c as u64);
+                // skipcq: RS-W1070
                 event_data.target_etag = target_head_object_output.e_tag.clone();
                 event_data.message =
                     Some("Object filtered. This version already synced.".to_string());
