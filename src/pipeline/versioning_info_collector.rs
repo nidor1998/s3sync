@@ -98,12 +98,23 @@ impl VersioningInfoCollector {
                     "already synced."
                 );
 
+                let target_head_object_output = target_head_object_output_map
+                    .get(source_version_id)
+                    .expect("The version id must exist in the map.");
+
                 let mut event_data = EventData::new(EventType::SYNC_FILTERED);
                 event_data.key = Some(key.to_string());
                 // skipcq: RS-W1070
                 event_data.source_version_id = source_object.version_id().map(|v| v.to_string());
                 event_data.source_last_modified = Some(*source_object.last_modified());
                 event_data.source_size = Some(source_object.size() as u64);
+                // skipcq: RS-W1070
+                event_data.source_etag = source_object.e_tag().map(|s| s.to_string());
+                event_data.target_version_id = target_head_object_output.version_id.clone();
+                event_data.target_last_modified = target_head_object_output.last_modified;
+                // skipcq: RS-W1070
+                event_data.target_size = target_head_object_output.content_length.map(|c| c as u64);
+                event_data.target_etag = target_head_object_output.e_tag.clone();
                 event_data.message =
                     Some("Object filtered. This version already synced.".to_string());
                 self.config.event_manager.trigger_event(event_data).await;

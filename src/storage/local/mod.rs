@@ -215,12 +215,16 @@ impl LocalStorage {
         target_content_length: u64,
         source_express_onezone_storage: bool,
         source_version_id: Option<String>,
+        source_last_modified: Option<DateTime>,
     ) -> Result<()> {
         let mut event_data = EventData::new(EventType::UNDEFINED);
         event_data.key = Some(key.to_string());
         event_data.source_version_id = source_version_id;
         // skipcq: RS-W1070
         event_data.source_etag = source_e_tag.clone();
+        event_data.source_size = Some(source_content_length);
+        event_data.target_size = Some(target_content_length);
+        event_data.source_last_modified = source_last_modified;
 
         let key = key.to_string();
         if !self.config.disable_etag_verify && !source_express_onezone_storage {
@@ -374,8 +378,6 @@ impl LocalStorage {
         }
 
         event_data.event_type = EventType::UNDEFINED;
-        event_data.source_etag = None;
-        event_data.target_etag = None;
         event_data.message = None;
         // skipcq: RS-W1070
         event_data.checksum_algorithm = source_checksum_algorithm.clone();
@@ -500,6 +502,20 @@ impl LocalStorage {
             let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key)
                 .to_string_lossy()
                 .to_string();
+
+            let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
+            event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
+            event_data.source_version_id = get_object_output
+                .version_id()
+                .as_ref()
+                .map(|v| v.to_string());
+            event_data.source_last_modified = get_object_output.last_modified;
+            event_data.source_etag = source_e_tag.clone();
+            event_data.source_size = get_object_output.content_length().map(|v| v as u64);
+            event_data.target_size = get_object_output.content_length().map(|v| v as u64); // Assuming the size is the same as source
+            self.config.event_manager.trigger_event(event_data).await;
+
             info!(
                 key = key,
                 real_path = real_path,
@@ -596,6 +612,7 @@ impl LocalStorage {
         // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.source_last_modified = source_last_modified_raw;
+        event_data.source_etag = source_e_tag.clone();
         event_data.source_size = Some(source_content_length);
         event_data.target_size = Some(target_content_length);
         self.config.event_manager.trigger_event(event_data).await;
@@ -613,6 +630,7 @@ impl LocalStorage {
             target_content_length,
             source_storage_class == Some(StorageClass::ExpressOnezone),
             source_version_id,
+            source_last_modified_raw,
         )
         .await?;
 
@@ -963,6 +981,7 @@ impl LocalStorage {
         // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.source_last_modified = source_last_modified_raw;
+        event_data.source_etag = source_e_tag.clone();
         event_data.source_size = Some(source_size);
         event_data.target_size = Some(target_content_length);
         self.config.event_manager.trigger_event(event_data).await;
@@ -980,6 +999,7 @@ impl LocalStorage {
             target_content_length,
             source_storage_class == Some(StorageClass::ExpressOnezone),
             source_version_id,
+            source_last_modified_raw,
         )
         .await?;
 
