@@ -506,6 +506,8 @@ For example, you can use Lua script to implement custom preprocessing logic, suc
 attributes(e.g., metadata, tagging) before transferring it to S3.  
 By default, Lua scripts run in safe mode, so they cannot use Lua’s OS or I/O library functions.  
 If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
+With Lua third-party C libraries, you can use more complex logic, like querying databases, requesting web APIs, etc.
+
 See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
 
 Note: `--preprocess-callback-lua-script` can not modify the object's key or content itself.

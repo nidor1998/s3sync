@@ -88,9 +88,11 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 - Fast  
   s3sync is implemented in Rust and uses the AWS SDK for Rust, which supports multithreaded asynchronous I/O.  
-  In my environment(`s3sync 1.45.0(glibc)/c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)`, with 160 workers), uploading from local to S3 achieved about 4,300 objects/sec (small
+  In my environment(`s3sync 1.45.0(glibc)/c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)`, with 160 workers), uploading
+  from local to S3 achieved about 4,300 objects/sec (small
   objects 10KiB),  
-  in the case of a large objects(6GiB object, total 96GiB, `--max-parallel-uploads 48`), about 256.72 MiB/sec, 6.5 minutes,
+  in the case of a large objects(6GiB object, total 96GiB, `--max-parallel-uploads 48`), about 256.72 MiB/sec, 6.5
+  minutes,
 
 - Versioning support  
   All versions of the object can be synchronized. (Except intermediate delete markers)
@@ -102,13 +104,16 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   You can use a [Lua](https://www.lua.org) (5.4) script to implement custom filtering, event handling, preprocessing
   before transferring objects to S3.  
   `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are
-  available for this purpose.  
+  available
+  for this purpose.  
   Lua is widely recognized as a fast scripting language. The Lua engine is embedded in s3sync, so you can use Lua script
   without any additional dependencies.  
   For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object
   attributes(e.g., metadata, tagging) before transferring it to S3.  
   By default, Lua scripts run in safe mode, so they cannot use Lua’s OS or I/O library functions.  
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
+  With Lua third-party C libraries, you can use more complex logic, like querying databases, requesting web APIs, etc.
+
   See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
 
   Note: `--preprocess-callback-lua-script` can not modify the object's key or content itself.
@@ -190,12 +195,14 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   s3sync is designed to be used in CI/CD pipelines.
     - JSON tracing(logging) support(`--json-tracing` option)
     - Explicit exit code  
-      `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch), `101` for abnormal termination (e.g., Rust panic, it's a bug of s3sync)
+      `0` for success, `1` for error, `2` for invalid arguments, `3` for warnings(e.g., ETag mismatch), `101` for
+      abnormal termination (e.g., Rust panic, it's a bug of s3sync)
     - Supports all options via environment variables
 
 - Multiple platforms support  
   On Linux(x86_64, aarch64), macOS(aarch64) and Windows(x86_64, aarch64) are fully tested and supported.  
-  s3sync is distributed as a single binary with no dependencies (except glibc), so it can be easily run on the above platforms.  
+  s3sync is distributed as a single binary with no dependencies (except glibc), so it can be easily run on the above
+  platforms.  
   Linux musl statically linked binary is also available.
 
 ## About testing

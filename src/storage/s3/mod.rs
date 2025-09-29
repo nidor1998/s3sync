@@ -980,6 +980,21 @@ impl StorageTrait for S3Storage {
         if self.config.dry_run {
             self.send_stats(SyncBytes(source_size)).await;
 
+            let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
+            event_data.key = Some(key.to_string());
+            // skipcq: RS-W1070
+            event_data.source_version_id = get_object_output_first_chunk
+                .version_id()
+                .as_ref()
+                .map(|v| v.to_string());
+            event_data.source_last_modified =
+                get_object_output_first_chunk.last_modified().copied();
+            // skipcq: RS-W1070
+            event_data.source_etag = get_object_output_first_chunk.e_tag().map(|e| e.to_string());
+            event_data.source_size = Some(source_size);
+            event_data.target_size = Some(source_size); // Assuming the size is the same as source
+            self.config.event_manager.trigger_event(event_data).await;
+
             info!(
                 key = key,
                 source_version_id = version_id,

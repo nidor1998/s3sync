@@ -514,6 +514,7 @@ impl UploadManager {
             .version_id
             .clone()
             .map(|v| v.to_string());
+        event_data.source_etag = source_e_tag.clone();
         event_data.source_last_modified = source_last_modified;
         event_data.source_size = Some(self.source_total_size);
         event_data.target_size = Some(self.source_total_size); // Assuming the size is the same as source
@@ -525,6 +526,7 @@ impl UploadManager {
             source_e_tag
         };
 
+        let mut target_e_tag = None;
         if !self.config.disable_etag_verify
             && !self.express_onezone_storage
             && !self.config.disable_content_md5_header
@@ -533,7 +535,7 @@ impl UploadManager {
             let target_sse = complete_multipart_upload_output
                 .server_side_encryption()
                 .cloned();
-            let target_e_tag = complete_multipart_upload_output
+            target_e_tag = complete_multipart_upload_output
                 .e_tag()
                 .map(|e| e.to_string());
 
@@ -549,6 +551,9 @@ impl UploadManager {
                     .version_id
                     .clone()
                     .map(|v| v.to_string()),
+                source_last_modified,
+                self.source_total_size,
+                self.source_total_size, // Assuming the size is the same as source
             )
             .await;
         }
@@ -564,12 +569,16 @@ impl UploadManager {
                 source_checksum,
                 target_checksum,
                 &source_e_tag,
+                &target_e_tag,
                 source_remote_storage,
                 source_version_id,
                 complete_multipart_upload_output
                     .version_id
                     .clone()
                     .map(|v| v.to_string()),
+                source_last_modified,
+                self.source_total_size,
+                self.source_total_size, // Assuming the size is the same as source
             )
             .await;
         }
@@ -590,6 +599,9 @@ impl UploadManager {
         target_e_tag: &Option<String>,
         source_version_id: Option<String>,
         target_version_id: Option<String>,
+        source_last_modified: Option<DateTime>,
+        source_content_length: u64,
+        target_content_length: u64,
     ) {
         let verify_result = storage::e_tag_verify::verify_e_tag(
             !self.config.disable_multipart_verify,
@@ -609,6 +621,9 @@ impl UploadManager {
         event_data.source_etag = source_e_tag.clone();
         // skipcq: RS-W1070
         event_data.target_etag = target_e_tag.clone();
+        event_data.source_last_modified = source_last_modified;
+        event_data.source_size = Some(source_content_length);
+        event_data.target_size = Some(target_content_length);
 
         if let Some(e_tag_match) = verify_result {
             if !e_tag_match {
@@ -1428,6 +1443,7 @@ impl UploadManager {
         let source_checksum = self.source_additional_checksum.clone();
         let source_storage_class = get_object_output.storage_class().cloned();
         let source_version_id = get_object_output.version_id().map(|v| v.to_string());
+        let source_last_modified = get_object_output.last_modified().copied();
 
         let buffer = if !self.config.server_side_copy {
             let mut body = get_object_output.body.into_async_read();
@@ -1654,6 +1670,7 @@ impl UploadManager {
         // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.target_version_id = put_object_output.version_id().map(|v| v.to_string());
+        event_data.source_etag = source_e_tag.clone();
         event_data.source_last_modified = get_object_output.last_modified().copied();
         event_data.source_size = Some(self.source_total_size);
         event_data.target_size = Some(self.source_total_size); // Assuming the size is the same as source
@@ -1665,13 +1682,14 @@ impl UploadManager {
             source_e_tag
         };
 
+        let mut target_e_tag = None;
         if !self.config.disable_etag_verify
             && !self.express_onezone_storage
             && !self.config.disable_content_md5_header
             && source_storage_class != Some(StorageClass::ExpressOnezone)
         {
             let target_sse = put_object_output.server_side_encryption().cloned();
-            let target_e_tag = put_object_output.e_tag().map(|e| e.to_string());
+            target_e_tag = put_object_output.e_tag().map(|e| e.to_string());
 
             self.verify_e_tag(
                 key,
@@ -1682,6 +1700,9 @@ impl UploadManager {
                 &target_e_tag,
                 source_version_id.clone(),
                 put_object_output.version_id().map(|v| v.to_string()),
+                source_last_modified,
+                self.source_total_size,
+                self.source_total_size, // Assuming the size is the same as source
             )
             .await;
         }
@@ -1697,9 +1718,13 @@ impl UploadManager {
                 source_checksum,
                 target_checksum,
                 &source_e_tag,
+                &target_e_tag,
                 source_remote_storage,
                 source_version_id,
                 put_object_output.version_id().map(|v| v.to_string()),
+                source_last_modified,
+                self.source_total_size,
+                self.source_total_size, // Assuming the size is the same as source
             )
             .await;
         }
@@ -1714,9 +1739,13 @@ impl UploadManager {
         source_checksum: Option<String>,
         target_checksum: Option<String>,
         source_e_tag: &Option<String>,
+        target_e_tag: &Option<String>,
         source_remote_storage: bool,
         source_version_id: Option<String>,
         target_version_id: Option<String>,
+        source_last_modified: Option<DateTime>,
+        source_content_length: u64,
+        target_content_length: u64,
     ) {
         if self.config.additional_checksum_mode.is_some() && source_checksum.is_none() {
             self.send_stats(SyncWarning {
@@ -1734,6 +1763,11 @@ impl UploadManager {
             event_data.source_version_id = source_version_id.clone();
             // skipcq: RS-W1070
             event_data.target_version_id = target_version_id.clone();
+            event_data.source_last_modified = source_last_modified;
+            event_data.source_etag = source_e_tag.clone();
+            event_data.source_size = Some(source_content_length);
+            event_data.target_etag = target_e_tag.clone();
+            event_data.target_size = Some(target_content_length);
             event_data.message = Some(message.to_string());
             self.config.event_manager.trigger_event(event_data).await;
         }
@@ -1754,6 +1788,11 @@ impl UploadManager {
             event_data.key = Some(key.to_string());
             event_data.source_version_id = source_version_id;
             event_data.target_version_id = target_version_id;
+            event_data.source_last_modified = source_last_modified;
+            event_data.source_etag = source_e_tag.clone();
+            event_data.source_size = Some(source_content_length);
+            event_data.target_etag = target_e_tag.clone();
+            event_data.target_size = Some(target_content_length);
             event_data.source_checksum = Some(source_checksum.clone());
             event_data.target_checksum = Some(target_checksum.clone());
             event_data.checksum_algorithm =
