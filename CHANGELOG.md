@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Improved event data information in the event callback system
+- Improved event callback system  
+  Even if dry-run is enabled, SYNC_COMPLETE event will be triggered.
+- Improved event data information in the event callback system  
+  For example, SYNC_CHECKSUM_VERIFIED event now includes size, modified time, etag.
 - Updated dependencies
 
 ## [1.49.0] - 2025-09-28
