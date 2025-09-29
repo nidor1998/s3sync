@@ -514,6 +514,7 @@ impl UploadManager {
             .version_id
             .clone()
             .map(|v| v.to_string());
+        // skipcq: RS-W1070
         event_data.source_etag = source_e_tag.clone();
         event_data.source_last_modified = source_last_modified;
         event_data.source_size = Some(self.source_total_size);
@@ -1670,6 +1671,7 @@ impl UploadManager {
         // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.target_version_id = put_object_output.version_id().map(|v| v.to_string());
+        // skipcq: RS-W1070
         event_data.source_etag = source_e_tag.clone();
         event_data.source_last_modified = get_object_output.last_modified().copied();
         event_data.source_size = Some(self.source_total_size);
@@ -1764,8 +1766,10 @@ impl UploadManager {
             // skipcq: RS-W1070
             event_data.target_version_id = target_version_id.clone();
             event_data.source_last_modified = source_last_modified;
+            // skipcq: RS-W1070
             event_data.source_etag = source_e_tag.clone();
             event_data.source_size = Some(source_content_length);
+            // skipcq: RS-W1070
             event_data.target_etag = target_e_tag.clone();
             event_data.target_size = Some(target_content_length);
             event_data.message = Some(message.to_string());
@@ -1789,8 +1793,10 @@ impl UploadManager {
             event_data.source_version_id = source_version_id;
             event_data.target_version_id = target_version_id;
             event_data.source_last_modified = source_last_modified;
+            // skipcq: RS-W1070
             event_data.source_etag = source_e_tag.clone();
             event_data.source_size = Some(source_content_length);
+            // skipcq: RS-W1070
             event_data.target_etag = target_e_tag.clone();
             event_data.target_size = Some(target_content_length);
             event_data.source_checksum = Some(source_checksum.clone());

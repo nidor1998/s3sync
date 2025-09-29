@@ -511,6 +511,7 @@ impl LocalStorage {
                 .as_ref()
                 .map(|v| v.to_string());
             event_data.source_last_modified = get_object_output.last_modified;
+            // skipcq: RS-W1070
             event_data.source_etag = source_e_tag.clone();
             event_data.source_size = get_object_output.content_length().map(|v| v as u64);
             event_data.target_size = get_object_output.content_length().map(|v| v as u64); // Assuming the size is the same as source
@@ -612,6 +613,7 @@ impl LocalStorage {
         // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.source_last_modified = source_last_modified_raw;
+        // skipcq: RS-W1070
         event_data.source_etag = source_e_tag.clone();
         event_data.source_size = Some(source_content_length);
         event_data.target_size = Some(target_content_length);
@@ -981,6 +983,7 @@ impl LocalStorage {
         // skipcq: RS-W1070
         event_data.source_version_id = source_version_id.clone();
         event_data.source_last_modified = source_last_modified_raw;
+        // skipcq: RS-W1070
         event_data.source_etag = source_e_tag.clone();
         event_data.source_size = Some(source_size);
         event_data.target_size = Some(target_content_length);
