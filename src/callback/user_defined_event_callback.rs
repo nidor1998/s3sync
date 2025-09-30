@@ -90,6 +90,11 @@ impl EventCallback for UserDefinedEventCallback {
                 println!("Sync filtered: {event_data:?}");
             }
 
+            // This event is triggered after the PIPELINE_END event
+            EventType::STATS_REPORT => {
+                println!("Stats report: {event_data:?}");
+            }
+
             // Currently, all events are captured by above match arms,
             _ => {
                 println!("Other events: {event_data:?}");
