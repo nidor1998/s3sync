@@ -72,7 +72,7 @@ zeroize_derive = "1.4.2"
 ## If you want to luagit, you can specify the `luajit` feature.
 ## If you have trouble with third-party Lua libraries, remove `vendored` feature(static linking). This will use the system Lua engine.
 ## But you need to install Lua engine according to your OS.
-## mlua = { version = "0.11.3", features = ["luajit", "async", "send", "vendored"], optional = true }
+## mlua = { version = "0.11", features = ["luajit", "async", "send", "vendored"], optional = true }
 mlua = { version = "0.11.4", features = ["lua54", "async", "send", "vendored"], optional = true }
 
 [dev-dependencies]
