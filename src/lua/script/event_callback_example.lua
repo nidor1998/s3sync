@@ -31,6 +31,23 @@ function on_event(event_data)
         print("SYNC_WRITE")
     elseif event_data.event_type == 1 << 14 then
         print("SYNC_FILTERED")
+    elseif event_data.event_type == 1 << 15 then
+        print("STATS_REPORT")
+
+        print("dry_run:", event_data.dry_run)
+        print("stats_transferred_byte:", event_data.stats_transferred_byte)
+        print("stats_transferred_byte_per_sec:", event_data.stats_transferred_byte_per_sec)
+        print("stats_transferred_object:", event_data.stats_transferred_object)
+        print("stats_transferred_object_per_sec:", event_data.stats_transferred_object_per_sec)
+        print("stats_etag_verified:", event_data.stats_etag_verified)
+        print("stats_checksum_verified:", event_data.stats_checksum_verified)
+        print("stats_deleted:", event_data.stats_deleted)
+        print("stats_skipped:", event_data.stats_skipped)
+        print("stats_error:", event_data.stats_error)
+        print("stats_warning:", event_data.stats_warning)
+        print("stats_duration_sec:", event_data.stats_duration_sec)
+
+        return
     else
         print("UNKNOWN_EVENT")
     end

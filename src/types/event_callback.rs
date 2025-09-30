@@ -40,6 +40,9 @@ bitflags! {
         // If an object is filtered out, this event is triggered. EventData.message will contain the reason for filtering.
         const SYNC_FILTERED = 1u64 << 14;
 
+        // This event is triggered after the PIPELINE_END event
+        const STATS_REPORT = 1u64 << 15;
+
         // This is a special event mask to indicate that all events should be captured
         const ALL_EVENTS  = !0;
     }
@@ -68,6 +71,17 @@ pub struct EventData {
     pub upload_id: Option<String>,
     pub part_number: Option<u64>,
     pub message: Option<String>,
+    pub stats_transferred_byte: Option<u64>,
+    pub stats_transferred_byte_per_sec: Option<u64>,
+    pub stats_transferred_object: Option<u64>,
+    pub stats_transferred_object_per_sec: Option<u64>,
+    pub stats_etag_verified: Option<u64>,
+    pub stats_checksum_verified: Option<u64>,
+    pub stats_deleted: Option<u64>,
+    pub stats_skipped: Option<u64>,
+    pub stats_error: Option<u64>,
+    pub stats_warning: Option<u64>,
+    pub stats_duration_sec: Option<f64>,
 }
 
 impl EventData {

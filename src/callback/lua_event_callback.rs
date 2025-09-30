@@ -106,6 +106,51 @@ impl EventCallback for LuaEventCallback {
         event_data_lua
             .set("message", event_data.message.clone())
             .unwrap();
+        event_data_lua
+            .set("stats_transferred_byte", event_data.stats_transferred_byte)
+            .unwrap();
+        event_data_lua
+            .set(
+                "stats_transferred_byte_per_sec",
+                event_data.stats_transferred_byte_per_sec,
+            )
+            .unwrap();
+        event_data_lua
+            .set(
+                "stats_transferred_object",
+                event_data.stats_transferred_object,
+            )
+            .unwrap();
+        event_data_lua
+            .set(
+                "stats_transferred_object_per_sec",
+                event_data.stats_transferred_object_per_sec,
+            )
+            .unwrap();
+        event_data_lua
+            .set("stats_etag_verified", event_data.stats_etag_verified)
+            .unwrap();
+        event_data_lua
+            .set(
+                "stats_checksum_verified",
+                event_data.stats_checksum_verified,
+            )
+            .unwrap();
+        event_data_lua
+            .set("stats_deleted", event_data.stats_deleted)
+            .unwrap();
+        event_data_lua
+            .set("stats_skipped", event_data.stats_skipped)
+            .unwrap();
+        event_data_lua
+            .set("stats_error", event_data.stats_error)
+            .unwrap();
+        event_data_lua
+            .set("stats_warning", event_data.stats_warning)
+            .unwrap();
+        event_data_lua
+            .set("stats_duration_sec", event_data.stats_duration_sec)
+            .unwrap();
 
         let func: mlua::Result<mlua::Function> = self.lua.get_engine().globals().get("on_event");
         if let Err(e) = func {
