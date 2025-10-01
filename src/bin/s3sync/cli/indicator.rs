@@ -4,44 +4,10 @@ use std::io::Write;
 use async_channel::Receiver;
 use indicatif::{HumanBytes, HumanCount, HumanDuration, ProgressBar, ProgressStyle};
 use s3sync::types::SyncStatistics;
-use s3sync::types::event_callback::{EventData, EventType};
 use simple_moving_average::{SMA, SumTreeSMA};
 use tokio::task::JoinHandle;
 use tokio::time::Instant;
 use tracing::info;
-
-#[derive(Default, Debug, Clone)]
-pub struct SyncStats {
-    pub stats_transferred_byte: Option<u64>,
-    pub stats_transferred_byte_per_sec: Option<u64>,
-    pub stats_transferred_object: Option<u64>,
-    pub stats_transferred_object_per_sec: Option<u64>,
-    pub stats_etag_verified: Option<u64>,
-    pub stats_checksum_verified: Option<u64>,
-    pub stats_deleted: Option<u64>,
-    pub stats_skipped: Option<u64>,
-    pub stats_error: Option<u64>,
-    pub stats_warning: Option<u64>,
-    pub stats_duration_sec: Option<f64>,
-}
-
-impl From<SyncStats> for EventData {
-    fn from(stats: SyncStats) -> Self {
-        let mut event_data = EventData::new(EventType::STATS_REPORT);
-        event_data.stats_transferred_byte = stats.stats_transferred_byte;
-        event_data.stats_transferred_byte_per_sec = stats.stats_transferred_byte_per_sec;
-        event_data.stats_transferred_object = stats.stats_transferred_object;
-        event_data.stats_transferred_object_per_sec = stats.stats_transferred_object_per_sec;
-        event_data.stats_etag_verified = stats.stats_etag_verified;
-        event_data.stats_checksum_verified = stats.stats_checksum_verified;
-        event_data.stats_deleted = stats.stats_deleted;
-        event_data.stats_skipped = stats.stats_skipped;
-        event_data.stats_error = stats.stats_error;
-        event_data.stats_warning = stats.stats_warning;
-        event_data.stats_duration_sec = stats.stats_duration_sec;
-        event_data
-    }
-}
 
 const MOVING_AVERAGE_PERIOD_SECS: usize = 10;
 const REFRESH_INTERVAL: f32 = 1.0;
@@ -52,14 +18,12 @@ pub fn show_indicator(
     show_result: bool,
     log_sync_summary: bool,
     dry_run: bool,
-) -> JoinHandle<SyncStats> {
+) -> JoinHandle<()> {
     let progress_style = ProgressStyle::with_template("{wide_msg}").unwrap();
     let progress_text = ProgressBar::new(0);
     progress_text.set_style(progress_style);
 
     tokio::spawn(async move {
-        let mut sync_stats = SyncStats::default();
-
         let start_time = Instant::now();
 
         let mut ma_synced_bytes = SumTreeSMA::<_, u64, MOVING_AVERAGE_PERIOD_SECS>::new();
@@ -74,6 +38,7 @@ pub fn show_indicator(
         let mut total_e_tag_verified_count: u64 = 0;
         let mut total_checksum_verified_count: u64 = 0;
 
+        // stats_receiver's statistics is more high precision (in bytes transferred) than event_callback's one.
         loop {
             let mut sync_bytes: u64 = 0;
             let mut sync_count: u64 = 0;
@@ -171,19 +136,7 @@ pub fn show_indicator(
                         io::stdout().flush().unwrap()
                     }
 
-                    sync_stats.stats_transferred_byte = Some(total_sync_bytes);
-                    sync_stats.stats_transferred_byte_per_sec = Some(sync_bytes_per_sec);
-                    sync_stats.stats_transferred_object = Some(total_sync_count);
-                    sync_stats.stats_transferred_object_per_sec = Some(objects_per_sec);
-                    sync_stats.stats_etag_verified = Some(total_e_tag_verified_count);
-                    sync_stats.stats_checksum_verified = Some(total_checksum_verified_count);
-                    sync_stats.stats_deleted = Some(total_delete_count);
-                    sync_stats.stats_skipped = Some(total_skip_count);
-                    sync_stats.stats_error = Some(total_error_count);
-                    sync_stats.stats_warning = Some(total_warning_count);
-                    sync_stats.stats_duration_sec = Some(elapsed_secs_f64);
-
-                    return sync_stats;
+                    return;
                 }
 
                 tokio::time::sleep(std::time::Duration::from_secs_f32(0.05)).await;
@@ -390,37 +343,6 @@ mod tests {
         stats_sender.close();
 
         join_handle.await.unwrap();
-    }
-
-    #[test]
-    fn from_sync_stats_to_event_data() {
-        let sync_stats = SyncStats {
-            stats_transferred_byte: Some(1),
-            stats_transferred_byte_per_sec: Some(2),
-            stats_transferred_object: Some(3),
-            stats_transferred_object_per_sec: Some(4),
-            stats_etag_verified: Some(5),
-            stats_checksum_verified: Some(6),
-            stats_deleted: Some(7),
-            stats_skipped: Some(8),
-            stats_error: Some(9),
-            stats_warning: Some(10),
-            stats_duration_sec: Some(11.0),
-        };
-
-        let event_data: EventData = sync_stats.into();
-        assert_eq!(event_data.event_type, EventType::STATS_REPORT);
-        assert_eq!(event_data.stats_transferred_byte, Some(1));
-        assert_eq!(event_data.stats_transferred_byte_per_sec, Some(2));
-        assert_eq!(event_data.stats_transferred_object, Some(3));
-        assert_eq!(event_data.stats_transferred_object_per_sec, Some(4));
-        assert_eq!(event_data.stats_etag_verified, Some(5));
-        assert_eq!(event_data.stats_checksum_verified, Some(6));
-        assert_eq!(event_data.stats_deleted, Some(7));
-        assert_eq!(event_data.stats_skipped, Some(8));
-        assert_eq!(event_data.stats_error, Some(9));
-        assert_eq!(event_data.stats_warning, Some(10));
-        assert_eq!(event_data.stats_duration_sec, Some(11.0));
     }
 
     fn init_dummy_tracing_subscriber() {
