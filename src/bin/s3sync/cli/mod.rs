@@ -4,7 +4,7 @@ use s3sync::callback::user_defined_event_callback::UserDefinedEventCallback;
 use s3sync::callback::user_defined_filter_callback::UserDefinedFilterCallback;
 use s3sync::callback::user_defined_preprocess_callback::UserDefinedPreprocessCallback;
 use s3sync::pipeline::Pipeline;
-use s3sync::types::event_callback::{EventData, EventType};
+use s3sync::types::event_callback::EventType;
 use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::{SYNC_REPORT_SUMMERY_NAME, SyncStatsReport};
 use std::sync::MutexGuard;
@@ -94,10 +94,7 @@ pub async fn run(mut config: Config) -> Result<()> {
         );
 
         pipeline.run().await;
-
-        let sync_stats_data = indicator_join_handle.await?;
-        let event_data: EventData = sync_stats_data.into();
-        config.event_manager.trigger_event(event_data).await;
+        indicator_join_handle.await?;
 
         let duration_sec = format!("{:.3}", start_time.elapsed().as_secs_f32());
         if pipeline.has_error() {

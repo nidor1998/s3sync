@@ -131,9 +131,18 @@ impl EventCallback for LuaEventCallback {
             .set("stats_etag_verified", event_data.stats_etag_verified)
             .unwrap();
         event_data_lua
+            .set("stats_etag_mismatch", event_data.stats_etag_mismatch)
+            .unwrap();
+        event_data_lua
             .set(
                 "stats_checksum_verified",
                 event_data.stats_checksum_verified,
+            )
+            .unwrap();
+        event_data_lua
+            .set(
+                "stats_checksum_mismatch",
+                event_data.stats_checksum_mismatch,
             )
             .unwrap();
         event_data_lua
