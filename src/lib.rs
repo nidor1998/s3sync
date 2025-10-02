@@ -92,6 +92,7 @@ use s3sync::types::event_callback::{EventCallback, EventData, EventType};
 use s3sync::types::filter_callback::FilterCallback;
 use s3sync::types::preprocess_callback::{PreprocessCallback, PreprocessError, UploadMetadata};
 use s3sync::types::token::create_pipeline_cancellation_token;
+#[allow(unused_imports)]
 use s3sync::types::{S3syncObject, SyncStatistics};
 
 // This struct represents a user-defined event callback.
@@ -212,24 +213,49 @@ async fn main() {
     // You can use this token to cancel the pipeline.
     let cancellation_token = create_pipeline_cancellation_token();
     let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
-    let stats_receiver = pipeline.get_stats_receiver();
+
+    // You can get the statistics receiver to get the statistics of the pipeline in real time.
+    // let stats_receiver = pipeline.get_stats_receiver();
 
     // You can close statistics sender to stop statistics collection, if needed.
     // Statistics collection consumes some Memory, so it is recommended to close it if you don't need it.
-    // pipeline.close_stats_sender();
+    pipeline.close_stats_sender();
 
     pipeline.run().await;
 
-    // You can use the statistics receiver to get the statistics of the pipeline.
-    // Or, you can get the live statistics, If you run async the pipeline.
-    let mut total_sync_count = 0;
-    while let Ok(sync_stats) = stats_receiver.try_recv() {
-        if matches!(sync_stats, SyncStatistics::SyncComplete { .. }) {
-            total_sync_count += 1;
-        }
-    }
-
-    println!("Total sync count: {total_sync_count}");
+    // You can get the sync statistics of the pipeline after the pipeline is completed.
+    let sync_stats = pipeline.get_sync_stats().await;
+    println!(
+        "stats_transferred_byte: {}",
+        sync_stats.stats_transferred_byte
+    );
+    println!(
+        "stats_transferred_byte_per_sec: {}",
+        sync_stats.stats_transferred_byte_per_sec
+    );
+    println!(
+        "stats_transferred_object: {}",
+        sync_stats.stats_transferred_object
+    );
+    println!(
+        "stats_transferred_object_per_sec: {}",
+        sync_stats.stats_transferred_object_per_sec
+    );
+    println!("stats_etag_verified: {}", sync_stats.stats_etag_verified);
+    println!("stats_etag_mismatch: {}", sync_stats.stats_etag_mismatch);
+    println!(
+        "stats_checksum_verified: {}",
+        sync_stats.stats_checksum_verified
+    );
+    println!(
+        "stats_checksum_mismatch: {}",
+        sync_stats.stats_checksum_mismatch
+    );
+    println!("stats_deleted: {}", sync_stats.stats_deleted);
+    println!("stats_skipped: {}", sync_stats.stats_skipped);
+    println!("stats_error: {}", sync_stats.stats_error);
+    println!("stats_warning: {}", sync_stats.stats_warning);
+    println!("stats_duration_sec: {}", sync_stats.stats_duration_sec);
 
     // If there is an error in the pipeline, you can get the errors.
     if pipeline.has_error() {
