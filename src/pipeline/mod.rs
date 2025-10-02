@@ -2,12 +2,8 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Error, anyhow};
-use async_channel::{Receiver, Sender};
-use tokio::task::JoinHandle;
-use tracing::{debug, error};
-
 use crate::Config;
+use crate::callback::event_manager::SyncStats;
 use crate::pipeline::deleter::ObjectDeleter;
 use crate::pipeline::diff_lister::DiffLister;
 use crate::pipeline::filter::{ExcludeRegexFilter, IncludeRegexFilter, ObjectFilter};
@@ -24,6 +20,10 @@ use crate::types::error::is_cancelled_error;
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{ObjectKeyMap, S3syncObject, SyncStatistics, SyncStatsReport};
+use anyhow::{Error, anyhow};
+use async_channel::{Receiver, Sender};
+use tokio::task::JoinHandle;
+use tracing::{debug, error};
 
 mod deleter;
 mod diff_detector;
@@ -852,6 +852,10 @@ impl Pipeline {
         self.sync_stats_report.clone()
     }
 
+    pub async fn get_sync_stats(&self) -> SyncStats {
+        self.config.event_manager.sync_stats.lock().await.clone()
+    }
+
     pub fn close_stats_sender(&self) {
         self.source.get_stats_sender().close();
         self.target.get_stats_sender().close();
@@ -924,7 +928,9 @@ mod tests {
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
-        Pipeline::new(config, create_pipeline_cancellation_token()).await;
+        let pipeline = Pipeline::new(config, create_pipeline_cancellation_token()).await;
+        let sync_stats = pipeline.get_sync_stats().await;
+        assert_eq!(sync_stats.stats_transferred_object, 0);
     }
 
     #[tokio::test]

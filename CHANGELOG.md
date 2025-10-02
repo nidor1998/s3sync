@@ -5,12 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.52.0] - 2025-10-02
+
+### Changed
+
+- Added `stats_etag_mismatch`, `stats_checksum_mismatch` field to `STATS_REPORT` event data
+- Added `Pipeline::get_sync_stats()` function to get the statistics of the transfer in the library
+- Updated dependencies
+
+### Fixed
+
+- Fixed a bug that does not trigger `STATS_REPORT` event outside s3sync CLI.
+
 ## [1.51.0] - 2025-09-30
 
 ### Changed
 
 - Added `STATS_REPORT` event to the event callback system  
-  This event is triggered after the PIPELINE_END event. This event contains the statistics of the transfer. 
+  This event is triggered after the PIPELINE_END event. This event contains the statistics of the transfer.
 - Updated dependencies
 
 ## [1.50.0] - 2025-09-29
