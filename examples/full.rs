@@ -15,6 +15,7 @@ use s3sync::types::{S3syncObject, SyncStatistics};
 #[tokio::main]
 async fn main() {
     // You can use all the arguments for s3sync CLI.
+    // Please refer to `s3sync --help` for more details.
     let args = vec![
         "program_name",
         "--aws-max-attempts",
@@ -24,6 +25,7 @@ async fn main() {
     ];
 
     // s3sync library converts the arguments to Config.
+    // For simplicity, if invalid arguments are passed, this function will panic.
     let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 
     // This is an event manager that manages the event callbacks.(optional)
@@ -54,16 +56,26 @@ async fn main() {
     // Create a cancellation token for the pipeline.
     // You can use this token to cancel the pipeline.
     let cancellation_token = create_pipeline_cancellation_token();
-    let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+    let mut pipeline = Pipeline::new(config.clone(), cancellation_token.clone()).await;
 
     // You can get the statistics receiver to get the statistics of the pipeline in real time.
     // let stats_receiver = pipeline.get_stats_receiver();
 
-    // You can close statistics sender to stop a statistics collection, if needed.
-    // Statistics collection consumes some Memory, so it is recommended to close it if you don't need it.
+    // `stats_sender` is used to get the statistics of the pipeline in real time.
+    // You can close `stats_sender` to stop a statistics collection, if needed.
+    // Statistics collection consumes some memory, so it is recommended to close it if you don't need it.
     pipeline.close_stats_sender();
 
-    pipeline.run().await;
+    let sync_task = pipeline.run();
+
+    // You can get live statistics of the pipeline from `stats_receiver`.
+    // Refer to src/bin/s3sync/cli/indicator.rs for your reference.
+
+    // You can cancel the pipeline. The following code is an example of how to cancel the pipeline.
+    // cancellation_token.cancel();
+
+    // Wait for the pipeline to complete.
+    sync_task.await;
 
     // You can get the sync statistics of the pipeline.
     let sync_stats = pipeline.get_sync_stats().await;
