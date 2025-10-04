@@ -133,10 +133,10 @@ impl Pipeline {
                 event_data.event_type = EventType::PIPELINE_ERROR;
                 event_data.message = Some(
                     // skipcq: RS-W1031
-                    self.get_errors_and_consume()
+                    self.get_error_messages()
                         .unwrap_or_default()
                         .first()
-                        .unwrap_or(&anyhow!("Unknown error"))
+                        .unwrap_or(&"Unknown error".to_string())
                         .to_string(),
                 );
                 self.config
@@ -165,10 +165,10 @@ impl Pipeline {
             event_data.event_type = EventType::PIPELINE_ERROR;
             event_data.message = Some(
                 // skipcq: RS-W1031
-                self.get_errors_and_consume()
+                self.get_error_messages()
                     .unwrap_or_default()
                     .first()
-                    .unwrap_or(&anyhow!("Unknown error"))
+                    .unwrap_or(&"Unknown error".to_string())
                     .to_string(),
             );
             self.config
@@ -848,6 +848,21 @@ impl Pipeline {
         Some(errors_to_return)
     }
 
+    pub fn get_error_messages(&self) -> Option<Vec<String>> {
+        if !self.has_error() {
+            return None;
+        }
+
+        let error_list = self.errors.clone();
+        let error_list = error_list.lock().unwrap();
+        let mut errors_to_return = Vec::<String>::new();
+        for error in error_list.iter() {
+            errors_to_return.push(error.to_string());
+        }
+
+        Some(errors_to_return)
+    }
+
     pub fn get_sync_stats_report(&self) -> Arc<Mutex<SyncStatsReport>> {
         self.sync_stats_report.clone()
     }
@@ -1365,6 +1380,42 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn get_error_messages_some() {
+        init_dummy_tracing_subscriber();
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let args = vec![
+            "s3sync",
+            "--source-endpoint-url",
+            "https://invalid-s3-endpoint-url.6329313.local:65535",
+            "--target-endpoint-url",
+            "https://invalid-s3-endpoint-url.6329313.local:65535",
+            "--aws-max-attempts",
+            "1",
+            "--force-retry-count",
+            "1",
+            "--force-retry-interval-milliseconds",
+            "1",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let pipeline = Pipeline::new(config, create_pipeline_cancellation_token()).await;
+        pipeline.list_target();
+        tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
+
+        assert!(pipeline.has_error());
+        assert_eq!(pipeline.get_error_messages().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
     async fn get_errors_and_consume_none() {
         init_dummy_tracing_subscriber();
 
@@ -1386,6 +1437,30 @@ mod tests {
 
         assert!(!pipeline.has_error());
         assert!(pipeline.get_errors_and_consume().is_none());
+    }
+
+    #[tokio::test]
+    async fn get_error_messages_none() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source",
+            "./test_data/source",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let pipeline = Pipeline::new(config, create_pipeline_cancellation_token()).await;
+        pipeline.list_target();
+
+        tokio::time::sleep(std::time::Duration::from_millis(
+            WAITING_TIME_MILLIS_FOR_ASYNC_TASK_START,
+        ))
+        .await;
+
+        assert!(!pipeline.has_error());
+        assert!(pipeline.get_error_messages().is_none());
     }
 
     #[tokio::test]
