@@ -55,6 +55,8 @@ s3sync library has many features that are not documented. You can refer to the s
 
 You can refer to the source code bin/cli to implement your own synchronization tool.
 
+**IMPORTANT: This library has many dependencies, so it may be overkill if your sole purpose is to transfer objects. The generated binary becomes unnecessarily large and increases the attack surface.**
+
 **NOTE: s3sync library is assumed to be used like a way that you use s3sync CLI. If you want to control more finely, instead of using s3sync library, we recommend using AWS SDK for Rust or aws-s3-transfer-manager-rs(developer preview) directly.**
 
 **NOTE: Each type of callback is registered only once. Lua scripting support CLI arguments are disabled if you use custom callbacks.**
