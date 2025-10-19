@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use aws_sdk_s3::Client;
@@ -196,8 +194,8 @@ impl UploadManager {
         // skipcq: RS-W1031
         let mut metadata = get_object_output
             .metadata()
-            .unwrap_or(&HashMap::new())
-            .clone();
+            .cloned()
+            .unwrap_or_default();
         let last_modified = DateTime::from_millis(
             get_object_output
                 .last_modified()
@@ -240,8 +238,8 @@ impl UploadManager {
         // skipcq: RS-W1031
         let mut metadata = get_object_output
             .metadata()
-            .unwrap_or(&HashMap::new())
-            .clone();
+            .cloned()
+            .unwrap_or_default();
 
         let last_modified = DateTime::from_millis(
             get_object_output
