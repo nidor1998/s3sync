@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/s3sync.svg)](https://crates.io/crates/s3sync)
 [![crates.io downloads](https://img.shields.io/crates/d/s3sync.svg)](https://crates.io/crates/s3sync)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![MSRV](https://img.shields.io/badge/msrv-1.86.0-red)
+![MSRV](https://img.shields.io/badge/msrv-1.88.0-red)
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 [![dependency status](https://deps.rs/crate/s3sync/latest/status.svg)](https://deps.rs/crate/s3sync/)
@@ -551,7 +551,7 @@ for more information.
 
 - x86_64 Linux (kernel 3.2 or later)
 - ARM64 Linux (kernel 4.1 or later)
-- x86_64 Windows 10 or later
+- x86_64 Windows 11
 - ARM64 Windows 11
 - macOS 11.0 or later
 
@@ -581,7 +581,7 @@ See [Install Rust](https://www.rust-lang.org/tools/install)
 
 ### Build
 
-s3sync requires Rust 1.86 or later.
+s3sync requires Rust 1.88 or later.
 
 ```bash
 cargo install s3sync
@@ -1312,7 +1312,7 @@ Update Checking:
       --check-size
           Use object size for update checking [env: CHECK_SIZE=]
       --check-etag
-          Use etag for update checking [env: CHECK_ETAG=]
+          Use ETag for update checking [env: CHECK_ETAG=]
       --check-mtime-and-etag
           Use the modification time and ETag for update checking.
           If the source modification date is newer, check the ETag.
@@ -1335,7 +1335,7 @@ Verification:
       --disable-multipart-verify
           Disable multipart upload verification with ETag/additional checksum [env: DISABLE_MULTIPART_VERIFY=]
       --disable-etag-verify
-          Disable etag verification [env: DISABLE_ETAG_VERIFY=]
+          Disable ETag verification [env: DISABLE_ETAG_VERIFY=]
       --disable-additional-checksum-verify
           Disable additional checksum verification
           But use additional checksum for upload (The hash value is stored in the target object). [env: DISABLE_ADDITIONAL_CHECKSUM_VERIFY=]
@@ -1437,7 +1437,7 @@ Encryption:
 
 Reporting:
       --report-sync-status           Report sync status to the target storage.
-                                     Default verification is for etag. For additional checksum, use --check-additional-checksum.
+                                     Default verification is for ETag. For additional checksum, use --check-additional-checksum.
                                      For more precise control, use with --auto-chunksize. [env: REPORT_SYNC_STATUS=]
       --report-metadata-sync-status  Report metadata sync status to the target storage.
                                      It must be used with --report-sync-status.
@@ -1479,7 +1479,7 @@ Timeout Options:
 
 Advanced:
       --warn-as-error
-          Treat warnings as errors(except for the case of etag/checksum mismatch, etc.) [env: WARN_AS_ERROR=]
+          Treat warnings as errors(except for the case of ETag/checksum mismatch, etc.) [env: WARN_AS_ERROR=]
       --ignore-symlinks
           Ignore symbolic links [env: IGNORE_SYMLINKS=]
       --head-each-target
