@@ -139,6 +139,8 @@ For more information about s3sync CLI,
 see [s3sync homepage](https://github.com/nidor1998/s3sync).
 */
 
+#![allow(clippy::collapsible_if)]
+
 pub use config::Config;
 pub use config::args::CLIArgs;
 
