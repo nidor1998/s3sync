@@ -310,6 +310,9 @@ impl S3syncObject {
     }
 }
 
+// sha1 uses generic-array v0.x internally, which is deprecated.
+// Suppress warnings until the underlying library is updated.
+#[allow(deprecated)]
 pub fn sha1_digest_from_key(key: &str) -> Sha1Digest {
     let digest = Sha1::digest(key);
     TryInto::<Sha1Digest>::try_into(digest.as_slice()).unwrap()
