@@ -20,6 +20,9 @@ impl Default for ChecksumSha1 {
     }
 }
 
+// sha1 uses generic-array v0.x internally, which is deprecated.
+// Suppress warnings until the underlying library is updated.
+#[allow(deprecated)]
 impl Checksum for ChecksumSha1 {
     fn new(_full_object_checksum: bool) -> Self {
         Self::default()
