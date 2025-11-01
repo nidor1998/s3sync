@@ -415,7 +415,7 @@ Example: "key1=(value1|value2)&key2=value2""#)]
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_etag", "check_mtime_and_etag", "check_mtime_and_additional_checksum"], default_value_t = DEFAULT_CHECK_SIZE, help_heading = "Update Checking")]
     check_size: bool,
 
-    /// Use etag for update checking.
+    /// Use ETag for update checking.
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "check_size", "check_mtime_and_etag", "check_mtime_and_additional_checksum", "source_sse_c_key", "target_sse_c_key"], default_value_t = DEFAULT_CHECK_ETAG, help_heading = "Update Checking",)]
     check_etag: bool,
 
@@ -451,7 +451,7 @@ This option cannot be used with SHA1/SHA256 additional checksum."#)]
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_MULTIPART_VERIFY, help_heading = "Verification")]
     disable_multipart_verify: bool,
 
-    /// Disable etag verification.
+    /// Disable ETag verification.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_ETAG_VERIFY, help_heading = "Verification")]
     disable_etag_verify: bool,
 
@@ -642,7 +642,7 @@ Example: 2025-07-16T12:00:00Z"#
         conflicts_with_all = ["dry_run", "delete", "enable_versioning", "head_each_target"],
         help_heading = "Reporting",
         long_help = r#"Report sync status to the target storage.
-Default verification is for etag. For additional checksum, use --check-additional-checksum.
+Default verification is for ETag. For additional checksum, use --check-additional-checksum.
 For more precise control, use with --auto-chunksize."#
     )]
     report_sync_status: bool,
@@ -744,7 +744,7 @@ The default has no timeout."#
     )]
     read_timeout_milliseconds: Option<u64>,
 
-    /// Treat warnings as errors(except for the case of etag/checksum mismatch, etc.).
+    /// Treat warnings as errors(except for the case of ETag/checksum mismatch, etc.).
     #[arg(long, env, default_value_t = DEFAULT_WARN_AS_ERROR, help_heading = "Advanced")]
     warn_as_error: bool,
 
