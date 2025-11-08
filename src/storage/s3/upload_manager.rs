@@ -286,7 +286,7 @@ impl UploadManager {
         let storage_class = if self.config.storage_class.is_none() {
             get_object_output_first_chunk.storage_class().cloned()
         } else {
-            Some(self.config.storage_class.as_ref().unwrap().clone())
+            self.config.storage_class.clone()
         };
 
         let checksum_type = if self.config.full_object_checksum {
@@ -1473,7 +1473,7 @@ impl UploadManager {
         let storage_class = if self.config.storage_class.is_none() {
             get_object_output.storage_class().cloned()
         } else {
-            Some(self.config.storage_class.as_ref().unwrap().clone())
+            self.config.storage_class.clone()
         };
 
         let mut upload_metadata = UploadMetadata {
