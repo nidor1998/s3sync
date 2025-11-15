@@ -3,13 +3,13 @@ use base64::{Engine as _, engine::general_purpose};
 use crate::storage::checksum::Checksum;
 
 pub struct ChecksumCRC64NVMe {
-    digest: crc64fast_nvme::Digest,
+    digest: crc_fast::Digest,
 }
 
 impl Default for ChecksumCRC64NVMe {
     fn default() -> Self {
         ChecksumCRC64NVMe {
-            digest: crc64fast_nvme::Digest::new(),
+            digest: crc_fast::Digest::new(crc_fast::CrcAlgorithm::Crc64Nvme),
         }
     }
 }
@@ -17,20 +17,20 @@ impl Default for ChecksumCRC64NVMe {
 impl Checksum for ChecksumCRC64NVMe {
     fn new(_full_object_checksum: bool) -> Self {
         ChecksumCRC64NVMe {
-            digest: crc64fast_nvme::Digest::new(),
+            digest: crc_fast::Digest::new(crc_fast::CrcAlgorithm::Crc64Nvme),
         }
     }
     fn update(&mut self, data: &[u8]) {
-        self.digest.write(data);
+        self.digest.update(data);
     }
 
     fn finalize(&mut self) -> String {
-        general_purpose::STANDARD.encode(self.digest.sum64().to_be_bytes().as_slice())
+        general_purpose::STANDARD.encode(self.digest.finalize().to_be_bytes().as_slice())
     }
 
     fn finalize_all(&mut self) -> String {
         // AWS S3 CRC64NVME does not support composite checksum type. So this method always returns the same value as finalize().
-        general_purpose::STANDARD.encode(self.digest.sum64().to_be_bytes().as_slice())
+        general_purpose::STANDARD.encode(self.digest.finalize().to_be_bytes().as_slice())
     }
 }
 
