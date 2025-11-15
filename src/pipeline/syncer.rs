@@ -1324,6 +1324,15 @@ impl ObjectSyncer {
             )));
         }
 
+        if !self
+            .base
+            .config
+            .transfer_config
+            .is_multipart_upload_required(object.size() as u64)
+        {
+            return Ok(None);
+        }
+
         let first_chunk_size =
             if object.size() < self.base.config.transfer_config.multipart_chunksize as i64 {
                 object.size() as u64
