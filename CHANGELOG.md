@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `stats_etag_mismatch`, `stats_checksum_mismatch` field to `STATS_REPORT` event data
 - Added `Pipeline::get_sync_stats()` function to get the statistics of the transfer in the library
 - Updated dependencies
+  - Migrated from deprecated crc64fast-nvme to crc-fast-rust
 
 ### Fixed
 
