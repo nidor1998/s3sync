@@ -3,5 +3,5 @@ updates:
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
-      interval: "monthly"
-      time: "00:00"
+      interval: "cron"
+      cron: "0 0 28 * *"
