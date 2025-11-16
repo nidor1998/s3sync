@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refactored
 - Updated dependencies
-  - Migrated from deprecated crc64fast-nvme to crc-fast-rust
+  - Migrated from deprecated crc64fast-nvme to crc-fast-rust(1.6.0)
 
 ## [1.53.0] - 2025-11-01
 
