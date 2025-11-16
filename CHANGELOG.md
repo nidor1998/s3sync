@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refactored
 - Updated dependencies
-  - Migrated from deprecated crc64fast-nvme to crc-fast-rust(1.6.0)
+    - Migrated from deprecated crc64fast-nvme to crc-fast-rust(1.6.0)
 
 ## [1.53.0] - 2025-11-01
 
@@ -44,10 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug that `Pipeline::get_errors_and_consume()` does not return errors in certain cases.
 
 ## [1.52.0] - 2025-10-02
-
-### Fixed
-
-- Fixed a bug that
 
 ### Changed
 
