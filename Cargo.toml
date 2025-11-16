@@ -59,7 +59,7 @@ simple_moving_average = "1.0.2"
 tempfile = "3.23.0"
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
-tokio-util = "0.7.16"
+tokio-util = "0.7.17"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter", "json", "local-time"] }
 url = "2.5.7"
