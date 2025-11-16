@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use aws_sdk_s3::Client;
@@ -193,11 +191,7 @@ impl UploadManager {
     }
 
     fn modify_last_modified_metadata(mut get_object_output: GetObjectOutput) -> GetObjectOutput {
-        // skipcq: RS-W1031
-        let mut metadata = get_object_output
-            .metadata()
-            .unwrap_or(&HashMap::new())
-            .clone();
+        let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
         let last_modified = DateTime::from_millis(
             get_object_output
                 .last_modified()
@@ -237,11 +231,7 @@ impl UploadManager {
 
         let source_version_id = get_object_output.version_id().unwrap();
 
-        // skipcq: RS-W1031
-        let mut metadata = get_object_output
-            .metadata()
-            .unwrap_or(&HashMap::new())
-            .clone();
+        let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
 
         let last_modified = DateTime::from_millis(
             get_object_output
@@ -296,7 +286,7 @@ impl UploadManager {
         let storage_class = if self.config.storage_class.is_none() {
             get_object_output_first_chunk.storage_class().cloned()
         } else {
-            Some(self.config.storage_class.as_ref().unwrap().clone())
+            self.config.storage_class.clone()
         };
 
         let checksum_type = if self.config.full_object_checksum {
@@ -1483,7 +1473,7 @@ impl UploadManager {
         let storage_class = if self.config.storage_class.is_none() {
             get_object_output.storage_class().cloned()
         } else {
-            Some(self.config.storage_class.as_ref().unwrap().clone())
+            self.config.storage_class.clone()
         };
 
         let mut upload_metadata = UploadMetadata {

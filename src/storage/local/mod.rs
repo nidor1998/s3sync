@@ -407,7 +407,7 @@ impl LocalStorage {
                 } else {
                     // If the source object is a multipart upload, and first chunk size is equal to the first part size,
                     // We adjust the multipart threshold to the first part size.
-                    if source_content_length == (*parts.clone().first().unwrap() as u64) {
+                    if source_content_length == (*parts.first().unwrap() as u64) {
                         source_content_length as usize
                     } else {
                         self.config.transfer_config.multipart_threshold as usize
