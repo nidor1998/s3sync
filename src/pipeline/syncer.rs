@@ -888,11 +888,7 @@ impl ObjectSyncer {
                 };
 
                 let if_none_match = if self.base.config.if_none_match {
-                    if target_etag.is_none() {
-                        self.get_etag_from_target_key_map(key)
-                    } else {
-                        target_etag
-                    }
+                    Some("*".to_string())
                 } else {
                     None
                 };

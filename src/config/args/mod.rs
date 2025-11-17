@@ -810,13 +810,13 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
 This is for like an optimistic lock."#)]
     if_match: bool,
 
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time", "if_match"], default_value_t = DEFAULT_IF_NONE_MATCH, help_heading = "Advanced", long_help=r#"Add an If-None-Match header for PutObject/GetObject requests.
-When a Precondition Failed error occurs, the program will continue with a warning message."#)]
-    if_none_match: bool,
-
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time"], requires = "server_side_copy", default_value_t = DEFAULT_COPY_SOURCE_IF_MATCH, help_heading = "Advanced", long_help=r#"Add an x-amz-copy-source-if-match header for CopyObject/UploadPartCopy requests.
 This is for like an optimistic lock."#)]
     copy_source_if_match: bool,
+
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time", "if_match"], default_value_t = DEFAULT_IF_NONE_MATCH, help_heading = "Advanced", long_help=r#"Uploads the object only if the object key name does not already exist in the specified bucket.
+This is for like an optimistic lock."#)]
+    if_none_match: bool,
 
     /// Don't delete more than a specified number of objects
     #[arg(long, env, requires = "delete", value_parser = clap::value_parser!(u64).range(1..), help_heading = "Advanced")]

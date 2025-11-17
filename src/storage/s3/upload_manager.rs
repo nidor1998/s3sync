@@ -488,6 +488,7 @@ impl UploadManager {
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
             .set_checksum_type(checksum_type)
             .set_if_match(self.if_match.clone())
+            .set_if_none_match(self.if_none_match.clone())
             .send()
             .await
             .context("aws_sdk_s3::client::Client complete_multipart_upload() failed.")?;
@@ -1594,6 +1595,7 @@ impl UploadManager {
                 .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .set_copy_source_if_match(self.copy_source_if_match.clone())
+                .set_if_none_match(self.if_none_match.clone())
                 .send()
                 .await?;
             let _ = self
