@@ -960,6 +960,7 @@ impl StorageTrait for S3Storage {
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
         if_match: Option<String>,
+        if_none_match: Option<String>,
         copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput> {
         let mut version_id = "".to_string();
@@ -1002,6 +1003,7 @@ impl StorageTrait for S3Storage {
                 target_key = target_key,
                 size = source_size.to_string(),
                 if_match = if_match.clone(),
+                if_none_match = if_none_match.clone(),
                 copy_source_if_match = copy_source_if_match.clone(),
                 "[dry-run] sync completed.",
             );
@@ -1062,6 +1064,7 @@ impl StorageTrait for S3Storage {
             source_size,
             source_additional_checksum,
             if_match,
+            if_none_match,
             copy_source_if_match,
             self.has_warning.clone(),
         );

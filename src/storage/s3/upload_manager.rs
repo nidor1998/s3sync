@@ -64,6 +64,7 @@ pub struct UploadManager {
     source_total_size: u64,
     source_additional_checksum: Option<String>,
     if_match: Option<String>,
+    if_none_match: Option<String>,
     copy_source_if_match: Option<String>,
     has_warning: Arc<AtomicBool>,
 }
@@ -84,6 +85,7 @@ impl UploadManager {
         source_total_size: u64,
         source_additional_checksum: Option<String>,
         if_match: Option<String>,
+        if_none_match: Option<String>,
         copy_source_if_match: Option<String>,
         has_warning: Arc<AtomicBool>,
     ) -> Self {
@@ -102,6 +104,7 @@ impl UploadManager {
             source_total_size,
             source_additional_checksum,
             if_match,
+            if_none_match,
             copy_source_if_match,
             has_warning,
         }
@@ -485,6 +488,7 @@ impl UploadManager {
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
             .set_checksum_type(checksum_type)
             .set_if_match(self.if_match.clone())
+            .set_if_none_match(self.if_none_match.clone())
             .send()
             .await
             .context("aws_sdk_s3::client::Client complete_multipart_upload() failed.")?;
@@ -1591,6 +1595,7 @@ impl UploadManager {
                 .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .set_copy_source_if_match(self.copy_source_if_match.clone())
+                .set_if_none_match(self.if_none_match.clone())
                 .send()
                 .await?;
             let _ = self
@@ -1624,7 +1629,8 @@ impl UploadManager {
                 .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
                 .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
-                .set_if_match(self.if_match.clone());
+                .set_if_match(self.if_match.clone())
+                .set_if_none_match(self.if_none_match.clone());
 
             if self.config.disable_payload_signing {
                 builder
@@ -1644,6 +1650,7 @@ impl UploadManager {
         debug!(
             key = &key,
             if_match = &self.if_match.clone(),
+            if_none_match = &self.if_none_match.clone(),
             copy_source_if_match = self.copy_source_if_match.clone(),
             "put_object() complete",
         );

@@ -1691,6 +1691,7 @@ impl StorageTrait for LocalStorage {
         _tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
         _if_match: Option<String>,
+        _if_none_match: Option<String>,
         _copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput> {
         if get_object_output_first_chunk.content_range.is_none() {
@@ -3354,6 +3355,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
             )
             .await
             .unwrap();
@@ -3414,6 +3416,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
             )
             .await
             .unwrap();
@@ -3470,6 +3473,7 @@ mod tests {
                     .set_content_length(Some(1))
                     .last_modified(DateTime::from_secs(1))
                     .build(),
+                None,
                 None,
                 None,
                 None,
