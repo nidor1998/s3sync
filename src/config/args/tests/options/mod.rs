@@ -38,6 +38,7 @@ mod force_retry;
 mod full_object_checksum;
 mod head_each_target;
 mod if_match;
+mod if_none_match;
 mod ignore_symlinks;
 mod include_content_type_regex;
 mod include_metadata_regex;

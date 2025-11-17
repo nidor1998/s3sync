@@ -272,7 +272,7 @@ impl ObjectSyncer {
                         .await;
                     self.base.set_warning();
 
-                    let message = "precondition(if-match/copy-source-if-match) failed. skipping.";
+                    let message = "precondition(if-match/if-none-match/copy-source-if-match) failed. skipping.";
                     warn!(
                         worker_index = self.worker_index,
                         key = key,
@@ -881,6 +881,16 @@ impl ObjectSyncer {
                     if target_etag.is_none() {
                         self.get_etag_from_target_key_map(key)
                     } else {
+                        target_etag.clone()
+                    }
+                } else {
+                    None
+                };
+
+                let if_none_match = if self.base.config.if_none_match {
+                    if target_etag.is_none() {
+                        self.get_etag_from_target_key_map(key)
+                    } else {
                         target_etag
                     }
                 } else {
@@ -902,6 +912,7 @@ impl ObjectSyncer {
                         tagging,
                         object_checksum,
                         if_match,
+                        if_none_match,
                         copy_source_if_match,
                     )
                     .await;
@@ -1101,6 +1112,7 @@ impl ObjectSyncer {
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
         if_match: Option<String>,
+        if_none_match: Option<String>,
         copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput> {
         // This is special for test emulation.
@@ -1122,6 +1134,7 @@ impl ObjectSyncer {
                 tagging,
                 object_checksum,
                 if_match,
+                if_none_match,
                 copy_source_if_match,
             )
             .await

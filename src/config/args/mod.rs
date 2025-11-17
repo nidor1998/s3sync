@@ -99,6 +99,7 @@ const DEFAULT_ALLOW_LUA_UNSAFE_VM: bool = false;
 const DEFAULT_LUA_VM_MEMORY_LIMIT: &str = "64MiB";
 const DEFAULT_SHOW_NO_PROGRESS: bool = false;
 const DEFAULT_IF_MATCH: bool = false;
+const DEFAULT_IF_NONE_MATCH: bool = false;
 const DEFAULT_COPY_SOURCE_IF_MATCH: bool = false;
 const DEFAULT_IGNORE_GLACIER_WARNINGS: bool = false;
 
@@ -209,6 +210,8 @@ const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_IF_MATCH: &str =
     "with --if-match, target storage must be s3://\n";
 const IF_MATCH_CONFLICT: &str =
     "--head-each-target is required for --if-match, or remove --remove-modified-filter\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_IF_NONE_MATCH: &str =
+    "with --if-none-match, target storage must be s3://\n";
 
 #[cfg(feature = "version")]
 shadow!(build);
@@ -807,6 +810,10 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
 This is for like an optimistic lock."#)]
     if_match: bool,
 
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time", "if_match"], default_value_t = DEFAULT_IF_NONE_MATCH, help_heading = "Advanced", long_help=r#"Add an If-None-Match header for PutObject/GetObject requests.
+When a Precondition Failed error occurs, the program will continue with a warning message."#)]
+    if_none_match: bool,
+
     #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time"], requires = "server_side_copy", default_value_t = DEFAULT_COPY_SOURCE_IF_MATCH, help_heading = "Advanced", long_help=r#"Add an x-amz-copy-source-if-match header for CopyObject/UploadPartCopy requests.
 This is for like an optimistic lock."#)]
     copy_source_if_match: bool,
@@ -959,6 +966,7 @@ impl CLIArgs {
         self.check_report_metadata_sync_status_conflict()?;
         self.check_report_tagging_sync_status_conflict()?;
         self.check_if_match_conflict()?;
+        self.check_if_none_match_conflict()?;
         self.check_copy_source_if_match_conflict()?;
 
         Ok(())
@@ -1540,6 +1548,19 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_if_none_match_conflict(&self) -> Result<(), String> {
+        if !self.if_none_match {
+            return Ok(());
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) {
+            return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_IF_NONE_MATCH.to_string());
+        }
+
+        Ok(())
+    }
+
     fn check_copy_source_if_match_conflict(&self) -> Result<(), String> {
         if !self.copy_source_if_match {
             return Ok(());
@@ -2078,6 +2099,7 @@ impl TryFrom<CLIArgs> for Config {
             allow_lua_unsafe_vm,
             lua_vm_memory_limit,
             if_match: value.if_match,
+            if_none_match: value.if_none_match,
             copy_source_if_match: value.copy_source_if_match,
             max_delete: value.max_delete,
             ignore_glacier_warnings: value.ignore_glacier_warnings,
