@@ -145,6 +145,7 @@ pub trait StorageTrait: DynClone {
         tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
         if_match: Option<String>,
+        if_none_match: Option<String>,
         copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput>;
     async fn put_object_tagging(
