@@ -28,7 +28,7 @@ bitflags = "2.10.0"
 base64 = "0.22.1"
 byte-unit = "5.1.6"
 cfg-if = "1.0.4"
-clap = { version = "4.5.51", features = ["derive", "env", "cargo", "string"] }
+clap = { version = "4.5.53", features = ["derive", "env", "cargo", "string"] }
 clap_complete = "4.5.60"
 clap-verbosity-flag = "3.0.4"
 chrono = "0.4.42"
