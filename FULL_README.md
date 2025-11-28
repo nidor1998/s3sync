@@ -480,11 +480,14 @@ With `--max-delete`, you can limit the maximum number of deletions for safety.
 
 ### Etag-based conditional write/delete support
 
-You can use `--if-match` for conditional write and delete operations(PutObject/CompleteMultipartUpload/DeleteObject) with `If-Match` header.  
+You can use `--if-match` for conditional write and delete operations(PutObject/CompleteMultipartUpload/DeleteObject) with `If-Match` header.
 And you can use `--copy-source-if-match` for conditional copy operations(CopyObject/UploadPartCopy) with `x-amz-copy-source-if-match` header.
 
 Actually, it serves as like optimistic locking.  
 This prevents race conditions that s3sync overwrites or deletes an object that has been modified by another process after s3sync checks the object.
+
+`--if-none-match` option is also available.  
+This option guarantees that the object does not exist in the target bucket. Without this option, race conditions can occur.
 
 If precondition fails, s3sync skips the object and outputs a warning message.  
 If you want to treat it as an error, you can use `--warn-as-error` option.
@@ -1517,6 +1520,9 @@ Advanced:
       --copy-source-if-match
           Add an x-amz-copy-source-if-match header for CopyObject/UploadPartCopy requests.
           This is for like an optimistic lock. [env: COPY_SOURCE_IF_MATCH=]
+      --if-none-match
+          Uploads the object only if the object key name does not already exist in the specified bucket.
+          This is for like an optimistic lock. [env: IF_NONE_MATCH=]
       --max-delete <MAX_DELETE>
           Don't delete more than a specified number of objects [env: MAX_DELETE=]
       --ignore-glacier-warnings
@@ -1568,4 +1574,4 @@ While this project began as a personal hobby, it has been built with careful att
 - If you find this project useful, feel free to fork and modify it as you wish.
 
 🔒 I consider this project to be “complete” and will maintain it only minimally going forward.  
-However, I intend to keep the AWS SDK for Rust and other dependencies up to date regularly.
+However, I intend to keep the AWS SDK for Rust and other dependencies up to date monthly.

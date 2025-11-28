@@ -407,7 +407,7 @@ impl LocalStorage {
                 } else {
                     // If the source object is a multipart upload, and first chunk size is equal to the first part size,
                     // We adjust the multipart threshold to the first part size.
-                    if source_content_length == (*parts.clone().first().unwrap() as u64) {
+                    if source_content_length == (*parts.first().unwrap() as u64) {
                         source_content_length as usize
                     } else {
                         self.config.transfer_config.multipart_threshold as usize
@@ -1691,6 +1691,7 @@ impl StorageTrait for LocalStorage {
         _tagging: Option<String>,
         object_checksum: Option<ObjectChecksum>,
         _if_match: Option<String>,
+        _if_none_match: Option<String>,
         _copy_source_if_match: Option<String>,
     ) -> Result<PutObjectOutput> {
         if get_object_output_first_chunk.content_range.is_none() {
@@ -3354,6 +3355,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
             )
             .await
             .unwrap();
@@ -3414,6 +3416,7 @@ mod tests {
                 None,
                 None,
                 None,
+                None,
             )
             .await
             .unwrap();
@@ -3470,6 +3473,7 @@ mod tests {
                     .set_content_length(Some(1))
                     .last_modified(DateTime::from_secs(1))
                     .build(),
+                None,
                 None,
                 None,
                 None,

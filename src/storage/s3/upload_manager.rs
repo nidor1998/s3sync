@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use aws_sdk_s3::Client;
@@ -66,6 +64,7 @@ pub struct UploadManager {
     source_total_size: u64,
     source_additional_checksum: Option<String>,
     if_match: Option<String>,
+    if_none_match: Option<String>,
     copy_source_if_match: Option<String>,
     has_warning: Arc<AtomicBool>,
 }
@@ -86,6 +85,7 @@ impl UploadManager {
         source_total_size: u64,
         source_additional_checksum: Option<String>,
         if_match: Option<String>,
+        if_none_match: Option<String>,
         copy_source_if_match: Option<String>,
         has_warning: Arc<AtomicBool>,
     ) -> Self {
@@ -104,6 +104,7 @@ impl UploadManager {
             source_total_size,
             source_additional_checksum,
             if_match,
+            if_none_match,
             copy_source_if_match,
             has_warning,
         }
@@ -193,11 +194,7 @@ impl UploadManager {
     }
 
     fn modify_last_modified_metadata(mut get_object_output: GetObjectOutput) -> GetObjectOutput {
-        // skipcq: RS-W1031
-        let mut metadata = get_object_output
-            .metadata()
-            .unwrap_or(&HashMap::new())
-            .clone();
+        let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
         let last_modified = DateTime::from_millis(
             get_object_output
                 .last_modified()
@@ -237,11 +234,7 @@ impl UploadManager {
 
         let source_version_id = get_object_output.version_id().unwrap();
 
-        // skipcq: RS-W1031
-        let mut metadata = get_object_output
-            .metadata()
-            .unwrap_or(&HashMap::new())
-            .clone();
+        let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
 
         let last_modified = DateTime::from_millis(
             get_object_output
@@ -296,7 +289,7 @@ impl UploadManager {
         let storage_class = if self.config.storage_class.is_none() {
             get_object_output_first_chunk.storage_class().cloned()
         } else {
-            Some(self.config.storage_class.as_ref().unwrap().clone())
+            self.config.storage_class.clone()
         };
 
         let checksum_type = if self.config.full_object_checksum {
@@ -495,6 +488,7 @@ impl UploadManager {
             .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
             .set_checksum_type(checksum_type)
             .set_if_match(self.if_match.clone())
+            .set_if_none_match(self.if_none_match.clone())
             .send()
             .await
             .context("aws_sdk_s3::client::Client complete_multipart_upload() failed.")?;
@@ -1483,7 +1477,7 @@ impl UploadManager {
         let storage_class = if self.config.storage_class.is_none() {
             get_object_output.storage_class().cloned()
         } else {
-            Some(self.config.storage_class.as_ref().unwrap().clone())
+            self.config.storage_class.clone()
         };
 
         let mut upload_metadata = UploadMetadata {
@@ -1601,6 +1595,7 @@ impl UploadManager {
                 .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .set_copy_source_if_match(self.copy_source_if_match.clone())
+                .set_if_none_match(self.if_none_match.clone())
                 .send()
                 .await?;
             let _ = self
@@ -1634,7 +1629,8 @@ impl UploadManager {
                 .set_sse_customer_key_md5(self.config.target_sse_c_key_md5.clone())
                 .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
-                .set_if_match(self.if_match.clone());
+                .set_if_match(self.if_match.clone())
+                .set_if_none_match(self.if_none_match.clone());
 
             if self.config.disable_payload_signing {
                 builder
@@ -1654,6 +1650,7 @@ impl UploadManager {
         debug!(
             key = &key,
             if_match = &self.if_match.clone(),
+            if_none_match = &self.if_none_match.clone(),
             copy_source_if_match = self.copy_source_if_match.clone(),
             "put_object() complete",
         );
