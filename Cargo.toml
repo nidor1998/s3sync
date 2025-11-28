@@ -17,7 +17,7 @@ categories = ["command-line-utilities", "filesystem", "asynchronous", "concurren
 anyhow = { version = "1.0.100" }
 async-trait = "0.1.89"
 async-channel = "2.5.0"
-aws-config = { version = "1.8.10", features = ["behavior-version-latest"] }
+aws-config = { version = "1.8.11", features = ["behavior-version-latest"] }
 aws-runtime = "1.5.13"
 aws-sdk-s3 = "1.112.0"
 aws-smithy-runtime-api = "1.9.2"
