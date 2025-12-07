@@ -1,4 +1,4 @@
-FROM debian:bookworm AS builder
+FROM debian:trixie AS builder
 WORKDIR /s3sync
 COPY . ./
 RUN apt-get update \
@@ -10,7 +10,7 @@ RUN apt-get update \
 && rustup update \
 && cargo build --release
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 RUN apt-get update \
 && apt-get install --no-install-recommends -y ca-certificates \
 && apt-get clean \
@@ -18,7 +18,7 @@ RUN apt-get update \
 
 COPY --from=builder /s3sync/target/release/s3sync /usr/local/bin/s3sync
 
-RUN adduser s3sync
+RUN useradd -m -s /bin/bash s3sync
 USER s3sync
 WORKDIR /home/s3sync/
 ENTRYPOINT ["/usr/local/bin/s3sync"]
