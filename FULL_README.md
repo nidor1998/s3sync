@@ -223,7 +223,7 @@ Note: Above the case, the bottleneck is the disk I/O (Maximum throughput is 500M
 
 ### Any object size support
 
-s3sync can handle any object size. From 0 bytes to 5TiB.  
+s3sync can handle any object size. From 0 bytes to 50TiB.  
 Multipart upload is used for objects larger than `--multipart-threshold`(default:8MiB).
 
 ### Low memory usage
