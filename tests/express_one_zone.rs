@@ -23,7 +23,7 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
@@ -82,7 +82,7 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
@@ -104,7 +104,7 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
@@ -160,7 +160,7 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
@@ -223,7 +223,7 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
@@ -287,7 +287,7 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
@@ -361,8 +361,8 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
 
@@ -420,8 +420,8 @@ mod tests {
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
 
@@ -509,8 +509,8 @@ mod tests {
 
         TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
 
@@ -619,8 +619,8 @@ mod tests {
 
         TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
 
@@ -723,8 +723,8 @@ mod tests {
 
         TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
 
@@ -828,8 +828,8 @@ mod tests {
 
         TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-        let bucket1 = format!("{}{}", BUCKET1.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", BUCKET2.to_string(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         TestHelper::create_large_file();
 

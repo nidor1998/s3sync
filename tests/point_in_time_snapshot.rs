@@ -33,7 +33,7 @@ mod tests {
 
         let step1_complete_time;
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -64,7 +64,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
 
             let point_in_time = step1_complete_time.to_rfc3339();
 
@@ -112,7 +112,7 @@ mod tests {
 
         let step1_complete_time;
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -144,7 +144,7 @@ mod tests {
 
         let step2_complete_time;
         {
-            let target_bucket_url = format!("s3://{}/step2/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step2/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -181,7 +181,7 @@ mod tests {
 
         let step3_complete_time;
         {
-            let target_bucket_url = format!("s3://{}/step3/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step3/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -212,7 +212,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
             let point_in_time = step1_complete_time.to_rfc3339();
@@ -242,7 +242,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
             let point_in_time = step2_complete_time.to_rfc3339();
@@ -272,7 +272,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
             let point_in_time = delete_complete_time.to_rfc3339();
@@ -302,7 +302,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
             let point_in_time = step3_complete_time.to_rfc3339();
@@ -332,7 +332,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
 
             let point_in_time = step3_complete_time.to_rfc3339();
 
@@ -361,7 +361,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
 
             let point_in_time = step3_complete_time.to_rfc3339();
 
@@ -420,7 +420,7 @@ mod tests {
 
         let step1_complete_time;
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -452,7 +452,7 @@ mod tests {
 
         let step2_complete_time;
         {
-            let target_bucket_url = format!("s3://{}/step2/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step2/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -489,7 +489,7 @@ mod tests {
 
         let step3_complete_time;
         {
-            let target_bucket_url = format!("s3://{}/step3/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step3/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -520,8 +520,8 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
 
             let helper = TestHelper::new().await;
             helper.delete_all_objects(&BUCKET2.to_string()).await;
@@ -555,8 +555,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
 
             let helper = TestHelper::new().await;
             helper.delete_all_objects(&BUCKET2.to_string()).await;
@@ -590,8 +590,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
 
             let helper = TestHelper::new().await;
             helper.delete_all_objects(&BUCKET2.to_string()).await;
@@ -625,8 +625,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
 
             let helper = TestHelper::new().await;
             helper.delete_all_objects(&BUCKET2.to_string()).await;
@@ -660,8 +660,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
 
             let helper = TestHelper::new().await;
             helper.delete_all_objects(&BUCKET2.to_string()).await;
@@ -695,8 +695,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
 
             let helper = TestHelper::new().await;
             helper.delete_all_objects(&BUCKET2.to_string()).await;
@@ -733,8 +733,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
 
             let point_in_time = step3_complete_time.to_rfc3339();
 

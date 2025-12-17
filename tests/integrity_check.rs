@@ -182,7 +182,7 @@ mod tests {
     async fn local_to_s3_single_e_tag() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -209,7 +209,7 @@ mod tests {
     async fn local_to_s3_single_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -237,7 +237,7 @@ mod tests {
     async fn local_to_s3_single_without_content_md5() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -266,14 +266,14 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -303,14 +303,14 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -341,13 +341,13 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -380,13 +380,13 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -419,7 +419,7 @@ mod tests {
     async fn local_to_s3_multipart_e_tag() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -449,7 +449,7 @@ mod tests {
     async fn local_to_s3_multipart_no_verify_e_tag() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -480,7 +480,7 @@ mod tests {
     async fn local_to_s3_multipart_without_content_md5() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -512,14 +512,14 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -549,14 +549,14 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -587,13 +587,13 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -626,13 +626,13 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -666,7 +666,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
@@ -675,7 +675,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -705,7 +705,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
@@ -714,7 +714,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -745,15 +745,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -786,15 +786,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -827,7 +827,7 @@ mod tests {
     async fn local_to_s3_single_checksum() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -856,7 +856,7 @@ mod tests {
     async fn local_to_s3_single_checksum_without_content_md5() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -886,7 +886,7 @@ mod tests {
     async fn local_to_s3_single_crc64nvme_checksum() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -915,7 +915,7 @@ mod tests {
     async fn local_to_s3_single_crc64nvme_checksum_without_content_md5() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -946,14 +946,14 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -984,7 +984,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
@@ -993,7 +993,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1024,13 +1024,13 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1066,15 +1066,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1109,7 +1109,7 @@ mod tests {
     async fn local_to_s3_multipart_checksum() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -1141,7 +1141,7 @@ mod tests {
     async fn local_to_s3_multipart_checksum_without_content_md5() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -1174,7 +1174,7 @@ mod tests {
     async fn local_to_s3_multipart_crc64nvme_checksum() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -1206,7 +1206,7 @@ mod tests {
     async fn local_to_s3_multipart_crc32_full_object_checksum() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -1239,7 +1239,7 @@ mod tests {
     async fn local_to_s3_multipart_crc32c_full_object_checksum() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -1272,7 +1272,7 @@ mod tests {
     async fn local_to_s3_multipart_crc64nvme_checksum_without_content_md5() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
 
         TestHelper::create_large_file();
 
@@ -1306,15 +1306,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1350,15 +1350,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1394,15 +1394,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_crc32_full_object_checksum(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1439,15 +1439,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_crc32c_full_object_checksum(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1484,7 +1484,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
                 .await;
@@ -1493,7 +1493,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1524,7 +1524,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
@@ -1533,7 +1533,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1564,7 +1564,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_crc32_full_object_checksum(&target_bucket_url)
                 .await;
@@ -1573,7 +1573,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1604,7 +1604,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_crc32c_full_object_checksum(&target_bucket_url)
                 .await;
@@ -1613,7 +1613,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1644,15 +1644,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize_sha256(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1689,15 +1689,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc64nvme(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1734,7 +1734,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc32_full_object(
                     &target_bucket_url,
@@ -1744,8 +1744,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1783,7 +1783,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc32c_full_object(
                     &target_bucket_url,
@@ -1793,8 +1793,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1832,15 +1832,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc64nvme(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1876,15 +1876,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_custom_chunksize_sha256(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1920,15 +1920,15 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1963,7 +1963,7 @@ mod tests {
     async fn local_to_s3_sse_kms() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -1995,7 +1995,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2019,7 +2019,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2050,7 +2050,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2072,8 +2072,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2110,7 +2110,7 @@ mod tests {
     async fn local_to_s3_dsse_kms() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2142,7 +2142,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2166,7 +2166,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2197,7 +2197,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2219,8 +2219,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2257,7 +2257,7 @@ mod tests {
     async fn local_to_s3_sse_c() {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2293,7 +2293,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2321,7 +2321,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2358,7 +2358,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2384,8 +2384,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2434,7 +2434,7 @@ mod tests {
 
         TestHelper::create_large_file();
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2467,7 +2467,7 @@ mod tests {
 
         TestHelper::create_large_file();
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2499,7 +2499,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file();
 
@@ -2525,7 +2525,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2556,7 +2556,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file();
 
@@ -2580,8 +2580,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2619,7 +2619,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file();
 
@@ -2645,7 +2645,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2676,7 +2676,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file();
 
@@ -2700,8 +2700,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2740,7 +2740,7 @@ mod tests {
 
         TestHelper::create_large_file();
 
-        let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+        let target_bucket_url = format!("s3://{}", *BUCKET1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2777,7 +2777,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file();
 
@@ -2807,7 +2807,7 @@ mod tests {
         {
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2844,7 +2844,7 @@ mod tests {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file();
 
@@ -2872,8 +2872,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",

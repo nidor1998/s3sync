@@ -30,7 +30,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -61,7 +61,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -97,7 +97,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -133,7 +133,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -167,7 +167,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step2/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step2/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -201,7 +201,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -238,7 +238,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -271,7 +271,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -307,7 +307,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -344,7 +344,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -373,7 +373,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -430,7 +430,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -461,7 +461,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
             TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
             let args = vec![
@@ -489,7 +489,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -525,7 +525,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -561,7 +561,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -595,7 +595,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -632,7 +632,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -665,7 +665,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -699,7 +699,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -738,7 +738,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -767,7 +767,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -825,7 +825,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -856,8 +856,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -887,8 +887,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -928,8 +928,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -969,8 +969,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1008,8 +1008,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1050,7 +1050,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -1083,8 +1083,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1116,8 +1116,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1155,8 +1155,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1200,7 +1200,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -1229,8 +1229,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1259,8 +1259,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1306,7 +1306,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -1339,8 +1339,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1370,8 +1370,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1413,7 +1413,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -1444,8 +1444,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1472,8 +1472,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1538,7 +1538,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -1583,8 +1583,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1614,8 +1614,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1657,8 +1657,8 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1690,8 +1690,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1735,8 +1735,8 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1784,8 +1784,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1851,7 +1851,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -1880,8 +1880,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1911,8 +1911,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1954,8 +1954,8 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -1986,8 +1986,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -2031,8 +2031,8 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",
@@ -2064,8 +2064,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", BUCKET1.to_string());
-            let target_bucket_url = format!("s3://{}/step1/", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
 
             let args = vec![
                 "s3sync",

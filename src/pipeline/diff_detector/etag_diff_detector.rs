@@ -968,12 +968,11 @@ mod tests {
                 .e_tag("e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1020,12 +1019,11 @@ mod tests {
                 .e_tag("e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output,)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1072,12 +1070,11 @@ mod tests {
                 .e_tag("different_e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output,)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1123,12 +1120,11 @@ mod tests {
                 .e_tag("e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output,)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1175,12 +1171,11 @@ mod tests {
                 .e_tag("e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output,)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1227,12 +1222,11 @@ mod tests {
                 .e_tag("different_e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output,)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1278,12 +1272,11 @@ mod tests {
                 .e_tag(TEST_OBJECT_ETAG)
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output,)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1331,12 +1324,11 @@ mod tests {
                 .e_tag(TEST_OBJECT_ETAG)
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output,)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
