@@ -993,12 +993,11 @@ mod tests {
             .checksum_crc64_nvme(TEST_OBJECT_CHECKSUM)
             .build();
 
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_source_local_checksum_different_from_target_s3("6byte.dat", &head_object_output)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -1042,12 +1041,11 @@ mod tests {
             .checksum_crc64_nvme(TEST_OBJECT_CHECKSUM)
             .build();
 
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_source_local_checksum_different_from_target_s3("6byte.dat", &head_object_output)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
