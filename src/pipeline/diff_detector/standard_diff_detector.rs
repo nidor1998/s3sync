@@ -118,12 +118,11 @@ mod tests {
                 .e_tag("e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -153,12 +152,11 @@ mod tests {
                 .e_tag("e_tag")
                 .build(),
         );
-        assert_eq!(
-            diff_detector
+        assert!(
+            !diff_detector
                 .is_different(&source_object, &head_object_output)
                 .await
-                .unwrap(),
-            false
+                .unwrap()
         );
     }
 
@@ -188,12 +186,11 @@ mod tests {
                 .e_tag("e_tag")
                 .build(),
         );
-        assert_eq!(
+        assert!(
             diff_detector
                 .is_different(&source_object, &head_object_output)
                 .await
-                .unwrap(),
-            true
+                .unwrap()
         );
     }
 

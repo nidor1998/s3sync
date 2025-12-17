@@ -1770,7 +1770,7 @@ impl TestHelper {
 
         output_file.flush()?;
 
-        return Ok(());
+        Ok(())
     }
 
     pub fn get_sha256_from_file(file_path: &str) -> String {

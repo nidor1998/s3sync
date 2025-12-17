@@ -27,7 +27,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
 
             let args = vec![

@@ -31,7 +31,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -39,8 +39,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -124,7 +124,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -132,8 +132,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -224,7 +224,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -232,8 +232,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -294,7 +294,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -302,8 +302,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -444,7 +444,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -452,8 +452,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -515,7 +515,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -523,8 +523,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -594,7 +594,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -602,8 +602,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -672,7 +672,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -680,8 +680,8 @@ mod tests {
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -751,7 +751,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -759,8 +759,8 @@ mod tests {
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", BUCKET1.to_string(), TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", BUCKET2.to_string(), TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -827,7 +827,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -835,8 +835,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -884,7 +884,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -892,8 +892,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -942,7 +942,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -950,8 +950,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1033,7 +1033,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1041,8 +1041,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1127,7 +1127,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1135,8 +1135,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1220,7 +1220,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1228,8 +1228,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1312,7 +1312,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1320,8 +1320,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1389,7 +1389,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1397,8 +1397,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1473,7 +1473,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1481,8 +1481,8 @@ mod tests {
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1532,7 +1532,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1540,8 +1540,8 @@ mod tests {
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1590,7 +1590,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -1598,8 +1598,8 @@ mod tests {
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1686,8 +1686,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1747,8 +1747,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1809,8 +1809,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1871,8 +1871,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1933,8 +1933,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -1996,8 +1996,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2055,8 +2055,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2115,8 +2115,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2178,8 +2178,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2362,8 +2362,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2515,7 +2515,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2537,8 +2537,8 @@ mod tests {
             assert_eq!(object_list.len(), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2595,7 +2595,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2617,8 +2617,8 @@ mod tests {
             assert_eq!(object_list.len(), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2680,8 +2680,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2739,7 +2739,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2759,8 +2759,8 @@ mod tests {
             assert_eq!(object_list.len(), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2819,7 +2819,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -2839,8 +2839,8 @@ mod tests {
             assert_eq!(object_list.len(), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2904,8 +2904,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -2969,8 +2969,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3023,7 +3023,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3031,8 +3031,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3118,7 +3118,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3126,8 +3126,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3184,7 +3184,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3192,8 +3192,8 @@ mod tests {
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3283,7 +3283,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3293,8 +3293,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3384,7 +3384,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3394,8 +3394,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3446,7 +3446,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3456,8 +3456,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3509,7 +3509,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3519,8 +3519,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3572,7 +3572,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3582,8 +3582,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3632,7 +3632,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3642,8 +3642,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3695,7 +3695,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3705,8 +3705,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3756,7 +3756,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3782,8 +3782,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3821,7 +3821,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3885,7 +3885,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -3911,8 +3911,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -3951,7 +3951,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4014,7 +4014,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4048,8 +4048,8 @@ mod tests {
             );
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4087,7 +4087,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4136,7 +4136,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4170,8 +4170,8 @@ mod tests {
             );
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4210,7 +4210,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", BUCKET2.to_string());
+            let source_bucket_url = format!("s3://{}", *BUCKET2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4262,15 +4262,15 @@ mod tests {
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
 
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4318,7 +4318,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4326,8 +4326,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4384,7 +4384,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4392,8 +4392,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4438,7 +4438,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -4521,7 +4521,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4544,8 +4544,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4616,7 +4616,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4637,8 +4637,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4710,7 +4710,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4720,8 +4720,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4766,7 +4766,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file_case2();
 
@@ -4853,7 +4853,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -4861,8 +4861,8 @@ mod tests {
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -4915,7 +4915,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -5008,7 +5008,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5035,8 +5035,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5093,7 +5093,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -5192,7 +5192,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5223,8 +5223,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5301,7 +5301,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             let args = vec![
                 "s3sync",
@@ -5424,7 +5424,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5445,8 +5445,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5525,7 +5525,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5533,8 +5533,8 @@ mod tests {
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5621,7 +5621,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5629,8 +5629,8 @@ mod tests {
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5680,7 +5680,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5690,8 +5690,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5775,7 +5775,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5785,8 +5785,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5873,7 +5873,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5883,8 +5883,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -5969,7 +5969,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -5979,8 +5979,8 @@ mod tests {
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -6069,7 +6069,7 @@ mod tests {
         TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
 
@@ -6103,8 +6103,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -6139,7 +6139,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::update_case3_large_file_mtime();
 
@@ -6203,7 +6203,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::modify_case3_large_file();
 
@@ -6282,7 +6282,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -6320,8 +6320,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -6517,7 +6517,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -6551,8 +6551,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -6690,7 +6690,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -6728,8 +6728,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -6895,7 +6895,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -6929,8 +6929,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -7098,7 +7098,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -7136,8 +7136,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -7275,7 +7275,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             helper.create_bucket(&BUCKET1.to_string(), REGION).await;
             helper.create_bucket(&BUCKET2.to_string(), REGION).await;
@@ -7297,8 +7297,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
@@ -7349,7 +7349,7 @@ mod tests {
             .await;
 
         {
-            let target_bucket_url = format!("s3://{}", BUCKET1.to_string());
+            let target_bucket_url = format!("s3://{}", *BUCKET1);
 
             TestHelper::create_large_file_with_special_characters();
 
@@ -7373,8 +7373,8 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        let source_bucket_url = format!("s3://{}", BUCKET1.to_string());
-        let target_bucket_url = format!("s3://{}", BUCKET2.to_string());
+        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", *BUCKET2);
 
         {
             let args = vec![
