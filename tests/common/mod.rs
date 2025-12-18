@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(clippy::assertions_on_constants)]
 
 use anyhow::Result;
 use async_channel::Receiver;

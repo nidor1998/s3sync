@@ -727,8 +727,7 @@ impl StorageTrait for S3Storage {
                     .versions()
                     .iter()
                     .filter(|&object| object.key().unwrap() == key)
-                    .cloned()
-                    .map(|object| clone_object_version_with_key(&object, &key_without_prefix))
+                    .map(|object| clone_object_version_with_key(object, &key_without_prefix))
                     .collect(),
             );
 
