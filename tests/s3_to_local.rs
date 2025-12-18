@@ -293,8 +293,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url =
-                format!("s3://{}/{}", *BUCKET1, TEST_PREFIX);
+            let source_bucket_url = format!("s3://{}/{}", *BUCKET1, TEST_PREFIX);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -342,8 +341,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url =
-                format!("s3://{}/{}", *BUCKET1, TEST_PREFIX);
+            let source_bucket_url = format!("s3://{}/{}", *BUCKET1, TEST_PREFIX);
             let args = vec![
                 "s3sync",
                 "--source-profile",
