@@ -140,6 +140,8 @@ see [s3sync homepage](https://github.com/nidor1998/s3sync).
 */
 
 #![allow(clippy::collapsible_if)]
+#![allow(clippy::assertions_on_constants)]
+#![allow(clippy::unnecessary_unwrap)]
 
 pub use config::Config;
 pub use config::args::CLIArgs;

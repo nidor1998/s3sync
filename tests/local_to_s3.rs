@@ -193,7 +193,7 @@ mod tests {
                     format!("{}/dir1/data1", TEST_PREFIX),
                 ]);
 
-                assert!(key_set.get(object.key.as_ref().unwrap()).is_some())
+                assert!(key_set.contains(object.key.as_ref().unwrap()))
             }
         }
 
