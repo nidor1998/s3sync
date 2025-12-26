@@ -1,8 +1,3 @@
-[advisories]
-ignore = [
-    "RUSTSEC-2025-0134",  # rustls-pemfile is unmaintained - tracked issue with aws-smithy-runtime-api
-]
-
 [licenses]
 allow = [
     "Apache-2.0 WITH LLVM-exception",
