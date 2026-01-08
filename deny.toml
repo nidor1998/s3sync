@@ -1,6 +1,5 @@
 [advisories]
 ignore = [
-    "RUSTSEC-2025-0134",  # rustls-pemfile is unmaintained - tracked issue with aws-smithy-runtime-api
     "RUSTSEC-2026-0002",  # lru 0.12.5 IterMut soundness issue - transitive dependency from aws-sdk-s3
 ]
 
