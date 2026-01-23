@@ -121,8 +121,8 @@ This tool is designed solely for object storage (S3 or S3-compatible) data synch
 
 ### Demo
 
-c8i.xlarge (4vCPU, 8GB), Local to S3, 50,000 Objects (10 KiB each), End-to-End Integrity Verified (MD5 and
-SHA256)
+`c8i.xlarge (4vCPU, 8GB)` with 180 workers, Local to S3, 50,000 Objects (10 KiB each), End-to-End Integrity Verified (
+MD5 and SHA256)
 
 The last command performs an incremental transfer based on modified time.
 

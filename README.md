@@ -19,8 +19,8 @@ the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).
 
 ### Demo
 
-c8i.xlarge (4vCPU, 8GB), Local to S3, 50,000 Objects (10 KiB each), End-to-End Integrity Verified (MD5 and
-SHA256)
+`c8i.xlarge (4vCPU, 8GB)` with 180 workers, Local to S3, 50,000 Objects (10 KiB each), End-to-End Integrity Verified (
+MD5 and SHA256)
 
 The last command performs an incremental transfer based on modified time.
 
