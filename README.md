@@ -17,8 +17,12 @@ performance.
 **This document is a summary of s3sync. For more detailed information, please refer to
 the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).**
 
-Demo: c8i.xlarge (4 vCPU, 8 GB), Local to S3, 50,000 Objects (10 KiB Each), End-to-End Integrity Verified (MD5 and
+### Demo
+
+c8i.xlarge (4vCPU, 8GB), Local to S3, 50,000 Objects (10 KiB each), End-to-End Integrity Verified (MD5 and
 SHA256)
+
+The last command performs an incremental transfer based on modified time.
 
 ![demo](media/demo.webp)
 
@@ -90,7 +94,7 @@ correctly.
   In my environment(`s3sync 1.45.0(glibc)/c7a.xlarge(4vCPU, 8GB)/200GB IOPS SSD(io 1)`, with 160 workers), uploading
   from local to S3 achieved about 4,300 objects/sec (small
   objects 10KiB),  
-  in the case of a large objects(6GiB object, total 96GiB, `--max-parallel-uploads 48`), about 256.72 MiB/sec, 6.5
+  in the case of large objects(6GiB each, total 96GiB, `--max-parallel-uploads 48`), about 256.72 MiB/sec, 6.5
   minutes,
 
 - Versioning support  
