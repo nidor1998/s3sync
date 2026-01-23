@@ -119,8 +119,12 @@ It supports multipart uploads, versioning, metadata, and tagging.
 
 This tool is designed solely for object storage (S3 or S3-compatible) data synchronization.
 
-Demo: c8i.xlarge (4 vCPU, 8 GB), Local to S3, 50,000 Objects (10 KiB Each), End-to-End Integrity Verified (MD5 and
+### Demo
+
+c8i.xlarge (4vCPU, 8GB), Local to S3, 50,000 Objects (10 KiB each), End-to-End Integrity Verified (MD5 and
 SHA256)
+
+The last command performs an incremental transfer based on modified time.
 
 ![demo](media/demo.webp)
 
@@ -187,7 +191,7 @@ objects are end-to-end integrity verified(MD5, SHA256).
   sys     0m22.800s
   ```
 
-Local to S3, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 256.72 MiB/sec, 6.23 minutes, and all
+Local to S3, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB each), 96.00 GiB | 256.72 MiB/sec, 6.23 minutes, and all
 objects are end-to-end integrity verified(MD5, SHA256).
 
 Note: Calculating ETag/additional checksum is costly with large local objects.
@@ -203,7 +207,7 @@ Note: Above the case, the bottleneck is the disk I/O (Maximum throughput is 500M
   sys     1m45.131s
   ```
 
-S3 to Local, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB objects), 96.00 GiB | 166.63 MiB/sec, 10 minutes, and all objects
+S3 to Local, `c7a.xlarge(4vCPU, 8GB)` 16 objects(6GiB each), 96.00 GiB | 166.63 MiB/sec, 10 minutes, and all objects
 are end-to-end integrity verified(MD5, SHA256).  
 ETag/additional checksum verification is costly in the case of S3 to Local. Because s3sync needs to read the entire
 downloaded object from the local disk to calculate ETag/checksum.   
