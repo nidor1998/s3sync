@@ -15,7 +15,6 @@
 <summary>Click to expand to view table of contents </summary>
 
 - [Overview](#Overview)
-- [As a Rust library](#As-A-Rust-Library)
 - [Features](#Features)
     * [Object integrity check](#Object-Integrity-Check)
     * [Multiple ways](#Multiple-Ways)
@@ -52,6 +51,7 @@
 - [Installation](#Installation)
     * [Install Rust](#Install-Rust)
     * [Build](#Build)
+    * [As a Rust library](#As-A-Rust-Library)
 - [Usage](#Usage)
     * [Local to S3](#Local-to-S3)
     * [S3 to Local](#S3-to-Local)
@@ -112,17 +112,17 @@
 ## Overview
 
 s3sync is a reliable, flexible, and fast synchronization tool for S3.  
+It serves as an alternative to the AWS CLI’s `aws s3 sync` command, offering more powerful features and better
+performance.
+
 It can be used to synchronize local directories with an S3 bucket and synchronize between S3 buckets as well.  
 It supports multipart uploads, versioning, metadata, and tagging.
 
 This tool is designed solely for object storage (S3 or S3-compatible) data synchronization.
 
-## As a Rust library
-
-s3sync can be used as a Rust library.   
-The s3sync CLI is a very thin wrapper over the s3sync library. All CLI features are available in the library.
-
-See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
+Demo: c8i.xlarge (4 vCPU, 8 GB), Local to S3, 50,000 Objects (10 KiB Each), End-to-End Integrity Verified (MD5 and
+SHA256)
+![demo](media/demo.webp)
 
 ## Features
 
@@ -329,10 +329,12 @@ With `--json-tracing`, you can output the tracing information in JSON format.
   0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
   ```
 
-With `--check-mtime-and-etag` option, s3sync first checks the modification time, then ETag of the source and target objects. It
+With `--check-mtime-and-etag` option, s3sync first checks the modification time, then ETag of the source and target
+objects. It
 is useful if you want to transfer only modified objects based on the modification time and ETag.
 
-Note: Calculating ETag is costly with local objects. Because s3sync needs to read the entire object from the local disk to calculate ETag.
+Note: Calculating ETag is costly with local objects. Because s3sync needs to read the entire object from the local disk
+to calculate ETag.
 
 ### Additional checksum-based incremental transfer
 
@@ -351,11 +353,13 @@ with `--json-tracing`, you can output the tracing information in JSON format.
   0 B | 0 B/sec,  transferred   0 objects | 0 objects/sec,  etag verified 0 objects,  checksum verified 0 objects,  deleted 0 objects,  skipped 3 objects,  error 0 objects, warning 0 objects,  duration 0 seconds
   ```
 
-With `--check-mtime-and-additional-checksum` option, s3sync first checks the modification time, then additional checksum of the
+With `--check-mtime-and-additional-checksum` option, s3sync first checks the modification time, then additional checksum
+of the
 source and target objects. It is useful if you want to transfer only modified objects based on the modification time and
 additional checksum.
 
-Note: Calculating additional checksum is costly with local objects. Because s3sync needs to read the entire object from the local disk to calculate the checksum.
+Note: Calculating additional checksum is costly with local objects. Because s3sync needs to read the entire object from
+the local disk to calculate the checksum.
 
 ### Proxy support
 
@@ -480,19 +484,24 @@ With `--max-delete`, you can limit the maximum number of deletions for safety.
 
 ### Etag-based conditional write/delete support
 
-You can use `--if-match` for conditional write and delete operations(PutObject/CompleteMultipartUpload/DeleteObject) with `If-Match` header.
-And you can use `--copy-source-if-match` for conditional copy operations(CopyObject/UploadPartCopy) with `x-amz-copy-source-if-match` header.
+You can use `--if-match` for conditional write and delete operations(PutObject/CompleteMultipartUpload/DeleteObject)
+with `If-Match` header.
+And you can use `--copy-source-if-match` for conditional copy operations(CopyObject/UploadPartCopy) with
+`x-amz-copy-source-if-match` header.
 
 Actually, it serves as like optimistic locking.  
-This prevents race conditions that s3sync overwrites or deletes an object that has been modified by another process after s3sync checks the object.
+This prevents race conditions that s3sync overwrites or deletes an object that has been modified by another process
+after s3sync checks the object.
 
 `--if-none-match` option is also available.  
-This option guarantees that the object does not exist in the target bucket. Without this option, race conditions can occur.
+This option guarantees that the object does not exist in the target bucket. Without this option, race conditions can
+occur.
 
 If precondition fails, s3sync skips the object and outputs a warning message.  
 If you want to treat it as an error, you can use `--warn-as-error` option.
 
-It is a challenging topic to understand, please refer to [AWS document](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-requests.html)
+It is a challenging topic to understand, please refer
+to [AWS document](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-requests.html)
 
 Note: few S3-compatible storage supports conditional requests.
 
@@ -566,7 +575,7 @@ This project is licensed under the Apache-2.0 License.
 
 ## Installation
 
-Download the latest binary from [Releases](https://github.com/nidor1998/s3sync/releases)
+Download the latest binary from [GitHub Releases](https://github.com/nidor1998/s3sync/releases)
 
 `s3sync-linux-glibc2.28` binary cannot be run on a glibc version less than or equal to 2.17. (i.e., CentOS 7, etc.)  
 `s3sync-linux-musl` binary is statically linked version and can be run on any Linux distribution.  
@@ -592,6 +601,13 @@ cargo install s3sync
 
 Note: The above command ignores the project's configuration and builds with global configuration. If you want to use Lua
 third-party C libraries, you need to manually download the source code and build. e.g. `cargo install --path .` .
+
+## As a Rust library
+
+s3sync can be used as a Rust library.   
+The s3sync CLI is a very thin wrapper over the s3sync library. All CLI features are available in the library.
+
+See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 ## Usage
 
@@ -1142,9 +1158,12 @@ of
 memory.**
 
 ### --disable-additional-checksum-verify
+
 When `--additional-checksum-algorithm` is specified, s3sync verifies the additional checksum of the target object.  
-But if source S3-compatible storage does not support additional checksum, s3sync cannot verify the additional checksum.  
-In this case, you can disable the verification with this option, while keeping the additional checksum in the target object.
+But if source S3-compatible storage does not support additional checksum, s3sync cannot verify the additional
+checksum.  
+In this case, you can disable the verification with this option, while keeping the additional checksum in the target
+object.
 
 ### -v
 

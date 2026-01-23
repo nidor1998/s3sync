@@ -11,10 +11,15 @@
 
 ## Overview
 
-s3sync is a reliable, flexible, and fast synchronization tool for S3.
+s3sync is a reliable, flexible, and fast synchronization tool for S3.  
+It serves as an alternative to the AWS CLI’s `aws s3 sync` command, offering more powerful features and better
+performance.
 
 **This document is a summary of s3sync. For more detailed information, please refer to
 the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).**
+
+Demo: c8i.xlarge (4 vCPU, 8 GB), Local to S3, 50,000 Objects (10 KiB Each), End-to-End Integrity Verified (MD5 and SHA256)
+![demo](media/demo.webp)
 
 ## Who is this for?
 
@@ -26,13 +31,6 @@ If you don't use s3sync for synchronization, you can use s3sync for checking the
 transferred by other tools, such as AWS CLI, Rclone, s5cmd, and other S3 storage tools.  
 In general, it is recommended to verify with other tools if you want to ensure that the objects have been transferred
 correctly.
-
-## As a Rust library
-
-s3sync can be used as a Rust library.  
-s3sync CLI is a very thin wrapper of the s3sync library. You can use all features of s3sync CLI in the library.
-
-See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 ## Features highlights
 
@@ -204,6 +202,31 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
   s3sync is distributed as a single binary with no dependencies (except glibc), so it can be easily run on the above
   platforms.  
   Linux musl statically linked binary is also available.
+
+## Requirements
+
+- x86_64 Linux (kernel 3.2 or later)
+- ARM64 Linux (kernel 4.1 or later)
+- x86_64 Windows 11
+- ARM64 Windows 11
+- macOS 11.0 or later
+
+All features are tested on the above platforms.
+
+## License
+
+This project is licensed under the Apache-2.0 License.
+
+## Installation
+
+Download the latest binary from [GitHub Releases](https://github.com/nidor1998/s3sync/releases)
+
+## As a Rust library
+
+s3sync can be used as a Rust library.  
+s3sync CLI is a very thin wrapper of the s3sync library. You can use all features of s3sync CLI in the library.
+
+See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 ## About testing
 
