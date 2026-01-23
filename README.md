@@ -18,7 +18,9 @@ performance.
 **This document is a summary of s3sync. For more detailed information, please refer to
 the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).**
 
-Demo: c8i.xlarge (4 vCPU, 8 GB), Local to S3, 50,000 Objects (10 KiB Each), End-to-End Integrity Verified (MD5 and SHA256)
+Demo: c8i.xlarge (4 vCPU, 8 GB), Local to S3, 50,000 Objects (10 KiB Each), End-to-End Integrity Verified (MD5 and
+SHA256)
+
 ![demo](media/demo.webp)
 
 ## Who is this for?
