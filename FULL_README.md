@@ -122,6 +122,7 @@ This tool is designed solely for object storage (S3 or S3-compatible) data synch
 
 Demo: c8i.xlarge (4 vCPU, 8 GB), Local to S3, 50,000 Objects (10 KiB Each), End-to-End Integrity Verified (MD5 and
 SHA256)
+
 ![demo](media/demo.webp)
 
 ## Features
