@@ -19,10 +19,10 @@ the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md).
 
 ### Demo
 
-`c8i.xlarge (4vCPU, 8GB)` with 180 workers, Local to S3, 50,000 Objects (10 KiB each), End-to-End Integrity Verified (
-MD5 and SHA256)
+`c8i.xlarge (4 vCPU, 8 GB)` with 180 workers, local to S3, 50,000 objects (10 KiB each)
 
-The last command performs an incremental transfer based on modified time.
+This demo shows the integrity check features (MD5 and SHA256) and performance (4,300 objects/sec).  
+The final command performs an incremental transfer based on modification time, enabling fast incremental transfers.
 
 ![demo](media/demo.webp)
 
