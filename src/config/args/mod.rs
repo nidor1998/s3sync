@@ -885,27 +885,27 @@ Exclude filters other than --filter-exclude-regex will not prevent an object fro
     allow_both_local_storage: bool,
 
     /// test purpose only
-    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[cfg(e2e_test_dangerous_simulations)]
     #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
     test_user_defined_callback: bool,
 
     /// [dangerous] Test purpose only
-    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[cfg(e2e_test_dangerous_simulations)]
     #[arg(long, hide = true, default_value_t = false, help_heading = "Dangerous")]
     allow_e2e_test_dangerous_simulation: bool,
 
     /// [dangerous] Test purpose only
-    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[cfg(e2e_test_dangerous_simulations)]
     #[arg(long, hide = true, help_heading = "Dangerous")]
     cancellation_point: Option<String>,
 
     /// [dangerous] Test purpose only
-    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[cfg(e2e_test_dangerous_simulations)]
     #[arg(long, hide = true, help_heading = "Dangerous")]
     panic_simulation_point: Option<String>,
 
     /// [dangerous] Test purpose only
-    #[cfg(feature = "e2e_test_dangerous_simulations")]
+    #[cfg(e2e_test_dangerous_simulations)]
     #[arg(long, hide = true, help_heading = "Dangerous")]
     error_simulation_point: Option<String>,
 }
@@ -1831,7 +1831,7 @@ impl TryFrom<CLIArgs> for Config {
         #[allow(unused_assignments)]
         #[allow(unused_mut)]
         let mut error_simulation_point = None;
-        #[cfg(feature = "e2e_test_dangerous_simulations")]
+        #[cfg(e2e_test_dangerous_simulations)]
         {
             allow_e2e_test_dangerous_simulation = value.allow_e2e_test_dangerous_simulation;
             cancellation_point = value.cancellation_point;
@@ -1842,7 +1842,7 @@ impl TryFrom<CLIArgs> for Config {
         #[allow(unused_assignments)]
         #[allow(unused_mut)]
         let mut test_user_defined_callback = false;
-        #[cfg(feature = "e2e_test_dangerous_simulations")]
+        #[cfg(e2e_test_dangerous_simulations)]
         {
             test_user_defined_callback = value.test_user_defined_callback;
         }

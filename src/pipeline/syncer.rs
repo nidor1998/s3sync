@@ -82,7 +82,7 @@ impl ObjectSyncer {
         loop {
             // This is special for test emulation.
             #[allow(clippy::collapsible_if)]
-            if cfg!(feature = "e2e_test_dangerous_simulations") {
+            if cfg!(e2e_test_dangerous_simulations) {
                 panic_simulation(&self.base.config, "ObjectSyncer::receive_and_filter");
 
                 if is_error_simulation_point(&self.base.config, "ObjectSyncer::receive_and_filter")
@@ -126,7 +126,7 @@ impl ObjectSyncer {
 
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             self.do_cancel_simulation("sync_object_with_force_retry");
         }
 
@@ -479,7 +479,7 @@ impl ObjectSyncer {
 
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             self.do_cancel_simulation("sync_object_versions");
         }
 
@@ -545,7 +545,7 @@ impl ObjectSyncer {
 
         let size = object.size();
 
-        #[cfg(feature = "e2e_test_dangerous_simulations")]
+        #[cfg(e2e_test_dangerous_simulations)]
         {
             self.do_precondition_error_simulation(
                 "ObjectSyncer::sync_or_delete_object-precondition",
@@ -603,7 +603,7 @@ impl ObjectSyncer {
 
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             self.do_cancel_simulation("sync_or_delete_object");
         }
 
@@ -1113,7 +1113,7 @@ impl ObjectSyncer {
     ) -> Result<PutObjectOutput> {
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             self.do_cancel_simulation("put_object");
         }
 

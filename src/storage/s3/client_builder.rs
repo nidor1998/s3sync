@@ -508,7 +508,7 @@ mod tests {
     }
 
     // In cloud environment, this test may fail because of the lack of credentials.
-    #[cfg(feature = "e2e_test")]
+    #[cfg(e2e_test)]
     #[tokio::test]
     async fn create_client_from_env() {
         init_dummy_tracing_subscriber();

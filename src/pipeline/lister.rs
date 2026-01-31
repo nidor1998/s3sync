@@ -15,7 +15,7 @@ impl ObjectLister {
     pub async fn list_source(&self, max_keys: i32) -> Result<()> {
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             panic_simulation(&self.base.config, "ObjectLister::list_source");
 
             if is_error_simulation_point(&self.base.config, "ObjectLister::list_source") {
@@ -59,7 +59,7 @@ impl ObjectLister {
     pub async fn list_target(&self, max_keys: i32) -> Result<()> {
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             panic_simulation(&self.base.config, "ObjectLister::list_target");
 
             if is_error_simulation_point(&self.base.config, "ObjectLister::list_target") {

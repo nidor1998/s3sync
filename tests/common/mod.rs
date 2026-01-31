@@ -146,7 +146,7 @@ const PANIC_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
 const ERROR_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_ERROR_DANGEROUS_SIMULATION";
 const ERROR_DANGEROUS_SIMULATION_ENV_ALLOW: &str = "ALLOW";
 
-#[cfg(feature = "e2e_test")]
+#[cfg(e2e_test)]
 pub struct TestHelper {
     client: Client,
 }
@@ -162,7 +162,7 @@ pub struct StatsCount {
     pub checksum_verified: u64,
 }
 
-#[cfg(feature = "e2e_test")]
+#[cfg(e2e_test)]
 impl TestHelper {
     pub async fn new() -> Self {
         Self {

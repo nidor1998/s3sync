@@ -18,7 +18,7 @@ impl ObjectVersionsPacker {
     pub async fn pack(&self) -> Result<()> {
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             panic_simulation(
                 &self.base.config,
                 "ObjectVersionsPacker::receive_and_filter",

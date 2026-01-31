@@ -14,7 +14,7 @@ aws configure --profile s3sync-e2e-test
 
 To run all the tests, use the following command:
 ```bash
-RUST_MIN_STACK=20000000 cargo test --all-features
+RUST_MIN_STACK=20000000 RUSTFLAGS="--cfg e2e_test --cfg e2e_test_dangerous_simulations" cargo test --all-features
 ```
 ### S3 permissions
 I tested with `AmazonS3FullAccess` policy, but you can use a more restrictive policy.

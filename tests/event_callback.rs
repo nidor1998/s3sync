@@ -1,9 +1,8 @@
+#![cfg(e2e_test)]
 #[cfg(test)]
-#[cfg(feature = "e2e_test")]
 mod common;
 
 #[cfg(test)]
-#[cfg(feature = "e2e_test")]
 mod tests {
     use common::*;
     use s3sync::callback::debug_event_callback::DebugEventCallback;
