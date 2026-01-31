@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.55.0] - 2026-01-31
+
+### Added
+
+- Added Lua 5.5 support  
+  By default, s3sync uses Lua 5.4. If you want to use Lua 5.5, you can
+  modify [Cargo.toml](https://github.com/nidor1998/s3sync/blob/main/Cargo.toml) and rebuild s3sync.  
+  The following is an example of how to build with Lua 5.5 support.
+
+  ```toml  
+  mlua = { version = "0.11.6", features = ["lua55", "async", "send", "vendored"], optional = true }
+  ```
+
+### Changed
+
+- aws-sdk-s3 `v1.120.0 -> v1.121.0`
+- Refactored
+- Updated dependencies
+- Updated docs
+
 ## [1.54.2] - 2026-01-23
 
 ### Changed

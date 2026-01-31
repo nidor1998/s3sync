@@ -45,7 +45,7 @@ impl ObjectDeleter {
         loop {
             // This is special for test emulation.
             #[allow(clippy::collapsible_if)]
-            if cfg!(feature = "e2e_test_dangerous_simulations") {
+            if cfg!(e2e_test_dangerous_simulations) {
                 panic_simulation(&self.base.config, "ObjectDeleter::receive_and_filter");
 
                 if is_error_simulation_point(&self.base.config, "ObjectDeleter::receive_and_filter")
@@ -180,7 +180,7 @@ impl ObjectDeleter {
         version_id: Option<String>,
         if_match: Option<String>,
     ) -> Result<()> {
-        #[cfg(feature = "e2e_test_dangerous_simulations")]
+        #[cfg(e2e_test_dangerous_simulations)]
         {
             self.do_precondition_error_simulation("ObjectDeleter::delete-precondition")?;
         }

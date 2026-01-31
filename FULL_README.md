@@ -1068,7 +1068,7 @@ But an event callback Lua script does not stop the operation, just shows the war
 ### Lua version
 
 s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.4.  
-If you want to use `LuaJIT`, `luau-jit`, etc, you can modify the `Cargo.toml` file and set the `mlua` feature.  
+If you want to use `LuaJIT`, `luau-jit`, `Lua 5.5` etc, you can modify the `Cargo.toml` file and set the `mlua` feature.  
 For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
 
 ### CLI process exit codes

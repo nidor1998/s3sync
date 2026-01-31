@@ -24,7 +24,7 @@ impl DiffLister {
     ) -> Result<()> {
         // This is special for test emulation.
         #[allow(clippy::collapsible_if)]
-        if cfg!(feature = "e2e_test_dangerous_simulations") {
+        if cfg!(e2e_test_dangerous_simulations) {
             panic_simulation(&self.base.config, "DiffLister::receive_and_filter");
 
             if is_error_simulation_point(&self.base.config, "DiffLister::receive_and_filter") {

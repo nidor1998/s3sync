@@ -1,11 +1,10 @@
+#![cfg(e2e_test)]
 #[cfg(test)]
-#[cfg(feature = "e2e_test")]
 mod common;
 
 pub const EXPRESS_ONE_ZONE_BUCKET_SUFFIX: &str = "--apne1-az4--x-s3";
 
 #[cfg(test)]
-#[cfg(feature = "e2e_test")]
 mod tests {
     use std::convert::TryFrom;
 
