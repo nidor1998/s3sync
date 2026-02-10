@@ -567,8 +567,8 @@ for more information.
 
 - x86_64 Linux (kernel 3.2 or later)
 - ARM64 Linux (kernel 4.1 or later)
-- Windows 11 (x86_64, ARM64)
-- macOS 11.0 or later (Apple Silicon, Intel)
+- Windows 11 (x86_64, aarch64)
+- macOS 11.0 or later (aarch64, x86_64)
 
 All features are tested on the above platforms.
 
