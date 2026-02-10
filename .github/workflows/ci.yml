@@ -18,6 +18,7 @@ jobs:
           - stable
         os:
           - windows-latest
+          - windows-11-arm
           - macos-latest
         include:
           - os: ubuntu-latest
@@ -30,12 +31,14 @@ jobs:
             target: aarch64-unknown-linux-musl
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
           - os: macos-latest
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - uses: actions/checkout@v6
+      - run: rustup update
       - uses: Swatinem/rust-cache@v2
       - run: rustup target add ${{ matrix.target }}
       - name: Run only musl
@@ -49,7 +52,7 @@ jobs:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: rustup update stable && rustup default stable && rustup component add rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check --verbose
@@ -58,7 +61,7 @@ jobs:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: rustup update stable && rustup default stable && rustup component add clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy -- -D warnings
@@ -67,7 +70,7 @@ jobs:
     name: cargo_deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: rustup update stable && rustup default stable && cargo install cargo-deny
       - uses: Swatinem/rust-cache@v2
       - run: cargo deny -L error check
