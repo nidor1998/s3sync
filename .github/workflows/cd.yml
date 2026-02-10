@@ -15,7 +15,7 @@ jobs:
     container: quay.io/pypa/manylinux_2_28_x86_64
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v6
       - name: build and packaging final binary
         shell: bash
         run: |
@@ -27,8 +27,9 @@ jobs:
           chmod +x rust_install.sh
           ./rust_install.sh -y
           source "$HOME/.cargo/env"
-          rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+          rustup update
 
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cargo build --release --target x86_64-unknown-linux-gnu
 
           cd target/x86_64-unknown-linux-gnu/release
@@ -51,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v6
       - name: build and packaging final binary
         shell: bash
         run: |
@@ -59,13 +60,14 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
           RELEASE_NAME=$APP_NAME-$VERSION-linux-musl-x86_64
 
-          sudo apt update && sudo apt install -y curl musl-dev musl-tools build-essential
+          sudo apt update && sudo apt install -y git curl musl-dev musl-tools build-essential
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs >./rust_install.sh
           chmod +x rust_install.sh
           ./rust_install.sh -y
           source "$HOME/.cargo/env"
           rustup target add x86_64-unknown-linux-musl
 
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cargo build --profile release-min-size --target x86_64-unknown-linux-musl
 
           cd target/x86_64-unknown-linux-musl/release-min-size
@@ -89,7 +91,7 @@ jobs:
     container: quay.io/pypa/manylinux_2_28_aarch64
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v6
       - name: build and packaging final binary
         shell: bash
         run: |
@@ -103,6 +105,7 @@ jobs:
           source "$HOME/.cargo/env"
           rustup update
 
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cargo build --release --target aarch64-unknown-linux-gnu
 
           cd target/aarch64-unknown-linux-gnu/release
@@ -125,7 +128,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v6
       - name: build and packaging final binary
         shell: bash
         run: |
@@ -133,13 +136,14 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
           RELEASE_NAME=$APP_NAME-$VERSION-linux-musl-aarch64
 
-          sudo apt update && sudo apt install -y curl musl-dev musl-tools build-essential
+          sudo apt update && sudo apt install -y git curl musl-dev musl-tools build-essential
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs >./rust_install.sh
           chmod +x rust_install.sh
           ./rust_install.sh -y
           source "$HOME/.cargo/env"
           rustup target add aarch64-unknown-linux-musl
-
+          
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           cargo build --profile release-min-size --target aarch64-unknown-linux-musl
 
           cd target/aarch64-unknown-linux-musl/release-min-size
@@ -163,7 +167,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ macos-latest, windows-latest ]
+        os: [ macos-latest, windows-latest, windows-11-arm ]
         include:
           - os: macos-latest
             artifact_suffix: macos-aarch64
@@ -173,12 +177,15 @@ jobs:
             artifact_suffix: windows-x86_64
             target: x86_64-pc-windows-msvc
             file_extension: ".exe"
-
+          - os: windows-11-arm
+            artifact_suffix: windows-aarch64
+            target: aarch64-pc-windows-msvc
+            file_extension: ".exe"
     steps:
       - name: install rust toolchain
-        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+        run: rustup update
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: cargo build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Packaging final binary
@@ -218,7 +225,7 @@ jobs:
 
   publish-release:
     name: publish release
-    needs: [release-linux, release-linux-musl, release-arm-linux, release-arm-linux-musl, release-others]
+    needs: [ release-linux, release-linux-musl, release-arm-linux, release-arm-linux-musl, release-others ]
     runs-on: ubuntu-latest
     permissions:
       contents: write

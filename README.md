@@ -212,9 +212,8 @@ correctly.
 
 - x86_64 Linux (kernel 3.2 or later)
 - ARM64 Linux (kernel 4.1 or later)
-- x86_64 Windows 11
-- ARM64 Windows 11
-- macOS 11.0 or later
+- Windows 11 (x86_64, ARM64)
+- macOS 11.0 or later (Apple Silicon, Intel)
 
 All features are tested on the above platforms.
 
@@ -225,6 +224,8 @@ This project is licensed under the Apache-2.0 License.
 ## Installation
 
 Download the latest binary from [GitHub Releases](https://github.com/nidor1998/s3sync/releases)
+
+You should build Intel Mac binaries yourself.
 
 ## As a Rust library
 

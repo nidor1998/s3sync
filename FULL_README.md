@@ -567,9 +567,8 @@ for more information.
 
 - x86_64 Linux (kernel 3.2 or later)
 - ARM64 Linux (kernel 4.1 or later)
-- x86_64 Windows 11
-- ARM64 Windows 11
-- macOS 11.0 or later
+- Windows 11 (x86_64, ARM64)
+- macOS 11.0 or later (Apple Silicon, Intel)
 
 All features are tested on the above platforms.
 
@@ -580,6 +579,8 @@ This project is licensed under the Apache-2.0 License.
 ## Installation
 
 Download the latest binary from [GitHub Releases](https://github.com/nidor1998/s3sync/releases)
+
+You should build Intel Mac binary for yourself.
 
 `s3sync-linux-glibc2.28` binary cannot be run on a glibc version less than or equal to 2.17. (i.e., CentOS 7, etc.)  
 `s3sync-linux-musl` binary is statically linked version and can be run on any Linux distribution.  
@@ -1068,7 +1069,8 @@ But an event callback Lua script does not stop the operation, just shows the war
 ### Lua version
 
 s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.4.  
-If you want to use `LuaJIT`, `luau-jit`, `Lua 5.5` etc, you can modify the `Cargo.toml` file and set the `mlua` feature.  
+If you want to use `LuaJIT`, `luau-jit`, `Lua 5.5` etc, you can modify the `Cargo.toml` file and set the `mlua`
+feature.  
 For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
 
 ### CLI process exit codes
