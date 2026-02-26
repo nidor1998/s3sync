@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - aws-sdk-s3 `v1.122.0 -> v1.124.0`
+- Added aarch64-pc-windows-msvc target configuration with static CRT linking
 - Refactored
 - Updated dependencies
 - Updated docs
