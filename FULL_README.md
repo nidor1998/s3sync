@@ -599,7 +599,7 @@ See [Install Rust](https://www.rust-lang.org/tools/install)
 
 ### Build
 
-s3sync requires Rust 1.88 or later.
+s3sync requires Rust 1.91 or later.
 
 ```bash
 cargo install s3sync
