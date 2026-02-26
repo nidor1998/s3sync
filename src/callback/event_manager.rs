@@ -93,7 +93,9 @@ impl EventManager {
                 event_data.dry_run = self.dry_run;
                 callback.lock().await.on_event(event_data).await;
             }
-            if event_type == EventType::PIPELINE_END {
+            if event_type == EventType::PIPELINE_END
+                && self.event_flags.contains(EventType::STATS_REPORT)
+            {
                 let sync_stats = self.sync_stats.lock().await.clone();
                 let mut event_data: EventData = sync_stats.into();
                 event_data.dry_run = self.dry_run;
