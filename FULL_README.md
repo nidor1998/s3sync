@@ -1,9 +1,10 @@
 # s3sync
 
 [![Crates.io](https://img.shields.io/crates/v/s3sync.svg)](https://crates.io/crates/s3sync)
-[![crates.io downloads](https://img.shields.io/crates/d/s3sync.svg)](https://crates.io/crates/s3sync)
+![](https://img.shields.io/crates/d/s3sync?label=downloads%20%28crates.io%29)
+![](https://img.shields.io/github/downloads/nidor1998/s3sync/total?label=downloads%20%28GitHub%29)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![MSRV](https://img.shields.io/badge/msrv-1.88.0-red)
+![MSRV](https://img.shields.io/badge/msrv-1.91.0-red)
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 [![dependency status](https://deps.rs/crate/s3sync/latest/status.svg)](https://deps.rs/crate/s3sync/)
@@ -598,7 +599,7 @@ See [Install Rust](https://www.rust-lang.org/tools/install)
 
 ### Build
 
-s3sync requires Rust 1.88 or later.
+s3sync requires Rust 1.91 or later.
 
 ```bash
 cargo install s3sync
