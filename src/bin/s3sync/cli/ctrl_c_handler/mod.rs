@@ -1,6 +1,6 @@
 use tokio::task::JoinHandle;
 use tokio::{select, signal};
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 use s3sync::types::token::PipelineCancellationToken;
 
@@ -10,9 +10,16 @@ pub fn spawn_ctrl_c_handler(cancellation_token: PipelineCancellationToken) -> Jo
             _ = cancellation_token.cancelled() => {
                 debug!("cancellation_token canceled.")
             }
-            _ = signal::ctrl_c() => {
-                warn!("ctrl-c received, shutting down.");
-                cancellation_token.cancel();
+            result = signal::ctrl_c() => {
+                match result {
+                    Ok(()) => {
+                        warn!("ctrl-c received, shutting down.");
+                        cancellation_token.cancel();
+                    }
+                    Err(e) => {
+                        error!("failed to listen for ctrl-c signal: {e}");
+                    }
+                }
             }
         }
     })
