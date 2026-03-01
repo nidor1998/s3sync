@@ -18,16 +18,12 @@ mod tests {
     async fn test_lua_event_callback_no_script() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -42,25 +38,19 @@ mod tests {
             assert!(args.is_err());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_event_callback() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -89,7 +79,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -118,39 +108,29 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_event_callback_versioning() {
         TestHelper::init_dummy_tracing_subscriber();
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
-            helper.enable_bucket_versioning(&BUCKET1.to_string()).await;
-            helper.enable_bucket_versioning(&BUCKET2.to_string()).await;
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
-        let target_bucket_url = format!("s3://{}", *BUCKET2);
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
 
         {
             let args = vec![
@@ -172,12 +152,12 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object_versions_list = helper.list_object_versions(&BUCKET2.to_string(), "").await;
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
             assert_eq!(object_versions_list.len(), 5);
         }
 
         {
-            helper.delete_all_objects(&BUCKET1.to_string()).await;
+            helper.delete_all_objects(&bucket1).await;
         }
 
         {
@@ -200,15 +180,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object_versions_list = helper.list_object_versions(&BUCKET2.to_string(), "").await;
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
             assert_eq!(object_versions_list.len(), 5);
 
-            let object_list = helper.list_objects(&BUCKET2.to_string(), "").await;
+            let object_list = helper.list_objects(&bucket2, "").await;
             assert_eq!(object_list.len(), 0);
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--target-profile",
@@ -247,35 +227,27 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object_versions_list = helper.list_object_versions(&BUCKET2.to_string(), "").await;
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
             assert_eq!(object_versions_list.len(), 9);
 
-            let object_list = helper.list_objects(&BUCKET2.to_string(), "").await;
+            let object_list = helper.list_objects(&bucket2, "").await;
             assert_eq!(object_list.len(), 4);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
     async fn test_lua_event_callback_twice() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -304,7 +276,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -332,25 +304,19 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_event_callback_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -378,25 +344,19 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_event_callback_no_entrypoint() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -424,25 +384,19 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_no_script() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -457,25 +411,19 @@ mod tests {
             assert!(args.is_err());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -505,25 +453,19 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_no_entrypoint() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -544,25 +486,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_with_os_lib_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -583,25 +519,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_with_io_lib_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -622,25 +552,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_with_io_lib() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -662,25 +586,19 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_with_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -701,25 +619,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_with_os_lib() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -748,25 +660,19 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_filter_callback_with_unsafe_lua_vm() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -795,25 +701,19 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_no_script() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -828,25 +728,19 @@ mod tests {
             assert!(args.is_err());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_no_entrypoint() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -867,25 +761,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -913,42 +801,34 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             helper
-                .verify_test_object_metadata(&BUCKET1.to_string(), "dir1/data1", None)
+                .verify_test_object_metadata(&bucket, "dir1/data1", None)
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_all_metadata() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         const TEST_PREFIX: &str = "mydir";
 
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
+            let target_bucket_url = format!("s3://{}/{}/", bucket1, TEST_PREFIX);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}/{}/", *BUCKET1, TEST_PREFIX);
-        let target_bucket_url = format!("s3://{}/{}/", *BUCKET2, TEST_PREFIX);
+        let source_bucket_url = format!("s3://{}/{}/", bucket1, TEST_PREFIX);
+        let target_bucket_url = format!("s3://{}/{}/", bucket2, TEST_PREFIX);
 
         {
             let args = vec![
@@ -1001,29 +881,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_multipart_upload() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
             TestHelper::create_large_file();
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1051,29 +923,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             helper
-                .verify_test_object_metadata(&BUCKET1.to_string(), LARGE_FILE_KEY, None)
+                .verify_test_object_metadata(&bucket, LARGE_FILE_KEY, None)
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_invalid_acl() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1094,25 +960,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_invalid_expire() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1133,25 +993,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_invalid_storage_class() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1172,25 +1026,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_invalid_request_payer() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1211,25 +1059,19 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_skip() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1257,25 +1099,19 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_invalid_script() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1291,25 +1127,19 @@ mod tests {
             assert!(config.is_err());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_not_enough_memory() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1327,25 +1157,19 @@ mod tests {
             assert!(config.is_err());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn test_lua_preprocess_callback_to_all_clear() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1396,12 +1220,10 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             helper
-                .verify_test_object_no_metadata(&BUCKET1.to_string(), "dir1/data1", None)
+                .verify_test_object_no_metadata(&bucket, "dir1/data1", None)
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 }

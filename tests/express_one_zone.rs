@@ -13,6 +13,7 @@ mod tests {
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use uuid::Uuid;
 
     use super::*;
 
@@ -20,11 +21,10 @@ mod tests {
     async fn local_to_s3_with_disable_stalled_protection() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        let test_dir = format!("./playground/case1_{}/", Uuid::new_v4());
+        TestHelper::copy_dir_all("./test_data/e2e_test/case1", &test_dir);
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -37,7 +37,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--disable-stalled-stream-protection",
-                "./test_data/e2e_test/case1/",
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -52,14 +52,15 @@ mod tests {
         }
 
         {
-            TestHelper::touch_file("./test_data/e2e_test/case1/data1", TOUCH_FILE_SECS_FROM_NOW);
+            let touch_path = format!("{}data1", &test_dir);
+            TestHelper::touch_file(&touch_path, TOUCH_FILE_SECS_FROM_NOW);
 
             let target_bucket_url = format!("s3://{}", &bucket1);
             let args = vec![
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
-                "./test_data/e2e_test/case1/",
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -73,17 +74,15 @@ mod tests {
         }
 
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 
     #[tokio::test]
     async fn local_to_s3_with_multipart_upload() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -101,11 +100,8 @@ mod tests {
     async fn local_to_s3_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -157,11 +153,9 @@ mod tests {
     async fn s3_to_local() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -181,7 +175,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -190,13 +184,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -208,11 +199,11 @@ mod tests {
                 helper
                     .get_object_last_modified(&bucket1, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        let _ = std::fs::remove_dir_all(&download_dir);
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
     }
 
@@ -220,11 +211,9 @@ mod tests {
     async fn s3_to_local_parallel_listing() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -245,7 +234,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--allow-parallel-listings-in-express-one-zone",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -254,13 +243,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -272,11 +258,11 @@ mod tests {
                 helper
                     .get_object_last_modified(&bucket1, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        let _ = std::fs::remove_dir_all(&download_dir);
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
     }
 
@@ -284,11 +270,9 @@ mod tests {
     async fn s3_to_local_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -308,7 +292,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -317,7 +301,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
             helper.delete_object(&bucket1, "data1", None).await;
@@ -331,7 +315,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--delete",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -340,16 +324,16 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 4);
 
             assert!(!TestHelper::is_file_exist(&format!(
                 "{}/data1",
-                TEMP_DOWNLOAD_DIR
+                &download_dir
             )));
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        let _ = std::fs::remove_dir_all(&download_dir);
         helper.delete_all_objects(&bucket1).await;
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
     }
@@ -358,15 +342,10 @@ mod tests {
     async fn s3_to_s3() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
-
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
-        helper.delete_directory_bucket_with_cascade(&bucket2).await;
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -417,15 +396,10 @@ mod tests {
     async fn s3_to_s3_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
-
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
-        helper.delete_directory_bucket_with_cascade(&bucket2).await;
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -504,17 +478,11 @@ mod tests {
     async fn single_part_operations_with_crc64nvme() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
-
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
-        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -590,7 +558,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -614,17 +582,11 @@ mod tests {
     async fn single_part_operations_with_default_additional_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
-
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
-        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -694,7 +656,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -718,17 +680,11 @@ mod tests {
     async fn single_part_operations_with_disable_additional_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
-
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
-        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -799,7 +755,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--disable-express-one-zone-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -823,19 +779,13 @@ mod tests {
     async fn multipart_operations_with_crc64nvme() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
-        let bucket1 = format!("{}{}", *BUCKET1, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", *BUCKET2, EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         TestHelper::create_large_file();
 
         let helper = TestHelper::new().await;
-
-        helper.delete_directory_bucket_with_cascade(&bucket1).await;
-        helper.delete_directory_bucket_with_cascade(&bucket2).await;
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", &bucket1);
@@ -944,7 +894,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();

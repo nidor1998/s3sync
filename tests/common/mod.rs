@@ -113,8 +113,6 @@ pub static SEMAPHORE: Lazy<Arc<Semaphore>> = Lazy::new(|| Arc::new(Semaphore::ne
 
 pub const TOUCH_FILE_SECS_FROM_NOW: i64 = 10;
 pub const SLEEP_SECS_BEFORE_RESYNC: u64 = 5;
-pub const SLEEP_SECS_AFTER_DELETE_BUCKET: u64 = 10;
-
 pub const TEST_SSE_C_KEY_1: &str = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=";
 pub const TEST_SSE_C_KEY_1_MD5: &str = "zZ5FnqcIqUjVwvWmyog4zw==";
 pub const TEST_SSE_C_KEY_2: &str = "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=";
@@ -168,6 +166,44 @@ impl TestHelper {
         Self {
             client: Self::create_client().await,
         }
+    }
+
+    pub fn generate_bucket_name() -> String {
+        format!("s3sync-e2e-{}", Uuid::new_v4())
+    }
+
+    pub fn copy_dir_all(src: &str, dst: &str) {
+        std::fs::create_dir_all(dst).unwrap();
+        for entry in WalkDir::new(src).min_depth(1) {
+            let entry = entry.unwrap();
+            let target = PathBuf::from(dst).join(entry.path().strip_prefix(src).unwrap());
+            if entry.file_type().is_dir() {
+                std::fs::create_dir_all(&target).unwrap();
+            } else {
+                std::fs::copy(entry.path(), &target).unwrap();
+            }
+        }
+    }
+
+    pub fn create_large_file_in(dir: &str) {
+        std::fs::create_dir_all(dir).unwrap();
+        let file_path = PathBuf::from(dir).join("large_file");
+        let data = vec![0_u8; LARGE_FILE_SIZE];
+        std::fs::write(&file_path, data.as_slice()).unwrap();
+    }
+
+    pub fn modify_large_file_in(dir: &str) {
+        std::thread::sleep(time::Duration::from_secs(2));
+        let file_path = PathBuf::from(dir).join("large_file");
+        let data = vec![1_u8; LARGE_FILE_SIZE];
+        std::fs::write(&file_path, data.as_slice()).unwrap();
+    }
+
+    pub fn update_large_file_mtime_in(dir: &str) {
+        let file_path = PathBuf::from(dir).join("large_file");
+        std::thread::sleep(time::Duration::from_secs(2));
+        let now = FileTime::now();
+        set_file_mtime(&file_path, now).unwrap();
     }
 
     pub async fn create_client() -> Client {
@@ -316,8 +352,6 @@ impl TestHelper {
                 assert!(false, "S3 API error has occurred.")
             }
         }
-
-        tokio::time::sleep(time::Duration::from_secs(SLEEP_SECS_AFTER_DELETE_BUCKET)).await;
     }
 
     pub async fn delete_directory_bucket_with_cascade(&self, bucket: &str) {
@@ -338,8 +372,6 @@ impl TestHelper {
                 assert!(false, "S3 API error has occurred.")
             }
         }
-
-        tokio::time::sleep(time::Duration::from_secs(SLEEP_SECS_AFTER_DELETE_BUCKET)).await;
     }
 
     pub async fn list_objects(&self, bucket: &str, prefix: &str) -> Vec<Object> {
@@ -919,7 +951,12 @@ impl TestHelper {
         pipeline.run().await;
         assert!(!pipeline.has_error());
 
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -943,8 +980,12 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
-
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -994,8 +1035,12 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
-
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -1015,8 +1060,12 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
-
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -1036,8 +1085,12 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
-
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -1057,8 +1110,12 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
-
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -1078,8 +1135,12 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
-
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -1099,8 +1160,12 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
-
-        let object_list = self.list_objects(&BUCKET1.to_string(), "").await;
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
         assert_eq!(object_list.len(), 5);
     }
 
@@ -1749,13 +1814,17 @@ impl TestHelper {
     }
 
     pub fn create_random_test_data_file(size_mb: usize, extra: i32) -> Result<()> {
-        std::fs::create_dir_all(RANDOM_DATA_FILE_DIR).unwrap();
+        Self::create_random_test_data_file_in(RANDOM_DATA_FILE_DIR, size_mb, extra)
+    }
+
+    pub fn create_random_test_data_file_in(dir: &str, size_mb: usize, extra: i32) -> Result<()> {
+        std::fs::create_dir_all(dir).unwrap();
 
         let mut random_file = File::open(RANDOM_DATA_SEED_FILE)?;
         let mut random_data = vec![0; 1024];
         random_file.read_exact(&mut random_data)?;
 
-        let output_path = Path::new(RANDOM_DATA_FILE_DIR).join(TEST_RANDOM_DATA_FILE_KEY);
+        let output_path = Path::new(dir).join(TEST_RANDOM_DATA_FILE_KEY);
         let mut output_file = File::create(output_path)?;
 
         for _ in 0..size_mb * 1024 {

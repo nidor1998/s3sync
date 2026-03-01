@@ -11,6 +11,7 @@ mod tests {
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use uuid::Uuid;
 
     use super::*;
 
@@ -18,30 +19,25 @@ mod tests {
     async fn s3_to_local_without_prefix() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -50,13 +46,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -66,9 +59,9 @@ mod tests {
 
             assert_eq!(
                 helper
-                    .get_object_last_modified(&BUCKET1.to_string(), "data1", None)
+                    .get_object_last_modified(&bucket, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
@@ -76,20 +69,16 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &BUCKET1.to_string(),
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -101,41 +90,33 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_without_slash() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR_WITHOUT_SLASH);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR_WITHOUT_SLASH,
+                download_dir.trim_end_matches('/'),
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -144,13 +125,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -160,40 +138,33 @@ mod tests {
 
             assert_eq!(
                 helper
-                    .get_object_last_modified(&BUCKET1.to_string(), "data1", None)
+                    .get_object_last_modified(&bucket, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_without_prefix_no_parallel_listing() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -201,7 +172,7 @@ mod tests {
                 "--max-parallel-listings",
                 "1",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -210,13 +181,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -226,9 +194,9 @@ mod tests {
 
             assert_eq!(
                 helper
-                    .get_object_last_modified(&BUCKET1.to_string(), "data1", None)
+                    .get_object_last_modified(&bucket, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
@@ -236,14 +204,10 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &BUCKET1.to_string(),
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -251,7 +215,7 @@ mod tests {
                 "--max-parallel-listings",
                 "1",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -263,10 +227,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -275,30 +237,25 @@ mod tests {
 
         const TEST_PREFIX: &str = "dir2";
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}/{}", *BUCKET1, TEST_PREFIX);
+            let source_bucket_url = format!("s3://{}/{}", bucket, TEST_PREFIX);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -307,14 +264,12 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 2);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -323,30 +278,25 @@ mod tests {
 
         const TEST_PREFIX: &str = "dir1/data1";
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}/{}", *BUCKET1, TEST_PREFIX);
+            let source_bucket_url = format!("s3://{}/{}", bucket, TEST_PREFIX);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -361,40 +311,33 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -403,23 +346,21 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&BUCKET1.to_string(), "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--delete",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -428,50 +369,43 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 4);
 
             assert!(!TestHelper::is_file_exist(&format!(
                 "{}/data1",
-                TEMP_DOWNLOAD_DIR
+                &download_dir
             )));
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        TestHelper::delete_all_files(&download_dir);
+        helper.delete_all_objects(&bucket).await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_delete_excluded() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -480,16 +414,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&BUCKET1.to_string(), "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -499,7 +431,7 @@ mod tests {
                 "--delete",
                 "--delete-excluded",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -508,50 +440,43 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 4);
 
             assert!(!TestHelper::is_file_exist(&format!(
                 "{}/data1",
-                TEMP_DOWNLOAD_DIR
+                &download_dir
             )));
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        TestHelper::delete_all_files(&download_dir);
+        helper.delete_all_objects(&bucket).await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_delete_no_excluded() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -560,16 +485,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&BUCKET1.to_string(), "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -578,7 +501,7 @@ mod tests {
                 "data1",
                 "--delete",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -587,50 +510,43 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
             assert!(TestHelper::is_file_exist(&format!(
                 "{}/data1",
-                TEMP_DOWNLOAD_DIR
+                &download_dir
             )));
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        TestHelper::delete_all_files(&download_dir);
+        helper.delete_all_objects(&bucket).await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_delete_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -639,16 +555,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&BUCKET1.to_string(), "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -656,7 +570,7 @@ mod tests {
                 "--delete",
                 "--dry-run",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -665,51 +579,44 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
             assert!(TestHelper::is_file_exist(&format!(
                 "{}/data1",
-                TEMP_DOWNLOAD_DIR
+                &download_dir
             )));
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        TestHelper::delete_all_files(&download_dir);
+        helper.delete_all_objects(&bucket).await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--dry-run",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -718,37 +625,30 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_skip_all() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -756,7 +656,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -765,7 +665,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
         }
 
@@ -775,7 +675,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -786,33 +686,24 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_empty_directory() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper
-                .put_empty_object(&BUCKET1.to_string(), "dir1/dir2/")
-                .await;
+            helper.create_bucket(&bucket, REGION).await;
+            helper.put_empty_object(&bucket, "dir1/dir2/").await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -820,7 +711,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -831,7 +722,7 @@ mod tests {
 
             assert!(TestHelper::is_file_exist(&format!(
                 "{}{}",
-                TEMP_DOWNLOAD_DIR, "dir1/dir2/"
+                &download_dir, "dir1/dir2/"
             )));
         }
 
@@ -841,7 +732,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -852,37 +743,28 @@ mod tests {
 
             assert!(TestHelper::is_file_exist(&format!(
                 "{}{}",
-                TEMP_DOWNLOAD_DIR, "dir1/dir2/"
+                &download_dir, "dir1/dir2/"
             )));
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_empty_directory_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper
-                .put_empty_object(&BUCKET1.to_string(), "dir1/dir2/")
-                .await;
+            helper.create_bucket(&bucket, REGION).await;
+            helper.put_empty_object(&bucket, "dir1/dir2/").await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -891,7 +773,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--dry-run",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -902,44 +784,37 @@ mod tests {
 
             assert!(!TestHelper::is_file_exist(&format!(
                 "{}{}",
-                TEMP_DOWNLOAD_DIR, "dir1/dir2/"
+                &download_dir, "dir1/dir2/"
             )));
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn s3_to_local_with_rate_limit() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -948,13 +823,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -964,9 +836,9 @@ mod tests {
 
             assert_eq!(
                 helper
-                    .get_object_last_modified(&BUCKET1.to_string(), "data1", None)
+                    .get_object_last_modified(&bucket, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
@@ -974,16 +846,12 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &BUCKET1.to_string(),
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -993,7 +861,7 @@ mod tests {
                 "--rate-limit-bandwidth",
                 "100MiB",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1005,41 +873,34 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1048,13 +909,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -1064,9 +922,9 @@ mod tests {
 
             assert_eq!(
                 helper
-                    .get_object_last_modified(&BUCKET1.to_string(), "data1", None)
+                    .get_object_last_modified(&bucket, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
@@ -1074,23 +932,19 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &BUCKET1.to_string(),
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1102,28 +956,21 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_sha256() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
@@ -1131,14 +978,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1152,28 +999,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
@@ -1181,7 +1021,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1189,7 +1029,7 @@ mod tests {
                 "--enable-additional-checksum",
                 "--dry-run",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1203,28 +1043,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_sha1() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_sha1(&target_bucket_url)
@@ -1232,14 +1065,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1253,28 +1086,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_disable_multipart_verify() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_sha1(&target_bucket_url)
@@ -1282,14 +1108,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--disable-multipart-verify",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1304,28 +1130,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_crc32() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc32(&target_bucket_url)
@@ -1333,14 +1152,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1354,28 +1173,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_crc32_full_object() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc32_full_object_checksum(&target_bucket_url)
@@ -1383,14 +1195,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1404,28 +1216,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_crc32c_full_object() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc32c_full_object_checksum(&target_bucket_url)
@@ -1433,14 +1238,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1454,27 +1259,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_crc32c() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc32c(&target_bucket_url)
@@ -1482,14 +1280,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1503,28 +1301,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_crc64nvme() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc64nvme(&target_bucket_url)
@@ -1532,14 +1323,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1553,34 +1344,29 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "7340033")
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -1589,7 +1375,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1603,33 +1389,28 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_with_8mib_composite_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_8mib_test_data_with_sha256(&target_bucket_url)
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -1638,7 +1419,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1654,33 +1435,28 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_with_8mib_crc32_full_object_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_8mib_test_data_with_full_object_crc32(&target_bucket_url)
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -1689,7 +1465,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1705,33 +1481,28 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_with_8mib_crc32c_full_object_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_8mib_test_data_with_full_object_crc32c(&target_bucket_url)
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -1740,7 +1511,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1756,33 +1527,28 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_with_8mib_crc64nvme_full_object_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_8mib_test_data_with_full_object_crc64nvme(&target_bucket_url)
                 .await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
+        let source_bucket_url = format!("s3://{}", bucket);
 
         {
             let args = vec![
@@ -1791,7 +1557,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1807,28 +1573,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
     async fn s3_to_local_with_sse_c() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -1857,7 +1616,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1869,7 +1628,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1883,29 +1642,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_sse_c_multipart_upload() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             TestHelper::create_large_file();
 
@@ -1937,7 +1689,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1949,7 +1701,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1963,41 +1715,34 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_empty_data_checksum_sha256() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_empty_data_with_sha256(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2011,28 +1756,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_e_tag_warning() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
@@ -2040,13 +1778,13 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2061,34 +1799,27 @@ mod tests {
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_max_keys() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2096,7 +1827,7 @@ mod tests {
                 "--max-keys",
                 "2",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2105,13 +1836,10 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let dir_entry_list = TestHelper::list_all_files(TEMP_DOWNLOAD_DIR);
+            let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(TEMP_DOWNLOAD_DIR, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -2121,34 +1849,27 @@ mod tests {
 
             assert_eq!(
                 helper
-                    .get_object_last_modified(&BUCKET1.to_string(), "data1", None)
+                    .get_object_last_modified(&bucket, "data1", None)
                     .await,
-                TestHelper::get_file_last_modified(&format!("{}/data1", TEMP_DOWNLOAD_DIR))
+                TestHelper::get_file_last_modified(&format!("{}/data1", &download_dir))
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_max_keys() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
@@ -2156,7 +1877,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2165,7 +1886,7 @@ mod tests {
                 "--max-keys",
                 "1",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2180,31 +1901,24 @@ mod tests {
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_directory_traversal_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .put_object_with_metadata(
-                    &BUCKET1.to_string(),
+                    &bucket,
                     "data1/../data2",
                     "./test_data/e2e_test/case1/data1",
                 )
@@ -2212,13 +1926,13 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2234,31 +1948,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_directory_traversal_warn_as_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .put_object_with_metadata(
-                    &BUCKET1.to_string(),
+                    &bucket,
                     "data1/../data2",
                     "./test_data/e2e_test/case1/data1",
                 )
@@ -2266,14 +1973,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--warn-as-error",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2283,45 +1990,34 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_incompatible_object() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &BUCKET1.to_string(),
-                    "data1/",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1/", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2337,51 +2033,38 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_access_denied() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &BUCKET1.to_string(),
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
         {
-            helper
-                .put_bucket_policy_deny_get_object(&BUCKET1.to_string())
-                .await;
+            helper.put_bucket_policy_deny_get_object(&bucket).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2397,52 +2080,39 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_warn_as_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &BUCKET1.to_string(),
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
         {
-            helper
-                .put_bucket_policy_deny_get_object(&BUCKET1.to_string())
-                .await;
+            helper.put_bucket_policy_deny_get_object(&bucket).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
                 "--warn-as-error",
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2452,41 +2122,34 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_etag_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-etag",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2498,14 +2161,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-etag",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2517,7 +2180,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -2536,14 +2199,14 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-etag",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2555,7 +2218,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2563,7 +2226,7 @@ mod tests {
                 "--check-etag",
                 "--head-each-target",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2575,7 +2238,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2583,7 +2246,7 @@ mod tests {
                 "--check-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2594,34 +2257,27 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_etag_check_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2629,7 +2285,7 @@ mod tests {
                 "--check-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2641,7 +2297,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2649,7 +2305,7 @@ mod tests {
                 "--check-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2661,14 +2317,14 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "6000000")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2676,7 +2332,7 @@ mod tests {
                 "--check-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2688,7 +2344,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             TestHelper::create_large_file_case2();
 
@@ -2711,7 +2367,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2719,7 +2375,7 @@ mod tests {
                 "--check-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2731,7 +2387,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2739,7 +2395,7 @@ mod tests {
                 "--check-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2750,28 +2406,21 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_etag_check_warn() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -2792,7 +2441,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2800,7 +2449,7 @@ mod tests {
                 "--head-each-target",
                 "--check-etag",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2812,7 +2461,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2820,7 +2469,7 @@ mod tests {
                 "--head-each-target",
                 "--check-etag",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2834,33 +2483,26 @@ mod tests {
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_sha256_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2869,7 +2511,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2881,7 +2523,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2890,7 +2532,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2902,7 +2544,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -2923,7 +2565,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2932,7 +2574,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2944,7 +2586,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2953,7 +2595,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2964,27 +2606,20 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_sha256_check_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
@@ -2992,7 +2627,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3001,7 +2636,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3013,7 +2648,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3022,7 +2657,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3034,7 +2669,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             TestHelper::create_large_file_case2();
 
@@ -3059,7 +2694,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3068,7 +2703,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3080,7 +2715,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3089,7 +2724,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3100,34 +2735,27 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_sha1_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data_with_sha1(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3136,7 +2764,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3148,7 +2776,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3157,7 +2785,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3169,7 +2797,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -3190,7 +2818,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3199,7 +2827,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3211,7 +2839,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3220,7 +2848,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3231,27 +2859,20 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_sha1_check_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_sha1(&target_bucket_url)
@@ -3259,7 +2880,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3268,7 +2889,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3280,7 +2901,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3289,7 +2910,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3301,7 +2922,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             TestHelper::create_large_file_case2();
 
@@ -3326,7 +2947,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3335,7 +2956,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3347,7 +2968,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3356,7 +2977,7 @@ mod tests {
                 "SHA1",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3367,34 +2988,27 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_crc32_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data_with_crc32(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3403,7 +3017,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3415,7 +3029,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3424,7 +3038,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3436,7 +3050,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -3457,7 +3071,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3466,7 +3080,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3478,7 +3092,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3487,7 +3101,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3498,28 +3112,21 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_crc32_check_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc32(&target_bucket_url)
@@ -3527,7 +3134,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3536,7 +3143,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3548,7 +3155,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3557,7 +3164,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3569,7 +3176,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             TestHelper::create_large_file_case2();
 
@@ -3594,7 +3201,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3603,7 +3210,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3615,7 +3222,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3624,7 +3231,7 @@ mod tests {
                 "CRC32",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3635,33 +3242,26 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_crc32c_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper.sync_test_data_with_crc32c(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3670,7 +3270,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3682,7 +3282,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3691,7 +3291,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3703,7 +3303,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -3724,7 +3324,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3733,7 +3333,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3745,7 +3345,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3754,7 +3354,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3765,28 +3365,21 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_crc64nvme_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_test_data_with_crc64nvme(&target_bucket_url)
@@ -3794,7 +3387,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3803,7 +3396,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3815,7 +3408,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3824,7 +3417,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3836,7 +3429,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -3857,7 +3450,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3866,7 +3459,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3878,7 +3471,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3887,7 +3480,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3898,28 +3491,21 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_crc32c_check_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc32c(&target_bucket_url)
@@ -3927,7 +3513,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3936,7 +3522,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3948,7 +3534,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -3957,7 +3543,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3969,7 +3555,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             TestHelper::create_large_file_case2();
 
@@ -3994,7 +3580,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4003,7 +3589,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4015,7 +3601,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4024,7 +3610,7 @@ mod tests {
                 "CRC32C",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4035,28 +3621,21 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_crc64nvme_check_auto_chunksize() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             helper
                 .sync_large_test_data_with_crc64nvme(&target_bucket_url)
@@ -4064,7 +3643,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4073,7 +3652,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4085,7 +3664,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4094,7 +3673,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4106,7 +3685,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             TestHelper::create_large_file_case2();
 
@@ -4131,7 +3710,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4140,7 +3719,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4152,7 +3731,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4161,7 +3740,7 @@ mod tests {
                 "CRC64NVME",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4172,30 +3751,23 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_checksum_check_kms() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -4220,7 +3792,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4229,7 +3801,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4241,7 +3813,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4250,7 +3822,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4261,31 +3833,24 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_checksum_check_dsse_kms() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -4310,7 +3875,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4319,7 +3884,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4331,7 +3896,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4340,7 +3905,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4351,31 +3916,24 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_checksum_check_sse_c() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -4404,7 +3962,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4419,7 +3977,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4431,7 +3989,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4446,7 +4004,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4457,31 +4015,24 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_with_checksum_check_warn() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -4500,7 +4051,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4509,7 +4060,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4521,7 +4072,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4530,7 +4081,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4544,29 +4095,24 @@ mod tests {
             );
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_mtime_etag_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        let test_dir = format!("./playground/case3_{}", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
-            TestHelper::create_case3_large_file();
+            TestHelper::create_large_file_in(&test_dir);
 
             let args = vec![
                 "s3sync",
@@ -4577,7 +4123,7 @@ mod tests {
                 "--check-mtime-and-etag",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                LARGE_FILE_DIR_CASE3,
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4596,7 +4142,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4605,7 +4151,7 @@ mod tests {
                 "--enable-additional-checksum",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4623,9 +4169,9 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            TestHelper::update_case3_large_file_mtime();
+            TestHelper::update_large_file_mtime_in(&test_dir);
 
             let args = vec![
                 "s3sync",
@@ -4634,7 +4180,7 @@ mod tests {
                 "--remove-modified-filter",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                LARGE_FILE_DIR_CASE3,
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4653,7 +4199,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4662,7 +4208,7 @@ mod tests {
                 "--check-mtime-and-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4680,9 +4226,9 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            TestHelper::modify_case3_large_file();
+            TestHelper::modify_large_file_in(&test_dir);
 
             let args = vec![
                 "s3sync",
@@ -4692,7 +4238,7 @@ mod tests {
                 "--check-mtime-and-etag",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                LARGE_FILE_DIR_CASE3,
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4711,7 +4257,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4720,7 +4266,7 @@ mod tests {
                 "--check-mtime-and-etag",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4737,29 +4283,25 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 
     #[tokio::test]
     async fn s3_to_local_mtime_checksum_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        let test_dir = format!("./playground/case3_{}", Uuid::new_v4());
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
-            TestHelper::create_case3_large_file();
+            TestHelper::create_large_file_in(&test_dir);
 
             let args = vec![
                 "s3sync",
@@ -4771,7 +4313,7 @@ mod tests {
                 "SHA256",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                LARGE_FILE_DIR_CASE3,
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4790,7 +4332,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4799,7 +4341,7 @@ mod tests {
                 "SHA256",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4817,9 +4359,9 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            TestHelper::update_case3_large_file_mtime();
+            TestHelper::update_large_file_mtime_in(&test_dir);
 
             let args = vec![
                 "s3sync",
@@ -4828,7 +4370,7 @@ mod tests {
                 "--remove-modified-filter",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                LARGE_FILE_DIR_CASE3,
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4847,7 +4389,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4856,7 +4398,7 @@ mod tests {
                 "--check-mtime-and-additional-checksum",
                 "SHA256",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4874,9 +4416,9 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
-            TestHelper::modify_case3_large_file();
+            TestHelper::modify_large_file_in(&test_dir);
 
             let args = vec![
                 "s3sync",
@@ -4886,7 +4428,7 @@ mod tests {
                 "SHA256",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                LARGE_FILE_DIR_CASE3,
+                &test_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4905,7 +4447,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -4914,7 +4456,7 @@ mod tests {
                 "--check-mtime-and-additional-checksum",
                 "SHA256",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4931,9 +4473,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 }

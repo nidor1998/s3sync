@@ -19,16 +19,12 @@ mod tests {
     async fn test_event_callback() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -51,8 +47,6 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 }
