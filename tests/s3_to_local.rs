@@ -100,7 +100,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -159,7 +159,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -251,7 +251,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -294,7 +294,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -339,7 +339,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -675,7 +675,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -734,7 +734,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -799,7 +799,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -844,7 +844,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -938,7 +938,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1030,7 +1030,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1075,7 +1075,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1121,7 +1121,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1166,7 +1166,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1212,7 +1212,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1257,7 +1257,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1302,7 +1302,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1347,7 +1347,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_multipart_upload_checksum_crc32c() {
@@ -1391,7 +1391,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1436,7 +1436,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1746,7 +1746,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1821,7 +1821,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1864,7 +1864,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1909,7 +1909,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -1970,7 +1970,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2018,7 +2018,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2067,7 +2067,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2111,7 +2111,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2160,7 +2160,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2215,7 +2215,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2265,7 +2265,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2402,7 +2402,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2553,7 +2553,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -2632,7 +2632,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_sha256_check() {
@@ -2757,7 +2757,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_sha256_check_auto_chunksize() {
@@ -2888,7 +2888,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -3014,7 +3014,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_sha1_check_auto_chunksize() {
@@ -3145,7 +3145,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -3271,7 +3271,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -3403,7 +3403,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_crc32c_check() {
@@ -3528,7 +3528,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -3656,7 +3656,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -3788,7 +3788,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -3920,7 +3920,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
     async fn s3_to_local_with_checksum_check_kms() {
@@ -4004,7 +4004,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -4089,7 +4089,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -4190,7 +4190,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -4272,7 +4272,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
@@ -4462,8 +4462,8 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
-        std::fs::remove_dir_all(&test_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 
     #[tokio::test]
@@ -4654,7 +4654,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        std::fs::remove_dir_all(&download_dir).unwrap();
-        std::fs::remove_dir_all(&test_dir).unwrap();
+        let _ = std::fs::remove_dir_all(&download_dir);
+        let _ = std::fs::remove_dir_all(&test_dir);
     }
 }
