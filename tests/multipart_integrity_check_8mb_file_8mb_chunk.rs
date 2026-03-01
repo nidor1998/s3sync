@@ -52,9 +52,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 0).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 0).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -63,7 +64,7 @@ mod tests {
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -202,9 +203,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -213,7 +215,7 @@ mod tests {
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -352,9 +354,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, -1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, -1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -363,7 +366,7 @@ mod tests {
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -502,9 +505,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -513,7 +517,7 @@ mod tests {
                 "s3sync",
                 "--target-profile",
                 "s3sync-e2e-test",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -655,9 +659,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -668,7 +673,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--sse",
                 "aws:kms",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -796,9 +801,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 0).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 0).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -809,7 +815,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -958,9 +964,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -971,7 +978,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1129,9 +1136,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, -1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, -1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1142,7 +1150,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1300,9 +1308,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1313,7 +1322,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1474,9 +1483,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1489,7 +1499,7 @@ mod tests {
                 "aws:kms",
                 "--additional-checksum-algorithm",
                 "SHA256",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1648,9 +1658,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 0).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 0).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1661,7 +1672,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC64NVME",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1819,9 +1830,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1832,7 +1844,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC64NVME",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1990,9 +2002,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, -1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, -1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2003,7 +2016,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC64NVME",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2161,9 +2174,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2174,7 +2188,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC64NVME",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2335,9 +2349,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2350,7 +2365,7 @@ mod tests {
                 "aws:kms",
                 "--additional-checksum-algorithm",
                 "CRC64NVME",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2509,9 +2524,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 0).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 0).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2522,7 +2538,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA1",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2671,9 +2687,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2684,7 +2701,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA1",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2833,9 +2850,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, -1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, -1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2846,7 +2864,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA1",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2995,9 +3013,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3008,7 +3027,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA1",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3160,9 +3179,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3175,7 +3195,7 @@ mod tests {
                 "aws:kms",
                 "--additional-checksum-algorithm",
                 "SHA1",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3325,9 +3345,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 0).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 0).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3338,7 +3359,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3487,9 +3508,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3500,7 +3522,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3658,9 +3680,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, -1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, -1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3671,7 +3694,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3829,9 +3852,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3842,7 +3866,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4003,9 +4027,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -4018,7 +4043,7 @@ mod tests {
                 "aws:kms",
                 "--additional-checksum-algorithm",
                 "CRC32",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4177,9 +4202,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 0).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 0).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -4190,7 +4216,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32C",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4339,9 +4365,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -4352,7 +4379,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32C",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4510,9 +4537,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, -1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, -1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -4523,7 +4551,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32C",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4681,9 +4709,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -4694,7 +4723,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "CRC32C",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -4855,9 +4884,10 @@ mod tests {
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
+        let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
 
-        TestHelper::create_random_test_data_file(8, 1).unwrap();
+        TestHelper::create_random_test_data_file_in(&random_data_dir, 8, 1).unwrap();
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -4870,7 +4900,7 @@ mod tests {
                 "aws:kms",
                 "--additional-checksum-algorithm",
                 "CRC32C",
-                RANDOM_DATA_FILE_DIR,
+                &random_data_dir,
                 &target_bucket_url,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
