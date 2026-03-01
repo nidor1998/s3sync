@@ -5,6 +5,7 @@ mod common;
 #[cfg(test)]
 mod tests {
     use common::*;
+    use uuid::Uuid;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
@@ -17,16 +18,12 @@ mod tests {
     async fn panic_object_filter_base() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -49,7 +46,7 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -57,16 +54,12 @@ mod tests {
     async fn panic_list_source() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -89,7 +82,7 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -97,16 +90,12 @@ mod tests {
     async fn panic_list_target() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -129,7 +118,7 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -137,16 +126,12 @@ mod tests {
     async fn panic_key_aggregator() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -169,7 +154,7 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -177,16 +162,12 @@ mod tests {
     async fn panic_user_defined_filter() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -211,7 +192,7 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -219,16 +200,12 @@ mod tests {
     async fn panic_syncer() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
 
             let args = vec![
                 "s3sync",
@@ -251,38 +228,30 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
     #[tokio::test]
     async fn panic_version_packer() {
         TestHelper::init_dummy_tracing_subscriber();
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
-            helper.enable_bucket_versioning(&BUCKET1.to_string()).await;
-            helper.enable_bucket_versioning(&BUCKET2.to_string()).await;
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
-        let target_bucket_url = format!("s3://{}", *BUCKET2);
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
 
         {
             let args = vec![
@@ -310,40 +279,32 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
     }
 
     #[tokio::test]
     async fn panic_point_in_time_packer() {
         TestHelper::init_dummy_tracing_subscriber();
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
-
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
-            helper.enable_bucket_versioning(&BUCKET1.to_string()).await;
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
 
             helper.sync_test_data(&target_bucket_url).await;
         }
 
-        let source_bucket_url = format!("s3://{}", *BUCKET1);
-        let target_bucket_url = format!("s3://{}", *BUCKET2);
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
 
         {
             let args = vec![
@@ -371,10 +332,10 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
     }
 
@@ -382,17 +343,13 @@ mod tests {
     async fn panic_diff_lister() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket);
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
             let args = vec![
                 "s3sync",
                 "--target-profile",
@@ -409,7 +366,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -433,7 +390,7 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -441,17 +398,13 @@ mod tests {
     async fn panic_object_deleter() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket);
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
             let args = vec![
                 "s3sync",
                 "--target-profile",
@@ -468,7 +421,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -492,7 +445,7 @@ mod tests {
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 }
