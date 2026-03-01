@@ -4,8 +4,12 @@ mod common;
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use once_cell::sync::Lazy;
+    use tokio::sync::Semaphore;
+
     use common::*;
-    use uuid::Uuid;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
@@ -14,9 +18,15 @@ mod tests {
 
     use super::*;
 
+    /// Panic simulation tests toggle global state, so they must run sequentially
+    /// with respect to each other. This file-local semaphore serializes only these
+    /// tests while allowing other test files to run in parallel.
+    static PANIC_SIM_SEMAPHORE: Lazy<Arc<Semaphore>> = Lazy::new(|| Arc::new(Semaphore::new(1)));
+
     #[tokio::test]
     async fn panic_object_filter_base() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -53,6 +63,7 @@ mod tests {
     #[tokio::test]
     async fn panic_list_source() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -89,6 +100,7 @@ mod tests {
     #[tokio::test]
     async fn panic_list_target() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -125,6 +137,7 @@ mod tests {
     #[tokio::test]
     async fn panic_key_aggregator() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -161,6 +174,7 @@ mod tests {
     #[tokio::test]
     async fn panic_user_defined_filter() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -199,6 +213,7 @@ mod tests {
     #[tokio::test]
     async fn panic_syncer() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -235,6 +250,8 @@ mod tests {
     #[tokio::test]
     async fn panic_version_packer() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
+
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         let bucket2 = TestHelper::generate_bucket_name();
@@ -289,6 +306,8 @@ mod tests {
     #[tokio::test]
     async fn panic_point_in_time_packer() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
+
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         let bucket2 = TestHelper::generate_bucket_name();
@@ -342,6 +361,7 @@ mod tests {
     #[tokio::test]
     async fn panic_diff_lister() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -397,6 +417,7 @@ mod tests {
     #[tokio::test]
     async fn panic_object_deleter() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = PANIC_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
