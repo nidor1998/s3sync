@@ -53,8 +53,6 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 }

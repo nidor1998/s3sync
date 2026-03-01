@@ -10,10 +10,10 @@ mod tests {
 
     use common::*;
     use s3sync::Config;
-    use uuid::Uuid;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use uuid::Uuid;
 
     use super::*;
 
@@ -70,11 +70,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let args = vec![
@@ -97,12 +93,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -160,11 +152,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let args = vec![
@@ -189,12 +177,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -253,12 +237,8 @@ mod tests {
             }
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -397,12 +377,8 @@ mod tests {
             }
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -462,12 +438,8 @@ mod tests {
             }
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -535,12 +507,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -607,12 +575,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -680,12 +644,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -752,12 +712,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -803,12 +759,8 @@ mod tests {
             assert_eq!(object_list.len(), 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -855,12 +807,8 @@ mod tests {
             assert_eq!(object_list.len(), 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -906,9 +854,7 @@ mod tests {
         }
 
         {
-            helper
-                .delete_object(&bucket1, "data1", None)
-                .await;
+            helper.delete_object(&bucket1, "data1", None).await;
         }
 
         {
@@ -933,19 +879,11 @@ mod tests {
             let object_list = helper.list_objects(&bucket2, "").await;
             assert_eq!(object_list.len(), 4);
 
-            assert!(
-                !helper
-                    .is_object_exist(&bucket2, "data1", None)
-                    .await
-            );
+            assert!(!helper.is_object_exist(&bucket2, "data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -991,9 +929,7 @@ mod tests {
         }
 
         {
-            helper
-                .delete_object(&bucket1, "data1", None)
-                .await;
+            helper.delete_object(&bucket1, "data1", None).await;
         }
 
         {
@@ -1021,19 +957,11 @@ mod tests {
             let object_list = helper.list_objects(&bucket2, "").await;
             assert_eq!(object_list.len(), 4);
 
-            assert!(
-                !helper
-                    .is_object_exist(&bucket2, "data1", None)
-                    .await
-            );
+            assert!(!helper.is_object_exist(&bucket2, "data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1079,9 +1007,7 @@ mod tests {
         }
 
         {
-            helper
-                .delete_object(&bucket1, "data1", None)
-                .await;
+            helper.delete_object(&bucket1, "data1", None).await;
         }
 
         {
@@ -1108,19 +1034,11 @@ mod tests {
             let object_list = helper.list_objects(&bucket2, "").await;
             assert_eq!(object_list.len(), 5);
 
-            assert!(
-                helper
-                    .is_object_exist(&bucket2, "data1", None)
-                    .await
-            );
+            assert!(helper.is_object_exist(&bucket2, "data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1166,9 +1084,7 @@ mod tests {
         }
 
         {
-            helper
-                .delete_object(&bucket1, "data1", None)
-                .await;
+            helper.delete_object(&bucket1, "data1", None).await;
         }
 
         {
@@ -1194,19 +1110,11 @@ mod tests {
             let object_list = helper.list_objects(&bucket2, "").await;
             assert_eq!(object_list.len(), 5);
 
-            assert!(
-                helper
-                    .is_object_exist(&bucket2, "data1", None)
-                    .await
-            );
+            assert!(helper.is_object_exist(&bucket2, "data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1272,12 +1180,8 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1350,12 +1254,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 10);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1403,12 +1303,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1455,12 +1351,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1533,12 +1425,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 2);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1554,11 +1442,7 @@ mod tests {
             helper.create_bucket(&bucket2, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -1588,12 +1472,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1609,11 +1489,7 @@ mod tests {
             helper.create_bucket(&bucket2, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -1644,12 +1520,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1665,11 +1537,7 @@ mod tests {
             helper.create_bucket(&bucket2, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -1700,12 +1568,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1721,11 +1585,7 @@ mod tests {
             helper.create_bucket(&bucket2, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -1756,12 +1616,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1777,11 +1633,7 @@ mod tests {
             helper.create_bucket(&bucket2, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -1807,20 +1659,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let get_object_tagging_output = helper
-                .get_object_tagging(&bucket2, "data1", None)
-                .await;
+            let get_object_tagging_output =
+                helper.get_object_tagging(&bucket2, "data1", None).await;
 
             let tag_set = get_object_tagging_output.tag_set();
             assert!(tag_set.is_empty());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1868,12 +1715,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1922,12 +1765,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1977,12 +1816,8 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1998,11 +1833,7 @@ mod tests {
             helper.create_bucket(&bucket2, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -2072,9 +1903,8 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let get_object_tagging_output = helper
-                .get_object_tagging(&bucket2, "data1", None)
-                .await;
+            let get_object_tagging_output =
+                helper.get_object_tagging(&bucket2, "data1", None).await;
 
             let tag_set = get_object_tagging_output.tag_set();
 
@@ -2107,9 +1937,8 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let get_object_tagging_output = helper
-                .get_object_tagging(&bucket2, "data1", None)
-                .await;
+            let get_object_tagging_output =
+                helper.get_object_tagging(&bucket2, "data1", None).await;
 
             let tag_set = get_object_tagging_output.tag_set();
 
@@ -2124,9 +1953,7 @@ mod tests {
         }
 
         {
-            helper
-                .delete_object_tagging(&bucket1, "data1", None)
-                .await;
+            helper.delete_object_tagging(&bucket1, "data1", None).await;
 
             let args = vec![
                 "s3sync",
@@ -2155,12 +1982,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2176,11 +1999,7 @@ mod tests {
             helper.create_bucket(&bucket2, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -2251,9 +2070,8 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let get_object_tagging_output = helper
-                .get_object_tagging(&bucket2, "data1", None)
-                .await;
+            let get_object_tagging_output =
+                helper.get_object_tagging(&bucket2, "data1", None).await;
 
             let tag_set = get_object_tagging_output.tag_set();
 
@@ -2268,9 +2086,7 @@ mod tests {
         }
 
         {
-            helper
-                .delete_object_tagging(&bucket1, "data1", None)
-                .await;
+            helper.delete_object_tagging(&bucket1, "data1", None).await;
         }
 
         {
@@ -2293,9 +2109,8 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let get_object_tagging_output = helper
-                .get_object_tagging(&bucket2, "data1", None)
-                .await;
+            let get_object_tagging_output =
+                helper.get_object_tagging(&bucket2, "data1", None).await;
 
             let tag_set = get_object_tagging_output.tag_set();
 
@@ -2309,12 +2124,8 @@ mod tests {
             assert_eq!(tag_map, expected_tag_map);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2374,21 +2185,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket2, "data1", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket2, "data1", None).await;
             assert_eq!(
                 *head_object_output.storage_class().unwrap(),
                 StorageClass::ReducedRedundancy
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2450,21 +2255,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket2, "data1", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket2, "data1", None).await;
             assert_eq!(
                 *head_object_output.storage_class().unwrap(),
                 StorageClass::IntelligentTiering
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2479,9 +2278,7 @@ mod tests {
             helper.create_bucket(&bucket1, REGION).await;
             helper.create_bucket(&bucket2, REGION).await;
 
-            helper
-                .put_empty_object(&bucket1, "dir1/dir2/")
-                .await;
+            helper.put_empty_object(&bucket1, "dir1/dir2/").await;
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -2515,12 +2312,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2580,21 +2373,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket2, "data1", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket2, "data1", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKms
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2654,21 +2441,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket2, "data1", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket2, "data1", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKmsDsse
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2713,21 +2494,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket2, "data1", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket2, "data1", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKmsDsse
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2772,21 +2547,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket2, "data1", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket2, "data1", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKms
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2842,11 +2611,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let args = vec![
@@ -2871,12 +2636,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -2932,12 +2693,8 @@ mod tests {
             }
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2996,11 +2753,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let args = vec![
@@ -3026,12 +2779,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3092,11 +2841,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let args = vec![
@@ -3122,12 +2867,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
     #[tokio::test]
     async fn s3_to_s3_with_multipart_upload_checksum() {
@@ -3177,12 +2918,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3234,12 +2971,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3291,12 +3024,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3345,12 +3074,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3402,12 +3127,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3457,12 +3178,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3568,10 +3285,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -3580,12 +3294,8 @@ mod tests {
             }
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3693,10 +3403,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -3705,12 +3412,8 @@ mod tests {
             }
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3823,12 +3526,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3941,12 +3640,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3996,12 +3691,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -4056,12 +3747,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -4187,12 +3874,8 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -4276,12 +3959,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -4364,12 +4043,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -4501,12 +4176,8 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -4650,12 +4321,8 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -4828,12 +4495,8 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5054,12 +4717,8 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5151,12 +4810,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
     #[tokio::test]
     async fn s3_to_s3_with_disable_payload_signing() {
@@ -5212,11 +4867,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket1,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket1, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let args = vec![
@@ -5240,12 +4891,8 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5294,12 +4941,8 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5342,9 +4985,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket2, "dir1/data1", None)
-                .await;
+            let object = helper.head_object(&bucket2, "dir1/data1", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect1".to_string())
@@ -5375,21 +5016,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket2, "dir1/data1", None)
-                .await;
+            let object = helper.head_object(&bucket2, "dir1/data1", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect777".to_string())
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5433,9 +5068,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket2, "dir1/data1", None)
-                .await;
+            let object = helper.head_object(&bucket2, "dir1/data1", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect1".to_string())
@@ -5467,21 +5100,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket2, "dir1/data1", None)
-                .await;
+            let object = helper.head_object(&bucket2, "dir1/data1", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect777".to_string())
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5524,9 +5151,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket1, "large_file", None)
-                .await;
+            let object = helper.head_object(&bucket1, "large_file", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect".to_string())
@@ -5557,21 +5182,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket2, "large_file", None)
-                .await;
+            let object = helper.head_object(&bucket2, "large_file", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect777".to_string())
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5615,9 +5234,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket1, "large_file", None)
-                .await;
+            let object = helper.head_object(&bucket1, "large_file", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect".to_string())
@@ -5649,21 +5266,15 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let object = helper
-                .head_object(&bucket2, "large_file", None)
-                .await;
+            let object = helper.head_object(&bucket2, "large_file", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect777".to_string())
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -5875,12 +5486,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
         let _ = std::fs::remove_dir_all(&download_dir);
         let _ = std::fs::remove_dir_all(&test_dir);
     }
@@ -6107,12 +5714,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -6275,12 +5878,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 6);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -6475,12 +6074,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -6673,12 +6268,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -6845,12 +6436,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -6914,12 +6501,8 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -7015,11 +6598,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 }

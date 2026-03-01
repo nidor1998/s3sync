@@ -32,7 +32,6 @@ mod tests {
 
     use super::*;
 
-
     #[tokio::test]
     async fn test_multipart_upload_5mb() {
         TestHelper::init_dummy_tracing_subscriber();
@@ -44,7 +43,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
-
 
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 0).unwrap();
 
@@ -192,12 +190,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -212,7 +206,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -359,12 +352,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -379,7 +368,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, -1).unwrap();
 
         {
@@ -526,12 +514,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_MINUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -546,7 +530,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -684,12 +667,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -704,7 +683,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -842,12 +820,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -862,7 +836,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 0).unwrap();
 
         {
@@ -1021,12 +994,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1041,7 +1010,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -1209,12 +1177,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1228,7 +1192,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
-
 
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, -1).unwrap();
 
@@ -1397,12 +1360,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_MINUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1417,7 +1376,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -1576,12 +1534,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1596,7 +1550,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -1767,12 +1720,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1786,7 +1735,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
-
 
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 0).unwrap();
 
@@ -1955,12 +1903,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1974,7 +1918,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
-
 
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
@@ -2143,12 +2086,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2162,7 +2101,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
-
 
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, -1).unwrap();
 
@@ -2331,12 +2269,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_MINUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2351,7 +2285,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -2510,12 +2443,8 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2530,7 +2459,6 @@ mod tests {
         helper.create_bucket(&bucket2, REGION).await;
         let random_data_dir = format!("./playground/random_data_{}/", Uuid::new_v4());
 
-
         TestHelper::create_random_test_data_file_in(&random_data_dir, 5, 1).unwrap();
 
         {
@@ -2701,11 +2629,7 @@ mod tests {
             assert_eq!(sha256_hash, SHA256_5M_PLUS_1_FILE_WHOLE);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 }

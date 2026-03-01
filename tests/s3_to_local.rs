@@ -8,10 +8,10 @@ mod tests {
 
     use common::*;
     use s3sync::config::Config;
-    use uuid::Uuid;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use uuid::Uuid;
 
     use super::*;
 
@@ -49,10 +49,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -72,11 +69,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let source_bucket_url = format!("s3://{}", bucket);
@@ -97,9 +90,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -137,10 +128,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -156,9 +144,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -198,10 +184,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -221,11 +204,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
 
             let source_bucket_url = format!("s3://{}", bucket);
@@ -248,9 +227,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -291,9 +268,7 @@ mod tests {
             assert_eq!(dir_entry_list.len(), 2);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -336,9 +311,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -376,9 +349,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&bucket, "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
@@ -409,9 +380,7 @@ mod tests {
 
         TestHelper::delete_all_files(&download_dir);
         helper.delete_all_objects(&bucket).await;
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -448,9 +417,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&bucket, "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
@@ -484,9 +451,7 @@ mod tests {
 
         TestHelper::delete_all_files(&download_dir);
         helper.delete_all_objects(&bucket).await;
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -523,9 +488,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&bucket, "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
@@ -558,9 +521,7 @@ mod tests {
 
         TestHelper::delete_all_files(&download_dir);
         helper.delete_all_objects(&bucket).await;
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -597,9 +558,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
             assert_eq!(dir_entry_list.len(), 5);
 
-            helper
-                .delete_object(&bucket, "data1", None)
-                .await;
+            helper.delete_object(&bucket, "data1", None).await;
         }
 
         {
@@ -631,9 +590,7 @@ mod tests {
 
         TestHelper::delete_all_files(&download_dir);
         helper.delete_all_objects(&bucket).await;
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -672,9 +629,7 @@ mod tests {
             assert_eq!(dir_entry_list.len(), 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -731,9 +686,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -747,9 +700,7 @@ mod tests {
 
         {
             helper.create_bucket(&bucket, REGION).await;
-            helper
-                .put_empty_object(&bucket, "dir1/dir2/")
-                .await;
+            helper.put_empty_object(&bucket, "dir1/dir2/").await;
         }
 
         let source_bucket_url = format!("s3://{}", bucket);
@@ -796,9 +747,7 @@ mod tests {
             )));
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -812,9 +761,7 @@ mod tests {
 
         {
             helper.create_bucket(&bucket, REGION).await;
-            helper
-                .put_empty_object(&bucket, "dir1/dir2/")
-                .await;
+            helper.put_empty_object(&bucket, "dir1/dir2/").await;
         }
 
         let source_bucket_url = format!("s3://{}", bucket);
@@ -841,9 +788,7 @@ mod tests {
             )));
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -881,10 +826,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -904,11 +846,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -935,9 +873,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -976,10 +912,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -999,11 +932,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -1027,9 +956,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1072,9 +999,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1118,9 +1043,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1163,9 +1086,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1209,9 +1130,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1254,9 +1173,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1299,9 +1216,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1344,9 +1259,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
@@ -1388,9 +1301,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1433,9 +1344,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1480,9 +1389,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1528,9 +1435,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1576,9 +1481,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1624,9 +1527,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1672,9 +1573,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1743,9 +1642,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1818,9 +1715,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1861,9 +1756,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1906,9 +1799,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -1948,10 +1839,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -1967,9 +1855,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2015,9 +1901,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2064,9 +1948,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2108,9 +1990,7 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2126,11 +2006,7 @@ mod tests {
             helper.create_bucket(&bucket, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket,
-                    "data1/",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1/", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
@@ -2157,9 +2033,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2175,18 +2049,12 @@ mod tests {
             helper.create_bucket(&bucket, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
         {
-            helper
-                .put_bucket_policy_deny_get_object(&bucket)
-                .await;
+            helper.put_bucket_policy_deny_get_object(&bucket).await;
         }
 
         {
@@ -2212,9 +2080,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2230,18 +2096,12 @@ mod tests {
             helper.create_bucket(&bucket, REGION).await;
 
             helper
-                .put_object_with_metadata(
-                    &bucket,
-                    "data1",
-                    "./test_data/e2e_test/case1/data1",
-                )
+                .put_object_with_metadata(&bucket, "data1", "./test_data/e2e_test/case1/data1")
                 .await;
         }
 
         {
-            helper
-                .put_bucket_policy_deny_get_object(&bucket)
-                .await;
+            helper.put_bucket_policy_deny_get_object(&bucket).await;
         }
 
         {
@@ -2262,9 +2122,7 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2399,9 +2257,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2550,9 +2406,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -2629,9 +2483,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
@@ -2754,9 +2606,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
@@ -2885,9 +2735,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3011,9 +2859,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
@@ -3142,9 +2988,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3268,9 +3112,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3400,9 +3242,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
@@ -3525,9 +3365,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3653,9 +3491,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3785,9 +3621,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -3917,9 +3751,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
     #[tokio::test]
@@ -4001,9 +3833,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -4086,9 +3916,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -4187,9 +4015,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -4269,9 +4095,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
     }
 
@@ -4459,9 +4283,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
         let _ = std::fs::remove_dir_all(&test_dir);
     }
@@ -4651,9 +4473,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&download_dir);
         let _ = std::fs::remove_dir_all(&test_dir);
     }

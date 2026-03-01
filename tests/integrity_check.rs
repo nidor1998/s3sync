@@ -7,14 +7,13 @@ mod tests {
     use std::convert::TryFrom;
 
     use common::*;
-    use uuid::Uuid;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use uuid::Uuid;
 
     use super::*;
-
 
     #[tokio::test]
     async fn local_to_s3_single_e_tag() {
@@ -23,7 +22,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -46,9 +44,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -58,7 +54,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -82,9 +77,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -94,7 +87,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -118,9 +110,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -131,7 +121,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -164,9 +153,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -177,7 +164,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -211,9 +197,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -226,7 +210,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
 
-
         {
             let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_test_data(&target_bucket_url).await;
@@ -259,12 +242,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -276,7 +255,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -311,12 +289,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -326,7 +300,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -352,9 +325,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -364,7 +335,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -391,9 +361,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -403,7 +371,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -430,9 +397,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -443,7 +408,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -476,9 +440,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -489,7 +451,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -523,9 +484,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -538,7 +497,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
 
-
         {
             let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_large_test_data(&target_bucket_url).await;
@@ -571,12 +529,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -588,7 +542,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -623,12 +576,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -639,7 +588,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -674,9 +622,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -687,7 +633,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -723,9 +668,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -738,7 +681,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
 
-
         {
             let target_bucket_url = format!("s3://{}", bucket1);
             helper
@@ -773,12 +715,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -790,7 +728,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -827,12 +764,8 @@ mod tests {
             assert_eq!(stats.checksum_verified, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -843,7 +776,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
 
-
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
@@ -867,9 +799,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -880,7 +810,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
 
-
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
@@ -905,9 +834,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -917,7 +844,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -942,9 +868,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -954,7 +878,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -980,9 +903,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -993,7 +914,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1027,9 +947,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1040,7 +958,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1076,9 +993,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1090,7 +1005,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1127,12 +1041,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1144,7 +1054,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1183,12 +1092,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1198,7 +1103,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1226,9 +1130,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1238,7 +1140,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1267,9 +1168,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1279,7 +1178,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1307,9 +1205,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1319,7 +1215,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1348,9 +1243,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1360,7 +1253,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1389,9 +1281,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1401,7 +1291,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1430,9 +1319,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1444,7 +1331,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1483,12 +1369,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1500,7 +1382,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1539,12 +1420,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1556,7 +1433,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1596,12 +1472,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1613,7 +1485,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1653,12 +1524,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1669,7 +1536,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1705,9 +1571,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1718,7 +1582,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1754,9 +1617,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1767,7 +1628,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1803,9 +1663,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1816,7 +1674,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1852,9 +1709,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -1866,7 +1721,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1906,12 +1760,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1923,7 +1773,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1963,12 +1812,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1980,7 +1825,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2024,12 +1868,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2041,7 +1881,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2085,12 +1924,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2102,7 +1937,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2141,12 +1975,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2158,7 +1988,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2197,12 +2026,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 2);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2214,7 +2039,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2253,12 +2077,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2268,7 +2088,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -2295,9 +2114,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2308,7 +2125,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2359,9 +2175,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2374,7 +2188,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
 
-
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -2429,12 +2242,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2444,7 +2253,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -2471,9 +2279,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2484,7 +2290,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2535,9 +2340,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2549,7 +2352,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2605,12 +2407,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2620,7 +2418,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -2651,9 +2448,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2664,7 +2459,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2725,9 +2519,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2739,7 +2531,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2809,12 +2600,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2824,7 +2611,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         TestHelper::create_large_file();
 
@@ -2853,9 +2639,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2865,7 +2649,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         TestHelper::create_large_file();
 
@@ -2894,9 +2677,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2907,7 +2688,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2960,9 +2740,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -2975,7 +2753,6 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
 
-
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -3032,12 +2809,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3048,7 +2821,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3101,9 +2873,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -3115,7 +2885,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3173,12 +2942,8 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -3188,7 +2953,6 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-
 
         TestHelper::create_large_file();
 
@@ -3222,9 +2986,7 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -3235,7 +2997,6 @@ mod tests {
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
         helper.create_bucket(&bucket1, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3298,9 +3059,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
     }
 
     #[tokio::test]
@@ -3312,7 +3071,6 @@ mod tests {
         let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
-
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3384,11 +3142,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 }

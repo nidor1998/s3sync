@@ -9,11 +9,11 @@ mod tests {
     use std::convert::TryFrom;
 
     use common::*;
-    use uuid::Uuid;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use uuid::Uuid;
 
     use super::*;
 
@@ -187,10 +187,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),
@@ -249,10 +246,7 @@ mod tests {
             let dir_entry_list = TestHelper::list_all_files(&download_dir);
 
             for entry in dir_entry_list {
-                let path = entry
-                    .path()
-                    .to_string_lossy()
-                    .replace(&download_dir, "");
+                let path = entry.path().to_string_lossy().replace(&download_dir, "");
 
                 assert!(TestHelper::verify_file_md5_digest(
                     &format!("./test_data/e2e_test/case1/{}", &path),

@@ -6,13 +6,13 @@ mod common;
 mod tests {
     use chrono::Utc;
     use common::*;
-    use uuid::Uuid;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
     use std::convert::TryFrom;
     use std::time::Duration;
+    use uuid::Uuid;
 
     use super::*;
 
@@ -84,9 +84,7 @@ mod tests {
             pipeline.run().await;
             assert!(pipeline.has_error());
         }
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -383,9 +381,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
             assert_eq!(stats.sync_skip, 1);
         }
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -752,11 +748,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
             assert_eq!(stats.sync_skip, 1);
         }
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 }

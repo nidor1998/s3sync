@@ -406,9 +406,7 @@ mod tests {
         }
 
         TestHelper::delete_all_files(&download_dir);
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -797,9 +795,7 @@ mod tests {
         }
 
         TestHelper::delete_all_files(&download_dir);
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1505,12 +1501,8 @@ mod tests {
         }
 
         TestHelper::delete_all_files(&download_dir);
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -1816,12 +1808,8 @@ mod tests {
         }
 
         TestHelper::delete_all_files(&download_dir);
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 
     #[tokio::test]
@@ -2094,11 +2082,7 @@ mod tests {
         }
 
         TestHelper::delete_all_files(&download_dir);
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
     }
 }

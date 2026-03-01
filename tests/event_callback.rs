@@ -47,8 +47,6 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 }

@@ -11,10 +11,10 @@ mod tests {
 
     use common::*;
     use s3sync::config::Config;
-    use uuid::Uuid;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use uuid::Uuid;
 
     use super::*;
 
@@ -76,9 +76,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 
@@ -144,9 +142,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 
@@ -193,9 +189,7 @@ mod tests {
             }
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -243,16 +237,10 @@ mod tests {
             let object_list = helper.list_objects(&bucket, "").await;
             assert_eq!(object_list.len(), 4);
 
-            assert!(
-                !helper
-                    .is_object_exist(&bucket, "data1", None)
-                    .await
-            );
+            assert!(!helper.is_object_exist(&bucket, "data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -306,16 +294,10 @@ mod tests {
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
 
-            assert!(
-                !helper
-                    .is_object_exist(&bucket, "data1", None)
-                    .await
-            );
+            assert!(!helper.is_object_exist(&bucket, "data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -370,9 +352,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 10);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -424,9 +404,7 @@ mod tests {
             assert!(stats.sync_warning > 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -477,16 +455,10 @@ mod tests {
             let object_list = helper.list_objects(&bucket, "").await;
             assert_eq!(object_list.len(), 3);
 
-            assert!(
-                !helper
-                    .is_object_exist(&bucket, "dir21/data1", None)
-                    .await
-            );
+            assert!(!helper.is_object_exist(&bucket, "dir21/data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -536,16 +508,10 @@ mod tests {
             let object_list = helper.list_objects(&bucket, "").await;
             assert_eq!(object_list.len(), 4);
 
-            assert!(
-                helper
-                    .is_object_exist(&bucket, "dir21/data1", None)
-                    .await
-            );
+            assert!(helper.is_object_exist(&bucket, "dir21/data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -594,16 +560,10 @@ mod tests {
             let object_list = helper.list_objects(&bucket, "").await;
             assert_eq!(object_list.len(), 5);
 
-            assert!(
-                helper
-                    .is_object_exist(&bucket, "data1", None)
-                    .await
-            );
+            assert!(helper.is_object_exist(&bucket, "data1", None).await);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -636,9 +596,7 @@ mod tests {
             assert_eq!(object_list.len(), 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -676,9 +634,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -701,9 +657,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -733,18 +687,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "data1", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "data1", None).await;
             assert_eq!(
                 *head_object_output.storage_class().unwrap(),
                 StorageClass::ReducedRedundancy
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -776,18 +726,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "large_file", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "large_file", None).await;
             assert_eq!(
                 *head_object_output.storage_class().unwrap(),
                 StorageClass::StandardIa
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -826,9 +772,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -864,9 +808,7 @@ mod tests {
             assert!(pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -896,15 +838,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "img.png", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "img.png", None).await;
             assert_eq!(head_object_output.content_type().unwrap(), "image/png");
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -935,18 +873,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "img.png", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "img.png", None).await;
             assert_eq!(
                 head_object_output.content_type().unwrap(),
                 "application/octet-stream"
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -976,18 +910,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "img.png", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "img.png", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKms
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1019,18 +949,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "large_file", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "large_file", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKms
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1060,18 +986,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "img.png", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "img.png", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKmsDsse
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1103,18 +1025,14 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            let head_object_output = helper
-                .head_object(&bucket, "large_file", None)
-                .await;
+            let head_object_output = helper.head_object(&bucket, "large_file", None).await;
             assert_eq!(
                 head_object_output.server_side_encryption().unwrap(),
                 &ServerSideEncryption::AwsKmsDsse
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1145,9 +1063,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1180,9 +1096,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -1247,9 +1161,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 
@@ -1281,9 +1193,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1321,9 +1231,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1356,9 +1264,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1392,9 +1298,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1428,9 +1332,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1463,9 +1365,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1504,9 +1404,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1546,9 +1444,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1588,9 +1484,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1629,9 +1523,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1655,9 +1547,7 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1681,9 +1571,7 @@ mod tests {
                 .await;
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1724,9 +1612,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1770,9 +1656,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1807,9 +1691,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1844,9 +1726,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1881,9 +1761,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1918,9 +1796,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1955,9 +1831,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -1999,9 +1873,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -2035,9 +1907,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -2071,9 +1941,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -2191,9 +2059,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -2293,9 +2159,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 
@@ -2432,9 +2296,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
     #[tokio::test]
     async fn local_to_s3_with_e_tag_check_warn() {
@@ -2489,9 +2351,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -2598,9 +2458,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -2707,9 +2565,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
     #[tokio::test]
     async fn local_to_s3_with_crc32_check() {
@@ -2815,9 +2671,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -2928,9 +2782,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
     #[tokio::test]
     async fn local_to_s3_with_crc32c_check() {
@@ -3036,9 +2888,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3149,9 +2999,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3258,9 +3106,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3373,9 +3219,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3489,9 +3333,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3604,9 +3446,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3719,9 +3559,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3838,9 +3676,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -3957,9 +3793,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4072,9 +3906,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4187,9 +4019,7 @@ mod tests {
             assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4304,9 +4134,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4463,9 +4291,7 @@ mod tests {
             assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4508,9 +4334,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4544,9 +4368,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4578,9 +4400,7 @@ mod tests {
             assert!(!pipeline.has_error());
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4686,9 +4506,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 
@@ -4796,9 +4614,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 
@@ -4840,9 +4656,7 @@ mod tests {
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4878,9 +4692,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -4942,9 +4754,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -5007,9 +4817,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -5071,9 +4879,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 1);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -5109,9 +4915,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -5147,9 +4951,7 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -5167,18 +4969,14 @@ mod tests {
                 .sync_large_test_data_with_website_redirect(&target_bucket_url, "/redirect")
                 .await;
 
-            let object = helper
-                .head_object(&bucket, "large_file", None)
-                .await;
+            let object = helper.head_object(&bucket, "large_file", None).await;
             assert_eq!(
                 object.website_redirect_location,
                 Some("/redirect".to_string())
             );
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 
     #[tokio::test]
@@ -5248,8 +5046,6 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
-        helper
-            .delete_bucket_with_cascade(&bucket)
-            .await;
+        helper.delete_bucket_with_cascade(&bucket).await;
     }
 }
