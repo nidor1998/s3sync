@@ -12,24 +12,22 @@ mod tests {
     use s3sync::types::token::create_pipeline_cancellation_token;
     use std::convert::TryFrom;
     use std::time::Duration;
+    use uuid::Uuid;
 
     #[tokio::test]
     async fn local_to_s3_sync_report() {
         TestHelper::init_tracing_subscriber_for_report();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -60,7 +58,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -96,7 +94,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -132,7 +130,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -166,7 +164,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step2/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step2/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -200,7 +198,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -233,11 +231,11 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&bucket).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -270,7 +268,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -306,7 +304,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -339,11 +337,11 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&bucket).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -372,7 +370,7 @@ mod tests {
         }
 
         {
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -407,9 +405,9 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        TestHelper::delete_all_files(&download_dir);
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -417,19 +415,16 @@ mod tests {
     async fn s3_to_local_sync_report() {
         TestHelper::init_tracing_subscriber_for_report();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
+            helper.create_bucket(&bucket, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -460,8 +455,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            let source_bucket_url = format!("s3://{}/step1/", bucket);
+            TestHelper::delete_all_files(&download_dir);
 
             let args = vec![
                 "s3sync",
@@ -470,7 +465,7 @@ mod tests {
                 "--check-additional-checksum",
                 "SHA256",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -488,7 +483,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let source_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -498,7 +493,7 @@ mod tests {
                 "SHA256",
                 "--report-sync-status",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -524,7 +519,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
+            let source_bucket_url = format!("s3://{}/step2/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -534,7 +529,7 @@ mod tests {
                 "SHA256",
                 "--report-sync-status",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -560,7 +555,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let source_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -568,7 +563,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--report-sync-status",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -594,7 +589,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
+            let source_bucket_url = format!("s3://{}/step2/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -602,7 +597,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--report-sync-status",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -627,11 +622,11 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&bucket).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -664,7 +659,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let source_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -672,7 +667,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--report-sync-status",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -698,7 +693,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let source_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -708,7 +703,7 @@ mod tests {
                 "SHA256",
                 "--report-sync-status",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -733,11 +728,11 @@ mod tests {
             assert!(!pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&bucket).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket);
 
             let args = vec![
                 "s3sync",
@@ -766,7 +761,7 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
+            let source_bucket_url = format!("s3://{}/step1/", bucket);
 
             let args = vec![
                 "s3sync",
@@ -776,7 +771,7 @@ mod tests {
                 "SHA256",
                 "--report-sync-status",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                &download_dir,
             ];
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
             let cancellation_token = create_pipeline_cancellation_token();
@@ -801,9 +796,9 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        TestHelper::delete_all_files(&download_dir);
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket)
             .await;
     }
 
@@ -811,20 +806,18 @@ mod tests {
     async fn s3_to_s3_sync_report() {
         TestHelper::init_tracing_subscriber_for_report();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -855,8 +848,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -886,8 +879,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -927,8 +920,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step2/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -968,8 +961,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1007,8 +1000,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step2/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step2/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1045,11 +1038,11 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(&bucket1).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -1082,8 +1075,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1115,8 +1108,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1154,8 +1147,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1194,12 +1187,12 @@ mod tests {
             assert!(!pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(&bucket1).await;
+        helper.delete_all_objects(&bucket2).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -1228,8 +1221,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1258,8 +1251,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1300,12 +1293,12 @@ mod tests {
 
         /////////
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(&bucket1).await;
+        helper.delete_all_objects(&bucket2).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -1338,8 +1331,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1369,8 +1362,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1407,12 +1400,12 @@ mod tests {
 
         /////////
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(&bucket1).await;
+        helper.delete_all_objects(&bucket2).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -1443,8 +1436,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1471,8 +1464,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1511,12 +1504,12 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        TestHelper::delete_all_files(&download_dir);
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
     }
 
@@ -1524,20 +1517,18 @@ mod tests {
     async fn s3_to_s3_sync_metadata_report() {
         TestHelper::init_tracing_subscriber_for_report();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -1582,8 +1573,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1613,8 +1604,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1652,12 +1643,12 @@ mod tests {
             assert!(!pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(&bucket2).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1689,8 +1680,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1730,12 +1721,12 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(&bucket2).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1783,8 +1774,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1824,12 +1815,12 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        TestHelper::delete_all_files(&download_dir);
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
     }
 
@@ -1837,20 +1828,18 @@ mod tests {
     async fn s3_to_s3_sync_tagging_report() {
         TestHelper::init_tracing_subscriber_for_report();
 
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
         let helper = TestHelper::new().await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
-            helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-            helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
         }
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -1879,8 +1868,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1910,8 +1899,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1949,12 +1938,12 @@ mod tests {
             assert!(!pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(&bucket2).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -1985,8 +1974,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -2026,12 +2015,12 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(&bucket2).await;
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -2063,8 +2052,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}/step1/", *BUCKET1);
-            let target_bucket_url = format!("s3://{}/step1/", *BUCKET2);
+            let source_bucket_url = format!("s3://{}/step1/", bucket1);
+            let target_bucket_url = format!("s3://{}/step1/", bucket2);
 
             let args = vec![
                 "s3sync",
@@ -2104,12 +2093,12 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
-        TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+        TestHelper::delete_all_files(&download_dir);
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
     }
 }
