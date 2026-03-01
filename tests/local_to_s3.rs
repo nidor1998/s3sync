@@ -5251,8 +5251,5 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket)
             .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
     }
 }

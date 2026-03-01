@@ -219,7 +219,9 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_warning, 0);
-        }        helper
+        }
+
+        helper
             .delete_bucket_with_cascade(&bucket)
             .await;
     }

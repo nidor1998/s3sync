@@ -113,7 +113,7 @@ pub static SEMAPHORE: Lazy<Arc<Semaphore>> = Lazy::new(|| Arc::new(Semaphore::ne
 
 pub const TOUCH_FILE_SECS_FROM_NOW: i64 = 10;
 pub const SLEEP_SECS_BEFORE_RESYNC: u64 = 5;
-pub const SLEEP_SECS_AFTER_DELETE_BUCKET: u64 = 1;
+pub const SLEEP_SECS_AFTER_DELETE_BUCKET: u64 = 10;
 
 pub const TEST_SSE_C_KEY_1: &str = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=";
 pub const TEST_SSE_C_KEY_1_MD5: &str = "zZ5FnqcIqUjVwvWmyog4zw==";
@@ -355,7 +355,7 @@ impl TestHelper {
             }
         }
 
-        // tokio::time::sleep(time::Duration::from_secs(SLEEP_SECS_AFTER_DELETE_BUCKET)).await;
+        tokio::time::sleep(time::Duration::from_secs(SLEEP_SECS_AFTER_DELETE_BUCKET)).await;
     }
 
     pub async fn delete_directory_bucket_with_cascade(&self, bucket: &str) {
@@ -377,7 +377,7 @@ impl TestHelper {
             }
         }
 
-        // tokio::time::sleep(time::Duration::from_secs(SLEEP_SECS_AFTER_DELETE_BUCKET)).await;
+        tokio::time::sleep(time::Duration::from_secs(SLEEP_SECS_AFTER_DELETE_BUCKET)).await;
     }
 
     pub async fn list_objects(&self, bucket: &str, prefix: &str) -> Vec<Object> {
@@ -957,6 +957,9 @@ impl TestHelper {
         pipeline.run().await;
         assert!(!pipeline.has_error());
 
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
     }
 
     pub async fn sync_test_data_with_website_redirect(
@@ -979,6 +982,9 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
 
     }
 
@@ -1028,6 +1034,9 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
 
     }
 
@@ -1047,6 +1056,9 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
 
     }
 
@@ -1066,6 +1078,9 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
 
     }
 
@@ -1085,6 +1100,9 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
 
     }
 
@@ -1104,6 +1122,9 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
 
     }
 
@@ -1123,6 +1144,9 @@ impl TestHelper {
 
         pipeline.run().await;
         assert!(!pipeline.has_error());
+        let bucket = target_bucket_url.trim_start_matches("s3://").split('/').next().unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
 
     }
 
