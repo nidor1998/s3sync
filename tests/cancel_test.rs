@@ -179,8 +179,11 @@ mod tests {
     #[tokio::test]
     async fn cancel_list_target_objects() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = CANCEL_SIM_SEMAPHORE.clone().acquire_owned().await.unwrap();
+
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", bucket);
