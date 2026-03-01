@@ -21,7 +21,7 @@ mod tests {
     async fn local_to_s3_with_disable_stalled_protection() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         let test_dir = format!("./playground/case1_{}/", Uuid::new_v4());
         TestHelper::copy_dir_all("./test_data/e2e_test/case1", &test_dir);
@@ -81,7 +81,7 @@ mod tests {
     async fn local_to_s3_with_multipart_upload() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
 
         {
@@ -100,7 +100,7 @@ mod tests {
     async fn local_to_s3_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
 
         let target_bucket_url = format!("s3://{}", bucket1);
@@ -153,7 +153,7 @@ mod tests {
     async fn s3_to_local() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
@@ -214,7 +214,7 @@ mod tests {
     async fn s3_to_local_parallel_listing() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
@@ -276,7 +276,7 @@ mod tests {
     async fn s3_to_local_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
         let helper = TestHelper::new().await;
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
@@ -348,8 +348,8 @@ mod tests {
     async fn s3_to_s3() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
 
@@ -402,8 +402,8 @@ mod tests {
     async fn s3_to_s3_with_delete() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
 
@@ -484,8 +484,8 @@ mod tests {
     async fn single_part_operations_with_crc64nvme() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
@@ -588,8 +588,8 @@ mod tests {
     async fn single_part_operations_with_default_additional_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
@@ -686,8 +686,8 @@ mod tests {
     async fn single_part_operations_with_disable_additional_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         let helper = TestHelper::new().await;
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
@@ -785,8 +785,8 @@ mod tests {
     async fn multipart_operations_with_crc64nvme() {
         TestHelper::init_dummy_tracing_subscriber();
 
-        let bucket1 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
-        let bucket2 = format!("{}{}", TestHelper::generate_bucket_name(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket1 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
+        let bucket2 = format!("s3e2e-{}{}", Uuid::new_v4(), EXPRESS_ONE_ZONE_BUCKET_SUFFIX);
 
         TestHelper::create_large_file();
 
