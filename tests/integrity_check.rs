@@ -7,6 +7,7 @@ mod tests {
     use std::convert::TryFrom;
 
     use common::*;
+    use uuid::Uuid;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
@@ -19,48 +20,41 @@ mod tests {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
-
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
-        helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
 
         {
-            local_to_s3_single_no_verify_e_tag().await;
-            local_to_s3_multipart_no_verify_e_tag().await;
-            local_to_s3_single_e_tag().await;
-            local_to_s3_multipart_e_tag().await;
-            local_to_s3_single_checksum().await;
-            local_to_s3_multipart_checksum().await;
-            local_to_s3_sse_kms().await;
-            local_to_s3_dsse_kms().await;
-            local_to_s3_sse_c().await;
-            local_to_s3_multipart_sse_kms().await;
-            local_to_s3_multipart_dsse_kms().await;
-            local_to_s3_multipart_sse_c().await;
-            local_to_s3_single_without_content_md5().await;
-            local_to_s3_multipart_without_content_md5().await;
-            local_to_s3_single_checksum_without_content_md5().await;
-            local_to_s3_multipart_checksum_without_content_md5().await;
-            local_to_s3_single_crc64nvme_checksum().await;
-            local_to_s3_multipart_crc64nvme_checksum().await;
-            local_to_s3_single_crc64nvme_checksum_without_content_md5().await;
-            local_to_s3_multipart_crc64nvme_checksum_without_content_md5().await;
-            local_to_s3_multipart_crc32_full_object_checksum().await;
-            local_to_s3_multipart_crc32c_full_object_checksum().await;
+            local_to_s3_single_no_verify_e_tag(&bucket1).await;
+            local_to_s3_multipart_no_verify_e_tag(&bucket1).await;
+            local_to_s3_single_e_tag(&bucket1).await;
+            local_to_s3_multipart_e_tag(&bucket1).await;
+            local_to_s3_single_checksum(&bucket1).await;
+            local_to_s3_multipart_checksum(&bucket1).await;
+            local_to_s3_sse_kms(&bucket1).await;
+            local_to_s3_dsse_kms(&bucket1).await;
+            local_to_s3_sse_c(&bucket1).await;
+            local_to_s3_multipart_sse_kms(&bucket1).await;
+            local_to_s3_multipart_dsse_kms(&bucket1).await;
+            local_to_s3_multipart_sse_c(&bucket1).await;
+            local_to_s3_single_without_content_md5(&bucket1).await;
+            local_to_s3_multipart_without_content_md5(&bucket1).await;
+            local_to_s3_single_checksum_without_content_md5(&bucket1).await;
+            local_to_s3_multipart_checksum_without_content_md5(&bucket1).await;
+            local_to_s3_single_crc64nvme_checksum(&bucket1).await;
+            local_to_s3_multipart_crc64nvme_checksum(&bucket1).await;
+            local_to_s3_single_crc64nvme_checksum_without_content_md5(&bucket1).await;
+            local_to_s3_multipart_crc64nvme_checksum_without_content_md5(&bucket1).await;
+            local_to_s3_multipart_crc32_full_object_checksum(&bucket1).await;
+            local_to_s3_multipart_crc32c_full_object_checksum(&bucket1).await;
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
 
         tokio::time::sleep(std::time::Duration::from_millis(
@@ -74,44 +68,38 @@ mod tests {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
-
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
-        helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
 
         {
-            s3_to_local_single_no_verify_e_tag().await;
-            s3_to_local_multipart_no_verify_e_tag().await;
-            s3_to_local_single_e_tag().await;
-            s3_to_local_multipart_e_tag().await;
-            s3_to_local_multipart_e_tag_ng().await;
-            s3_to_local_multipart_e_tag_auto().await;
-            s3_to_local_single_checksum().await;
-            s3_to_local_multipart_checksum().await;
-            s3_to_local_sse_kms().await;
-            s3_to_local_dsse_kms().await;
-            s3_to_local_sse_c().await;
-            s3_to_local_multipart_sse_kms().await;
-            s3_to_local_multipart_dsse_kms().await;
-            s3_to_local_multipart_sse_c().await;
-            s3_to_local_single_crc64nvme_checksum().await;
-            s3_to_local_multipart_crc64nvme_checksum().await;
-            s3_to_local_multipart_crc32_full_object_checksum().await;
-            s3_to_local_multipart_crc32c_full_object_checksum().await;
+            s3_to_local_single_no_verify_e_tag(&bucket1, &download_dir).await;
+            s3_to_local_multipart_no_verify_e_tag(&bucket1, &download_dir).await;
+            s3_to_local_single_e_tag(&bucket1, &download_dir).await;
+            s3_to_local_multipart_e_tag(&bucket1, &download_dir).await;
+            s3_to_local_multipart_e_tag_ng(&bucket1, &download_dir).await;
+            s3_to_local_multipart_e_tag_auto(&bucket1, &download_dir).await;
+            s3_to_local_single_checksum(&bucket1, &download_dir).await;
+            s3_to_local_multipart_checksum(&bucket1, &download_dir).await;
+            s3_to_local_sse_kms(&bucket1, &download_dir).await;
+            s3_to_local_dsse_kms(&bucket1, &download_dir).await;
+            s3_to_local_sse_c(&bucket1, &download_dir).await;
+            s3_to_local_multipart_sse_kms(&bucket1, &download_dir).await;
+            s3_to_local_multipart_dsse_kms(&bucket1, &download_dir).await;
+            s3_to_local_multipart_sse_c(&bucket1, &download_dir).await;
+            s3_to_local_single_crc64nvme_checksum(&bucket1, &download_dir).await;
+            s3_to_local_multipart_crc64nvme_checksum(&bucket1, &download_dir).await;
+            s3_to_local_multipart_crc32_full_object_checksum(&bucket1, &download_dir).await;
+            s3_to_local_multipart_crc32c_full_object_checksum(&bucket1, &download_dir).await;
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
 
         tokio::time::sleep(std::time::Duration::from_millis(
@@ -125,51 +113,44 @@ mod tests {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
-
-        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
-
-        helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
-            .await;
-        helper.create_bucket(&BUCKET1.to_string(), REGION).await;
-        helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
-            .await;
-        helper.create_bucket(&BUCKET2.to_string(), REGION).await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
 
         {
-            s3_to_s3_single_no_verify_e_tag().await;
-            s3_to_s3_multipart_no_verify_e_tag().await;
-            s3_to_s3_single_e_tag().await;
-            s3_to_s3_multipart_e_tag().await;
-            s3_to_s3_multipart_e_tag_ng().await;
-            s3_to_s3_multipart_e_tag_auto().await;
-            s3_to_s3_single_checksum().await;
-            s3_to_s3_sse_kms().await;
-            s3_to_s3_dsse_kms().await;
-            s3_to_s3_sse_c().await;
-            s3_to_s3_multipart_checksum().await;
-            s3_to_s3_multipart_checksum_auto().await;
-            s3_to_s3_multipart_checksum_ng().await;
-            s3_to_s3_multipart_checksum_ng_different_checksum().await;
-            s3_to_s3_multipart_sse_kms().await;
-            s3_to_s3_multipart_dsse_kms().await;
-            s3_to_s3_multipart_sse_c().await;
-            s3_to_s3_single_crc64nvme_checksum().await;
-            s3_to_s3_multipart_crc64nvme_checksum().await;
-            s3_to_s3_multipart_crc64nvme_checksum_auto().await;
-            s3_to_s3_multipart_crc64nvme_checksum_ok().await;
-            s3_to_s3_multipart_crc32_full_object_checksum().await;
-            s3_to_s3_multipart_crc32c_full_object_checksum().await;
-            s3_to_s3_multipart_crc32_full_object_checksum_auto().await;
-            s3_to_s3_multipart_crc32c_full_object_checksum_auto().await;
+            s3_to_s3_single_no_verify_e_tag(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_no_verify_e_tag(&bucket1, &bucket2).await;
+            s3_to_s3_single_e_tag(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_e_tag(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_e_tag_ng(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_e_tag_auto(&bucket1, &bucket2).await;
+            s3_to_s3_single_checksum(&bucket1, &bucket2).await;
+            s3_to_s3_sse_kms(&bucket1, &bucket2).await;
+            s3_to_s3_dsse_kms(&bucket1, &bucket2).await;
+            s3_to_s3_sse_c(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_checksum(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_checksum_auto(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_checksum_ng(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_checksum_ng_different_checksum(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_sse_kms(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_dsse_kms(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_sse_c(&bucket1, &bucket2).await;
+            s3_to_s3_single_crc64nvme_checksum(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_crc64nvme_checksum(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_crc64nvme_checksum_auto(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_crc64nvme_checksum_ok(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_crc32_full_object_checksum(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_crc32c_full_object_checksum(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_crc32_full_object_checksum_auto(&bucket1, &bucket2).await;
+            s3_to_s3_multipart_crc32c_full_object_checksum_auto(&bucket1, &bucket2).await;
         }
 
         helper
-            .delete_bucket_with_cascade(&BUCKET1.to_string())
+            .delete_bucket_with_cascade(&bucket1)
             .await;
         helper
-            .delete_bucket_with_cascade(&BUCKET2.to_string())
+            .delete_bucket_with_cascade(&bucket2)
             .await;
 
         tokio::time::sleep(std::time::Duration::from_millis(
@@ -178,10 +159,10 @@ mod tests {
         .await;
     }
 
-    async fn local_to_s3_single_e_tag() {
+    async fn local_to_s3_single_e_tag(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -202,13 +183,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_single_no_verify_e_tag() {
+    async fn local_to_s3_single_no_verify_e_tag(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -230,13 +211,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_single_without_content_md5() {
+    async fn local_to_s3_single_without_content_md5(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -258,27 +239,27 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_single_e_tag() {
+    async fn s3_to_local_single_e_tag(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -295,28 +276,28 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_single_no_verify_e_tag() {
+    async fn s3_to_local_single_no_verify_e_tag(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--disable-etag-verify",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -333,20 +314,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_single_e_tag() {
+    async fn s3_to_s3_single_e_tag(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -371,21 +352,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_single_no_verify_e_tag() {
+    async fn s3_to_s3_single_no_verify_e_tag(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -411,14 +392,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_multipart_e_tag() {
+    async fn local_to_s3_multipart_e_tag(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -442,13 +423,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_no_verify_e_tag() {
+    async fn local_to_s3_multipart_no_verify_e_tag(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -473,13 +454,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_without_content_md5() {
+    async fn local_to_s3_multipart_without_content_md5(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -504,27 +485,27 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_e_tag() {
+    async fn s3_to_local_multipart_e_tag(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -541,28 +522,28 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_no_verify_e_tag() {
+    async fn s3_to_local_multipart_no_verify_e_tag(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--disable-etag-verify",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -579,20 +560,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_multipart_e_tag() {
+    async fn s3_to_s3_multipart_e_tag(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -617,21 +598,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_no_verify_e_tag() {
+    async fn s3_to_s3_multipart_no_verify_e_tag(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_large_test_data(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -657,30 +638,30 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_local_multipart_e_tag_ng() {
+    async fn s3_to_local_multipart_e_tag_ng(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -697,30 +678,30 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_e_tag_auto() {
+    async fn s3_to_local_multipart_e_tag_auto(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--auto-chunksize",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -737,22 +718,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_multipart_e_tag_ng() {
+    async fn s3_to_s3_multipart_e_tag_ng(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -777,23 +758,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_e_tag_auto() {
+    async fn s3_to_s3_multipart_e_tag_auto(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -819,14 +800,14 @@ mod tests {
             assert_eq!(stats.checksum_verified, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_single_checksum() {
+    async fn local_to_s3_single_checksum(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -849,13 +830,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_single_checksum_without_content_md5() {
+    async fn local_to_s3_single_checksum_without_content_md5(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -879,13 +860,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_single_crc64nvme_checksum() {
+    async fn local_to_s3_single_crc64nvme_checksum(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -908,13 +889,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_single_crc64nvme_checksum_without_content_md5() {
+    async fn local_to_s3_single_crc64nvme_checksum_without_content_md5(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -938,28 +919,28 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_single_checksum() {
+    async fn s3_to_local_single_checksum(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -976,30 +957,30 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_single_crc64nvme_checksum() {
+    async fn s3_to_local_single_crc64nvme_checksum(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1016,20 +997,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_single_checksum() {
+    async fn s3_to_s3_single_checksum(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper.sync_test_data_with_sha256(&target_bucket_url).await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1057,23 +1038,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_single_crc64nvme_checksum() {
+    async fn s3_to_s3_single_crc64nvme_checksum(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1101,14 +1082,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_multipart_checksum() {
+    async fn local_to_s3_multipart_checksum(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -1134,13 +1115,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_checksum_without_content_md5() {
+    async fn local_to_s3_multipart_checksum_without_content_md5(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -1167,13 +1148,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_crc64nvme_checksum() {
+    async fn local_to_s3_multipart_crc64nvme_checksum(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -1199,13 +1180,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_crc32_full_object_checksum() {
+    async fn local_to_s3_multipart_crc32_full_object_checksum(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -1232,13 +1213,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_crc32c_full_object_checksum() {
+    async fn local_to_s3_multipart_crc32c_full_object_checksum(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -1265,13 +1246,13 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_crc64nvme_checksum_without_content_md5() {
+    async fn local_to_s3_multipart_crc64nvme_checksum_without_content_md5(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
 
         TestHelper::create_large_file();
 
@@ -1298,22 +1279,22 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_multipart_checksum() {
+    async fn s3_to_s3_multipart_checksum(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1341,23 +1322,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_crc64nvme_checksum() {
+    async fn s3_to_s3_multipart_crc64nvme_checksum(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1385,23 +1366,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_crc32_full_object_checksum() {
+    async fn s3_to_s3_multipart_crc32_full_object_checksum(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_crc32_full_object_checksum(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1430,23 +1411,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_crc32c_full_object_checksum() {
+    async fn s3_to_s3_multipart_crc32c_full_object_checksum(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_crc32c_full_object_checksum(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1475,31 +1456,31 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_local_multipart_checksum() {
+    async fn s3_to_local_multipart_checksum(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
                 .await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1516,30 +1497,30 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_crc64nvme_checksum() {
+    async fn s3_to_local_multipart_crc64nvme_checksum(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_crc64nvme(&target_bucket_url)
                 .await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1556,30 +1537,30 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_crc32_full_object_checksum() {
+    async fn s3_to_local_multipart_crc32_full_object_checksum(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_crc32_full_object_checksum(&target_bucket_url)
                 .await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1596,30 +1577,30 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_crc32c_full_object_checksum() {
+    async fn s3_to_local_multipart_crc32c_full_object_checksum(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_crc32c_full_object_checksum(&target_bucket_url)
                 .await;
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1636,22 +1617,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_multipart_checksum_auto() {
+    async fn s3_to_s3_multipart_checksum_auto(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize_sha256(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1680,23 +1661,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_crc64nvme_checksum_auto() {
+    async fn s3_to_s3_multipart_crc64nvme_checksum_auto(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc64nvme(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1725,15 +1706,15 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_crc32_full_object_checksum_auto() {
+    async fn s3_to_s3_multipart_crc32_full_object_checksum_auto(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc32_full_object(
                     &target_bucket_url,
@@ -1743,8 +1724,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1774,15 +1755,15 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_crc32c_full_object_checksum_auto() {
+    async fn s3_to_s3_multipart_crc32c_full_object_checksum_auto(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc32c_full_object(
                     &target_bucket_url,
@@ -1792,8 +1773,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1823,23 +1804,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_crc64nvme_checksum_ok() {
+    async fn s3_to_s3_multipart_crc64nvme_checksum_ok(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize_crc64nvme(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1867,23 +1848,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_checksum_ng() {
+    async fn s3_to_s3_multipart_checksum_ng(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_custom_chunksize_sha256(&target_bucket_url, "5MiB")
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1911,23 +1892,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 2);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_s3_multipart_checksum_ng_different_checksum() {
+    async fn s3_to_s3_multipart_checksum_ng_different_checksum(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
             helper
                 .sync_large_test_data_with_sha256(&target_bucket_url)
                 .await;
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -1955,14 +1936,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_sse_kms() {
+    async fn local_to_s3_sse_kms(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -1987,14 +1968,14 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_sse_kms() {
+    async fn s3_to_local_sse_kms(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -2016,16 +1997,16 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2042,14 +2023,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_sse_kms() {
+    async fn s3_to_s3_sse_kms(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -2071,8 +2052,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2102,14 +2083,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_dsse_kms() {
+    async fn local_to_s3_dsse_kms(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2134,14 +2115,14 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_dsse_kms() {
+    async fn s3_to_local_dsse_kms(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -2163,16 +2144,16 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2189,14 +2170,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_dsse_kms() {
+    async fn s3_to_s3_dsse_kms(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -2218,8 +2199,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2249,14 +2230,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_sse_c() {
+    async fn local_to_s3_sse_c(bucket1: &str) {
         let helper = TestHelper::new().await;
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2285,14 +2266,14 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_sse_c() {
+    async fn s3_to_local_sse_c(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -2318,9 +2299,9 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2333,7 +2314,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2350,14 +2331,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_sse_c() {
+    async fn s3_to_s3_sse_c(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             let args = vec![
                 "s3sync",
@@ -2383,8 +2364,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2424,16 +2405,16 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_multipart_sse_kms() {
+    async fn local_to_s3_multipart_sse_kms(bucket1: &str) {
         let helper = TestHelper::new().await;
 
         TestHelper::create_large_file();
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2458,15 +2439,15 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn local_to_s3_multipart_dsse_kms() {
+    async fn local_to_s3_multipart_dsse_kms(bucket1: &str) {
         let helper = TestHelper::new().await;
 
         TestHelper::create_large_file();
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2491,14 +2472,14 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_sse_kms() {
+    async fn s3_to_local_multipart_sse_kms(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             TestHelper::create_large_file();
 
@@ -2522,16 +2503,16 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2548,14 +2529,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_multipart_sse_kms() {
+    async fn s3_to_s3_multipart_sse_kms(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             TestHelper::create_large_file();
 
@@ -2579,8 +2560,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2610,15 +2591,15 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn s3_to_local_multipart_dsse_kms() {
+    async fn s3_to_local_multipart_dsse_kms(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             TestHelper::create_large_file();
 
@@ -2642,16 +2623,16 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2668,14 +2649,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_multipart_dsse_kms() {
+    async fn s3_to_s3_multipart_dsse_kms(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             TestHelper::create_large_file();
 
@@ -2699,8 +2680,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2730,16 +2711,16 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 
-    async fn local_to_s3_multipart_sse_c() {
+    async fn local_to_s3_multipart_sse_c(bucket1: &str) {
         let helper = TestHelper::new().await;
 
         TestHelper::create_large_file();
 
-        let target_bucket_url = format!("s3://{}", *BUCKET1);
+        let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
             "s3sync",
             "--target-profile",
@@ -2769,14 +2750,14 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_local_multipart_sse_c() {
+    async fn s3_to_local_multipart_sse_c(bucket1: &str, download_dir: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             TestHelper::create_large_file();
 
@@ -2804,9 +2785,9 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(TEMP_DOWNLOAD_DIR);
+            TestHelper::delete_all_files(download_dir);
 
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
+            let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2819,7 +2800,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                TEMP_DOWNLOAD_DIR,
+                download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2836,14 +2817,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
     }
 
-    async fn s3_to_s3_multipart_sse_c() {
+    async fn s3_to_s3_multipart_sse_c(bucket1: &str, bucket2: &str) {
         let helper = TestHelper::new().await;
 
         {
-            let target_bucket_url = format!("s3://{}", *BUCKET1);
+            let target_bucket_url = format!("s3://{}", bucket1);
 
             TestHelper::create_large_file();
 
@@ -2871,8 +2852,8 @@ mod tests {
         }
 
         {
-            let source_bucket_url = format!("s3://{}", *BUCKET1);
-            let target_bucket_url = format!("s3://{}", *BUCKET2);
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
                 "s3sync",
                 "--source-profile",
@@ -2912,7 +2893,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(&BUCKET1.to_string()).await;
-        helper.delete_all_objects(&BUCKET2.to_string()).await;
+        helper.delete_all_objects(bucket1).await;
+        helper.delete_all_objects(bucket2).await;
     }
 }
