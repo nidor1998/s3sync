@@ -15,152 +15,15 @@ mod tests {
 
     use super::*;
 
+
     #[tokio::test]
-    async fn integrity_check_local_to_s3() {
+    async fn local_to_s3_single_e_tag() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
-        let bucket2 = TestHelper::generate_bucket_name();
         helper.create_bucket(&bucket1, REGION).await;
-        helper.create_bucket(&bucket2, REGION).await;
 
-        {
-            local_to_s3_single_no_verify_e_tag(&bucket1).await;
-            local_to_s3_multipart_no_verify_e_tag(&bucket1).await;
-            local_to_s3_single_e_tag(&bucket1).await;
-            local_to_s3_multipart_e_tag(&bucket1).await;
-            local_to_s3_single_checksum(&bucket1).await;
-            local_to_s3_multipart_checksum(&bucket1).await;
-            local_to_s3_sse_kms(&bucket1).await;
-            local_to_s3_dsse_kms(&bucket1).await;
-            local_to_s3_sse_c(&bucket1).await;
-            local_to_s3_multipart_sse_kms(&bucket1).await;
-            local_to_s3_multipart_dsse_kms(&bucket1).await;
-            local_to_s3_multipart_sse_c(&bucket1).await;
-            local_to_s3_single_without_content_md5(&bucket1).await;
-            local_to_s3_multipart_without_content_md5(&bucket1).await;
-            local_to_s3_single_checksum_without_content_md5(&bucket1).await;
-            local_to_s3_multipart_checksum_without_content_md5(&bucket1).await;
-            local_to_s3_single_crc64nvme_checksum(&bucket1).await;
-            local_to_s3_multipart_crc64nvme_checksum(&bucket1).await;
-            local_to_s3_single_crc64nvme_checksum_without_content_md5(&bucket1).await;
-            local_to_s3_multipart_crc64nvme_checksum_without_content_md5(&bucket1).await;
-            local_to_s3_multipart_crc32_full_object_checksum(&bucket1).await;
-            local_to_s3_multipart_crc32c_full_object_checksum(&bucket1).await;
-        }
-
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
-
-        tokio::time::sleep(std::time::Duration::from_millis(
-            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
-        ))
-        .await;
-    }
-
-    #[tokio::test]
-    async fn integrity_check_s3_to_local() {
-        TestHelper::init_dummy_tracing_subscriber();
-
-        let helper = TestHelper::new().await;
-        let bucket1 = TestHelper::generate_bucket_name();
-        let bucket2 = TestHelper::generate_bucket_name();
-        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
-        helper.create_bucket(&bucket1, REGION).await;
-        helper.create_bucket(&bucket2, REGION).await;
-
-        {
-            s3_to_local_single_no_verify_e_tag(&bucket1, &download_dir).await;
-            s3_to_local_multipart_no_verify_e_tag(&bucket1, &download_dir).await;
-            s3_to_local_single_e_tag(&bucket1, &download_dir).await;
-            s3_to_local_multipart_e_tag(&bucket1, &download_dir).await;
-            s3_to_local_multipart_e_tag_ng(&bucket1, &download_dir).await;
-            s3_to_local_multipart_e_tag_auto(&bucket1, &download_dir).await;
-            s3_to_local_single_checksum(&bucket1, &download_dir).await;
-            s3_to_local_multipart_checksum(&bucket1, &download_dir).await;
-            s3_to_local_sse_kms(&bucket1, &download_dir).await;
-            s3_to_local_dsse_kms(&bucket1, &download_dir).await;
-            s3_to_local_sse_c(&bucket1, &download_dir).await;
-            s3_to_local_multipart_sse_kms(&bucket1, &download_dir).await;
-            s3_to_local_multipart_dsse_kms(&bucket1, &download_dir).await;
-            s3_to_local_multipart_sse_c(&bucket1, &download_dir).await;
-            s3_to_local_single_crc64nvme_checksum(&bucket1, &download_dir).await;
-            s3_to_local_multipart_crc64nvme_checksum(&bucket1, &download_dir).await;
-            s3_to_local_multipart_crc32_full_object_checksum(&bucket1, &download_dir).await;
-            s3_to_local_multipart_crc32c_full_object_checksum(&bucket1, &download_dir).await;
-        }
-
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
-
-        tokio::time::sleep(std::time::Duration::from_millis(
-            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
-        ))
-        .await;
-    }
-
-    #[tokio::test]
-    async fn integrity_check_s3_to_s3() {
-        TestHelper::init_dummy_tracing_subscriber();
-
-        let helper = TestHelper::new().await;
-        let bucket1 = TestHelper::generate_bucket_name();
-        let bucket2 = TestHelper::generate_bucket_name();
-        helper.create_bucket(&bucket1, REGION).await;
-        helper.create_bucket(&bucket2, REGION).await;
-
-        {
-            s3_to_s3_single_no_verify_e_tag(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_no_verify_e_tag(&bucket1, &bucket2).await;
-            s3_to_s3_single_e_tag(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_e_tag(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_e_tag_ng(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_e_tag_auto(&bucket1, &bucket2).await;
-            s3_to_s3_single_checksum(&bucket1, &bucket2).await;
-            s3_to_s3_sse_kms(&bucket1, &bucket2).await;
-            s3_to_s3_dsse_kms(&bucket1, &bucket2).await;
-            s3_to_s3_sse_c(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_checksum(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_checksum_auto(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_checksum_ng(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_checksum_ng_different_checksum(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_sse_kms(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_dsse_kms(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_sse_c(&bucket1, &bucket2).await;
-            s3_to_s3_single_crc64nvme_checksum(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_crc64nvme_checksum(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_crc64nvme_checksum_auto(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_crc64nvme_checksum_ok(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_crc32_full_object_checksum(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_crc32c_full_object_checksum(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_crc32_full_object_checksum_auto(&bucket1, &bucket2).await;
-            s3_to_s3_multipart_crc32c_full_object_checksum_auto(&bucket1, &bucket2).await;
-        }
-
-        helper
-            .delete_bucket_with_cascade(&bucket1)
-            .await;
-        helper
-            .delete_bucket_with_cascade(&bucket2)
-            .await;
-
-        tokio::time::sleep(std::time::Duration::from_millis(
-            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
-        ))
-        .await;
-    }
-
-    async fn local_to_s3_single_e_tag(bucket1: &str) {
-        let helper = TestHelper::new().await;
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -183,11 +46,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_single_no_verify_e_tag(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_single_no_verify_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -211,11 +82,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_single_without_content_md5(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_single_without_content_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -239,11 +118,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_single_e_tag(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_single_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -251,7 +139,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -259,7 +147,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -276,11 +164,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_single_no_verify_e_tag(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_single_no_verify_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -288,7 +185,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -297,7 +194,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--disable-etag-verify",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -314,11 +211,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_single_e_tag(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_single_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -352,12 +259,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_single_no_verify_e_tag(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_single_no_verify_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -392,12 +311,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_multipart_e_tag(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -423,11 +352,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_no_verify_e_tag(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_no_verify_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -454,11 +391,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_without_content_md5(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_without_content_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -485,11 +430,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 0);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_e_tag(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -497,7 +451,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -505,7 +459,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -522,11 +476,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_no_verify_e_tag(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_no_verify_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -534,7 +497,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -543,7 +506,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--disable-etag-verify",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -560,11 +523,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_e_tag(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -598,12 +571,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_no_verify_e_tag(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_no_verify_e_tag() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -638,12 +623,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_local_multipart_e_tag_ng(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_e_tag_ng() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -653,7 +649,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -661,7 +657,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -678,11 +674,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_e_tag_auto(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_e_tag_auto() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -692,7 +697,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -701,7 +706,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--auto-chunksize",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -718,11 +723,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_e_tag_ng(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_e_tag_ng() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -758,12 +773,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_e_tag_auto(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_e_tag_auto() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -800,12 +827,22 @@ mod tests {
             assert_eq!(stats.checksum_verified, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_single_checksum(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_single_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -830,11 +867,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_single_checksum_without_content_md5(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_single_checksum_without_content_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -860,11 +905,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_single_crc64nvme_checksum(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_single_crc64nvme_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -889,11 +942,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_single_crc64nvme_checksum_without_content_md5(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_single_crc64nvme_checksum_without_content_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -919,11 +980,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_single_checksum(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_single_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -931,7 +1001,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -940,7 +1010,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -957,11 +1027,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_single_crc64nvme_checksum(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_single_crc64nvme_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -971,7 +1050,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -980,7 +1059,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -997,11 +1076,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_single_checksum(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_single_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1038,12 +1127,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_single_crc64nvme_checksum(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_single_crc64nvme_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1082,12 +1183,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_multipart_checksum(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1115,11 +1226,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_checksum_without_content_md5(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_checksum_without_content_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1148,11 +1267,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_crc64nvme_checksum(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_crc64nvme_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1180,11 +1307,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_crc32_full_object_checksum(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_crc32_full_object_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1213,11 +1348,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_crc32c_full_object_checksum(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_crc32c_full_object_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1246,11 +1389,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_crc64nvme_checksum_without_content_md5(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_crc64nvme_checksum_without_content_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
 
@@ -1279,11 +1430,21 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_checksum(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1322,12 +1483,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_crc64nvme_checksum(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_crc64nvme_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1366,12 +1539,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_crc32_full_object_checksum(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_crc32_full_object_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1411,12 +1596,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_crc32c_full_object_checksum(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_crc32c_full_object_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1456,12 +1653,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_local_multipart_checksum(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1471,7 +1679,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -1480,7 +1688,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1497,11 +1705,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_crc64nvme_checksum(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_crc64nvme_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1511,7 +1728,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -1520,7 +1737,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1537,11 +1754,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_crc32_full_object_checksum(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_crc32_full_object_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1551,7 +1777,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -1560,7 +1786,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1577,11 +1803,20 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_crc32c_full_object_checksum(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_crc32c_full_object_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1591,7 +1826,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -1600,7 +1835,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1617,11 +1852,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_checksum_auto(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_checksum_auto() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1661,12 +1906,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_crc64nvme_checksum_auto(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_crc64nvme_checksum_auto() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1706,12 +1963,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_crc32_full_object_checksum_auto(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_crc32_full_object_checksum_auto() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1755,12 +2024,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_crc32c_full_object_checksum_auto(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_crc32c_full_object_checksum_auto() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1804,12 +2085,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_crc64nvme_checksum_ok(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_crc64nvme_checksum_ok() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1848,12 +2141,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_checksum_ng(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_checksum_ng() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1892,12 +2197,24 @@ mod tests {
             assert_eq!(stats.sync_warning, 2);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_checksum_ng_different_checksum(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_checksum_ng_different_checksum() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1936,12 +2253,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 1);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_sse_kms(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_sse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -1968,11 +2295,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_sse_kms(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_sse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -1997,7 +2333,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -2006,7 +2342,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2023,11 +2359,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_sse_kms(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_sse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2083,12 +2429,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_dsse_kms(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_dsse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -2115,11 +2471,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_dsse_kms(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_dsse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2144,7 +2509,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -2153,7 +2518,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2170,11 +2535,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_dsse_kms(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_dsse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2230,12 +2605,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_sse_c(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_sse_c() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -2266,11 +2651,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 5);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_sse_c(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_sse_c() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2299,7 +2693,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -2314,7 +2708,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2331,11 +2725,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_sse_c(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_sse_c() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2405,12 +2809,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_multipart_sse_kms(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_sse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         TestHelper::create_large_file();
 
@@ -2439,11 +2853,19 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn local_to_s3_multipart_dsse_kms(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_dsse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         TestHelper::create_large_file();
 
@@ -2472,11 +2894,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_sse_kms(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_sse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2503,7 +2934,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -2512,7 +2943,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2529,11 +2960,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_sse_kms(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_sse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2591,12 +3032,23 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn s3_to_local_multipart_dsse_kms(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_dsse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2623,7 +3075,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -2632,7 +3084,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2649,11 +3101,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_dsse_kms(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_dsse_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2711,12 +3173,22 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn local_to_s3_multipart_sse_c(bucket1: &str) {
+    #[tokio::test]
+    async fn local_to_s3_multipart_sse_c() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         TestHelper::create_large_file();
 
@@ -2750,11 +3222,20 @@ mod tests {
         assert_eq!(stats.checksum_verified, 1);
         assert_eq!(stats.sync_warning, 0);
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_local_multipart_sse_c(bucket1: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn s3_to_local_multipart_sse_c() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2785,7 +3266,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let args = vec![
@@ -2800,7 +3281,7 @@ mod tests {
                 "--source-sse-c-key-md5",
                 TEST_SSE_C_KEY_1_MD5,
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2817,11 +3298,21 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
     }
 
-    async fn s3_to_s3_multipart_sse_c(bucket1: &str, bucket2: &str) {
+    #[tokio::test]
+    async fn s3_to_s3_multipart_sse_c() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2893,7 +3384,11 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 }

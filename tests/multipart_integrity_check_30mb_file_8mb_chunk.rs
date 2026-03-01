@@ -32,8 +32,9 @@ mod tests {
 
     use super::*;
 
+
     #[tokio::test]
-    async fn integrity_check_30mb_file_multipart_upload_8mb_chunk() {
+    async fn test_multipart_upload_30mb() {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
@@ -43,24 +44,135 @@ mod tests {
         helper.create_bucket(&bucket1, REGION).await;
         helper.create_bucket(&bucket2, REGION).await;
 
+
+        TestHelper::create_random_test_data_file(30, 0).unwrap();
+
         {
-            test_multipart_upload_30mb(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_minus_1(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_auto_chunksize(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_kms(&bucket1, &bucket2, &download_dir).await;
+            let target_bucket_url = format!("s3://{}", bucket1);
 
-            test_multipart_upload_30mb_sha256(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_sha256(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_minus_1_sha256(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_sha256_auto_chunksize(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_sha256_kms(&bucket1, &bucket2, &download_dir).await;
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                RANDOM_DATA_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
 
-            test_multipart_upload_30mb_crc64nvme(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_crc64nvme(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_minus_1_crc64nvme(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_crc64nvme_auto_chunksize(&bucket1, &bucket2, &download_dir).await;
-            test_multipart_upload_30mb_plus_1_crc64nvme_kms(&bucket1, &bucket2, &download_dir).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            let object = helper
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .await;
+            assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            let object = helper
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .await;
+            assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
+        }
+
+        {
+            helper.delete_all_objects(&bucket2).await;
+
+            let source_bucket_url = format!("s3://{}", bucket1);
+            let target_bucket_url = format!("s3://{}", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--server-side-copy",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            let object = helper
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .await;
+            assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
+        }
+
+        {
+            TestHelper::delete_all_files(&download_dir);
+
+            let source_bucket_url = format!("s3://{}", bucket2);
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                &source_bucket_url,
+                &download_dir,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            let sha256_hash = TestHelper::get_sha256_from_file(&format!(
+                "{}/{}",
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
+            ));
+            assert_eq!(sha256_hash, SHA256_30M_FILE_WHOLE_HEX);
         }
 
         helper
@@ -69,152 +181,19 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket2)
             .await;
-
-        tokio::time::sleep(std::time::Duration::from_millis(
-            SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST,
-        ))
-        .await;
     }
 
-    async fn test_multipart_upload_30mb(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
 
-        TestHelper::create_random_test_data_file(30, 0).unwrap();
-
-        {
-            let target_bucket_url = format!("s3://{}", bucket1);
-
-            let args = vec![
-                "s3sync",
-                "--target-profile",
-                "s3sync-e2e-test",
-                RANDOM_DATA_FILE_DIR,
-                &target_bucket_url,
-            ];
-            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-            let cancellation_token = create_pipeline_cancellation_token();
-            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
-
-            pipeline.run().await;
-            assert!(!pipeline.has_error());
-
-            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
-            assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.e_tag_verified, 1);
-            assert_eq!(stats.checksum_verified, 0);
-            assert_eq!(stats.sync_warning, 0);
-
-            let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
-                .await;
-            assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
-        }
-
-        {
-            let source_bucket_url = format!("s3://{}", bucket1);
-            let target_bucket_url = format!("s3://{}", bucket2);
-
-            let args = vec![
-                "s3sync",
-                "--source-profile",
-                "s3sync-e2e-test",
-                "--target-profile",
-                "s3sync-e2e-test",
-                &source_bucket_url,
-                &target_bucket_url,
-            ];
-            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-            let cancellation_token = create_pipeline_cancellation_token();
-            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
-
-            pipeline.run().await;
-            assert!(!pipeline.has_error());
-
-            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
-            assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.e_tag_verified, 1);
-            assert_eq!(stats.checksum_verified, 0);
-            assert_eq!(stats.sync_warning, 0);
-
-            let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
-                .await;
-            assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
-        }
-
-        {
-            helper.delete_all_objects(bucket2).await;
-
-            let source_bucket_url = format!("s3://{}", bucket1);
-            let target_bucket_url = format!("s3://{}", bucket2);
-
-            let args = vec![
-                "s3sync",
-                "--source-profile",
-                "s3sync-e2e-test",
-                "--target-profile",
-                "s3sync-e2e-test",
-                "--server-side-copy",
-                &source_bucket_url,
-                &target_bucket_url,
-            ];
-            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-            let cancellation_token = create_pipeline_cancellation_token();
-            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
-
-            pipeline.run().await;
-            assert!(!pipeline.has_error());
-
-            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
-            assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.e_tag_verified, 1);
-            assert_eq!(stats.checksum_verified, 0);
-            assert_eq!(stats.sync_warning, 0);
-
-            let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
-                .await;
-            assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
-        }
-
-        {
-            TestHelper::delete_all_files(download_dir);
-
-            let source_bucket_url = format!("s3://{}", bucket2);
-            let args = vec![
-                "s3sync",
-                "--source-profile",
-                "s3sync-e2e-test",
-                &source_bucket_url,
-                download_dir,
-            ];
-
-            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
-            let cancellation_token = create_pipeline_cancellation_token();
-            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
-
-            pipeline.run().await;
-            assert!(!pipeline.has_error());
-
-            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
-            assert_eq!(stats.sync_complete, 1);
-            assert_eq!(stats.e_tag_verified, 1);
-            assert_eq!(stats.checksum_verified, 0);
-            assert_eq!(stats.sync_warning, 0);
-
-            let sha256_hash = TestHelper::get_sha256_from_file(&format!(
-                "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
-            ));
-            assert_eq!(sha256_hash, SHA256_30M_FILE_WHOLE_HEX);
-        }
-
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
-    }
-
-    async fn test_multipart_upload_30mb_plus_1(bucket1: &str, bucket2: &str, download_dir: &str) {
-        let helper = TestHelper::new().await;
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -242,7 +221,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
         }
@@ -274,13 +253,13 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -309,13 +288,13 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -323,7 +302,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -341,17 +320,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_minus_1(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_minus_1() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, -1).unwrap();
 
@@ -379,7 +371,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
         }
@@ -411,13 +403,13 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -446,13 +438,13 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -460,7 +452,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -478,17 +470,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_MINUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_auto_chunksize(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -516,7 +521,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
         }
@@ -549,13 +554,13 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -585,13 +590,13 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -600,7 +605,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--auto-chunksize",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -618,17 +623,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_kms(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -688,7 +706,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -720,7 +738,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -728,7 +746,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -746,17 +764,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_sha256(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_sha256() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 0).unwrap();
 
@@ -786,7 +817,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
             assert_eq!(object.checksum_sha256.unwrap(), SHA256_30M_FILE_8M_CHUNK);
@@ -822,14 +853,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
             assert_eq!(object.checksum_sha256.unwrap(), SHA256_30M_FILE_8M_CHUNK);
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -861,14 +892,14 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
             assert_eq!(object.checksum_sha256.unwrap(), SHA256_30M_FILE_8M_CHUNK);
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -877,7 +908,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -895,17 +926,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_FILE_WHOLE_HEX);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_sha256(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_sha256() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -935,7 +979,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -974,7 +1018,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -984,7 +1028,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -1016,7 +1060,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1026,7 +1070,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -1035,7 +1079,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1053,17 +1097,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_minus_1_sha256(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_minus_1_sha256() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, -1).unwrap();
 
@@ -1093,7 +1150,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1132,7 +1189,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1142,7 +1199,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -1174,7 +1231,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1184,7 +1241,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -1193,7 +1250,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1211,17 +1268,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_MINUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_sha256_auto_chunksize(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_sha256_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -1251,7 +1321,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1291,7 +1361,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1301,7 +1371,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -1334,7 +1404,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1344,7 +1414,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -1354,7 +1424,7 @@ mod tests {
                 "--auto-chunksize",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1372,17 +1442,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_sha256_kms(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_sha256_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -1414,7 +1497,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(
                 object.checksum_sha256.unwrap(),
@@ -1454,7 +1537,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(
                 object.checksum_sha256.unwrap(),
@@ -1463,7 +1546,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -1497,7 +1580,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(
                 object.checksum_sha256.unwrap(),
@@ -1506,7 +1589,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -1515,7 +1598,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1533,17 +1616,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_crc64nvme(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_crc64nvme() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 0).unwrap();
 
@@ -1573,7 +1669,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
             assert_eq!(
@@ -1612,7 +1708,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
             assert_eq!(
@@ -1622,7 +1718,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -1654,7 +1750,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_FILE_8M_CHUNK);
             assert_eq!(
@@ -1664,7 +1760,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -1673,7 +1769,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1691,17 +1787,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_FILE_WHOLE_HEX);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_crc64nvme(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_crc64nvme() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -1731,7 +1840,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1770,7 +1879,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1780,7 +1889,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -1812,7 +1921,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1822,7 +1931,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -1831,7 +1940,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -1849,17 +1958,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_minus_1_crc64nvme(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_minus_1_crc64nvme() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, -1).unwrap();
 
@@ -1889,7 +2011,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1928,7 +2050,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1938,7 +2060,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -1970,7 +2092,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_MINUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -1980,7 +2102,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -1989,7 +2111,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2007,17 +2129,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_MINUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_crc64nvme_auto_chunksize(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_crc64nvme_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -2047,7 +2182,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -2087,7 +2222,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -2097,7 +2232,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -2130,7 +2265,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket2, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(object.e_tag.unwrap(), ETAG_30M_PLUS_1_FILE_8M_CHUNK);
             assert_eq!(
@@ -2140,7 +2275,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -2150,7 +2285,7 @@ mod tests {
                 "--auto-chunksize",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2168,17 +2303,30 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 
-    async fn test_multipart_upload_30mb_plus_1_crc64nvme_kms(bucket1: &str, bucket2: &str, download_dir: &str) {
+    #[tokio::test]
+    async fn test_multipart_upload_30mb_plus_1_crc64nvme_kms() {
+        TestHelper::init_dummy_tracing_subscriber();
+
         let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+        helper.create_bucket(&bucket1, REGION).await;
+        helper.create_bucket(&bucket2, REGION).await;
+
 
         TestHelper::create_random_test_data_file(30, 1).unwrap();
 
@@ -2210,7 +2358,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(
                 object.checksum_crc64_nvme.unwrap(),
@@ -2250,7 +2398,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(
                 object.checksum_crc64_nvme.unwrap(),
@@ -2259,7 +2407,7 @@ mod tests {
         }
 
         {
-            helper.delete_all_objects(bucket2).await;
+            helper.delete_all_objects(&bucket2).await;
 
             let source_bucket_url = format!("s3://{}", bucket1);
             let target_bucket_url = format!("s3://{}", bucket2);
@@ -2293,7 +2441,7 @@ mod tests {
             assert_eq!(stats.sync_warning, 0);
 
             let object = helper
-                .head_object(bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
+                .head_object(&bucket1, TEST_RANDOM_DATA_FILE_KEY, None)
                 .await;
             assert_eq!(
                 object.checksum_crc64_nvme.unwrap(),
@@ -2302,7 +2450,7 @@ mod tests {
         }
 
         {
-            TestHelper::delete_all_files(download_dir);
+            TestHelper::delete_all_files(&download_dir);
 
             let source_bucket_url = format!("s3://{}", bucket2);
             let args = vec![
@@ -2311,7 +2459,7 @@ mod tests {
                 "s3sync-e2e-test",
                 "--enable-additional-checksum",
                 &source_bucket_url,
-                download_dir,
+                &download_dir,
             ];
 
             let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -2329,12 +2477,16 @@ mod tests {
 
             let sha256_hash = TestHelper::get_sha256_from_file(&format!(
                 "{}/{}",
-                download_dir, TEST_RANDOM_DATA_FILE_KEY
+                &download_dir, TEST_RANDOM_DATA_FILE_KEY
             ));
             assert_eq!(sha256_hash, SHA256_30M_PLUS_1_FILE_WHOLE);
         }
 
-        helper.delete_all_objects(bucket1).await;
-        helper.delete_all_objects(bucket2).await;
+        helper
+            .delete_bucket_with_cascade(&bucket1)
+            .await;
+        helper
+            .delete_bucket_with_cascade(&bucket2)
+            .await;
     }
 }
