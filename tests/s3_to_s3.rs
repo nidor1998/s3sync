@@ -3721,6 +3721,7 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         let bucket2 = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3828,6 +3829,7 @@ mod tests {
         helper
             .delete_bucket_with_cascade(&bucket2)
             .await;
+        let _ = std::fs::remove_dir_all(&download_dir);
     }
 
     #[tokio::test]
