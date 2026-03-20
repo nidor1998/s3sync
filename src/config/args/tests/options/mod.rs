@@ -43,6 +43,7 @@ mod ignore_symlinks;
 mod include_content_type_regex;
 mod include_metadata_regex;
 mod include_tag_regex;
+mod lua_callback_timeout_milliseconds;
 mod max_keys;
 mod metadata;
 mod no_guess_mime_type;
