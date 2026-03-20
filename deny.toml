@@ -1,7 +1,22 @@
+# ============================================================
+# cargo-deny configuration
+# https://embarkstudios.github.io/cargo-deny/
+# ============================================================
+
+# ---- 1. Advisories (RustSec Advisory DB) ----
+[advisories]
+# All vulnerability/unsound/notice advisories are errors by default.
+# To ignore a specific advisory, add it here with a reason:
+# ignore = [
+#     { id = "RUSTSEC-2024-XXXX", reason = "not applicable to our usage" },
+# ]
+
+# ---- 2. Licenses ----
 [licenses]
 allow = [
     "Apache-2.0 WITH LLVM-exception",
     "Apache-2.0",
+    "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
     "MIT",
@@ -13,5 +28,20 @@ allow = [
 crate = "ring"
 expression = "MIT AND ISC AND OpenSSL"
 license-files = [
-{ path = "LICENSE", hash = 0xbd0eed23 }
+    { path = "LICENSE", hash = 0xbd0eed23 }
 ]
+
+# ---- 3. Bans ----
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+deny = [
+    { crate = "openssl-sys", reason = "rustls is used; openssl is unnecessary" },
+]
+
+# ---- 4. Sources ----
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
