@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.57.0] - 2026-03-20
+
+### Added
+
+- Added `--lua-callback-timeout-milliseconds` option to prevent runaway Lua scripts from blocking the sync pipeline (default: 10000ms, 0 to disable)
+
+### Changed
+
+- aws-sdk-s3 `v1.124.0 -> v1.127.0`
+- clap `v4.5.60 -> v4.6.0`
+- MSRV `1.91.0 -> 1.91.1`
+- Updated deny.toml with advisories, bans, and sources sections
+- Updated dependencies
+
 ## [1.56.1] - 2026-03-06
 
 ### Security
