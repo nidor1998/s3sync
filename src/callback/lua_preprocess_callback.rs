@@ -16,13 +16,21 @@ pub struct LuaPreprocessCallback {
 
 impl LuaPreprocessCallback {
     #[allow(clippy::new_without_default)]
-    pub fn new(memory_limit: usize, allow_lua_os_library: bool, unsafe_lua: bool) -> Self {
+    pub fn new(
+        memory_limit: usize,
+        allow_lua_os_library: bool,
+        unsafe_lua: bool,
+        callback_timeout_milliseconds: u64,
+    ) -> Self {
         let lua = if unsafe_lua {
-            LuaScriptCallbackEngine::unsafe_new(memory_limit)
+            LuaScriptCallbackEngine::unsafe_new(memory_limit, callback_timeout_milliseconds)
         } else if allow_lua_os_library {
-            LuaScriptCallbackEngine::new(memory_limit)
+            LuaScriptCallbackEngine::new(memory_limit, callback_timeout_milliseconds)
         } else {
-            LuaScriptCallbackEngine::new_without_os_io_libs(memory_limit)
+            LuaScriptCallbackEngine::new_without_os_io_libs(
+                memory_limit,
+                callback_timeout_milliseconds,
+            )
         };
 
         Self { lua }
@@ -63,6 +71,8 @@ impl LuaPreprocessCallback {
         source_object: &GetObjectOutput,      // The source object being uploaded(read only)
         upload_metadata: &mut UploadMetadata, // The metadata for the upload, which can be modified
     ) -> Result<()> {
+        self.lua.reset_deadline();
+
         let source_object_lua = self.lua.get_engine().create_table()?;
 
         source_object_lua.set("key", key)?;
@@ -372,8 +382,8 @@ mod tests {
 
     #[tokio::test]
     async fn create_callback() {
-        let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, false, false);
-        let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, true, false);
-        let _callback = LuaPreprocessCallback::new(0, true, true);
+        let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, false, false, 0);
+        let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, true, false, 0);
+        let _callback = LuaPreprocessCallback::new(0, true, true, 0);
     }
 }

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-s3sync is a Rust CLI tool and library for reliable S3 synchronization. It supports Local→S3, S3→Local, and S3→S3 transfers with integrity verification (ETag/MD5, SHA256, SHA1, CRC32, CRC32C, CRC64NVME). Edition 2024, MSRV 1.91.0.
+s3sync is a Rust CLI tool and library for reliable S3 synchronization. It supports Local→S3, S3→Local, and S3→S3 transfers with integrity verification (ETag/MD5, SHA256, SHA1, CRC32, CRC32C, CRC64NVME). Edition 2024, MSRV 1.91.1.
 
 ## Build & Development Commands
 

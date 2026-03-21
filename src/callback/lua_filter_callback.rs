@@ -11,13 +11,21 @@ pub struct LuaFilterCallback {
 
 impl LuaFilterCallback {
     #[allow(clippy::new_without_default)]
-    pub fn new(memory_limit: usize, allow_lua_os_library: bool, unsafe_lua: bool) -> Self {
+    pub fn new(
+        memory_limit: usize,
+        allow_lua_os_library: bool,
+        unsafe_lua: bool,
+        callback_timeout_milliseconds: u64,
+    ) -> Self {
         let lua = if unsafe_lua {
-            LuaScriptCallbackEngine::unsafe_new(memory_limit)
+            LuaScriptCallbackEngine::unsafe_new(memory_limit, callback_timeout_milliseconds)
         } else if allow_lua_os_library {
-            LuaScriptCallbackEngine::new(memory_limit)
+            LuaScriptCallbackEngine::new(memory_limit, callback_timeout_milliseconds)
         } else {
-            LuaScriptCallbackEngine::new_without_os_io_libs(memory_limit)
+            LuaScriptCallbackEngine::new_without_os_io_libs(
+                memory_limit,
+                callback_timeout_milliseconds,
+            )
         };
 
         Self { lua }
@@ -42,6 +50,8 @@ impl FilterCallback for LuaFilterCallback {
 
 impl LuaFilterCallback {
     async fn filter_by_lua(&mut self, source_object: &S3syncObject) -> Result<bool> {
+        self.lua.reset_deadline();
+
         let source_object_lua = self.lua.get_engine().create_table()?;
         source_object_lua.set("key", source_object.key())?;
         source_object_lua.set("last_modified", source_object.last_modified().to_string())?;
@@ -74,8 +84,8 @@ mod tests {
 
     #[tokio::test]
     async fn create_callback() {
-        let _callback = LuaFilterCallback::new(8 * 1024 * 1024, false, false);
-        let _callback = LuaFilterCallback::new(8 * 1024 * 1024, true, false);
-        let _callback = LuaFilterCallback::new(0, true, true);
+        let _callback = LuaFilterCallback::new(8 * 1024 * 1024, false, false, 0);
+        let _callback = LuaFilterCallback::new(8 * 1024 * 1024, true, false, 0);
+        let _callback = LuaFilterCallback::new(0, true, true, 0);
     }
 }

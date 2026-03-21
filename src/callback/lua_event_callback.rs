@@ -10,13 +10,21 @@ pub struct LuaEventCallback {
 
 impl LuaEventCallback {
     #[allow(clippy::new_without_default)]
-    pub fn new(memory_limit: usize, allow_lua_os_library: bool, unsafe_lua: bool) -> Self {
+    pub fn new(
+        memory_limit: usize,
+        allow_lua_os_library: bool,
+        unsafe_lua: bool,
+        callback_timeout_milliseconds: u64,
+    ) -> Self {
         let lua = if unsafe_lua {
-            LuaScriptCallbackEngine::unsafe_new(memory_limit)
+            LuaScriptCallbackEngine::unsafe_new(memory_limit, callback_timeout_milliseconds)
         } else if allow_lua_os_library {
-            LuaScriptCallbackEngine::new(memory_limit)
+            LuaScriptCallbackEngine::new(memory_limit, callback_timeout_milliseconds)
         } else {
-            LuaScriptCallbackEngine::new_without_os_io_libs(memory_limit)
+            LuaScriptCallbackEngine::new_without_os_io_libs(
+                memory_limit,
+                callback_timeout_milliseconds,
+            )
         };
 
         Self { lua }
@@ -161,6 +169,8 @@ impl EventCallback for LuaEventCallback {
             .set("stats_duration_sec", event_data.stats_duration_sec)
             .unwrap();
 
+        self.lua.reset_deadline();
+
         let func: mlua::Result<mlua::Function> = self.lua.get_engine().globals().get("on_event");
         if let Err(e) = func {
             warn!("Lua function 'on_event' not found: {}", e);
@@ -181,8 +191,8 @@ mod tests {
 
     #[tokio::test]
     async fn create_callback() {
-        let _callback = LuaEventCallback::new(8 * 1024 * 1024, false, false);
-        let _callback = LuaEventCallback::new(8 * 1024 * 1024, true, false);
-        let _callback = LuaEventCallback::new(0, true, true);
+        let _callback = LuaEventCallback::new(8 * 1024 * 1024, false, false, 0);
+        let _callback = LuaEventCallback::new(8 * 1024 * 1024, true, false, 0);
+        let _callback = LuaEventCallback::new(0, true, true, 0);
     }
 }

@@ -97,6 +97,8 @@ const DEFAULT_ALLOW_LUA_OS_LIBRARY: bool = false;
 const DEFAULT_ALLOW_LUA_UNSAFE_VM: bool = false;
 #[allow(dead_code)]
 const DEFAULT_LUA_VM_MEMORY_LIMIT: &str = "64MiB";
+#[allow(dead_code)]
+const DEFAULT_LUA_CALLBACK_TIMEOUT_MILLISECONDS: &str = "10000";
 const DEFAULT_SHOW_NO_PROGRESS: bool = false;
 const DEFAULT_IF_MATCH: bool = false;
 const DEFAULT_IF_NONE_MATCH: bool = false;
@@ -866,6 +868,13 @@ This is for like an optimistic lock."#)]
 Zero means no limit.
 If the memory limit is exceeded, the whole process will be terminated."#)]
     lua_vm_memory_limit: String,
+
+    #[cfg(feature = "lua_support")]
+    #[arg(long, env, default_value = DEFAULT_LUA_CALLBACK_TIMEOUT_MILLISECONDS, value_parser = clap::value_parser!(u64), help_heading = "Lua scripting support",
+    long_help=r#"Timeout in milliseconds for Lua callback execution.
+Zero means no timeout.
+If the timeout is exceeded, the callback will be terminated with an error."#)]
+    lua_callback_timeout_milliseconds: u64,
 
     #[cfg(feature = "lua_support")]
     #[arg(long, env, conflicts_with_all = ["allow_lua_os_library"], default_value_t = DEFAULT_ALLOW_LUA_UNSAFE_VM, help_heading = "Dangerous",
@@ -1906,6 +1915,7 @@ impl TryFrom<CLIArgs> for Config {
                 let allow_lua_os_library = value.allow_lua_os_library;
                 let allow_lua_unsafe_vm = value.allow_lua_unsafe_vm;
                 let lua_vm_memory_limit = human_bytes::parse_human_bytes_without_low_limit(&value.lua_vm_memory_limit)? as usize;
+                let lua_callback_timeout_milliseconds = value.lua_callback_timeout_milliseconds;
             } else {
                 let preprocess_callback_lua_script =  None;
                 let event_callback_lua_script = None;
@@ -1913,6 +1923,7 @@ impl TryFrom<CLIArgs> for Config {
                 let allow_lua_os_library = false;
                 let allow_lua_unsafe_vm = false;
                 let lua_vm_memory_limit = 0;
+                let lua_callback_timeout_milliseconds: u64 = 0;
             }
         }
 
@@ -1925,6 +1936,7 @@ impl TryFrom<CLIArgs> for Config {
                         lua_vm_memory_limit,
                         allow_lua_os_library,
                         allow_lua_unsafe_vm,
+                        lua_callback_timeout_milliseconds,
                     );
                     if let Err(e) =
                         lua_preprocess_callback.load_and_compile(preprocess_callback_lua_script.as_str())
@@ -1945,6 +1957,7 @@ impl TryFrom<CLIArgs> for Config {
                         lua_vm_memory_limit,
                         allow_lua_os_library,
                         allow_lua_unsafe_vm,
+                        lua_callback_timeout_milliseconds,
                     );
                     if let Err(e) = lua_event_callback.load_and_compile(event_callback_lua_script.as_str())
                     {
@@ -1965,6 +1978,7 @@ impl TryFrom<CLIArgs> for Config {
                         lua_vm_memory_limit,
                         allow_lua_os_library,
                         allow_lua_unsafe_vm,
+                        lua_callback_timeout_milliseconds,
                     );
                     if let Err(e) =
                         lua_filter_callback.load_and_compile(filter_callback_lua_script.as_str())
@@ -2098,6 +2112,7 @@ impl TryFrom<CLIArgs> for Config {
             allow_lua_os_library,
             allow_lua_unsafe_vm,
             lua_vm_memory_limit,
+            lua_callback_timeout_milliseconds,
             if_match: value.if_match,
             if_none_match: value.if_none_match,
             copy_source_if_match: value.copy_source_if_match,
