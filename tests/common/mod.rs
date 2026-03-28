@@ -1857,7 +1857,10 @@ impl TestHelper {
         }
 
         let hash_result = hasher.finalize();
-        format!("{:x}", hash_result)
+        hash_result
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>()
     }
 
     pub fn tag_set_to_map(tag_set: &[Tag]) -> HashMap<String, String> {

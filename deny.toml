@@ -8,7 +8,6 @@
 # All vulnerability/unsound/notice advisories are errors by default.
 # To ignore a specific advisory, add it here with a reason:
 ignore = [
-    { id = "RUSTSEC-2026-0049", reason = "transitive dep via AWS SDK rustls 0.21; awaiting upstream fix" },
 ]
 
 # ---- 2. Licenses ----
