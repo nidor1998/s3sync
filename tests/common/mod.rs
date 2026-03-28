@@ -1,47 +1,13 @@
 #![allow(dead_code)]
 #![allow(clippy::assertions_on_constants)]
 
-use anyhow::Result;
-use async_channel::Receiver;
-use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
-use aws_config::{BehaviorVersion, ConfigLoader};
-use aws_sdk_s3::client::Client;
-use aws_sdk_s3::config::Builder;
-use aws_sdk_s3::operation::get_object::GetObjectOutput;
-use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
-use aws_sdk_s3::operation::head_object::HeadObjectOutput;
-use aws_sdk_s3::primitives::ByteStream;
-use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
-use aws_sdk_s3::types::{
-    BucketInfo, BucketLocationConstraint, BucketType, BucketVersioningStatus, ChecksumMode,
-    CreateBucketConfiguration, DataRedundancy, LocationInfo, LocationType, Object, ObjectVersion,
-    Tag, Tagging, VersioningConfiguration,
-};
-use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
-use aws_types::SdkConfig;
-use filetime::{FileTime, set_file_mtime};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::Path;
-use std::path::PathBuf;
 use std::sync::Arc;
-use std::time;
-use std::time::SystemTime;
 use tokio::sync::Semaphore;
-use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
-use walkdir::DirEntry;
-use walkdir::WalkDir;
 
-use sha2::{Digest, Sha256};
-
-use s3sync::Config;
-use s3sync::config::args::parse_from_args;
-use s3sync::pipeline::Pipeline;
-use s3sync::types::SyncStatistics;
-use s3sync::types::token::create_pipeline_cancellation_token;
+use sha2::Digest;
 
 pub const REGION: &str = "ap-northeast-1";
 pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
@@ -1857,7 +1823,10 @@ impl TestHelper {
         }
 
         let hash_result = hasher.finalize();
-        format!("{:x}", hash_result)
+        hash_result
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>()
     }
 
     pub fn tag_set_to_map(tag_set: &[Tag]) -> HashMap<String, String> {
