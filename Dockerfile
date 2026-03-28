@@ -1,7 +1,7 @@
 FROM rust:1-trixie AS builder
 WORKDIR /s3sync
 COPY . ./
-RUN git config --global --add safe.directory /s3rm \
+RUN git config --global --add safe.directory /s3sync \
 && cargo build --release
 
 FROM debian:trixie-slim
