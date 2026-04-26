@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `--source-no-sign-request` flag for anonymous access to public source buckets
 - Added `--tracing-stderr` flag to redirect all tracing to stderr
 
+### Security
+
+- Disabled default features on `aws-config` and `aws-sdk-s3` to drop the legacy `rustls` alias that pulls rustls 0.21 (vulnerable rustls-webpki 0.101.x, RUSTSEC-2026-0098). The modern `default-https-client` feature, which uses rustls 0.23 via `aws-smithy-http-client`, is re-enabled explicitly.
+
+### Changed
+
+- aws-sdk-s3 `v1.127.0 -> v1.131.0`
+- shadow-rs `v1.7.1 -> v2.0.0`
+- tokio `v1.50.0 -> v1.52.1`
+- hyper `v1.8.1 -> v1.9.0`
+- fancy-regex `v0.17.0 -> v0.18.0`
+- Updated dependencies
+
 ### Fixed
 
 - Stop panicking with "failed printing to stdout: Broken pipe" when output is piped to a consumer that closes early (e.g. `s3sync ... | wc -l` followed by Ctrl-C). Tracing writes now swallow `BrokenPipe`, and the indicator's trailing newline no longer unwraps the write/flush result.
