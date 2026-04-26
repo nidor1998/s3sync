@@ -697,6 +697,55 @@ mod tests {
         );
     }
 
+    #[test]
+    fn source_no_sign_request_conflicts_with_source_profile() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "--source-profile",
+            "some_profile",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        assert!(parse_from_args(args).is_err());
+    }
+
+    #[test]
+    fn source_no_sign_request_conflicts_with_source_access_key() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "--source-access-key",
+            "ak",
+            "--source-secret-access-key",
+            "sk",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        assert!(parse_from_args(args).is_err());
+    }
+
+    #[test]
+    fn source_no_sign_request_conflicts_with_source_request_payer() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "--source-request-payer",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        assert!(parse_from_args(args).is_err());
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")
