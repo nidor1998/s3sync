@@ -13,6 +13,10 @@ jobs:
     name: release for linux
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: checkout
         uses: actions/checkout@v6
@@ -30,15 +34,19 @@ jobs:
           rustup update
 
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          cargo build --release --target x86_64-unknown-linux-gnu
+          cargo build --locked --release --target x86_64-unknown-linux-gnu
 
           cd target/x86_64-unknown-linux-gnu/release
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
           sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: set version without v
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: target/x86_64-unknown-linux-gnu/release/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-glibc2.28-x86_64.tar.gz
       - name: releasing assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
@@ -50,6 +58,10 @@ jobs:
   release-linux-musl:
     name: release for linux musl
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: checkout
         uses: actions/checkout@v6
@@ -68,15 +80,19 @@ jobs:
           rustup target add x86_64-unknown-linux-musl
 
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          cargo build --profile release-min-size --target x86_64-unknown-linux-musl
+          cargo build --locked --profile release-min-size --target x86_64-unknown-linux-musl
 
           cd target/x86_64-unknown-linux-musl/release-min-size
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
           sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: set version without v
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: target/x86_64-unknown-linux-musl/release-min-size/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-musl-x86_64.tar.gz
       - name: releasing assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
@@ -89,6 +105,10 @@ jobs:
     name: release for arm64 linux
     runs-on: ubuntu-24.04-arm
     container: quay.io/pypa/manylinux_2_28_aarch64
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: checkout
         uses: actions/checkout@v6
@@ -106,15 +126,19 @@ jobs:
           rustup update
 
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          cargo build --release --target aarch64-unknown-linux-gnu
+          cargo build --locked --release --target aarch64-unknown-linux-gnu
 
           cd target/aarch64-unknown-linux-gnu/release
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
           sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: set version without v
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: target/aarch64-unknown-linux-gnu/release/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-glibc2.28-aarch64.tar.gz
       - name: releasing assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
@@ -126,6 +150,10 @@ jobs:
   release-arm-linux-musl:
     name: release for arm64 linux musl
     runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: checkout
         uses: actions/checkout@v6
@@ -142,17 +170,21 @@ jobs:
           ./rust_install.sh -y
           source "$HOME/.cargo/env"
           rustup target add aarch64-unknown-linux-musl
-          
+
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          cargo build --profile release-min-size --target aarch64-unknown-linux-musl
+          cargo build --locked --profile release-min-size --target aarch64-unknown-linux-musl
 
           cd target/aarch64-unknown-linux-musl/release-min-size
           tar czvf $RELEASE_NAME.tar.gz $BINARY_NAME
           sha256sum $RELEASE_NAME.tar.gz > $RELEASE_NAME.tar.gz.sha256
       - name: set version without v
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: target/aarch64-unknown-linux-musl/release-min-size/${{ env.APP_NAME }}-${{ env.VERSION }}-linux-musl-aarch64.tar.gz
       - name: releasing assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
@@ -165,6 +197,10 @@ jobs:
   release-others:
     name: release for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     strategy:
       matrix:
         os: [ macos-latest, windows-latest, windows-11-arm ]
@@ -187,7 +223,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v6
       - name: cargo build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --locked --release --target ${{ matrix.target }}
       - name: Packaging final binary
         shell: bash
         run: |
@@ -213,8 +249,12 @@ jobs:
         run: |
           $version = $env:GITHUB_REF_NAME -replace '^v',''
           Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
+      - name: attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: target/${{ matrix.target }}/release/${{ env.APP_NAME }}-${{ env.VERSION }}-${{ matrix.artifact_suffix }}.tar.gz
       - name: releasing assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: |
@@ -231,8 +271,29 @@ jobs:
       contents: write
     steps:
       - name: publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-crates-io:
+    name: publish to crates.io
+    needs: [ publish-release ]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: install rust toolchain
+        run: rustup update
+      - name: authenticate with crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+      - name: publish to crates.io
+        run: cargo publish --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
