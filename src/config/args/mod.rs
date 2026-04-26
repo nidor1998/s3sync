@@ -280,6 +280,20 @@ It cannot work with between different object storages or regions."#)]
     #[arg(long, env, default_value_t = DEFAULT_REQUEST_PAYER, help_heading = "Source Options")]
     source_request_payer: bool,
 
+    /// Do not sign requests for the source bucket (anonymous access for public buckets)
+    #[arg(
+        long, env, default_value_t = false,
+        conflicts_with_all = [
+            "source_profile",
+            "source_access_key",
+            "source_secret_access_key",
+            "source_session_token",
+            "source_request_payer",
+        ],
+        help_heading = "AWS Configuration",
+    )]
+    source_no_sign_request: bool,
+
     /// Force path-style addressing for source endpoint.
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE, help_heading = "Source Options")]
     source_force_path_style: bool,
