@@ -640,6 +640,39 @@ mod tests {
         assert!(false, "no error occurred");
     }
 
+    #[test]
+    fn build_from_source_no_sign_request() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args).unwrap();
+
+        if let S3Credentials::NoSignRequest =
+            &config.source_client_config.as_ref().unwrap().credential
+        {
+            // ok
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "expected NoSignRequest source credential");
+        }
+
+        // Target side falls through to the default FromEnvironment.
+        if let S3Credentials::FromEnvironment =
+            &config.target_client_config.as_ref().unwrap().credential
+        {
+            // ok
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "expected FromEnvironment target credential");
+        }
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")
