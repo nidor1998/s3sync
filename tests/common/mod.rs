@@ -15,7 +15,8 @@ use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
     BucketInfo, BucketLocationConstraint, BucketType, BucketVersioningStatus, ChecksumMode,
     CreateBucketConfiguration, DataRedundancy, LocationInfo, LocationType, Object, ObjectVersion,
-    Tag, Tagging, VersioningConfiguration,
+    ServerSideEncryption, ServerSideEncryptionByDefault, ServerSideEncryptionConfiguration,
+    ServerSideEncryptionRule, Tag, Tagging, VersioningConfiguration,
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
 use aws_types::SdkConfig;
@@ -267,6 +268,36 @@ impl TestHelper {
             .create_bucket()
             .create_bucket_configuration(cfg)
             .bucket(bucket)
+            .send()
+            .await
+            .unwrap();
+    }
+
+    pub async fn create_bucket_with_sse_c_encryption(&self, bucket: &str, region: &str) {
+        self.create_bucket(bucket, region).await;
+
+        let default_encryption = ServerSideEncryptionByDefault::builder()
+            .sse_algorithm(ServerSideEncryption::Aes256)
+            .build()
+            .unwrap();
+        // Explicitly set blocked_encryption_types with EncryptionType::None
+        // to unblock SSE-C (new buckets block SSE-C by default since April 2026).
+        let blocked = aws_sdk_s3::types::BlockedEncryptionTypes::builder()
+            .encryption_type(aws_sdk_s3::types::EncryptionType::None)
+            .build();
+        let rule = ServerSideEncryptionRule::builder()
+            .apply_server_side_encryption_by_default(default_encryption)
+            .blocked_encryption_types(blocked)
+            .build();
+        let config = ServerSideEncryptionConfiguration::builder()
+            .rules(rule)
+            .build()
+            .unwrap();
+
+        self.client
+            .put_bucket_encryption()
+            .bucket(bucket)
+            .server_side_encryption_configuration(config)
             .send()
             .await
             .unwrap();

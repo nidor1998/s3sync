@@ -2417,7 +2417,9 @@ mod tests {
 
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
-        helper.create_bucket(&bucket1, REGION).await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+            .await;
 
         let target_bucket_url = format!("s3://{}", bucket1);
         let args = vec![
@@ -2458,7 +2460,9 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
-        helper.create_bucket(&bucket1, REGION).await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+            .await;
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2529,8 +2533,12 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         let bucket2 = TestHelper::generate_bucket_name();
-        helper.create_bucket(&bucket1, REGION).await;
-        helper.create_bucket(&bucket2, REGION).await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+            .await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+            .await;
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -2952,7 +2960,9 @@ mod tests {
 
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
-        helper.create_bucket(&bucket1, REGION).await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+            .await;
 
         TestHelper::create_large_file();
 
@@ -2996,7 +3006,9 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
-        helper.create_bucket(&bucket1, REGION).await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+            .await;
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);
@@ -3069,8 +3081,12 @@ mod tests {
         let helper = TestHelper::new().await;
         let bucket1 = TestHelper::generate_bucket_name();
         let bucket2 = TestHelper::generate_bucket_name();
-        helper.create_bucket(&bucket1, REGION).await;
-        helper.create_bucket(&bucket2, REGION).await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+            .await;
+        helper
+            .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+            .await;
 
         {
             let target_bucket_url = format!("s3://{}", bucket1);

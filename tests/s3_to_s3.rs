@@ -3193,8 +3193,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
 
             let args = vec![
                 "s3sync",
@@ -3310,8 +3314,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
 
             let args = vec![
                 "s3sync",
@@ -3429,8 +3437,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
 
             TestHelper::create_large_file();
 
@@ -3542,8 +3554,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
 
             TestHelper::create_large_file();
 
@@ -4510,8 +4526,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
 
             let args = vec![
                 "s3sync",
