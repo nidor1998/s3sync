@@ -682,6 +682,14 @@ s3sync --source-profile foo --target-profile bar s3://bucket-name1/prefix s3://b
 s3sync --source-profile foo --source-region ap-northeast-1 s3://bucket-name1/prefix s3://bucket-name2/prefix
 ```
 
+### Anonymous access to a public source bucket
+
+```bash
+s3sync --source-no-sign-request s3://public-bucket-name/prefix /path/to/local
+```
+
+This issues unsigned requests for the source side, mirroring the AWS CLI's `--no-sign-request`. Conflicts with `--source-profile`, the source access-key flags, and `--source-request-payer`.
+
 ### Versioning mode
 
 ```bash
@@ -1248,6 +1256,8 @@ AWS Configuration:
           Target secret access key [env: TARGET_SECRET_ACCESS_KEY=]
       --target-session-token <TARGET_SESSION_TOKEN>
           Target session token [env: TARGET_SESSION_TOKEN=]
+      --source-no-sign-request
+          Do not sign requests for the source bucket (anonymous access for public buckets) [env: SOURCE_NO_SIGN_REQUEST=]
 
 Source Options:
       --source-region <SOURCE_REGION>
