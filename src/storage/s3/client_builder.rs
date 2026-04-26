@@ -61,14 +61,7 @@ impl ClientConfig {
             crate::types::S3Credentials::Profile(profile_name) => {
                 let mut builder = aws_config::profile::ProfileFileCredentialsProvider::builder();
 
-                if let Some(aws_shared_credentials_file) = self
-                    .client_config_location
-                    .aws_shared_credentials_file
-                    .as_ref()
-                {
-                    let profile_files = EnvConfigFiles::builder()
-                        .with_file(EnvConfigFileKind::Credentials, aws_shared_credentials_file)
-                        .build();
+                if let Some(profile_files) = self.build_profile_files() {
                     builder = builder.profile_files(profile_files)
                 }
 
@@ -84,10 +77,7 @@ impl ClientConfig {
         let mut builder = aws_config::profile::ProfileFileRegionProvider::builder();
 
         if let crate::types::S3Credentials::Profile(profile_name) = &self.credential {
-            if let Some(aws_config_file) = self.client_config_location.aws_config_file.as_ref() {
-                let profile_files = EnvConfigFiles::builder()
-                    .with_file(EnvConfigFileKind::Config, aws_config_file)
-                    .build();
+            if let Some(profile_files) = self.build_profile_files() {
                 builder = builder.profile_files(profile_files);
             }
             builder = builder.profile_name(profile_name)
@@ -105,6 +95,38 @@ impl ClientConfig {
         };
 
         Box::new(provider_region)
+    }
+
+    // Build a single EnvConfigFiles covering BOTH the config and credentials
+    // files so profile resolution sees the same set of files for region and
+    // credentials. Custom paths are wired in for whichever flag the user
+    // supplied; the default location is included for the other kind so that
+    // e.g. `--aws-config-file` does not silently drop `~/.aws/credentials`.
+    // Returns None when neither path is provided so the SDK uses its defaults.
+    fn build_profile_files(&self) -> Option<EnvConfigFiles> {
+        let aws_config_file = self.client_config_location.aws_config_file.as_ref();
+        let aws_shared_credentials_file = self
+            .client_config_location
+            .aws_shared_credentials_file
+            .as_ref();
+
+        if aws_config_file.is_none() && aws_shared_credentials_file.is_none() {
+            return None;
+        }
+
+        let mut builder = EnvConfigFiles::builder();
+
+        match aws_config_file {
+            Some(path) => builder = builder.with_file(EnvConfigFileKind::Config, path),
+            None => builder = builder.include_default_config_file(true),
+        }
+
+        match aws_shared_credentials_file {
+            Some(path) => builder = builder.with_file(EnvConfigFileKind::Credentials, path),
+            None => builder = builder.include_default_credentials_file(true),
+        }
+
+        Some(builder.build())
     }
 
     fn build_retry_config(&self) -> RetryConfig {
@@ -585,6 +607,63 @@ mod tests {
             client.config().region().unwrap().to_string(),
             "my-region2".to_string()
         );
+    }
+
+    #[tokio::test]
+    async fn create_client_from_profile_defined_in_config_file_only() {
+        // Profile `from_config_only` exists ONLY in the custom config file
+        // (not in the credentials file). Resolving its credentials requires
+        // the ProfileFileCredentialsProvider to also read --aws-config-file.
+        use aws_sdk_s3::config::ProvideCredentials;
+
+        init_dummy_tracing_subscriber();
+
+        let client_config = ClientConfig {
+            client_config_location: ClientConfigLocation {
+                aws_config_file: Some("./test_data/test_config/config".into()),
+                aws_shared_credentials_file: Some("./test_data/test_config/credentials".into()),
+            },
+            credential: crate::types::S3Credentials::Profile("from_config_only".to_string()),
+            region: None,
+            endpoint_url: Some("https://my.endpoint.local".to_string()),
+            force_path_style: false,
+            retry_config: crate::config::RetryConfig {
+                aws_max_attempts: 10,
+                initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
+            },
+            disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
+            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
+            request_payer: None,
+        };
+
+        // Inspect the loaded SdkConfig directly because aws-sdk-s3's
+        // Client::config().credentials_provider() is deprecated and always
+        // returns None.
+        let sdk_config = client_config.load_sdk_config().await;
+
+        assert_eq!(
+            sdk_config.region().unwrap().to_string(),
+            "eu-west-1".to_string()
+        );
+
+        let provider = sdk_config
+            .credentials_provider()
+            .expect("credentials provider must be set for Profile credentials");
+        let creds = provider
+            .provide_credentials()
+            .await
+            .expect("credentials must resolve from --aws-config-file");
+
+        assert_eq!(creds.access_key_id(), "config_only_access_key");
+        assert_eq!(creds.secret_access_key(), "config_only_secret_access_key");
     }
 
     fn init_dummy_tracing_subscriber() {
