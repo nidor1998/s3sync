@@ -133,12 +133,16 @@ pub fn show_indicator(
                             HumanDuration(elapsed),
                         ));
 
+                        // Send the trailing newline to whichever stream the
+                        // tracing output uses, and ignore BrokenPipe/other
+                        // write errors so a closed pipe (e.g. `s3sync ... |
+                        // wc -l` followed by Ctrl-C) does not panic.
                         if stderr_tracing {
-                            eprintln!();
-                            io::stderr().flush().unwrap()
+                            let _ = writeln!(io::stderr());
+                            let _ = io::stderr().flush();
                         } else {
-                            println!();
-                            io::stdout().flush().unwrap()
+                            let _ = writeln!(io::stdout());
+                            let _ = io::stdout().flush();
                         }
                     }
 
