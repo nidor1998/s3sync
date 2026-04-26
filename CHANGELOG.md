@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `--source-no-sign-request` flag for anonymous access to public source buckets
 - Added `--tracing-stderr` flag to redirect all tracing to stderr
 
+### Fixed
+
+- Stop panicking with "failed printing to stdout: Broken pipe" when output is piped to a consumer that closes early (e.g. `s3sync ... | wc -l` followed by Ctrl-C). Tracing writes now swallow `BrokenPipe`, and the indicator's trailing newline no longer unwraps the write/flush result.
+
 ## [1.57.1] - 2026-03-28
 
 ### Changed
