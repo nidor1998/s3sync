@@ -1,4 +1,5 @@
 use std::env;
+use std::io;
 
 use rusty_fork::rusty_fork_test;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -36,7 +37,14 @@ pub fn init_tracing(config: &TracingConfig) {
     let subscriber_builder = subscriber_builder
         .with_env_filter(event_filter)
         .with_target(show_target);
-    if config.json_tracing {
+    if config.stderr_tracing {
+        let subscriber_builder = subscriber_builder.with_writer(io::stderr);
+        if config.json_tracing {
+            subscriber_builder.json().init();
+        } else {
+            subscriber_builder.init();
+        }
+    } else if config.json_tracing {
         subscriber_builder.json().init();
     } else {
         subscriber_builder.init();
@@ -51,7 +59,8 @@ rusty_fork_test! {
             json_tracing: true,
             aws_sdk_tracing: false,
             span_events_tracing: false,
-            disable_color_tracing: false});
+            disable_color_tracing: false,
+            stderr_tracing: false});
     }
 
     #[test]
@@ -62,6 +71,7 @@ rusty_fork_test! {
             aws_sdk_tracing: true,
             span_events_tracing: false,
             disable_color_tracing: false,
+            stderr_tracing: false,
         });
     }
 
@@ -76,6 +86,7 @@ rusty_fork_test! {
             aws_sdk_tracing: false,
             span_events_tracing: false,
             disable_color_tracing: false,
+            stderr_tracing: false,
         });
     }
 
@@ -87,6 +98,7 @@ rusty_fork_test! {
             aws_sdk_tracing: true,
             span_events_tracing: true,
             disable_color_tracing: false,
+            stderr_tracing: false,
         });
     }
 
@@ -98,6 +110,7 @@ rusty_fork_test! {
             aws_sdk_tracing: false,
             span_events_tracing: false,
             disable_color_tracing: true,
+            stderr_tracing: false,
         });
     }
 
@@ -112,6 +125,31 @@ rusty_fork_test! {
             aws_sdk_tracing: false,
             span_events_tracing: false,
             disable_color_tracing: true,
+            stderr_tracing: false,
+        });
+    }
+
+    #[test]
+    fn init_stderr_tracing() {
+        init_tracing(&TracingConfig {
+            tracing_level: log::Level::Info,
+            json_tracing: false,
+            aws_sdk_tracing: false,
+            span_events_tracing: false,
+            disable_color_tracing: false,
+            stderr_tracing: true,
+        });
+    }
+
+    #[test]
+    fn init_stderr_json_tracing() {
+        init_tracing(&TracingConfig {
+            tracing_level: log::Level::Info,
+            json_tracing: true,
+            aws_sdk_tracing: false,
+            span_events_tracing: false,
+            disable_color_tracing: false,
+            stderr_tracing: true,
         });
     }
 }

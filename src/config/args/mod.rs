@@ -49,6 +49,7 @@ const DEFAULT_JSON_TRACING: bool = false;
 const DEFAULT_AWS_SDK_TRACING: bool = false;
 const DEFAULT_SPAN_EVENTS_TRACING: bool = false;
 const DEFAULT_DISABLE_COLOR_TRACING: bool = false;
+const DEFAULT_TRACING_STDERR: bool = false;
 const DEFAULT_MULTIPART_THRESHOLD: &str = "8MiB";
 const DEFAULT_MULTIPART_CHUNKSIZE: &str = "8MiB";
 const DEFAULT_AUTO_CHUNKSIZE: bool = false;
@@ -707,6 +708,15 @@ It must be used with --report-sync-status."#
     /// Disable ANSI terminal colors.
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_COLOR_TRACING, help_heading = "Tracing/Logging")]
     disable_color_tracing: bool,
+
+    #[arg(
+        long,
+        env,
+        default_value_t = DEFAULT_TRACING_STDERR,
+        help_heading = "Tracing/Logging",
+        long_help = r#"Output all tracing to stderr. By default, tracing messages are written to stdout."#
+    )]
+    tracing_stderr: bool,
 
     /// Maximum retry attempts that s3sync retry handler use
     #[arg(long, env, default_value_t = DEFAULT_AWS_MAX_ATTEMPTS, value_name = "max_attempts", help_heading = "Retry Options")]
@@ -1746,6 +1756,7 @@ impl TryFrom<CLIArgs> for Config {
             aws_sdk_tracing: value.aws_sdk_tracing,
             span_events_tracing: value.span_events_tracing,
             disable_color_tracing: value.disable_color_tracing,
+            stderr_tracing: value.tracing_stderr,
         });
 
         let storage_class = value
@@ -1927,6 +1938,7 @@ impl TryFrom<CLIArgs> for Config {
                     aws_sdk_tracing: DEFAULT_AWS_SDK_TRACING,
                     span_events_tracing: DEFAULT_SPAN_EVENTS_TRACING,
                     disable_color_tracing: DEFAULT_DISABLE_COLOR_TRACING,
+                    stderr_tracing: value.tracing_stderr,
                 });
             } else if tracing_config.unwrap().tracing_level < log::Level::Info {
                 tracing_config = Some(TracingConfig {
@@ -1935,6 +1947,7 @@ impl TryFrom<CLIArgs> for Config {
                     aws_sdk_tracing: tracing_config.unwrap().aws_sdk_tracing,
                     span_events_tracing: tracing_config.unwrap().span_events_tracing,
                     disable_color_tracing: tracing_config.unwrap().disable_color_tracing,
+                    stderr_tracing: tracing_config.unwrap().stderr_tracing,
                 });
             }
         }

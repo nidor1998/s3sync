@@ -1490,6 +1490,7 @@ Tracing/Logging:
       --aws-sdk-tracing        Enable aws sdk tracing [env: AWS_SDK_TRACING=]
       --span-events-tracing    Show span event tracing [env: SPAN_EVENTS_TRACING=]
       --disable-color-tracing  Disable ANSI terminal colors [env: DISABLE_COLOR_TRACING=]
+      --tracing-stderr         Output all tracing to stderr. By default, tracing messages are written to stdout. [env: TRACING_STDERR=]
 
 Retry Options:
       --aws-max-attempts <max_attempts>

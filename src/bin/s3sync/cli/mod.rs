@@ -84,6 +84,11 @@ pub async fn run(mut config: Config) -> Result<()> {
         // When reporting sync status, a sync summary log is not needed.
         let log_sync_summary = !config.report_sync_status;
 
+        let stderr_tracing = config
+            .tracing_config
+            .as_ref()
+            .is_some_and(|tracing_config| tracing_config.stderr_tracing);
+
         let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
         let indicator_join_handle = indicator::show_indicator(
             pipeline.get_stats_receiver(),
@@ -91,6 +96,7 @@ pub async fn run(mut config: Config) -> Result<()> {
             ui_config::is_show_result_needed(&config),
             log_sync_summary,
             config.dry_run,
+            stderr_tracing,
         );
 
         pipeline.run().await;

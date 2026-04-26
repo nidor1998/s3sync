@@ -18,6 +18,7 @@ pub fn show_indicator(
     show_result: bool,
     log_sync_summary: bool,
     dry_run: bool,
+    stderr_tracing: bool,
 ) -> JoinHandle<()> {
     let progress_style = ProgressStyle::with_template("{wide_msg}").unwrap();
     let progress_text = ProgressBar::new(0);
@@ -132,8 +133,13 @@ pub fn show_indicator(
                             HumanDuration(elapsed),
                         ));
 
-                        println!();
-                        io::stdout().flush().unwrap()
+                        if stderr_tracing {
+                            eprintln!();
+                            io::stderr().flush().unwrap()
+                        } else {
+                            println!();
+                            io::stdout().flush().unwrap()
+                        }
                     }
 
                     return;
@@ -179,7 +185,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let (stats_sender, stats_receiver) = async_channel::unbounded();
-        let join_handle = show_indicator(stats_receiver, true, true, false, false);
+        let join_handle = show_indicator(stats_receiver, true, true, false, false, false);
 
         stats_sender
             .send(SyncStatistics::SyncBytes(1))
@@ -236,7 +242,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let (stats_sender, stats_receiver) = async_channel::unbounded();
-        let join_handle = show_indicator(stats_receiver, true, false, true, false);
+        let join_handle = show_indicator(stats_receiver, true, false, true, false, false);
 
         stats_sender
             .send(SyncStatistics::SyncBytes(1))
@@ -293,7 +299,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let (stats_sender, stats_receiver) = async_channel::unbounded();
-        let join_handle = show_indicator(stats_receiver, true, true, true, true);
+        let join_handle = show_indicator(stats_receiver, true, true, true, true, false);
 
         stats_sender
             .send(SyncStatistics::SyncBytes(1))
@@ -331,6 +337,33 @@ mod tests {
             .unwrap();
         stats_sender
             .send(SyncStatistics::ChecksumVerified {
+                key: "test".to_string(),
+            })
+            .await
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_millis(
+            WAITING_TIME_MILLIS_FOR_ASYNC_INDICATOR_SET_MESSAGE,
+        ))
+        .await;
+        stats_sender.close();
+
+        join_handle.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn indicator_test_show_result_stderr_tracing() {
+        init_dummy_tracing_subscriber();
+
+        let (stats_sender, stats_receiver) = async_channel::unbounded();
+        let join_handle = show_indicator(stats_receiver, true, true, false, false, true);
+
+        stats_sender
+            .send(SyncStatistics::SyncBytes(1))
+            .await
+            .unwrap();
+        stats_sender
+            .send(SyncStatistics::SyncComplete {
                 key: "test".to_string(),
             })
             .await

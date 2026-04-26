@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `--source-no-sign-request` flag for anonymous access to public source buckets
+- Added `--tracing-stderr` flag to redirect all tracing to stderr
 
 ## [1.57.1] - 2026-03-28
 
