@@ -80,7 +80,7 @@ mlua = { version = "0.11.6", features = ["lua54", "async", "send", "vendored"], 
 [dev-dependencies]
 nix = { version = "0.31.2", features = ["user", "process", "signal"] }
 once_cell = "1.21.4"
-uuid = { version = "1.22.0", features = ["v4"] }
+uuid = { version = "1.23.1", features = ["v4"] }
 
 [build-dependencies]
 shadow-rs = { version = "1.7.1", optional = true }
