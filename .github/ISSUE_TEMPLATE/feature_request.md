@@ -17,6 +17,10 @@ While this project began as a personal hobby, it has been built with careful att
 🔒 I consider this project to be “complete” and will maintain it only minimally going forward.  
 However, I intend to keep the AWS SDK for Rust and other dependencies up to date monthly.
 
+**Before opening an issue**
+
+Please read the [Scope and Non-Goals](https://github.com/nidor1998/s3sync/blob/main/README.md#scope) section of the README first. Feature requests that fall under Non-Goals will be closed.
+
 **Is your feature request related to a problem? Please describe.**
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 
