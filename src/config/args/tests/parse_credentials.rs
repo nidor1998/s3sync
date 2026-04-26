@@ -118,6 +118,37 @@ mod tests {
         }
     }
 
+    #[test]
+    fn parse_from_args_source_no_sign_request() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        match parse_from_args(args) {
+            Ok(config_args) => {
+                let (source_config_result, _) =
+                    config_args.build_client_configs(RequestChecksumCalculation::WhenRequired);
+
+                match source_config_result.unwrap().credential {
+                    S3Credentials::NoSignRequest => {}
+                    _ => {
+                        // skipcq: RS-W1021
+                        assert!(false, "expected NoSignRequest credential");
+                    }
+                }
+            }
+            _ => {
+                // skipcq: RS-W1021
+                assert!(false, "error occurred.");
+            }
+        }
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

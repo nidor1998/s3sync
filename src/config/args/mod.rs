@@ -1603,7 +1603,9 @@ impl CLIArgs {
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
     ) -> (Option<ClientConfig>, Option<ClientConfig>) {
-        let source_credential = if let Some(source_profile) = self.source_profile.clone() {
+        let source_credential = if self.source_no_sign_request {
+            Some(S3Credentials::NoSignRequest)
+        } else if let Some(source_profile) = self.source_profile.clone() {
             Some(S3Credentials::Profile(source_profile))
         } else if self.source_access_key.is_some() {
             self.source_access_key
