@@ -133,6 +133,26 @@ const GET_OBJECT_DENY_BUCKET_POLICY: &str = r#"{
     ]
 }"#;
 
+const GET_OBJECT_PUBLIC_READ_BUCKET_POLICY: &str = r#"{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::{{ bucket }}/*"
+        },
+        {
+            "Sid": "PublicListBucket",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:ListBucket",
+            "Resource": "arn:aws:s3:::{{ bucket }}"
+        }
+    ]
+}"#;
+
 pub const SLEEP_TIME_MILLIS_AFTER_INTEGRATION_TEST: u64 = 30 * 1000;
 
 const NOT_FOUND_DANGEROUS_SIMULATION_ENV: &str = "S3SYNC_NOT_FOUND_DANGEROUS_SIMULATION";
@@ -1907,6 +1927,35 @@ impl TestHelper {
 
     pub async fn put_bucket_policy_deny_get_object(&self, bucket: &str) {
         let policy = GET_OBJECT_DENY_BUCKET_POLICY.replace("{{ bucket }}", bucket);
+
+        self.client
+            .put_bucket_policy()
+            .bucket(bucket)
+            .policy(policy)
+            .send()
+            .await
+            .unwrap();
+    }
+
+    pub async fn disable_block_public_access(&self, bucket: &str) {
+        self.client
+            .put_public_access_block()
+            .bucket(bucket)
+            .public_access_block_configuration(
+                aws_sdk_s3::types::PublicAccessBlockConfiguration::builder()
+                    .block_public_acls(false)
+                    .ignore_public_acls(false)
+                    .block_public_policy(false)
+                    .restrict_public_buckets(false)
+                    .build(),
+            )
+            .send()
+            .await
+            .unwrap();
+    }
+
+    pub async fn put_bucket_policy_public_read_get_object(&self, bucket: &str) {
+        let policy = GET_OBJECT_PUBLIC_READ_BUCKET_POLICY.replace("{{ bucket }}", bucket);
 
         self.client
             .put_bucket_policy()
