@@ -130,6 +130,8 @@ const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL: &str =
     "with --source-endpoint-url, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL: &str =
     "with --target-endpoint-url, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SIGN_REQUEST: &str =
+    "with --source-no-sign-request, source storage must be s3://\n";
 const CHECK_SIZE_CONFLICT: &str =
     "--head-each-target is required for --check-size, or remove --remove-modified-filter\n";
 
@@ -973,6 +975,7 @@ impl CLIArgs {
         self.check_ignore_symlinks_conflict()?;
         self.check_no_guess_mime_type_conflict()?;
         self.check_endpoint_url_conflict()?;
+        self.check_no_sign_request_conflict()?;
         self.check_disable_payload_signing_conflict()?;
         self.check_disable_content_md5_header_conflict()?;
         self.check_full_object_checksum_conflict()?;
@@ -1327,6 +1330,19 @@ impl CLIArgs {
         let target = storage_path::parse_storage_path(&self.target);
         if matches!(target, StoragePath::Local(_)) && self.target_endpoint_url.is_some() {
             return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_no_sign_request_conflict(&self) -> Result<(), String> {
+        if !self.source_no_sign_request {
+            return Ok(());
+        }
+
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SIGN_REQUEST.to_string());
         }
 
         Ok(())

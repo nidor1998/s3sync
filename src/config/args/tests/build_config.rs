@@ -673,6 +673,30 @@ mod tests {
         }
     }
 
+    #[test]
+    fn build_from_source_no_sign_request_with_local_source_errors() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "/tmp",
+            "s3://target-bucket/target_key",
+        ];
+
+        let result = build_config_from_args(args);
+        assert!(
+            result.is_err(),
+            "expected an error when --source-no-sign-request is paired with a local source",
+        );
+
+        let msg = result.err().unwrap();
+        assert!(
+            msg.contains("--source-no-sign-request"),
+            "error message should mention the flag, got: {msg}",
+        );
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")
