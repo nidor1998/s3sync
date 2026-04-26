@@ -442,7 +442,7 @@ fn build_from_source_no_sign_request_with_local_source_errors() {
     let args = vec![
         "s3sync",
         "--source-no-sign-request",
-        "/tmp/some_local_dir",
+        "/tmp",
         "s3://target-bucket/target_key",
     ];
 
@@ -451,6 +451,10 @@ fn build_from_source_no_sign_request_with_local_source_errors() {
         result.is_err(),
         "expected an error when --source-no-sign-request is paired with a local source",
     );
+
+    // Note: use a path that exists (e.g. `/tmp`). `check_source_local_storage`
+    // runs earlier in `validate_storage_config` and rejects nonexistent paths
+    // with a different error that does not mention the new flag.
 
     let msg = result.err().unwrap();
     assert!(
