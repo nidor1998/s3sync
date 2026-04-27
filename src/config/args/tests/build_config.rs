@@ -680,7 +680,7 @@ mod tests {
         let args = vec![
             "s3sync",
             "--source-no-sign-request",
-            "/tmp",
+            ".",
             "s3://target-bucket/target_key",
         ];
 
