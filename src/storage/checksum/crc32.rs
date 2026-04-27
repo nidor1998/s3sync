@@ -61,12 +61,11 @@ impl Checksum for ChecksumCRC32 {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use tokio::fs::File;
     use tokio::io::AsyncReadExt;
 
     use super::*;
+    use crate::storage::test_helpers::create_large_file;
 
     const LARGE_FILE_PATH: &str = "./playground/large_data/50MiB";
     const LARGE_FILE_DIR: &str = "./playground/large_data/";
@@ -80,7 +79,7 @@ mod tests {
     async fn checksum_crc32_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
         let mut file = File::open(LARGE_FILE_PATH).await.unwrap();
 
         let mut checksum = ChecksumCRC32::default();
@@ -116,7 +115,7 @@ mod tests {
     async fn checksum_crc32_full_object_checksum_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
         let mut file = File::open(LARGE_FILE_PATH).await.unwrap();
 
         let mut checksum = ChecksumCRC32::new(true);
@@ -146,20 +145,6 @@ mod tests {
         checksum.finalize();
 
         assert_eq!(checksum.finalize_all(), FULL_OBJECT_CHECKSUM.to_string());
-    }
-
-    #[cfg_attr(coverage_nightly, coverage(off))]
-    async fn create_large_file() {
-        if PathBuf::from(LARGE_FILE_PATH).try_exists().unwrap() {
-            return;
-        }
-
-        tokio::fs::create_dir_all(LARGE_FILE_DIR).await.unwrap();
-
-        let data = vec![0_u8; LARGE_FILE_SIZE];
-        tokio::fs::write(LARGE_FILE_PATH, data.as_slice())
-            .await
-            .unwrap();
     }
 
     fn init_dummy_tracing_subscriber() {

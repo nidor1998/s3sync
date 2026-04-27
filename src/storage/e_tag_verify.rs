@@ -218,6 +218,7 @@ fn is_verification_supported_sse(sse: &Option<ServerSideEncryption>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::test_helpers::create_large_file;
     use crate::types::token::create_pipeline_cancellation_token;
     use std::path::PathBuf;
     use tracing_subscriber::EnvFilter;
@@ -624,7 +625,7 @@ mod tests {
     async fn generate_e_tag_hash_from_path_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         assert_eq!(
             generate_e_tag_hash_from_path(
@@ -667,7 +668,7 @@ mod tests {
     async fn generate_e_tag_hash_from_path_cancel_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let cancel_token = create_pipeline_cancellation_token();
         cancel_token.cancel();
@@ -688,7 +689,7 @@ mod tests {
     async fn generate_e_tag_hash_from_path_auto_chunksize_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         assert_eq!(
             generate_e_tag_hash_from_path_with_auto_chunksize(
@@ -761,7 +762,7 @@ mod tests {
     async fn generate_e_tag_hash_from_path_auto_chunksize_cancel_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let cancel_token = create_pipeline_cancellation_token();
         cancel_token.cancel();
@@ -775,20 +776,6 @@ mod tests {
             .await
             .is_err()
         );
-    }
-
-    #[cfg_attr(coverage_nightly, coverage(off))]
-    async fn create_large_file() {
-        if PathBuf::from(LARGE_FILE_PATH).try_exists().unwrap() {
-            return;
-        }
-
-        tokio::fs::create_dir_all(LARGE_FILE_DIR).await.unwrap();
-
-        let data = vec![0_u8; LARGE_FILE_SIZE];
-        tokio::fs::write(LARGE_FILE_PATH, data.as_slice())
-            .await
-            .unwrap();
     }
 
     fn init_dummy_tracing_subscriber() {

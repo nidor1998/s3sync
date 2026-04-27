@@ -251,6 +251,7 @@ mod tests {
         UNKNOWN_CHECKSUM_VALUE, generate_checksum_from_path, generate_checksum_from_path_for_check,
         generate_checksum_from_path_with_chunksize, is_multipart_upload_checksum,
     };
+    use crate::storage::test_helpers::create_large_file;
     use crate::types::token::create_pipeline_cancellation_token;
     use aws_sdk_s3::types::ChecksumAlgorithm;
     use tracing_subscriber::EnvFilter;
@@ -311,7 +312,7 @@ mod tests {
     async fn generate_checksum_from_path_multipart_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let checksum = generate_checksum_from_path(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
@@ -378,7 +379,7 @@ mod tests {
     async fn generate_checksum_from_path_multipart_cancel_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
         let cancel_token = create_pipeline_cancellation_token();
         cancel_token.cancel();
 
@@ -400,7 +401,7 @@ mod tests {
     async fn generate_checksum_from_path_multipart_full_object_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let checksum = generate_checksum_from_path(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
@@ -434,7 +435,7 @@ mod tests {
     async fn generate_checksum_from_path_threshold_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let checksum = generate_checksum_from_path(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
@@ -472,7 +473,7 @@ mod tests {
     async fn generate_checksum_from_path_chunksize_cancel_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let cancel_token = create_pipeline_cancellation_token();
         cancel_token.cancel();
@@ -513,7 +514,7 @@ mod tests {
     async fn generate_checksum_from_path_chunksize_multipart_full_object_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let checksum = generate_checksum_from_path_with_chunksize(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
@@ -536,7 +537,7 @@ mod tests {
     async fn generate_checksum_from_path_multipart_chunksize_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let checksum = generate_checksum_from_path_with_chunksize(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
@@ -573,7 +574,7 @@ mod tests {
     async fn generate_checksum_from_path_for_check_multipart_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let checksum = generate_checksum_from_path_for_check(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
@@ -640,7 +641,7 @@ mod tests {
     async fn generate_checksum_from_path_for_check_multipart_cancel_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let cancel_token = create_pipeline_cancellation_token();
         cancel_token.cancel();
@@ -663,7 +664,7 @@ mod tests {
     async fn generate_checksum_from_path_for_check_full_object_test() {
         init_dummy_tracing_subscriber();
 
-        create_large_file().await;
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
 
         let checksum = generate_checksum_from_path_for_check(
             PathBuf::from(LARGE_FILE_PATH).as_path(),
@@ -709,20 +710,6 @@ mod tests {
             checksum,
             LARGE_FILE_CRC64NVME_FULL_OBJECT_BASE64_DIGEST.to_string()
         );
-    }
-
-    #[cfg_attr(coverage_nightly, coverage(off))]
-    async fn create_large_file() {
-        if PathBuf::from(LARGE_FILE_PATH).try_exists().unwrap() {
-            return;
-        }
-
-        tokio::fs::create_dir_all(LARGE_FILE_DIR).await.unwrap();
-
-        let data = vec![0_u8; LARGE_FILE_SIZE];
-        tokio::fs::write(LARGE_FILE_PATH, data.as_slice())
-            .await
-            .unwrap();
     }
 
     fn init_dummy_tracing_subscriber() {
