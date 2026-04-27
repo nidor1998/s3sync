@@ -466,6 +466,7 @@ pub enum S3Credentials {
     Profile(String),
     Credentials { access_keys: AccessKeys },
     FromEnvironment,
+    NoSignRequest,
 }
 
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]

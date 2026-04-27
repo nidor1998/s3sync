@@ -640,6 +640,112 @@ mod tests {
         assert!(false, "no error occurred");
     }
 
+    #[test]
+    fn build_from_source_no_sign_request() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args).unwrap();
+
+        if let S3Credentials::NoSignRequest =
+            &config.source_client_config.as_ref().unwrap().credential
+        {
+            // ok
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "expected NoSignRequest source credential");
+        }
+
+        // Target side falls through to the default FromEnvironment.
+        if let S3Credentials::FromEnvironment =
+            &config.target_client_config.as_ref().unwrap().credential
+        {
+            // ok
+        } else {
+            // skipcq: RS-W1021
+            assert!(false, "expected FromEnvironment target credential");
+        }
+    }
+
+    #[test]
+    fn build_from_source_no_sign_request_with_local_source_errors() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            ".",
+            "s3://target-bucket/target_key",
+        ];
+
+        let result = build_config_from_args(args);
+        assert!(
+            result.is_err(),
+            "expected an error when --source-no-sign-request is paired with a local source",
+        );
+
+        let msg = result.err().unwrap();
+        assert!(
+            msg.contains("--source-no-sign-request"),
+            "error message should mention the flag, got: {msg}",
+        );
+    }
+
+    #[test]
+    fn source_no_sign_request_conflicts_with_source_profile() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "--source-profile",
+            "some_profile",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        assert!(parse_from_args(args).is_err());
+    }
+
+    #[test]
+    fn source_no_sign_request_conflicts_with_source_access_key() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "--source-access-key",
+            "ak",
+            "--source-secret-access-key",
+            "sk",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        assert!(parse_from_args(args).is_err());
+    }
+
+    #[test]
+    fn source_no_sign_request_conflicts_with_source_request_payer() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-no-sign-request",
+            "--source-request-payer",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        assert!(parse_from_args(args).is_err());
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

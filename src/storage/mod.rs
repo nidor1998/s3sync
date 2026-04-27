@@ -39,6 +39,23 @@ pub mod e_tag_verify;
 pub mod local;
 pub mod s3;
 
+#[cfg(test)]
+pub(crate) mod test_helpers {
+    use std::path::PathBuf;
+
+    #[cfg_attr(coverage_nightly, coverage(off))]
+    pub(crate) async fn create_large_file(path: &str, dir: &str, size: usize) {
+        if PathBuf::from(path).try_exists().unwrap() {
+            return;
+        }
+
+        tokio::fs::create_dir_all(dir).await.unwrap();
+
+        let data = vec![0_u8; size];
+        tokio::fs::write(path, data.as_slice()).await.unwrap();
+    }
+}
+
 pub type Storage = Box<dyn StorageTrait + Send + Sync>;
 
 pub struct StoragePair {

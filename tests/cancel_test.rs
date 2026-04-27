@@ -210,6 +210,9 @@ mod tests {
             assert!(!pipeline.has_error());
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 

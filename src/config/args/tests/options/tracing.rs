@@ -32,6 +32,7 @@ mod tests {
                 .unwrap()
                 .disable_color_tracing
         );
+        assert!(!config.tracing_config.as_ref().unwrap().stderr_tracing);
     }
 
     #[test]
@@ -49,6 +50,7 @@ mod tests {
             "--aws-sdk-tracing",
             "--span-events-tracing",
             "--disable-color-tracing",
+            "--tracing-stderr",
             "s3://source-bucket/source_key",
             "s3://target-bucket/target_key",
         ];
@@ -69,6 +71,29 @@ mod tests {
                 .unwrap()
                 .disable_color_tracing
         );
+        assert!(config.tracing_config.as_ref().unwrap().stderr_tracing);
+    }
+
+    #[test]
+    fn with_tracing_stderr_dry_run_silent() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--dry-run",
+            "-qqq",
+            "--tracing-stderr",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args).unwrap();
+
+        assert!(config.tracing_config.as_ref().unwrap().stderr_tracing);
     }
 
     #[test]

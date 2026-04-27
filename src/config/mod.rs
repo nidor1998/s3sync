@@ -152,6 +152,7 @@ pub struct TracingConfig {
     pub aws_sdk_tracing: bool,
     pub span_events_tracing: bool,
     pub disable_color_tracing: bool,
+    pub stderr_tracing: bool,
 }
 
 #[derive(Debug, Clone, Copy)]

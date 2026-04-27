@@ -654,6 +654,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
             assert_eq!(stats.sync_skip, 3);
         }
@@ -808,6 +810,9 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
             assert_eq!(stats.sync_skip, 5);
         }
 
@@ -1803,6 +1808,9 @@ mod tests {
             assert!(!pipeline.has_error());
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1860,6 +1868,9 @@ mod tests {
             assert!(!pipeline.has_error());
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1878,8 +1889,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
             helper.enable_bucket_versioning(&bucket1).await;
             helper.enable_bucket_versioning(&bucket2).await;
 
@@ -1966,10 +1981,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_sync_count(pipeline.get_stats_receiver()),
-                10
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 10);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_bucket_with_cascade(&bucket1).await;
@@ -1987,8 +2003,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
             helper.enable_bucket_versioning(&bucket1).await;
             helper.enable_bucket_versioning(&bucket2).await;
 
@@ -2076,10 +2096,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_sync_count(pipeline.get_stats_receiver()),
-                10
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 10);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_bucket_with_cascade(&bucket1).await;
@@ -2097,8 +2118,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
             helper.enable_bucket_versioning(&bucket1).await;
             helper.enable_bucket_versioning(&bucket2).await;
 
@@ -2125,10 +2150,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
-                0
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2161,10 +2187,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
-                0
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -2202,6 +2229,8 @@ mod tests {
             assert!(!pipeline.has_error());
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 2);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -2220,8 +2249,12 @@ mod tests {
         {
             let target_bucket_url = format!("s3://{}", bucket1);
 
-            helper.create_bucket(&bucket1, REGION).await;
-            helper.create_bucket(&bucket2, REGION).await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket1, REGION)
+                .await;
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket2, REGION)
+                .await;
             helper.enable_bucket_versioning(&bucket1).await;
             helper.enable_bucket_versioning(&bucket2).await;
 
@@ -2248,10 +2281,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
-                0
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2284,10 +2318,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
-                0
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -2326,6 +2361,8 @@ mod tests {
             assert!(!pipeline.has_error());
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 2);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 

@@ -15,6 +15,8 @@
 <summary>Click to expand to view table of contents </summary>
 
 - [Overview](#Overview)
+    * [Scope](#Scope)
+    * [Non-Goals](#Non-Goals)
 - [Features](#Features)
     * [Object integrity check](#Object-Integrity-Check)
     * [Multiple ways](#Multiple-Ways)
@@ -128,6 +130,23 @@ This demo shows the integrity check features (MD5 and SHA256) and performance (4
 The final command performs an incremental transfer based on modification time, enabling fast incremental transfers.
 
 ![demo](media/demo.webp)
+
+### Scope
+
+s3sync is a synchronization tool with end-to-end integrity verification. It is **not** intended to be a drop-in replacement for, or behaviorally compatible with, any other S3 client — examples include the AWS CLI (`aws s3 sync`, `aws s3 cp`, `aws s3api`), `s5cmd`, `s3cmd`, `rclone`, `mc`, etc. Its command-line flags, sync semantics, output, and exit codes are designed around reliable transfers with verifiable checksums — not interoperability with another tool's interface. Output formats and flag names will not be adjusted to match any external tool, and scripts written against another S3 client should not be expected to work with s3sync unmodified. If you need general S3 management (presign, ACLs, bucket policies, lifecycle, etc.) or compatibility with a specific tool's flag set, use that tool. For object listing, see [s3ls](https://github.com/nidor1998/s3ls-rs); for general S3 operations, use the [AWS CLI](https://aws.amazon.com/cli/).
+
+### Non-Goals
+
+The following are explicitly out of scope and will not be added, regardless of demand:
+
+- General S3 management operations: bucket creation/deletion, ACLs, bucket policies, lifecycle, replication, inventory, presign, etc. s3sync is a transfer/sync tool; for those operations use the [AWS CLI](https://aws.amazon.com/cli/).
+- Object listing as a primary feature. s3sync lists only what it needs in order to sync; for fast parallel listing use [s3ls](https://github.com/nidor1998/s3ls-rs).
+- Non-S3 storage backends (FTP, SMB, NFS-only, Google Cloud Storage, Azure Blob, etc.). s3sync targets S3 and S3-compatible object storage only.
+- A graphical interface. s3sync is a CLI/library; UI front-ends are out of scope for this repository.
+- Compatibility with other S3 clients — neither in flag names and behavior, nor in feature coverage. The presence of a feature, flag, or output format in `aws s3`, `s5cmd`, `s3cmd`, `rclone`, `mc`, or any other S3 tool is not, by itself, a reason to add or change it in s3sync. Each request is evaluated only against s3sync's own scope and design principles. Use that other tool if you need its specific surface.
+- A plugin system beyond the existing Lua callbacks and user-defined Rust callbacks.
+
+Issues and pull requests requesting any of the above will be closed.
 
 ## Features
 
@@ -681,6 +700,14 @@ s3sync --source-profile foo --target-profile bar s3://bucket-name1/prefix s3://b
 ```bash
 s3sync --source-profile foo --source-region ap-northeast-1 s3://bucket-name1/prefix s3://bucket-name2/prefix
 ```
+
+### Anonymous access to a public source bucket
+
+```bash
+s3sync --source-no-sign-request s3://public-bucket-name/prefix /path/to/local
+```
+
+This issues unsigned requests for the source side, mirroring the AWS CLI's `--no-sign-request`. Conflicts with `--source-profile`, the source access-key flags, and `--source-request-payer`.
 
 ### Versioning mode
 
@@ -1248,6 +1275,8 @@ AWS Configuration:
           Target secret access key [env: TARGET_SECRET_ACCESS_KEY=]
       --target-session-token <TARGET_SESSION_TOKEN>
           Target session token [env: TARGET_SESSION_TOKEN=]
+      --source-no-sign-request
+          Do not sign requests for the source bucket (anonymous access for public buckets) [env: SOURCE_NO_SIGN_REQUEST=]
 
 Source Options:
       --source-region <SOURCE_REGION>
@@ -1480,6 +1509,7 @@ Tracing/Logging:
       --aws-sdk-tracing        Enable aws sdk tracing [env: AWS_SDK_TRACING=]
       --span-events-tracing    Show span event tracing [env: SPAN_EVENTS_TRACING=]
       --disable-color-tracing  Disable ANSI terminal colors [env: DISABLE_COLOR_TRACING=]
+      --tracing-stderr         Output all tracing to stderr. By default, tracing messages are written to stdout. [env: TRACING_STDERR=]
 
 Retry Options:
       --aws-max-attempts <max_attempts>

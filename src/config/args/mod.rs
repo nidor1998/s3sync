@@ -49,6 +49,7 @@ const DEFAULT_JSON_TRACING: bool = false;
 const DEFAULT_AWS_SDK_TRACING: bool = false;
 const DEFAULT_SPAN_EVENTS_TRACING: bool = false;
 const DEFAULT_DISABLE_COLOR_TRACING: bool = false;
+const DEFAULT_TRACING_STDERR: bool = false;
 const DEFAULT_MULTIPART_THRESHOLD: &str = "8MiB";
 const DEFAULT_MULTIPART_CHUNKSIZE: &str = "8MiB";
 const DEFAULT_AUTO_CHUNKSIZE: bool = false;
@@ -130,6 +131,8 @@ const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL: &str =
     "with --source-endpoint-url, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_ENDPOINT_URL: &str =
     "with --target-endpoint-url, target storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SIGN_REQUEST: &str =
+    "with --source-no-sign-request, source storage must be s3://\n";
 const CHECK_SIZE_CONFLICT: &str =
     "--head-each-target is required for --check-size, or remove --remove-modified-filter\n";
 
@@ -279,6 +282,20 @@ It cannot work with between different object storages or regions."#)]
     /// Use request payer for the source bucket.
     #[arg(long, env, default_value_t = DEFAULT_REQUEST_PAYER, help_heading = "Source Options")]
     source_request_payer: bool,
+
+    /// Do not sign requests for the source bucket (anonymous access for public buckets)
+    #[arg(
+        long, env, default_value_t = false,
+        conflicts_with_all = [
+            "source_profile",
+            "source_access_key",
+            "source_secret_access_key",
+            "source_session_token",
+            "source_request_payer",
+        ],
+        help_heading = "AWS Configuration",
+    )]
+    source_no_sign_request: bool,
 
     /// Force path-style addressing for source endpoint.
     #[arg(long, env, default_value_t = DEFAULT_FORCE_PATH_STYLE, help_heading = "Source Options")]
@@ -692,6 +709,15 @@ It must be used with --report-sync-status."#
     #[arg(long, env, default_value_t = DEFAULT_DISABLE_COLOR_TRACING, help_heading = "Tracing/Logging")]
     disable_color_tracing: bool,
 
+    #[arg(
+        long,
+        env,
+        default_value_t = DEFAULT_TRACING_STDERR,
+        help_heading = "Tracing/Logging",
+        long_help = r#"Output all tracing to stderr. By default, tracing messages are written to stdout."#
+    )]
+    tracing_stderr: bool,
+
     /// Maximum retry attempts that s3sync retry handler use
     #[arg(long, env, default_value_t = DEFAULT_AWS_MAX_ATTEMPTS, value_name = "max_attempts", help_heading = "Retry Options")]
     aws_max_attempts: u32,
@@ -959,6 +985,7 @@ impl CLIArgs {
         self.check_ignore_symlinks_conflict()?;
         self.check_no_guess_mime_type_conflict()?;
         self.check_endpoint_url_conflict()?;
+        self.check_no_sign_request_conflict()?;
         self.check_disable_payload_signing_conflict()?;
         self.check_disable_content_md5_header_conflict()?;
         self.check_full_object_checksum_conflict()?;
@@ -1318,6 +1345,19 @@ impl CLIArgs {
         Ok(())
     }
 
+    fn check_no_sign_request_conflict(&self) -> Result<(), String> {
+        if !self.source_no_sign_request {
+            return Ok(());
+        }
+
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) {
+            return Err(SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_NO_SIGN_REQUEST.to_string());
+        }
+
+        Ok(())
+    }
+
     fn check_disable_payload_signing_conflict(&self) -> Result<(), String> {
         if !self.disable_payload_signing {
             return Ok(());
@@ -1589,7 +1629,9 @@ impl CLIArgs {
         &self,
         request_checksum_calculation: RequestChecksumCalculation,
     ) -> (Option<ClientConfig>, Option<ClientConfig>) {
-        let source_credential = if let Some(source_profile) = self.source_profile.clone() {
+        let source_credential = if self.source_no_sign_request {
+            Some(S3Credentials::NoSignRequest)
+        } else if let Some(source_profile) = self.source_profile.clone() {
             Some(S3Credentials::Profile(source_profile))
         } else if self.source_access_key.is_some() {
             self.source_access_key
@@ -1714,6 +1756,7 @@ impl TryFrom<CLIArgs> for Config {
             aws_sdk_tracing: value.aws_sdk_tracing,
             span_events_tracing: value.span_events_tracing,
             disable_color_tracing: value.disable_color_tracing,
+            stderr_tracing: value.tracing_stderr,
         });
 
         let storage_class = value
@@ -1895,6 +1938,7 @@ impl TryFrom<CLIArgs> for Config {
                     aws_sdk_tracing: DEFAULT_AWS_SDK_TRACING,
                     span_events_tracing: DEFAULT_SPAN_EVENTS_TRACING,
                     disable_color_tracing: DEFAULT_DISABLE_COLOR_TRACING,
+                    stderr_tracing: value.tracing_stderr,
                 });
             } else if tracing_config.unwrap().tracing_level < log::Level::Info {
                 tracing_config = Some(TracingConfig {
@@ -1903,6 +1947,7 @@ impl TryFrom<CLIArgs> for Config {
                     aws_sdk_tracing: tracing_config.unwrap().aws_sdk_tracing,
                     span_events_tracing: tracing_config.unwrap().span_events_tracing,
                     disable_color_tracing: tracing_config.unwrap().disable_color_tracing,
+                    stderr_tracing: tracing_config.unwrap().stderr_tracing,
                 });
             }
         }

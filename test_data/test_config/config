@@ -4,3 +4,8 @@ region = us-west-1
 [profile aws]
 region = ap-northeast-1
 
+[profile from_config_only]
+region = eu-west-1
+aws_access_key_id = config_only_access_key
+aws_secret_access_key = config_only_secret_access_key
+
