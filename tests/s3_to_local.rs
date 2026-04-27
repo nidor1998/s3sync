@@ -87,7 +87,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -224,7 +228,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -307,6 +315,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
             assert_eq!(stats.sync_skip, 1);
         }
@@ -870,7 +880,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -953,7 +967,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -996,6 +1014,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1040,6 +1060,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1083,6 +1105,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1127,6 +1151,7 @@ mod tests {
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
             assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1170,6 +1195,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1213,6 +1240,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1256,6 +1285,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1298,6 +1329,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1341,6 +1374,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1386,6 +1421,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1611,10 +1648,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
-                0
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -1641,6 +1679,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1686,10 +1726,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
-                0
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -1716,6 +1757,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1757,6 +1800,8 @@ mod tests {
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
             assert_eq!(stats.sync_warning, 0);
         }
 
@@ -1899,10 +1944,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(
-                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
-                0
-            );
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -2034,6 +2080,7 @@ mod tests {
             assert_eq!(stats.sync_complete, 0);
             assert_eq!(stats.e_tag_verified, 0);
             assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
             assert_eq!(stats.sync_skip, 1);
         }
 
@@ -2161,7 +2208,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2218,7 +2269,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2297,7 +2352,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2387,7 +2446,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2441,7 +2504,11 @@ mod tests {
 
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2461,7 +2528,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2523,7 +2594,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2586,7 +2661,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2648,7 +2727,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2715,7 +2798,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2776,7 +2863,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2839,7 +2930,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2901,7 +2996,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -2968,7 +3067,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3029,7 +3132,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3092,7 +3199,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3155,7 +3266,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3222,7 +3337,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3282,7 +3401,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3345,7 +3468,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3408,7 +3535,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3471,7 +3602,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3534,7 +3669,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3601,7 +3740,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3664,7 +3807,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3731,7 +3878,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 1);
         }
 
         {
@@ -3792,7 +3943,11 @@ mod tests {
 
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3813,7 +3968,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3875,7 +4034,11 @@ mod tests {
 
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3896,7 +4059,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3964,7 +4131,11 @@ mod tests {
 
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -3991,7 +4162,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -4053,7 +4228,11 @@ mod tests {
 
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {
@@ -4074,7 +4253,11 @@ mod tests {
             let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
             pipeline.run().await;
             assert!(!pipeline.has_error());
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 5);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         {

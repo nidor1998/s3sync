@@ -70,7 +70,11 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            assert_eq!(TestHelper::get_sync_count(pipeline.get_stats_receiver()), 1);
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
         }
 
         helper.delete_directory_bucket_with_cascade(&bucket1).await;
