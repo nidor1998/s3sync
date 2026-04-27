@@ -1,13 +1,13 @@
 [target.x86_64-pc-windows-msvc]
 rustflags = [
     "-C", "target-feature=+crt-static",
-    "-C", "link-arg=/STACK:2097152"
+    "-C", "link-arg=/STACK:2000000"
 ]
 
 [target.aarch64-pc-windows-msvc]
 rustflags = [
     "-C", "target-feature=+crt-static",
-    "-C", "link-arg=/STACK:2097152"
+    "-C", "link-arg=/STACK:2000000"
 ]
 
 ## "link-args=-rdynamic" is used to ensure that symbols are exported correctly.
