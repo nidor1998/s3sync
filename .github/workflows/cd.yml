@@ -203,7 +203,10 @@ jobs:
       attestations: write
     strategy:
       matrix:
-        os: [ macos-latest, windows-latest, windows-11-arm ]
+        # windows-11-arm (aarch64-pc-windows-msvc) suspended: release builds hit
+        # link.exe LNK1322 (Cortex-A53 erratum 843419) intermittently. Re-enable
+        # once a stable workaround is in place.
+        os: [ macos-latest, windows-latest ]
         include:
           - os: macos-latest
             artifact_suffix: macos-aarch64
@@ -212,10 +215,6 @@ jobs:
           - os: windows-latest
             artifact_suffix: windows-x86_64
             target: x86_64-pc-windows-msvc
-            file_extension: ".exe"
-          - os: windows-11-arm
-            artifact_suffix: windows-aarch64
-            target: aarch64-pc-windows-msvc
             file_extension: ".exe"
     steps:
       - name: install rust toolchain

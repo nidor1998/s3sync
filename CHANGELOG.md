@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.58.5] - 2026-04-28
+
+### Changed
+
+- Suspended `windows-aarch64` (`aarch64-pc-windows-msvc`) release artifact: `link.exe` keeps failing with `LNK1322: cannot avoid potential ARM hazard (Cortex-A53 MPCore processor bug #843419)` and the workarounds tried in 1.58.1–1.58.3 have not stabilised the build. Pre-built binaries for this target will resume once a reliable fix is in place.
+- Switched the `aarch64-pc-windows-msvc` target to `lto = "thin"` with `codegen-units = 16` via target-specific `rustflags` (no longer release-blocking, but kept to make local/CI builds for that target succeed).
+
 ## [1.58.2] - 2026-04-27
 
 ### Changed

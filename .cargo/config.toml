@@ -7,9 +7,10 @@ rustflags = [
 [target.aarch64-pc-windows-msvc]
 rustflags = [
     "-C", "target-feature=+crt-static",
-    "-C", "link-arg=/STACK:2000000",
-    "-C", "link-arg=/OPT:REF",
-    "-C", "link-arg=/OPT:ICF",
+    # Work around LNK1322 (Cortex-A53 erratum 843419): fat LTO + codegen-units=1
+    # produce a section too large for link.exe to insert the erratum thunk.
+    "-C", "lto=thin",
+    "-C", "codegen-units=16",
 ]
 
 ## "link-args=-rdynamic" is used to ensure that symbols are exported correctly.
