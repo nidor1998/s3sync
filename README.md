@@ -8,6 +8,8 @@
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 
+> **Note on issues:** This project continues to be maintained, and binaries will keep being released. However, to consolidate discussion across the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs) family, **please file new issues in the [s7cmd](https://github.com/nidor1998/s7cmd) repository** instead of here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying code, so its behavior matches the standalone binaries and it can be used in their place. **Before opening an issue, please read the Scope and Non-Goals sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue to be handled as usual.
+
 ## Overview
 
 s3sync is a reliable, flexible, and fast synchronization tool for S3.  
