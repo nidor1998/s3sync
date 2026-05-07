@@ -11,6 +11,10 @@ pub mod crc32_c;
 pub mod crc64_nvme;
 pub mod sha1;
 pub mod sha256;
+pub mod sha512;
+pub mod xxhash128;
+pub mod xxhash3;
+pub mod xxhash64;
 
 pub trait Checksum {
     fn new(full_object_checksum: bool) -> Self
