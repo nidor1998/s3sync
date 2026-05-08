@@ -9,6 +9,7 @@ use crate::storage::checksum::sha256::ChecksumSha256;
 pub mod crc32;
 pub mod crc32_c;
 pub mod crc64_nvme;
+pub mod md5;
 pub mod sha1;
 pub mod sha256;
 pub mod sha512;
