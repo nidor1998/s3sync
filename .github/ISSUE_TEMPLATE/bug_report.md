@@ -26,6 +26,8 @@ Issues with no activity for 30 days are labeled `stale` and closed 7 days later 
 
 ## Prerequisites
 
+**Issues without all of the following boxes checked will be closed without review.** No exceptions.
+
 - [ ] I have read the README (including Scope and Non-Goals) and confirmed this issue is not already documented.
 - [ ] I have searched existing issues (open and closed) and this is not a duplicate.
 - [ ] This is a reproducible bug report — not a feature request, question, or request for usage help.
