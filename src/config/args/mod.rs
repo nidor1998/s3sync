@@ -1395,7 +1395,13 @@ impl CLIArgs {
         }
 
         if let Some(additional_checksum_algorithm) = &self.additional_checksum_algorithm {
-            if additional_checksum_algorithm == "SHA1" || additional_checksum_algorithm == "SHA256"
+            if additional_checksum_algorithm == "SHA1"
+                || additional_checksum_algorithm == "SHA256"
+                || additional_checksum_algorithm == "SHA512"
+                || additional_checksum_algorithm == "XXHASH128"
+                || additional_checksum_algorithm == "XXHASH3"
+                || additional_checksum_algorithm == "XXHASH64"
+                || additional_checksum_algorithm == "MD5"
             {
                 return Err(FULL_OBJECT_CHECKSUM_NOT_SUPPORTED.to_string());
             }
