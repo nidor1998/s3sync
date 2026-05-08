@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.58.6"
+version = "1.59.0"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, flexible, and fast synchronization tool for S3."
@@ -60,6 +60,7 @@ tempfile = "3.27.0"
 thiserror = "2.0.18"
 tokio = { version = "1.52.1", features = ["full"] }
 tokio-util = "0.7.18"
+twox-hash = { version = "2.1.2", default-features = false, features = ["std", "xxhash64", "xxhash3_64", "xxhash3_128"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json", "local-time"] }
 url = "2.5.8"
