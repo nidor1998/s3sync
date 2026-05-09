@@ -1,6 +1,6 @@
 use aws_sdk_s3::types::ChecksumAlgorithm;
 
-const INVALID_CHECKSUM_ALGORITHM: &str = "invalid checksum_algorithm. valid choices: CRC32 | CRC32C | CRC64NVME | SHA1 | SHA256 | SHA512 | XXHASH128 | XXHASH3 | XXHASH64 .";
+const INVALID_CHECKSUM_ALGORITHM: &str = "invalid checksum_algorithm. valid choices: CRC32 | CRC32C | CRC64NVME | MD5 | SHA1 | SHA256 | SHA512 | XXHASH128 | XXHASH3 | XXHASH64 .";
 
 pub fn parse_checksum_algorithm(checksum_algorithm: &str) -> Result<String, String> {
     #[allow(deprecated)]
