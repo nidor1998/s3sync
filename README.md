@@ -30,6 +30,8 @@ The final command performs an incremental transfer based on modification time, e
 
 ### Scope
 
+s3sync targets **Amazon S3** as its only supported platform. S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, and similar) is provided strictly **as-is**, with **absolutely no support or assistance**. Such services may work via `--target-endpoint-url` / `--source-endpoint-url` (and `--source-force-path-style` / `--target-force-path-style` when path-style addressing is required), but they are not part of the official test matrix and behavior may change between releases. This is a structural consequence of building on `aws-sdk-rust`, which is generated from AWS service models and assumes Amazon S3 semantics (checksum headers, endpoint resolution, signing variants, response schemas); features that depend on AWS-specific semantics, such as CRC64NVME checksums or newer S3 API additions, may not work against non-AWS endpoints. Bug reports, questions, and assistance requests regarding S3-compatible storage will not be addressed.
+
 s3sync is a synchronization tool with end-to-end integrity verification. It is **not** intended to be a drop-in replacement for, or behaviorally compatible with, any other S3 client — examples include the AWS CLI (`aws s3 sync`, `aws s3 cp`, `aws s3api`), `s5cmd`, `s3cmd`, `rclone`, `mc`, etc. Its command-line flags, sync semantics, output, and exit codes are designed around reliable transfers with verifiable checksums — not interoperability with another tool's interface. Output formats and flag names will not be adjusted to match any external tool, and scripts written against another S3 client should not be expected to work with s3sync unmodified. If you need general S3 management (presign, ACLs, bucket policies, lifecycle, etc.) or compatibility with a specific tool's flag set, use that tool.
 
 ### Non-Goals
@@ -37,7 +39,7 @@ s3sync is a synchronization tool with end-to-end integrity verification. It is *
 The following are explicitly out of scope and will not be added, regardless of demand:
 
 - General S3 management operations: bucket creation/deletion, ACLs, bucket policies, lifecycle, replication, inventory, presign, etc. s3sync is a transfer/sync tool; for those operations use the [AWS CLI](https://aws.amazon.com/cli/).
-- Non-S3 storage backends (FTP, SMB, NFS-only, Google Cloud Storage, Azure Blob, etc.). s3sync targets S3 and S3-compatible object storage only.
+- Support, testing, or guaranteed compatibility for any storage service other than Amazon S3. S3-compatible storage is provided strictly as-is, with no support or assistance — adding dedicated code paths, provider-specific workarounds, or backends for services such as MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, Tencent COS, Alibaba OSS, Azure Blob Storage, or Google Cloud Storage is out of scope.
 - A graphical interface. s3sync is a CLI/library; UI front-ends are out of scope for this repository.
 - Compatibility with other S3 clients — neither in flag names and behavior, nor in feature coverage. The presence of a feature, flag, or output format in `aws s3`, `s5cmd`, `s3cmd`, `rclone`, `mc`, or any other S3 tool is not, by itself, a reason to add or change it in s3sync. Each request is evaluated only against s3sync's own scope and design principles. Use that other tool if you need its specific surface.
 - A plugin system beyond the existing Lua callbacks and user-defined Rust callbacks.
@@ -46,7 +48,7 @@ Issues and pull requests requesting any of the above will be closed.
 
 ## Who is this for?
 
-s3sync is designed for users who need to synchronize data with S3 or S3-compatible object storage.  
+s3sync is designed for users who need to synchronize data with Amazon S3.  
 This tool is specifically tailored for those who require reliable synchronization capabilities and evidence of data
 integrity.
 
@@ -78,9 +80,9 @@ correctly.
   If you want to get detailed evidence of the integrity check, you can use `Sync statistics report` feature(see below).
 
 - Multiple ways
-    - Local to S3(S3-compatible storage)
-    - S3(S3-compatible storage) to Local
-    - S3 to S3(cross-region, same-region, same-account, cross-account, from-to S3/S3-compatible storage)
+    - Local to S3
+    - S3 to Local
+    - S3 to S3 (cross-region, same-region, same-account, cross-account)
 
 - Flexible filtering
     - Key, `ContentType`, user-defined metadata and tagging by regular expression.
@@ -256,13 +258,11 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 **Supported target: Amazon S3 only.**
 
-Support for S3-compatible storage is on a best-effort basis and may behave differently.   
-s3sync has been tested with Amazon S3. s3sync has many end-to-end tests and unit tests and runs every time when a new
-version
-is released.  
-S3-compatible storage is not tested when a new version is released (I test only when making major changes).  
-This is because S3-compatible storage may have different behaviors and features.  
-Since there is no official certification for S3-compatible storage, comprehensive testing is not possible.
+Support for S3-compatible storage is **deprecated** and provided strictly **as-is**, with **no support or
+assistance**. s3sync has many end-to-end and unit tests that run against Amazon S3 every time a new version is released;
+S3-compatible storage is not part of that test matrix and is no longer tested at release time. Because there is no
+official certification for S3-compatible storage and behavior varies across providers, comprehensive testing is not
+possible. Bug reports, questions, and assistance requests regarding S3-compatible storage will not be addressed.
 
 ## More information
 
