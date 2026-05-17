@@ -4,10 +4,13 @@ const INVALID_CHECKSUM_ALGORITHM: &str =
     "invalid checksum_algorithm. valid choices: CRC32 | CRC32C | CRC64NVME | SHA1 | SHA256 .";
 
 pub fn parse_checksum_algorithm(checksum_algorithm: &str) -> Result<String, String> {
-    #[allow(deprecated)]
-    if matches!(
+    if !matches!(
         ChecksumAlgorithm::from(checksum_algorithm),
-        ChecksumAlgorithm::Unknown(_)
+        ChecksumAlgorithm::Crc32
+            | ChecksumAlgorithm::Crc32C
+            | ChecksumAlgorithm::Crc64Nvme
+            | ChecksumAlgorithm::Sha1
+            | ChecksumAlgorithm::Sha256
     ) {
         return Err(INVALID_CHECKSUM_ALGORITHM.to_string());
     }

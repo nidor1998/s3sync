@@ -67,6 +67,110 @@ mod tests {
     }
 
     #[test]
+    fn with_custom_value_with_unsupported_algorithm_md5() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--additional-checksum-algorithm",
+            "MD5",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args);
+
+        assert!(config.is_err());
+    }
+
+    #[test]
+    fn with_custom_value_with_unsupported_algorithm_xxxhash128() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--additional-checksum-algorithm",
+            "XXHASH128",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args);
+
+        assert!(config.is_err());
+    }
+
+    #[test]
+    fn with_custom_value_with_unsupported_algorithm_xxxhash3() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--additional-checksum-algorithm",
+            "XXHASH3",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args);
+
+        assert!(config.is_err());
+    }
+
+    #[test]
+    fn with_custom_value_with_unsupported_algorithm_xxxhash64() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--additional-checksum-algorithm",
+            "XXHASH64",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args);
+
+        assert!(config.is_err());
+    }
+    #[test]
+    fn with_custom_value_with_unsupported_algorithm_sha12() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--additional-checksum-algorithm",
+            "SHA512",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args);
+
+        assert!(config.is_err());
+    }
+
+    #[test]
     fn with_custom_value_with_conflict() {
         init_dummy_tracing_subscriber();
 

@@ -1,9 +1,23 @@
 # s3sync
 
+[![Crates.io](https://img.shields.io/crates/v/s3sync.svg)](https://crates.io/crates/s3sync)
+[![Crates.io](https://img.shields.io/crates/d/s3sync?label=downloads%20%28crates.io%29)](https://crates.io/crates/s3sync)
+[![GitHub](https://img.shields.io/github/downloads/nidor1998/s3sync/total?label=downloads%20%28GitHub%29)](https://github.com/nidor1998/s3sync/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![MSRV](https://img.shields.io/badge/msrv-1.91.1-red)
+![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 
-> **Note on issues:** This project continues to be maintained, and binaries will keep being released. However, to consolidate discussion across the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs) family, **please file new issues in the [s7cmd](https://github.com/nidor1998/s7cmd) repository** instead of here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying code, so its behavior matches the standalone binaries and it can be used in their place. **Before opening an issue, please read the Scope and Non-Goals sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue to be handled as usual.
+> **Note on issues:** This project continues to be maintained, and binaries will keep being released. However, to
+> consolidate discussion across
+> the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)
+> family, **please file new issues in the [s7cmd](https://github.com/nidor1998/s7cmd) repository** instead of
+> here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying code,
+> so its behavior matches the standalone binaries and it can be used in their place. **Before opening an issue, please
+> read the Scope and Non-Goals sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each
+> project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))
+** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue
+> to be handled as usual.
 
 ## Overview
 
@@ -22,24 +36,6 @@ This demo shows the integrity check features (MD5 and SHA256) and performance (4
 The final command performs an incremental transfer based on modification time, enabling fast incremental transfers.
 
 ![demo](media/demo.webp)
-
-### Scope
-
-s3sync targets **Amazon S3** as its only supported platform. S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, and similar) is provided strictly **as-is**, with **absolutely no support or assistance**. Such services may work via `--target-endpoint-url` / `--source-endpoint-url` (and `--source-force-path-style` / `--target-force-path-style` when path-style addressing is required), but they are not part of the official test matrix and behavior may change between releases. This is a structural consequence of building on `aws-sdk-rust`, which is generated from AWS service models and assumes Amazon S3 semantics (checksum headers, endpoint resolution, signing variants, response schemas); features that depend on AWS-specific semantics, such as CRC64NVME checksums or newer S3 API additions, may not work against non-AWS endpoints. Bug reports, questions, and assistance requests regarding S3-compatible storage will not be addressed.
-
-s3sync is a synchronization tool with end-to-end integrity verification. It is **not** intended to be a drop-in replacement for, or behaviorally compatible with, any other S3 client — examples include the AWS CLI (`aws s3 sync`, `aws s3 cp`, `aws s3api`), `s5cmd`, `s3cmd`, `rclone`, `mc`, etc. Its command-line flags, sync semantics, output, and exit codes are designed around reliable transfers with verifiable checksums — not interoperability with another tool's interface. Output formats and flag names will not be adjusted to match any external tool, and scripts written against another S3 client should not be expected to work with s3sync unmodified. If you need general S3 management (presign, ACLs, bucket policies, lifecycle, etc.) or compatibility with a specific tool's flag set, use that tool.
-
-### Non-Goals
-
-The following are explicitly out of scope and will not be added, regardless of demand:
-
-- General S3 management operations: bucket creation/deletion, ACLs, bucket policies, lifecycle, replication, inventory, presign, etc. s3sync is a transfer/sync tool; for those operations use the [AWS CLI](https://aws.amazon.com/cli/).
-- Support, testing, or guaranteed compatibility for any storage service other than Amazon S3. S3-compatible storage is provided strictly as-is, with no support or assistance — adding dedicated code paths, provider-specific workarounds, or backends for services such as MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, Tencent COS, Alibaba OSS, Azure Blob Storage, or Google Cloud Storage is out of scope.
-- A graphical interface. s3sync is a CLI/library; UI front-ends are out of scope for this repository.
-- Compatibility with other S3 clients — neither in flag names and behavior, nor in feature coverage. The presence of a feature, flag, or output format in `aws s3`, `s5cmd`, `s3cmd`, `rclone`, `mc`, or any other S3 tool is not, by itself, a reason to add or change it in s3sync. Each request is evaluated only against s3sync's own scope and design principles. Use that other tool if you need its specific surface.
-- A plugin system beyond the existing Lua callbacks and user-defined Rust callbacks.
-
-Issues and pull requests requesting any of the above will be closed.
 
 ## Who is this for?
 
@@ -262,6 +258,45 @@ possible. Bug reports, questions, and assistance requests regarding S3-compatibl
 ## More information
 
 For more information, please refer to the [full README](https://github.com/nidor1998/s3sync/blob/main/FULL_README.md)
+
+### Scope
+
+s3sync targets **Amazon S3** as its only supported platform. S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2,
+Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, and similar) is provided strictly **as-is**, with **absolutely no
+support or assistance**. Such services may work via `--target-endpoint-url` / `--source-endpoint-url` (and
+`--source-force-path-style` / `--target-force-path-style` when path-style addressing is required), but they are not part
+of the official test matrix and behavior may change between releases. This is a structural consequence of building on
+`aws-sdk-rust`, which is generated from AWS service models and assumes Amazon S3 semantics (checksum headers, endpoint
+resolution, signing variants, response schemas); features that depend on AWS-specific semantics, such as CRC64NVME
+checksums or newer S3 API additions, may not work against non-AWS endpoints. Bug reports, questions, and assistance
+requests regarding S3-compatible storage will not be addressed.
+
+s3sync is a synchronization tool with end-to-end integrity verification. It is **not** intended to be a drop-in
+replacement for, or behaviorally compatible with, any other S3 client — examples include the AWS CLI (`aws s3 sync`,
+`aws s3 cp`, `aws s3api`), `s5cmd`, `s3cmd`, `rclone`, `mc`, etc. Its command-line flags, sync semantics, output, and
+exit codes are designed around reliable transfers with verifiable checksums — not interoperability with another tool's
+interface. Output formats and flag names will not be adjusted to match any external tool, and scripts written against
+another S3 client should not be expected to work with s3sync unmodified. If you need general S3 management (presign,
+ACLs, bucket policies, lifecycle, etc.) or compatibility with a specific tool's flag set, use that tool.
+
+### Non-Goals
+
+The following are explicitly out of scope and will not be added, regardless of demand:
+
+- General S3 management operations: bucket creation/deletion, ACLs, bucket policies, lifecycle, replication, inventory,
+  presign, etc. s3sync is a transfer/sync tool; for those operations use the [AWS CLI](https://aws.amazon.com/cli/).
+- Support, testing, or guaranteed compatibility for any storage service other than Amazon S3. S3-compatible storage is
+  provided strictly as-is, with no support or assistance — adding dedicated code paths, provider-specific workarounds,
+  or backends for services such as MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS,
+  Tencent COS, Alibaba OSS, Azure Blob Storage, or Google Cloud Storage is out of scope.
+- A graphical interface. s3sync is a CLI/library; UI front-ends are out of scope for this repository.
+- Compatibility with other S3 clients — neither in flag names and behavior, nor in feature coverage. The presence of a
+  feature, flag, or output format in `aws s3`, `s5cmd`, `s3cmd`, `rclone`, `mc`, or any other S3 tool is not, by itself,
+  a reason to add or change it in s3sync. Each request is evaluated only against s3sync's own scope and design
+  principles. Use that other tool if you need its specific surface.
+- A plugin system beyond the existing Lua callbacks and user-defined Rust callbacks.
+
+Issues and pull requests requesting any of the above will be closed.
 
 ## Contributing
 
