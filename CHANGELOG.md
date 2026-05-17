@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - AWS SDK for Rust does not support the new checksums XXHash64/3/128, MD5, and SHA-512, so an error check has been added
   to prevent these from being specified as additional checksums. We plan to remove this restriction when AWS SDK for
-  Rust supports these new chucksums.
+  Rust supports these new checksums.
 
 ## [1.58.6] - 2026-04-28
 
