@@ -5,30 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.58.7] - 2026-05-17
+
+### Changed
+
+- AWS SDK for Rust does not support the new checksums XXHash64/3/128, MD5, and SHA-512, so an error check has been added
+  to prevent these from being specified as additional checksums. We plan to remove this restriction when AWS SDK for
+  Rust supports these new checksums.
+
 ## [1.58.6] - 2026-04-28
 
 ### Changed
 
-- Removed `aarch64-pc-windows-msvc` (`windows-11-arm`) from CI build/test matrix while the release artifact for that target stays suspended.
+- Removed `aarch64-pc-windows-msvc` (`windows-11-arm`) from CI build/test matrix while the release artifact for that
+  target stays suspended.
 
 ## [1.58.5] - 2026-04-28
 
 ### Changed
 
-- Suspended `windows-aarch64` (`aarch64-pc-windows-msvc`) release artifact: `link.exe` keeps failing with `LNK1322: cannot avoid potential ARM hazard (Cortex-A53 MPCore processor bug #843419)` and the workarounds tried in 1.58.1–1.58.3 have not stabilised the build. Pre-built binaries for this target will resume once a reliable fix is in place.
-- Switched the `aarch64-pc-windows-msvc` target to `lto = "thin"` with `codegen-units = 16` via target-specific `rustflags` (no longer release-blocking, but kept to make local/CI builds for that target succeed).
+- Suspended `windows-aarch64` (`aarch64-pc-windows-msvc`) release artifact: `link.exe` keeps failing with
+  `LNK1322: cannot avoid potential ARM hazard (Cortex-A53 MPCore processor bug #843419)` and the workarounds tried in
+  1.58.1–1.58.3 have not stabilised the build. Pre-built binaries for this target will resume once a reliable fix is in
+  place.
+- Switched the `aarch64-pc-windows-msvc` target to `lto = "thin"` with `codegen-units = 16` via target-specific
+  `rustflags` (no longer release-blocking, but kept to make local/CI builds for that target succeed).
 
 ## [1.58.2] - 2026-04-27
 
 ### Changed
 
-- Added `/OPT:REF` and `/OPT:ICF` linker flags for `aarch64-pc-windows-msvc` to reduce binary size via dead code/data elimination and identical COMDAT folding.
+- Added `/OPT:REF` and `/OPT:ICF` linker flags for `aarch64-pc-windows-msvc` to reduce binary size via dead code/data
+  elimination and identical COMDAT folding.
 
 ## [1.58.1] - 2026-04-27
 
 ### Fixed
 
-- Reverted Windows `/STACK` size from `2097152` back to `2000000` to work around an `aarch64-pc-windows-msvc` linker failure (`LNK1322: cannot avoid potential ARM hazard (Cortex-A53 MPCore processor bug #843419)`).
+- Reverted Windows `/STACK` size from `2097152` back to `2000000` to work around an `aarch64-pc-windows-msvc` linker
+  failure (`LNK1322: cannot avoid potential ARM hazard (Cortex-A53 MPCore processor bug #843419)`).
 
 ## [1.58.0] - 2026-04-27
 
@@ -39,7 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Disabled default features on `aws-config` and `aws-sdk-s3` to drop the legacy `rustls` alias that pulls rustls 0.21 (vulnerable rustls-webpki 0.101.x, RUSTSEC-2026-0098). The modern `default-https-client` feature, which uses rustls 0.23 via `aws-smithy-http-client`, is re-enabled explicitly.
+- Disabled default features on `aws-config` and `aws-sdk-s3` to drop the legacy `rustls` alias that pulls rustls 0.21 (
+  vulnerable rustls-webpki 0.101.x, RUSTSEC-2026-0098). The modern `default-https-client` feature, which uses rustls
+  0.23 via `aws-smithy-http-client`, is re-enabled explicitly.
 
 ### Changed
 
@@ -52,7 +69,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Stop panicking with "failed printing to stdout: Broken pipe" when output is piped to a consumer that closes early (e.g. `s3sync ... | wc -l` followed by Ctrl-C). Tracing writes now swallow `BrokenPipe`, and the indicator's trailing newline no longer unwraps the write/flush result.
+- Stop panicking with "failed printing to stdout: Broken pipe" when output is piped to a consumer that closes early (
+  e.g. `s3sync ... | wc -l` followed by Ctrl-C). Tracing writes now swallow `BrokenPipe`, and the indicator's trailing
+  newline no longer unwraps the write/flush result.
 
 ## [1.57.1] - 2026-03-28
 
