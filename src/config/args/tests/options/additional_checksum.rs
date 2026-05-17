@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxxhash128() {
+    fn with_custom_value_with_unsupported_algorithm_xxhash128() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -109,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxxhash3() {
+    fn with_custom_value_with_unsupported_algorithm_xxhash3() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -130,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxxhash64() {
+    fn with_custom_value_with_unsupported_algorithm_xxhash64() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
