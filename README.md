@@ -10,12 +10,15 @@
 
 > **Note on issues:** This project continues to be maintained, and binaries will keep being released. However, to
 > consolidate discussion across
-> the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)
+>
+the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)
 > family, **please file new issues in the [s7cmd](https://github.com/nidor1998/s7cmd) repository** instead of
-> here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying code,
+> here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying
+> code,
 > so its behavior matches the standalone binaries and it can be used in their place. **Before opening an issue, please
 > read the Scope and Non-Goals sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each
-> project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))
+>
+project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))
 ** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue
 > to be handled as usual.
 
@@ -308,3 +311,9 @@ While this project began as a personal hobby, it has been built with careful att
 
 🔒 I consider this project “complete” and will maintain it only minimally going forward.
 However, I intend to keep the AWS SDK for Rust and other dependencies up to date monthly.
+
+**Issue and PR lifecycle**
+
+To keep the tracker focused, an issue or PR with no activity for 30 days is labeled `stale` and closed 7 days later
+unless a new comment (or, for PRs, a new commit) is added. Items labeled `pinned` or `security` are exempt; PRs are also
+exempt from `pinned`. Closed items can always be reopened.
