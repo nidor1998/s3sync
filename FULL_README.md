@@ -933,10 +933,14 @@ of
 the object.  
 Generally, you should use `--enable-versioning` when you transfer to a new bucket.
 
+s3sync tracks sync state using user-defined metadata. Other tools (such as aws s3 sync or rclone) do not write this metadata and therefore cannot recognize objects already synced by s3sync. As a result, synchronizing the same source and target with another tool may trigger unnecessary transfers, even when the objects are already in sync.
+
 With `--filter-mtime-before` and `--filter-mtime-after` options, you can get snapshots of the objects at a specific
 period.
 
 Intermediate delete markers are not synchronized. Latest version delete markers are synchronized.
+
+Note: in a versioning-enabled bucket, deleting an object means adding a delete marker. The object itself is never actually deleted, but the delete count still increases.
 
 user-defined metadata: `s3sync_origin_version_id`, `s3sync_origin_last_modified`
 
