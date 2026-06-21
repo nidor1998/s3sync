@@ -1314,13 +1314,20 @@ impl StorageTrait for S3Storage {
     async fn delete_object_annotation(
         &self,
         key: &str,
-        version_id: Option<String>,
+        target_version_id: Option<String>,
         annotation_name: &str,
     ) -> Result<DeleteObjectAnnotationOutput> {
         let target_key = generate_full_key(&self.prefix, key);
-        let version_id_str = version_id.clone().unwrap_or_default();
+        let version_id_str = target_version_id.clone().unwrap_or_default();
 
         if self.config.dry_run {
+            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_DELETED);
+            event_data.dry_run = true;
+            event_data.key = Some(key.to_string());
+            event_data.target_version_id = target_version_id.clone();
+            event_data.annotation_name = Some(annotation_name.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             info!(
                 key = key,
                 target_version_id = version_id_str,
@@ -1332,8 +1339,6 @@ impl StorageTrait for S3Storage {
             return Ok(DeleteObjectAnnotationOutput::builder().build());
         }
 
-        self.exec_rate_limit_objects_per_sec().await;
-
         let result = self
             .client
             .as_ref()
@@ -1341,12 +1346,19 @@ impl StorageTrait for S3Storage {
             .delete_object_annotation()
             .bucket(&self.bucket)
             .key(&target_key)
-            .set_version_id(version_id.clone())
+            .set_version_id(target_version_id.clone())
             .annotation_name(annotation_name)
             .set_request_payer(self.request_payer.clone())
             .send()
             .await
             .context("aws_sdk_s3::client::delete_object_tagging() failed.")?;
+
+        let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_DELETED);
+        event_data.dry_run = false;
+        event_data.key = Some(key.to_string());
+        event_data.target_version_id = target_version_id.clone();
+        event_data.annotation_name = Some(annotation_name.to_string());
+        self.config.event_manager.trigger_event(event_data).await;
 
         info!(
             key = key,
@@ -1362,15 +1374,33 @@ impl StorageTrait for S3Storage {
     async fn copy_object_annotation(
         &self,
         key: &str,
-        version_id: Option<String>,
+        target_version_id: Option<String>,
         annotation_name: &str,
         source_annotation: GetObjectAnnotationOutput,
     ) -> Result<PutObjectAnnotationOutput> {
-        let version_id_str = version_id.clone().unwrap_or_default();
+        let source_version_id_str = source_annotation
+            .object_version_id
+            .clone()
+            .unwrap_or_default();
+        let target_version_id_str = target_version_id.clone().unwrap_or_default();
+        let source_annotation_size = source_annotation.content_length.unwrap() as usize;
+
         if self.config.dry_run {
+            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_VERIFIED);
+            event_data.dry_run = true;
+            event_data.key = Some(key.to_string());
+            event_data.source_version_id = source_annotation.object_version_id.clone();
+            event_data.target_version_id = target_version_id.clone();
+            event_data.annotation_name = Some(annotation_name.to_string());
+            event_data.target_size = Some(source_annotation_size as u64);
+            event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+            event_data.target_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             info!(
                 key = key,
-                target_version_id = version_id_str,
+                source_version_id = source_version_id_str,
+                target_version_id = target_version_id_str,
                 annotation_name = annotation_name,
                 "[dry-run] sync object annotation completed.",
             );
@@ -1380,7 +1410,6 @@ impl StorageTrait for S3Storage {
 
         let checksum_algorithm = get_annotation_checksum_algorithm(&source_annotation);
 
-        let source_annotation_size = source_annotation.content_length.unwrap() as usize;
         let mut buffer = Vec::<u8>::with_capacity(source_annotation_size);
         buffer.resize_with(source_annotation_size, Default::default);
 
@@ -1407,7 +1436,7 @@ impl StorageTrait for S3Storage {
             .put_object_annotation()
             .bucket(&self.bucket)
             .key(generate_full_key(&self.prefix, key))
-            .set_version_id(version_id.clone())
+            .set_version_id(target_version_id.clone())
             .annotation_name(annotation_name)
             .annotation_payload(buffer_stream)
             .set_checksum_algorithm(checksum_algorithm)
@@ -1426,19 +1455,54 @@ impl StorageTrait for S3Storage {
             .await
             .context("aws_sdk_s3::client::put_object_annotation() failed.")?;
 
+        let mut event_data = EventData::new(EventType::SYNC_WRITE);
+        event_data.dry_run = false;
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_annotation.object_version_id.clone();
+        event_data.target_version_id = target_version_id.clone();
+        event_data.annotation_name = Some(annotation_name.to_string());
+        event_data.source_size = Some(source_annotation_size as u64);
+        event_data.target_size = Some(source_annotation_size as u64);
+        event_data.byte_written = Some(source_annotation_size as u64);
+        self.config.event_manager.trigger_event(event_data).await;
+
         if result.e_tag == source_annotation.e_tag {
+            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_VERIFIED);
+            event_data.dry_run = false;
+            event_data.key = Some(key.to_string());
+            event_data.source_version_id = source_annotation.object_version_id.clone();
+            event_data.target_version_id = target_version_id.clone();
+            event_data.annotation_name = Some(annotation_name.to_string());
+            event_data.target_size = Some(source_annotation_size as u64);
+            event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+            event_data.target_etag = result.e_tag.as_ref().map(|e| e.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             info!(
                 key = key,
-                target_version_id = version_id_str,
+                source_version_id = source_version_id_str,
+                target_version_id = target_version_id_str,
                 annotation_name = annotation_name,
                 annotation_size = source_annotation_size,
                 annotation_etag = result.e_tag().unwrap_or_default(),
                 "sync object annotation completed."
             );
         } else {
+            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_MISMATCH);
+            event_data.dry_run = false;
+            event_data.key = Some(key.to_string());
+            event_data.source_version_id = source_annotation.object_version_id.clone();
+            event_data.target_version_id = target_version_id.clone();
+            event_data.annotation_name = Some(annotation_name.to_string());
+            event_data.target_size = Some(source_annotation_size as u64);
+            event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+            event_data.target_etag = result.e_tag.as_ref().map(|e| e.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
             error!(
                 key = key,
-                target_version_id = version_id_str,
+                source_version_id = source_version_id_str,
+                target_version_id = target_version_id_str,
                 annotation_name = annotation_name,
                 annotation_size = source_annotation_size,
                 source_etag = source_annotation.e_tag.unwrap_or_default(),

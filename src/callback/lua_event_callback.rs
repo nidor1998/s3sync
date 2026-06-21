@@ -154,6 +154,9 @@ impl EventCallback for LuaEventCallback {
             )
             .unwrap();
         event_data_lua
+            .set("annotation_name", event_data.annotation_name.clone())
+            .unwrap();
+        event_data_lua
             .set("stats_deleted", event_data.stats_deleted)
             .unwrap();
         event_data_lua

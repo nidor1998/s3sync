@@ -202,13 +202,13 @@ pub trait StorageTrait: DynClone {
     async fn delete_object_annotation(
         &self,
         key: &str,
-        version_id: Option<String>,
+        target_version_id: Option<String>,
         annotation_name: &str,
     ) -> Result<DeleteObjectAnnotationOutput>;
     async fn copy_object_annotation(
         &self,
         key: &str,
-        version_id: Option<String>,
+        target_version_id: Option<String>,
         annotation_name: &str,
         source_annotation: GetObjectAnnotationOutput,
     ) -> Result<PutObjectAnnotationOutput>;
