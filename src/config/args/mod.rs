@@ -105,12 +105,12 @@ const DEFAULT_IF_MATCH: bool = false;
 const DEFAULT_IF_NONE_MATCH: bool = false;
 const DEFAULT_COPY_SOURCE_IF_MATCH: bool = false;
 const DEFAULT_IGNORE_GLACIER_WARNINGS: bool = false;
-const DEFAULT_DISABLE_SYNC_OBJECT_ANNOTATION: bool = false;
+const DEFAULT_ENABLE_SYNC_OBJECT_ANNOTATION: bool = false;
 const DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION_: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str = "with --enable-versioning/--sync-latest-tagging/--copy-source-if-match, both storage must be s3://\n";
-const LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "with --disable-sync-object-annotations/--disable-sync-object-annotations, both storage must be s3://\n";
+const LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "with --enable-sync-object-annotations/--sync-latest-object-annotations, both storage must be s3://\n";
 const VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--enable-versioning is not supported with express onezone storage class\n";
 const LOCAL_STORAGE_SPECIFIED_WITH_STORAGE_CLASS: &str =
@@ -596,14 +596,15 @@ If this option is enabled, the --remove-modified-filter and
 --head-each-target options are automatically enabled."#)]
     sync_latest_tagging: bool,
 
-    #[arg(long, env, default_value_t = DEFAULT_DISABLE_SYNC_OBJECT_ANNOTATION, help_heading = "Object Annotation",
-    long_help=r#"Do not copy object annotation."#)]
-    disable_sync_object_annotations: bool,
+    #[arg(long, env, default_value_t = DEFAULT_ENABLE_SYNC_OBJECT_ANNOTATION, help_heading = "Object Annotation",
+    long_help=r#"Copy object annotations from the source if necessary.
+If this option is enabled, extra API calls are required."#)]
+    enable_sync_object_annotations: bool,
 
-    #[arg(long, env, default_value_t = DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION_, conflicts_with_all = ["disable_sync_object_annotations"], help_heading = "Object Annotation",
+    #[arg(long, env, default_value_t = DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION_, conflicts_with_all = ["enable_sync_object_annotations"], help_heading = "Object Annotation",
     long_help=r#"Copy the latest object annotation from the source if necessary.
 If this option is enabled, the --remove-modified-filter and
---head-each-target options are automatically enabled."#)]
+--head-each-target options are automatically enabled. And extra API calls are required."#)]
     sync_latest_object_annotations: bool,
 
     #[arg(long, env, conflicts_with_all = ["delete", "head_each_target", "remove_modified_filter"], default_value_t = DEFAULT_ENABLE_VERSIONING, help_heading = "Versioning",
@@ -1017,7 +1018,7 @@ impl CLIArgs {
         self.check_if_match_conflict()?;
         self.check_if_none_match_conflict()?;
         self.check_copy_source_if_match_conflict()?;
-        self.check_disable_sync_object_annotation_conflict()?;
+        self.check_enable_sync_object_annotation_conflict()?;
         self.check_sync_latest_object_annotation_conflict()?;
 
         Ok(())
@@ -1640,8 +1641,8 @@ impl CLIArgs {
         Ok(())
     }
 
-    fn check_disable_sync_object_annotation_conflict(&self) -> Result<(), String> {
-        if !self.disable_sync_object_annotations {
+    fn check_enable_sync_object_annotation_conflict(&self) -> Result<(), String> {
+        if !self.enable_sync_object_annotations {
             return Ok(());
         }
 
@@ -1650,6 +1651,18 @@ impl CLIArgs {
 
         if !storage_path::is_both_storage_s3(&source, &target) {
             return Err(LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+            }
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
         }
 
         Ok(())
@@ -1665,6 +1678,18 @@ impl CLIArgs {
 
         if !storage_path::is_both_storage_s3(&source, &target) {
             return Err(LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+            }
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+            }
         }
 
         Ok(())
@@ -2208,7 +2233,7 @@ impl TryFrom<CLIArgs> for Config {
             copy_source_if_match: value.copy_source_if_match,
             max_delete: value.max_delete,
             ignore_glacier_warnings: value.ignore_glacier_warnings,
-            disable_sync_object_annotations: value.disable_sync_object_annotations,
+            enable_sync_object_annotations: value.enable_sync_object_annotations,
             sync_latest_object_annotations: value.sync_latest_object_annotations,
         })
     }

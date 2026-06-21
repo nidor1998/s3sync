@@ -456,7 +456,7 @@ impl ObjectSyncer {
                     return Ok(());
                 }
 
-                if self.base.config.disable_sync_object_annotations {
+                if !self.base.config.enable_sync_object_annotations {
                     return Ok(());
                 }
 
@@ -465,8 +465,9 @@ impl ObjectSyncer {
                     .unwrap()
                     .e_tag()
                     .map(|etag| etag.to_string());
-                // If single part upload is used, there is no need to sync object annotation(Done by CopyObject)
-                if !is_multipart_upload_e_tag(&target_etag) {
+
+                // If single part upload is used, there is no need to sync object annotation(Done by ServerSide Copy: CopyObject)
+                if self.base.config.server_side_copy && !is_multipart_upload_e_tag(&target_etag) {
                     return Ok(());
                 }
 

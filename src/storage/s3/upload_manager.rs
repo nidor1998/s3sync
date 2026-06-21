@@ -1562,10 +1562,21 @@ impl UploadManager {
         }
 
         let put_object_output = if self.config.server_side_copy {
-            let object_annotation_directive = if self.config.disable_sync_object_annotations {
-                AnnotationDirective::Exclude
+            let object_annotation_directive = if self.config.enable_sync_object_annotations {
+                Some(AnnotationDirective::Copy)
             } else {
-                AnnotationDirective::Copy
+                if self
+                    .config
+                    .target_client_config
+                    .as_ref()
+                    .unwrap()
+                    .endpoint_url
+                    .is_none()
+                {
+                    Some(AnnotationDirective::Exclude)
+                } else {
+                    None
+                }
             };
             let copy_source = self
                 .source
@@ -1601,7 +1612,7 @@ impl UploadManager {
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .set_copy_source_if_match(self.copy_source_if_match.clone())
                 .set_if_none_match(self.if_none_match.clone())
-                .annotation_directive(object_annotation_directive)
+                .set_annotation_directive(object_annotation_directive)
                 .send()
                 .await?;
             let _ = self
