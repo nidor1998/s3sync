@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
@@ -8,9 +8,11 @@ use aws_sdk_s3::operation::get_object::GetObjectOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::DateTime;
 use aws_sdk_s3::types::{
-    ChecksumAlgorithm, ChecksumType, DeleteMarkerEntry, Object, ObjectPart, ObjectVersion, Tag,
+    AnnotationEntry, ChecksumAlgorithm, ChecksumType, DeleteMarkerEntry, Object, ObjectPart,
+    ObjectVersion, Tag,
 };
 use sha1::{Digest, Sha1};
+use tracing::debug;
 use zeroize_derive::{Zeroize, ZeroizeOnDrop};
 
 pub mod async_callback;
@@ -66,6 +68,8 @@ pub struct ObjectEntry {
 pub type ObjectKeyMap = Arc<Mutex<HashMap<ObjectKey, ObjectEntry>>>;
 
 pub type ObjectVersions = Vec<S3syncObject>;
+
+pub type AnnotationMap = HashMap<String, AnnotationEntry>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PackedObjectVersions {
@@ -146,6 +150,14 @@ pub struct ObjectChecksum {
     pub final_checksum: Option<String>,
 }
 
+#[derive(Clone, Default)]
+pub struct AnnotationDifferences {
+    pub added: Vec<String>,
+    pub deleted: Vec<String>,
+    pub modified: Vec<String>,
+    pub unmodified: Vec<String>,
+}
+
 pub fn pack_object_versions(key: &str, object_versions: &ObjectVersions) -> S3syncObject {
     S3syncObject::PackedVersions(PackedObjectVersions {
         key: key.to_string(),
@@ -192,6 +204,78 @@ pub fn format_tags(tags: &[Tag]) -> String {
         })
         .collect::<Vec<String>>()
         .join("&")
+}
+
+pub fn generate_annotation_differences(
+    key: &str,
+    source_annotation_map: &AnnotationMap,
+    target_annotation_map: &AnnotationMap,
+) -> AnnotationDifferences {
+    let mut annotation_differences = AnnotationDifferences {
+        added: vec![],
+        deleted: vec![],
+        modified: vec![],
+        unmodified: vec![],
+    };
+
+    let source_annotation_name_set = source_annotation_map
+        .keys()
+        .cloned()
+        .collect::<HashSet<String>>();
+    let target_annotation_name_set = target_annotation_map
+        .keys()
+        .cloned()
+        .collect::<HashSet<String>>();
+
+    annotation_differences.added.extend(
+        source_annotation_name_set
+            .difference(&target_annotation_name_set)
+            .cloned()
+            .collect::<Vec<String>>(),
+    );
+    annotation_differences.deleted.extend(
+        target_annotation_name_set
+            .difference(&source_annotation_name_set)
+            .cloned()
+            .collect::<Vec<String>>(),
+    );
+    let common_annotation_name_set = source_annotation_name_set
+        .intersection(&target_annotation_name_set)
+        .cloned()
+        .collect::<HashSet<String>>();
+
+    for annotation_name in common_annotation_name_set {
+        let source_annotation = source_annotation_map.get(&annotation_name).unwrap();
+        let target_annotation = target_annotation_map.get(&annotation_name).unwrap();
+
+        if source_annotation.e_tag() == target_annotation.e_tag()
+            && source_annotation.size == target_annotation.size
+        {
+            debug!(
+                key = key,
+                annotation_name = annotation_name,
+                source_annotation.e_tag = source_annotation.e_tag(),
+                target_annotation.e_tag = target_annotation.e_tag(),
+                source_annotation.size = source_annotation.size,
+                target_annotation.size = target_annotation.size,
+                "object annotation unmodified"
+            );
+            annotation_differences.unmodified.push(annotation_name);
+        } else {
+            debug!(
+                key = key,
+                annotation_name = annotation_name,
+                source_annotation.e_tag = source_annotation.e_tag(),
+                target_annotation.e_tag = target_annotation.e_tag(),
+                source_annotation.size = source_annotation.size,
+                target_annotation.size = target_annotation.size,
+                "object annotation modified"
+            );
+            annotation_differences.modified.push(annotation_name);
+        }
+    }
+
+    annotation_differences
 }
 
 impl S3syncObject {

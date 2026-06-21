@@ -1,6 +1,7 @@
 use super::stage::Stage;
 use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
+use crate::storage::e_tag_verify::is_multipart_upload_e_tag;
 use crate::storage::{
     convert_head_to_get_object_output, e_tag_verify, get_range_from_content_range,
     parse_range_header_string,
@@ -17,8 +18,8 @@ use crate::types::{
     SYNC_REPORT_METADATA_TYPE, SYNC_REPORT_TAGGING_TYPE, SYNC_REPORT_USER_DEFINED_METADATA_KEY,
     SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH,
     SseCustomerKey, SyncStatsReport, TAGGING_SYNC_REPORT_LOG_NAME, error, format_metadata,
-    format_tags, get_additional_checksum, get_additional_checksum_with_head_object,
-    is_full_object_checksum, sha1_digest_from_key,
+    format_tags, generate_annotation_differences, get_additional_checksum,
+    get_additional_checksum_with_head_object, is_full_object_checksum, sha1_digest_from_key,
 };
 use anyhow::{Context, Error, Result, anyhow};
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadError;
@@ -38,9 +39,13 @@ use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Taggin
 use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::{Response, StatusCode};
 use aws_smithy_types::body::SdkBody;
+use futures_util::StreamExt;
+use futures_util::stream::FuturesUnordered;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
+use tokio::task;
+use tokio::task::JoinHandle;
 use tracing::{debug, error, info, trace, warn};
 
 const INCLUDE_CONTENT_TYPE_REGEX_FILTER_NAME: &str = "include_content_type_regex_filter";
@@ -374,7 +379,7 @@ impl ObjectSyncer {
     }
 
     async fn sync_object(&self, object: S3syncObject) -> Result<()> {
-        let key = object.key();
+        let key = object.key().to_string();
 
         if self.is_incompatible_object_with_local_storage(&object) {
             self.base
@@ -434,33 +439,87 @@ impl ObjectSyncer {
                 result.context("pipeline::syncer::sync_object() -> is_sync_required() failed.")?;
             trace!(
                 worker_index = self.worker_index,
-                key = key,
+                key = key.clone(),
                 target_etag = target_etag,
                 sync_required = sync_required,
                 "head_object_checker.is_sync_required() ended.",
             );
 
+            // Todo:  sync_latest_taggingの判定も含めて怪しいのでチェック
             // Even if the object is not required to sync, we need to check tagging and metadata if report_sync_status is enabled.
             if sync_required || self.base.config.report_sync_status {
-                return self.sync_or_delete_object(object, target_etag).await;
+                let put_object_output = self
+                    .sync_or_delete_object(object.clone(), target_etag)
+                    .await?;
+                // If the object is not required to sync, put_object_output is None.
+                // And no need to sync object annotation.
+                if put_object_output.is_none() {
+                    return Ok(());
+                }
+
+                if self.base.config.disable_sync_object_annotations {
+                    return Ok(());
+                }
+
+                let target_etag = put_object_output
+                    .as_ref()
+                    .unwrap()
+                    .e_tag()
+                    .map(|etag| etag.to_string());
+                // If single part upload is used, there is no need to sync object annotation(Done by CopyObject)
+                if !is_multipart_upload_e_tag(&target_etag) {
+                    return Ok(());
+                }
+
+                let source_version_id =
+                    object.version_id().map(|version_id| version_id.to_string());
+                let target_version_id = put_object_output
+                    .as_ref()
+                    .unwrap()
+                    .version_id()
+                    .map(|version_id| version_id.to_string());
+
+                self.sync_object_annotations(&key, source_version_id, target_version_id)
+                    .await?;
+
+                return Ok(());
             }
         }
 
-        if self.base.config.sync_latest_tagging && self.sync_tagging(key).await? {
+        let mut annotation_modified = false;
+        if self.base.config.sync_latest_object_annotations {
+            let source_version_id = object.version_id().map(|version_id| version_id.to_string());
+            annotation_modified = self
+                .sync_object_annotations(&key, source_version_id, None)
+                .await?;
+            if annotation_modified {
+                self.base
+                    .send_stats(SyncComplete {
+                        key: key.to_string(),
+                    })
+                    .await;
+            }
+        }
+
+        if self.base.config.sync_latest_tagging {
+            if self.sync_tagging(&key).await? {
+                self.base
+                    .send_stats(SyncComplete {
+                        key: key.to_string(),
+                    })
+                    .await;
+
+                return Ok(());
+            }
+        }
+
+        if !annotation_modified {
             self.base
-                .send_stats(SyncComplete {
+                .send_stats(SyncSkip {
                     key: key.to_string(),
                 })
                 .await;
-
-            return Ok(());
         }
-
-        self.base
-            .send_stats(SyncSkip {
-                key: key.to_string(),
-            })
-            .await;
 
         Ok(())
     }
@@ -504,7 +563,7 @@ impl ObjectSyncer {
         &self,
         object: S3syncObject,
         target_etag: Option<String>,
-    ) -> Result<()> {
+    ) -> Result<Option<PutObjectOutput>> {
         let key = object.key();
 
         let mut event_data = EventData::new(EventType::UNDEFINED);
@@ -533,7 +592,7 @@ impl ObjectSyncer {
                 .trigger_event(event_data.clone())
                 .await;
 
-            return Ok(());
+            return Ok(None);
         }
 
         event_data.event_type = EventType::SYNC_START;
@@ -614,9 +673,10 @@ impl ObjectSyncer {
                 "get_object() has been cancelled."
             );
 
-            return Ok(());
+            return Ok(None);
         }
 
+        let put_object_output: Option<PutObjectOutput>;
         let mut is_callback_cancelled = false;
         match get_object_output {
             Ok(get_object_output) => {
@@ -670,7 +730,7 @@ impl ObjectSyncer {
                         .trigger_event(event_data)
                         .await;
 
-                    return Ok(());
+                    return Ok(None);
                 }
                 if !self
                     .decide_sync_target_by_exclude_content_type_regex(
@@ -695,7 +755,7 @@ impl ObjectSyncer {
                         .trigger_event(event_data)
                         .await;
 
-                    return Ok(());
+                    return Ok(None);
                 }
 
                 // Metadata filtering
@@ -723,7 +783,7 @@ impl ObjectSyncer {
                         .trigger_event(event_data)
                         .await;
 
-                    return Ok(());
+                    return Ok(None);
                 }
                 if !self
                     .decide_sync_target_by_exclude_metadata_regex(key, get_object_output.metadata())
@@ -749,14 +809,14 @@ impl ObjectSyncer {
                         .trigger_event(event_data)
                         .await;
 
-                    return Ok(());
+                    return Ok(None);
                 }
 
                 if self.base.config.report_metadata_sync_status {
                     self.check_metadata_sync_status(key, &get_object_output)
                         .await?;
                     if !self.base.config.report_tagging_sync_status {
-                        return Ok(());
+                        return Ok(None);
                     }
                 }
 
@@ -799,7 +859,7 @@ impl ObjectSyncer {
                                 .trigger_event(event_data)
                                 .await;
 
-                            return Ok(());
+                            return Ok(None);
                         }
                         if !self
                             .decide_sync_target_by_exclude_tag_regex(key, source_tagging)
@@ -820,7 +880,7 @@ impl ObjectSyncer {
                                 .trigger_event(event_data)
                                 .await;
 
-                            return Ok(());
+                            return Ok(None);
                         }
                     }
                 } else {
@@ -832,7 +892,7 @@ impl ObjectSyncer {
                         .await?;
 
                     // If report_tagging_sync_status is enabled, we don't need to sync the object.
-                    return Ok(());
+                    return Ok(None);
                 }
 
                 let tagging = if self.base.config.disable_tagging {
@@ -899,7 +959,7 @@ impl ObjectSyncer {
                     None
                 };
 
-                let put_object_output = self
+                let put_object_output_result = self
                     .put_object(
                         key,
                         size as u64,
@@ -912,16 +972,23 @@ impl ObjectSyncer {
                         copy_source_if_match,
                     )
                     .await;
-                if let Err(e) = put_object_output {
-                    return self.handle_put_object_error(key, e).await;
+                if let Err(e) = put_object_output_result {
+                    let handle_result = self.handle_put_object_error(key, e).await;
+                    if let Err(e) = handle_result {
+                        return Err(e);
+                    } else {
+                        return Ok(None);
+                    }
                 }
 
                 // If preprocess_callback is registered and preprocess was cancelled, e_tag will be None.
                 if self.base.config.preprocess_manager.is_callback_registered()
-                    && put_object_output.as_ref().unwrap().e_tag.is_none()
+                    && put_object_output_result.as_ref().unwrap().e_tag.is_none()
                 {
                     is_callback_cancelled = true;
                 }
+
+                put_object_output = Some(put_object_output_result.unwrap());
             }
             Err(e) => {
                 return Err(e);
@@ -953,7 +1020,7 @@ impl ObjectSyncer {
         }
 
         self.base.send(object).await?;
-        Ok(())
+        Ok(put_object_output)
     }
 
     async fn sync_tagging(&self, key: &str) -> Result<bool> {
@@ -1003,6 +1070,137 @@ impl ObjectSyncer {
         }
 
         Ok(false)
+    }
+
+    async fn sync_object_annotations(
+        &self,
+        key: &str,
+        source_version_id: Option<String>,
+        target_version_id: Option<String>,
+    ) -> Result<bool> {
+        let source_annotation_map = self
+            .base
+            .source
+            .as_ref()
+            .unwrap()
+            .list_object_annotations(key, source_version_id.clone())
+            .await?;
+        let target_annotation_map = self
+            .base
+            .target
+            .as_ref()
+            .unwrap()
+            .list_object_annotations(key, target_version_id.clone())
+            .await?;
+
+        let annotation_differences =
+            generate_annotation_differences(key, &source_annotation_map, &target_annotation_map);
+        let need_modify = !(annotation_differences.added.is_empty()
+            && annotation_differences.modified.is_empty()
+            && annotation_differences.deleted.is_empty());
+        let mut annotations_to_be_copied = annotation_differences.added.clone();
+        annotations_to_be_copied.extend(annotation_differences.modified.clone());
+
+        debug!(
+            key = key,
+            source_version_id = source_version_id.as_deref().unwrap_or("None"),
+            target_version_id = target_version_id.as_deref().unwrap_or("None"),
+            "Annotations to be copied: {:?}",
+            annotations_to_be_copied
+        );
+
+        let mut annotation_copy_tasks = FuturesUnordered::new();
+        for added_annotation_name in annotations_to_be_copied {
+            let source = dyn_clone::clone_box(&**self.base.source.as_ref().unwrap());
+            let target = dyn_clone::clone_box(&**self.base.target.as_ref().unwrap());
+            let source_version_id = source_version_id.clone();
+            let target_version_id = target_version_id.clone();
+            let key = key.to_string();
+            let checksum_mode = self.base.config.additional_checksum_mode.clone();
+
+            let permit = self
+                .base
+                .config
+                .clone()
+                .target_client_config
+                .unwrap()
+                .parallel_upload_semaphore
+                .acquire_owned()
+                .await?;
+
+            let task: JoinHandle<Result<()>> = task::spawn(async move {
+                let _permit = permit; // Keep the semaphore permit in scope
+                let annotation_data = source
+                    .get_object_annotation(
+                        &key,
+                        source_version_id.clone(),
+                        &added_annotation_name,
+                        checksum_mode,
+                    )
+                    .await?;
+
+                target
+                    .copy_object_annotation(
+                        &key,
+                        target_version_id.clone(),
+                        &added_annotation_name,
+                        annotation_data,
+                    )
+                    .await?;
+
+                Ok(())
+            });
+            annotation_copy_tasks.push(task);
+        }
+
+        while let Some(result) = annotation_copy_tasks.next().await {
+            result??;
+        }
+
+        debug!(
+            key = key,
+            source_version_id = source_version_id.as_deref().unwrap_or("None"),
+            target_version_id = target_version_id.as_deref().unwrap_or("None"),
+            "Annotations to be copied: {:?}",
+            annotation_differences.deleted
+        );
+
+        let mut annotation_delete_tasks = FuturesUnordered::new();
+        for annotation_name_to_be_deleted in annotation_differences.deleted {
+            let target = dyn_clone::clone_box(&**self.base.target.as_ref().unwrap());
+            let target_version_id = target_version_id.clone();
+            let key = key.to_string();
+
+            let permit = self
+                .base
+                .config
+                .clone()
+                .target_client_config
+                .unwrap()
+                .parallel_upload_semaphore
+                .acquire_owned()
+                .await?;
+
+            let task: JoinHandle<Result<()>> = task::spawn(async move {
+                let _permit = permit; // Keep the semaphore permit in scope
+                target
+                    .delete_object_annotation(
+                        &key,
+                        target_version_id.clone(),
+                        &annotation_name_to_be_deleted,
+                    )
+                    .await?;
+                Ok(())
+            });
+
+            annotation_delete_tasks.push(task);
+        }
+
+        while let Some(result) = annotation_delete_tasks.next().await {
+            result??;
+        }
+
+        Ok(need_modify)
     }
 
     async fn handle_put_object_error(&self, key: &str, e: Error) -> Result<()> {

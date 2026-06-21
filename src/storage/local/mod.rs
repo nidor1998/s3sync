@@ -3,13 +3,16 @@ use async_channel::Sender;
 use async_trait::async_trait;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
+use aws_sdk_s3::operation::delete_object_annotation::DeleteObjectAnnotationOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::builders::GetObjectOutputBuilder;
 use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
+use aws_sdk_s3::operation::get_object_annotation::GetObjectAnnotationOutput;
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::builders::HeadObjectOutputBuilder;
 use aws_sdk_s3::operation::head_object::{HeadObjectError, HeadObjectOutput};
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
+use aws_sdk_s3::operation::put_object_annotation::PutObjectAnnotationOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::DateTime;
@@ -57,7 +60,7 @@ use crate::types::error::S3syncError;
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{
-    ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
+    AnnotationMap, ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
     is_full_object_checksum,
 };
 use crate::{Config, storage};
@@ -1417,6 +1420,14 @@ impl StorageTrait for LocalStorage {
         unimplemented!();
     }
 
+    async fn list_object_annotations(
+        &self,
+        _key: &str,
+        _version_id: Option<String>,
+    ) -> Result<AnnotationMap> {
+        unimplemented!();
+    }
+
     // skipcq: RS-R1000
     async fn get_object(
         &self,
@@ -1681,6 +1692,16 @@ impl StorageTrait for LocalStorage {
         unimplemented!();
     }
 
+    async fn get_object_annotation(
+        &self,
+        _key: &str,
+        _version_id: Option<String>,
+        _annotation_name: &str,
+        _checksum_mode: Option<ChecksumMode>,
+    ) -> Result<GetObjectAnnotationOutput> {
+        unimplemented!();
+    }
+
     async fn put_object(
         &self,
         key: &str,
@@ -1765,6 +1786,24 @@ impl StorageTrait for LocalStorage {
         unimplemented!();
     }
 
+    async fn delete_object_annotation(
+        &self,
+        _key: &str,
+        _version_id: Option<String>,
+        _annotation_name: &str,
+    ) -> Result<DeleteObjectAnnotationOutput> {
+        unimplemented!();
+    }
+
+    async fn copy_object_annotation(
+        &self,
+        _key: &str,
+        _version_id: Option<String>,
+        _annotation_name: &str,
+        _source_annotation: GetObjectAnnotationOutput,
+    ) -> Result<PutObjectAnnotationOutput> {
+        unimplemented!();
+    }
     #[cfg_attr(coverage_nightly, coverage(off))]
     async fn is_versioning_enabled(&self) -> Result<bool> {
         unimplemented!();

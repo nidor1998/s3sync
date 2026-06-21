@@ -103,6 +103,8 @@ pub struct Config {
     pub copy_source_if_match: bool,
     pub max_delete: Option<u64>,
     pub ignore_glacier_warnings: bool,
+    pub disable_sync_object_annotations: bool,
+    pub sync_latest_object_annotations: bool,
 }
 
 impl Config {
