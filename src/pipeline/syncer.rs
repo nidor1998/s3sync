@@ -445,7 +445,6 @@ impl ObjectSyncer {
                 "head_object_checker.is_sync_required() ended.",
             );
 
-            // Todo:  sync_latest_taggingの判定も含めて怪しいのでチェック
             // Even if the object is not required to sync, we need to check tagging and metadata if report_sync_status is enabled.
             if sync_required || self.base.config.report_sync_status {
                 let put_object_output = self
