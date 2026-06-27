@@ -9,8 +9,11 @@ use tokio::fs::File;
 use tracing::debug;
 
 pub fn check_directory_traversal(key: &str) -> bool {
-    let re = Regex::new(r"\.\.[/\\]").unwrap();
-    re.is_match(key)
+    key.split(['/', '\\']).any(segment_is_dot_traversal)
+}
+
+fn segment_is_dot_traversal(seg: &str) -> bool {
+    !seg.is_empty() && seg.trim_end_matches([' ', '.']).is_empty()
 }
 
 pub async fn get_file_size(path: &PathBuf) -> Result<u64> {
@@ -127,10 +130,24 @@ mod tests {
     fn check_directory_traversal_test() {
         init_dummy_tracing_subscriber();
 
+        assert!(check_directory_traversal(".."));
+        assert!(check_directory_traversal("."));
+        assert!(check_directory_traversal("..."));
+        assert!(check_directory_traversal("./."));
+        assert!(check_directory_traversal("../.."));
+        assert!(check_directory_traversal("/../.."));
+        assert!(check_directory_traversal("/./.."));
+        assert!(check_directory_traversal(".. \\xyz"));
+        assert!(check_directory_traversal(".. \\"));
+
         assert!(check_directory_traversal("../etc/passwd"));
+        assert!(check_directory_traversal("./etc/passwd"));
+        assert!(check_directory_traversal("./etc/ /passwd"));
+        assert!(check_directory_traversal(".../etc/passwd"));
         assert!(check_directory_traversal("dir1/dir2/../../etc/passwd"));
         assert!(check_directory_traversal("/xyz/data/../../etc/passwd"));
-
+        assert!(check_directory_traversal("dir1/dir2/././etc/passwd"));
+        assert!(check_directory_traversal("/xyz/data/././etc/passwd"));
         assert!(check_directory_traversal("..\\etc\\passwd"));
         assert!(check_directory_traversal("dir1\\dir2\\..\\..\\etc\\passwd"));
         assert!(check_directory_traversal(
@@ -139,17 +156,34 @@ mod tests {
         assert!(check_directory_traversal(
             "c:\\xyz\\data\\..\\..\\etc\\passwd"
         ));
+        assert!(check_directory_traversal("./etc/passwd"));
+        assert!(check_directory_traversal("/etc/./passwd"));
+        assert!(check_directory_traversal("\\xyz\\data\\.\\.\\etc\\passwd"));
+        assert!(check_directory_traversal(
+            "c:\\xyz\\data\\.\\.\\etc\\passwd"
+        ));
 
         assert!(!check_directory_traversal("/etc/passwd"));
         assert!(!check_directory_traversal("etc/passwd"));
         assert!(!check_directory_traversal("passwd"));
         assert!(!check_directory_traversal("/xyz/test.jpg"));
         assert!(!check_directory_traversal("/xyz/test..jpg"));
+        assert!(!check_directory_traversal("..jpg"));
+        assert!(!check_directory_traversal("xyz/..jpg"));
+        assert!(!check_directory_traversal("xyz/.jpg"));
+        assert!(!check_directory_traversal(".jpg"));
+        assert!(!check_directory_traversal("..jpg"));
+        assert!(!check_directory_traversal(".jpg."));
+        assert!(!check_directory_traversal("jpg."));
+        assert!(!check_directory_traversal("jpg ."));
 
         assert!(!check_directory_traversal("\\etc\\passwd"));
         assert!(!check_directory_traversal("etc\\passwd"));
         assert!(!check_directory_traversal("\\xyz\\test.jpg"));
         assert!(!check_directory_traversal("\\xyz\\test..jpg"));
+        assert!(!check_directory_traversal("\\xyz\\.jpg"));
+        assert!(!check_directory_traversal("\\xyz\\..jpg"));
+        assert!(!check_directory_traversal("\\xyz\\..jpg."));
     }
 
     #[tokio::test]
