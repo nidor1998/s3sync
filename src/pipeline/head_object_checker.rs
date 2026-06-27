@@ -5,7 +5,7 @@ use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
 use std::sync::{Arc, Mutex};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::pipeline::diff_detector::always_different_diff_detector::AlwaysDifferentDiffDetector;
 use crate::pipeline::diff_detector::checksum_diff_detector::ChecksumDiffDetector;
@@ -15,7 +15,10 @@ use crate::pipeline::diff_detector::standard_diff_detector::StandardDiffDetector
 
 use crate::Config;
 use crate::storage::Storage;
-use crate::types::SyncStatistics::SyncError;
+use crate::storage::local::fs_util::check_directory_traversal;
+use crate::types::SyncStatistics::{SyncError, SyncWarning};
+use crate::types::error::S3syncError;
+use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{
     S3syncObject, SYNC_REPORT_EXISTENCE_TYPE, SYNC_REPORT_RECORD_NAME, SYNC_STATUS_NOT_FOUND,
@@ -94,6 +97,47 @@ impl HeadObjectChecker {
         };
 
         let key = source_object.key();
+
+        if self.target.is_local_storage() {
+            if check_directory_traversal(source_object.key()) {
+                self.target
+                    .send_stats(SyncWarning {
+                        key: key.to_string(),
+                    })
+                    .await;
+                self.target.set_warning();
+
+                let message = "object references a current/parent directory.";
+                warn!(worker_index = self.worker_index, key = key, message);
+
+                let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                event_data.key = Some(key.to_string());
+                event_data.message = Some(message.to_string());
+                self.config.event_manager.trigger_event(event_data).await;
+
+                if self.config.report_sync_status {
+                    info!(
+                       name = SYNC_REPORT_RECORD_NAME,
+                       type = SYNC_REPORT_EXISTENCE_TYPE,
+                       status = SYNC_STATUS_NOT_FOUND,
+                       key = key,
+                       source_version_id = source_object.version_id().unwrap_or(""),
+                       source_e_tag = source_object.e_tag().unwrap_or(""),
+                       source_last_modified = source_object.last_modified().to_string(),
+                       source_size = source_object.size(),
+                    );
+
+                    self.sync_stats_report.lock().unwrap().increment_not_found();
+                }
+
+                if self.config.warn_as_error && !self.config.report_sync_status {
+                    return (Err(anyhow!(S3syncError::DirectoryTraversalError)), None);
+                }
+
+                return (Ok(false), None);
+            }
+        }
+
         let head_target_object_output = self
             .target
             .head_object(

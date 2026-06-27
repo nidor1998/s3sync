@@ -1030,7 +1030,7 @@ impl ObjectSyncer {
         }
 
         if is_directory_traversal_error(&e) {
-            let message = "object references a parent directory.";
+            let message = "object references a current/parent directory.";
             warn!(worker_index = self.worker_index, key = key, message);
 
             let mut event_data = EventData::new(EventType::SYNC_WARNING);
@@ -2365,8 +2365,12 @@ fn is_force_retryable_error(e: &Error) -> bool {
         return is_force_sdk_retryable_error(error);
     }
 
-    if e.downcast_ref::<S3syncError>().is_some() {
-        return true;
+    let s3sync_error = e.downcast_ref::<S3syncError>();
+    if s3sync_error.is_some() {
+        return matches!(
+            s3sync_error.unwrap(),
+            S3syncError::DownloadForceRetryableError
+        );
     }
 
     false

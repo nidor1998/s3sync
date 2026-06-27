@@ -2003,6 +2003,92 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_local_with_directory_traversal_error_case2() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+
+        {
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .put_object_with_metadata(&bucket, "./data2", "./test_data/e2e_test/case1/data1")
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", bucket);
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                &source_bucket_url,
+                &download_dir,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 1);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
+    }
+
+    #[tokio::test]
+    async fn s3_to_local_with_directory_traversal_error_case3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+        let download_dir = format!("./playground/download_{}/", Uuid::new_v4());
+
+        {
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .put_object_with_metadata(&bucket, ".", "./test_data/e2e_test/case1/data1")
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}", bucket);
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                &source_bucket_url,
+                &download_dir,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 1);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+        let _ = std::fs::remove_dir_all(&download_dir);
+    }
+
+    #[tokio::test]
     async fn s3_to_local_with_directory_traversal_warn_as_error() {
         TestHelper::init_dummy_tracing_subscriber();
 
