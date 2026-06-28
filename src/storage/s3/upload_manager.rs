@@ -1562,22 +1562,24 @@ impl UploadManager {
         }
 
         let put_object_output = if self.config.server_side_copy {
-            let object_annotation_directive = if self.config.enable_sync_object_annotations {
-                Some(AnnotationDirective::Copy)
-            } else {
-                if self
-                    .config
-                    .target_client_config
-                    .as_ref()
-                    .unwrap()
-                    .endpoint_url
-                    .is_none()
-                {
-                    Some(AnnotationDirective::Exclude)
+            let object_annotation_directive =
+                if self.config.enable_sync_object_annotations && !self.express_onezone_storage {
+                    Some(AnnotationDirective::Copy)
                 } else {
-                    None
-                }
-            };
+                    if self
+                        .config
+                        .target_client_config
+                        .as_ref()
+                        .unwrap()
+                        .endpoint_url
+                        .is_none()
+                        && !self.express_onezone_storage
+                    {
+                        Some(AnnotationDirective::Exclude)
+                    } else {
+                        None
+                    }
+                };
             let copy_source = self
                 .source
                 .generate_copy_source_key(self.source_key.as_ref(), source_version_id.clone());

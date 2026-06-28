@@ -1164,6 +1164,13 @@ impl ObjectSyncer {
         );
 
         let mut annotation_copy_tasks = FuturesUnordered::new();
+        let semaphore = self
+            .base
+            .config
+            .clone()
+            .target_client_config
+            .unwrap()
+            .parallel_upload_semaphore;
         for added_annotation_name in annotations_to_be_copied {
             let source = dyn_clone::clone_box(&**self.base.source.as_ref().unwrap());
             let target = dyn_clone::clone_box(&**self.base.target.as_ref().unwrap());
@@ -1171,16 +1178,7 @@ impl ObjectSyncer {
             let target_version_id = target_version_id.clone();
             let key = key.to_string();
             let checksum_mode = self.base.config.additional_checksum_mode.clone();
-
-            let permit = self
-                .base
-                .config
-                .clone()
-                .target_client_config
-                .unwrap()
-                .parallel_upload_semaphore
-                .acquire_owned()
-                .await?;
+            let permit = semaphore.clone().acquire_owned().await;
 
             let task: JoinHandle<Result<()>> = task::spawn(async move {
                 let _permit = permit; // Keep the semaphore permit in scope
