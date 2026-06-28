@@ -676,14 +676,14 @@ impl StorageTrait for S3Storage {
             }
 
             if list_object_annotations_result
-                .continuation_token()
+                .next_continuation_token
                 .is_none()
             {
                 break;
             }
 
             continuation_token = list_object_annotations_result
-                .continuation_token()
+                .next_continuation_token()
                 .map(|s| s.to_string());
         }
 
@@ -1351,7 +1351,7 @@ impl StorageTrait for S3Storage {
             .set_request_payer(self.request_payer.clone())
             .send()
             .await
-            .context("aws_sdk_s3::client::delete_object_tagging() failed.")?;
+            .context("aws_sdk_s3::client::delete_object_annotation() failed.")?;
 
         let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_DELETED);
         event_data.dry_run = false;
@@ -1412,6 +1412,11 @@ impl StorageTrait for S3Storage {
         }
 
         let checksum_algorithm = get_annotation_checksum_algorithm(&source_annotation);
+
+        // As of June 2026, there are reportedly no annotations larger than 1 MB.
+        if source_annotation_size > 8 * 1024 * 1024 {
+            return Err(anyhow!("invalid source annotation size"));
+        }
 
         let mut buffer = Vec::<u8>::with_capacity(source_annotation_size);
         buffer.resize_with(source_annotation_size, Default::default);
@@ -1582,20 +1587,21 @@ impl StorageTrait for S3Storage {
 fn get_annotation_checksum_algorithm(
     source_annotation: &GetObjectAnnotationOutput,
 ) -> Option<ChecksumAlgorithm> {
-    if source_annotation.checksum_crc32.is_some() {
+    // Multiple checksum algorithms are not supported.
+    if source_annotation.checksum_sha512.is_some() {
+        Some(ChecksumAlgorithm::Sha512)
+    } else if source_annotation.checksum_sha256.is_some() {
+        Some(ChecksumAlgorithm::Sha256)
+    } else if source_annotation.checksum_sha1.is_some() {
+        Some(ChecksumAlgorithm::Sha1)
+    } else if source_annotation.checksum_md5.is_some() {
+        Some(ChecksumAlgorithm::Md5)
+    } else if source_annotation.checksum_crc64_nvme.is_some() {
+        Some(ChecksumAlgorithm::Crc64Nvme)
+    } else if source_annotation.checksum_crc32.is_some() {
         Some(ChecksumAlgorithm::Crc32)
     } else if source_annotation.checksum_crc32_c.is_some() {
         Some(ChecksumAlgorithm::Crc32C)
-    } else if source_annotation.checksum_crc64_nvme.is_some() {
-        Some(ChecksumAlgorithm::Crc64Nvme)
-    } else if source_annotation.checksum_sha1.is_some() {
-        Some(ChecksumAlgorithm::Sha1)
-    } else if source_annotation.checksum_sha256.is_some() {
-        Some(ChecksumAlgorithm::Sha256)
-    } else if source_annotation.checksum_sha512.is_some() {
-        Some(ChecksumAlgorithm::Sha512)
-    } else if source_annotation.checksum_md5.is_some() {
-        Some(ChecksumAlgorithm::Md5)
     } else if source_annotation.checksum_xxhash64.is_some() {
         Some(ChecksumAlgorithm::Xxhash64)
     } else if source_annotation.checksum_xxhash3.is_some() {

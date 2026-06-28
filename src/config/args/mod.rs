@@ -107,13 +107,14 @@ const DEFAULT_IF_NONE_MATCH: bool = false;
 const DEFAULT_COPY_SOURCE_IF_MATCH: bool = false;
 const DEFAULT_IGNORE_GLACIER_WARNINGS: bool = false;
 const DEFAULT_ENABLE_SYNC_OBJECT_ANNOTATION: bool = false;
-const DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION_: bool = false;
+const DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str = "with --enable-versioning/--sync-latest-tagging/--copy-source-if-match, both storage must be s3://\n";
-const LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "with --enable-sync-object-annotations/--sync-latest-object-annotations, both storage must be s3://\n";
+const LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "with --enable-sync-object-annotations/--sync-latest-object-annotations/--check-report-annotations-sync-status, both storage must be s3://\n";
 const VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--enable-versioning is not supported with express onezone storage class\n";
+const EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "--enable-sync-object-annotations/--sync-latest-object-annotations/--check-report-annotations-sync-status are not supported with express onezone storage class\n";
 const LOCAL_STORAGE_SPECIFIED_WITH_STORAGE_CLASS: &str =
     "with --storage-class, target storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_SSE: &str =
@@ -209,12 +210,8 @@ const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_METADATA_SYNC_STATUS: &str =
     "with --report-metadata-sync-status, target storage must be s3://\n";
 const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS: &str =
     "with --report-tagging-sync-status, source storage must be s3://\n";
-const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS: &str =
-    "with --report-annotations-sync-status, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS: &str =
     "with --report-tagging-sync-status, target storage must be s3://\n";
-const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS: &str =
-    "with --report-annotations-sync-status, target storage must be s3://\n";
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
 #[allow(dead_code)]
@@ -606,7 +603,7 @@ If this option is enabled, the --remove-modified-filter and
 If this option is enabled, extra API calls are required."#)]
     enable_sync_object_annotations: bool,
 
-    #[arg(long, env, default_value_t = DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION_, conflicts_with_all = ["enable_versioning", "enable_sync_object_annotations"], help_heading = "Object Annotation",
+    #[arg(long, env, default_value_t = DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION, conflicts_with_all = ["enable_versioning", "enable_sync_object_annotations"], help_heading = "Object Annotation",
     long_help=r#"Copy the latest object annotation from the source if necessary.
 If this option is enabled, the --remove-modified-filter and
 --head-each-target options are automatically enabled. And extra API calls are required."#)]
@@ -1619,17 +1616,22 @@ impl CLIArgs {
         }
 
         let source = storage_path::parse_storage_path(&self.source);
-        if matches!(source, StoragePath::Local(_)) {
-            return Err(
-                SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS.to_string(),
-            );
+        let target = storage_path::parse_storage_path(&self.target);
+
+        if !storage_path::is_both_storage_s3(&source, &target) {
+            return Err(LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
         }
 
-        let target = storage_path::parse_storage_path(&self.target);
-        if matches!(target, StoragePath::Local(_)) {
-            return Err(
-                TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS.to_string(),
-            );
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+            }
+        }
+
+        if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
+            if is_express_onezone_storage(&bucket) {
+                return Err(EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+            }
         }
 
         Ok(())
@@ -1694,13 +1696,13 @@ impl CLIArgs {
 
         if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
             if is_express_onezone_storage(&bucket) {
-                return Err(LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+                return Err(EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
             }
         }
 
         if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
             if is_express_onezone_storage(&bucket) {
-                return Err(VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+                return Err(EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
             }
         }
 
@@ -1721,13 +1723,13 @@ impl CLIArgs {
 
         if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.source) {
             if is_express_onezone_storage(&bucket) {
-                return Err(LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
+                return Err(EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
             }
         }
 
         if let StoragePath::S3 { bucket, .. } = storage_path::parse_storage_path(&self.target) {
             if is_express_onezone_storage(&bucket) {
-                return Err(VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE.to_string());
+                return Err(EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION.to_string());
             }
         }
 

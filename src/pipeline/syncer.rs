@@ -507,11 +507,13 @@ impl ObjectSyncer {
 
         if self.base.config.sync_latest_tagging {
             if self.sync_tagging(&key).await? {
-                self.base
-                    .send_stats(SyncComplete {
-                        key: key.to_string(),
-                    })
-                    .await;
+                if !annotation_modified {
+                    self.base
+                        .send_stats(SyncComplete {
+                            key: key.to_string(),
+                        })
+                        .await;
+                }
 
                 return Ok(());
             }
@@ -850,7 +852,9 @@ impl ObjectSyncer {
                 if self.base.config.report_metadata_sync_status {
                     self.check_metadata_sync_status(key, &get_object_output)
                         .await?;
-                    if !self.base.config.report_tagging_sync_status {
+                    if !self.base.config.report_tagging_sync_status
+                        && !self.base.config.report_annotations_sync_status
+                    {
                         return Ok(None);
                     }
                 }
@@ -925,8 +929,15 @@ impl ObjectSyncer {
                 if self.base.config.report_tagging_sync_status {
                     self.check_tagging_sync_status(key, object.version_id(), source_tagging)
                         .await?;
+                    if !self.base.config.report_annotations_sync_status {
+                        return Ok(None);
+                    }
+                }
 
-                    // If report_tagging_sync_status is enabled, we don't need to sync the object.
+                if self.base.config.report_annotations_sync_status {
+                    self.check_annotations_sync_status(key).await?;
+
+                    // If report_annotations_sync_status is enabled, we don't need to sync the object.
                     return Ok(None);
                 }
 
@@ -951,13 +962,6 @@ impl ObjectSyncer {
                         None
                     }
                 };
-
-                if self.base.config.report_annotations_sync_status {
-                    self.check_annotations_sync_status(key).await?;
-
-                    // If report_annotations_sync_status is enabled, we don't need to sync the object.
-                    return Ok(None);
-                }
 
                 // If multipart upload is required, the first chunk does not contain the final checksum.
                 // So, we need to get the final checksum from the head object.
@@ -1015,12 +1019,8 @@ impl ObjectSyncer {
                     )
                     .await;
                 if let Err(e) = put_object_output_result {
-                    let handle_result = self.handle_put_object_error(key, e).await;
-                    if let Err(e) = handle_result {
-                        return Err(e);
-                    } else {
-                        return Ok(None);
-                    }
+                    self.handle_put_object_error(key, e).await?;
+                    return Ok(None);
                 }
 
                 // If preprocess_callback is registered and preprocess was cancelled, e_tag will be None.
@@ -1137,8 +1137,8 @@ impl ObjectSyncer {
         let target_annotation_map = match target_annotation_map_result {
             Ok(target_annotation_map) => target_annotation_map,
             Err(e) => {
-                // This is a report mode, so we do not return an error if the target object is not found.
                 if is_not_found_error(&e) && self.base.config.dry_run {
+                    // This is a dry-run mode, so we do not return an error if the target object is not found.
                     // All annotations should be copied
                     AnnotationMap::new()
                 } else {
@@ -1215,7 +1215,7 @@ impl ObjectSyncer {
             key = key,
             source_version_id = source_version_id.as_deref().unwrap_or("None"),
             target_version_id = target_version_id.as_deref().unwrap_or("None"),
-            "Annotations to be copied: {:?}",
+            "Annotations to be deleted: {:?}",
             annotation_differences.deleted
         );
 
@@ -1324,7 +1324,8 @@ impl ObjectSyncer {
             self.sync_stats_report
                 .lock()
                 .unwrap()
-                .increment_annotation_mismatch()
+                .increment_annotation_mismatch();
+            self.base.set_warning();
         }
 
         for annotation_name in annotation_differences.deleted {
@@ -1346,6 +1347,7 @@ impl ObjectSyncer {
                 .lock()
                 .unwrap()
                 .increment_annotation_mismatch();
+            self.base.set_warning();
         }
 
         for annotation_name in annotation_differences.modified {
@@ -1367,6 +1369,7 @@ impl ObjectSyncer {
                 .lock()
                 .unwrap()
                 .increment_annotation_mismatch();
+            self.base.set_warning();
         }
 
         Ok(())
