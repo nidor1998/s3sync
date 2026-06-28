@@ -1,7 +1,7 @@
 use super::stage::Stage;
 use crate::pipeline::head_object_checker::HeadObjectChecker;
 use crate::pipeline::versioning_info_collector::VersioningInfoCollector;
-use crate::storage::e_tag_verify::is_multipart_upload_e_tag;
+use crate::storage::e_tag_verify::{is_multipart_upload_e_tag, normalize_e_tag};
 use crate::storage::{
     convert_head_to_get_object_output, e_tag_verify, get_range_from_content_range,
     parse_range_header_string,
@@ -10,15 +10,17 @@ use crate::types::SyncStatistics::{SyncComplete, SyncDelete, SyncError, SyncSkip
 use crate::types::error::S3syncError;
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::{
-    METADATA_SYNC_REPORT_LOG_NAME, MINIMUM_CHUNKSIZE, ObjectChecksum, ObjectKey, ObjectKeyMap,
+    ANNOTATION_SYNC_REPORT_LOG_NAME, AnnotationMap, METADATA_SYNC_REPORT_LOG_NAME,
+    MINIMUM_CHUNKSIZE, ObjectChecksum, ObjectKey, ObjectKeyMap,
     S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY, S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY, S3syncObject,
-    SYNC_REPORT_CACHE_CONTROL_METADATA_KEY, SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY,
-    SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY, SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY,
-    SYNC_REPORT_CONTENT_TYPE_METADATA_KEY, SYNC_REPORT_EXPIRES_METADATA_KEY,
-    SYNC_REPORT_METADATA_TYPE, SYNC_REPORT_TAGGING_TYPE, SYNC_REPORT_USER_DEFINED_METADATA_KEY,
-    SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY, SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH,
-    SseCustomerKey, SyncStatsReport, TAGGING_SYNC_REPORT_LOG_NAME, error, format_metadata,
-    format_tags, generate_annotation_differences, get_additional_checksum,
+    SYNC_REPORT_ANNOTATION_TYPE, SYNC_REPORT_CACHE_CONTROL_METADATA_KEY,
+    SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY, SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY,
+    SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY, SYNC_REPORT_CONTENT_TYPE_METADATA_KEY,
+    SYNC_REPORT_EXPIRES_METADATA_KEY, SYNC_REPORT_METADATA_TYPE, SYNC_REPORT_TAGGING_TYPE,
+    SYNC_REPORT_USER_DEFINED_METADATA_KEY, SYNC_REPORT_WEBSITE_REDIRECT_METADATA_KEY,
+    SYNC_STATUS_MATCHES, SYNC_STATUS_MISMATCH, SseCustomerKey, SyncStatsReport,
+    TAGGING_SYNC_REPORT_LOG_NAME, error, format_metadata, format_tags,
+    generate_annotation_differences, get_additional_checksum,
     get_additional_checksum_with_head_object, is_full_object_checksum, sha1_digest_from_key,
 };
 use anyhow::{Context, Error, Result, anyhow};
@@ -30,6 +32,7 @@ use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
 use aws_sdk_s3::operation::get_object_attributes::GetObjectAttributesError;
 use aws_sdk_s3::operation::get_object_tagging::{GetObjectTaggingError, GetObjectTaggingOutput};
 use aws_sdk_s3::operation::head_object::HeadObjectError;
+use aws_sdk_s3::operation::list_object_annotations::ListObjectAnnotationsError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
@@ -429,6 +432,7 @@ impl ObjectSyncer {
         if self.base.config.report_sync_status
             && !self.base.config.report_metadata_sync_status
             && !self.base.config.report_tagging_sync_status
+            && !self.base.config.report_annotations_sync_status
         {
             let (result, _) = head_object_checker.is_sync_required(&object).await;
             result?;
@@ -548,7 +552,38 @@ impl ObjectSyncer {
 
         for object in objects_to_sync {
             if self.base.config.enable_versioning {
-                self.sync_or_delete_object(object, None).await?;
+                let put_object_output = self.sync_or_delete_object(object.clone(), None).await?;
+                // If the object is not required to sync, put_object_output is None.
+                // And no need to sync object annotation.
+                if put_object_output.is_none() {
+                    continue;
+                }
+
+                if !self.base.config.enable_sync_object_annotations {
+                    continue;
+                }
+
+                let target_etag = put_object_output
+                    .as_ref()
+                    .unwrap()
+                    .e_tag()
+                    .map(|etag| etag.to_string());
+
+                // If single part upload is used, there is no need to sync object annotation(Done by ServerSide Copy: CopyObject)
+                if self.base.config.server_side_copy && !is_multipart_upload_e_tag(&target_etag) {
+                    continue;
+                }
+
+                let source_version_id =
+                    object.version_id().map(|version_id| version_id.to_string());
+                let target_version_id = put_object_output
+                    .as_ref()
+                    .unwrap()
+                    .version_id()
+                    .map(|version_id| version_id.to_string());
+
+                self.sync_object_annotations(object.key(), source_version_id, target_version_id)
+                    .await?;
             } else {
                 // If point-in-time is enabled, head_object_checker may be used.
                 self.sync_object(object).await?;
@@ -917,6 +952,13 @@ impl ObjectSyncer {
                     }
                 };
 
+                if self.base.config.report_annotations_sync_status {
+                    self.check_annotations_sync_status(key).await?;
+
+                    // If report_annotations_sync_status is enabled, we don't need to sync the object.
+                    return Ok(None);
+                }
+
                 // If multipart upload is required, the first chunk does not contain the final checksum.
                 // So, we need to get the final checksum from the head object.
                 let final_checksum = self
@@ -1085,13 +1127,25 @@ impl ObjectSyncer {
             .unwrap()
             .list_object_annotations(key, source_version_id.clone())
             .await?;
-        let target_annotation_map = self
+        let target_annotation_map_result = self
             .base
             .target
             .as_ref()
             .unwrap()
             .list_object_annotations(key, target_version_id.clone())
-            .await?;
+            .await;
+        let target_annotation_map = match target_annotation_map_result {
+            Ok(target_annotation_map) => target_annotation_map,
+            Err(e) => {
+                // This is a report mode, so we do not return an error if the target object is not found.
+                if is_not_found_error(&e) && self.base.config.dry_run {
+                    // All annotations should be copied
+                    AnnotationMap::new()
+                } else {
+                    return Err(e);
+                }
+            }
+        };
 
         let annotation_differences =
             generate_annotation_differences(key, &source_annotation_map, &target_annotation_map);
@@ -1201,6 +1255,121 @@ impl ObjectSyncer {
         }
 
         Ok(need_modify)
+    }
+
+    async fn check_annotations_sync_status(&self, key: &str) -> Result<()> {
+        let source_annotation_map = self
+            .base
+            .source
+            .as_ref()
+            .unwrap()
+            .list_object_annotations(key, None)
+            .await?;
+
+        let target_annotation_map_result = self
+            .base
+            .target
+            .as_ref()
+            .unwrap()
+            .list_object_annotations(key, None)
+            .await;
+        if let Err(e) = target_annotation_map_result {
+            // This is a report mode, so we do not return an error if the target object is not found.
+            if is_not_found_error(&e) {
+                return Ok(());
+            }
+            return Err(e);
+        }
+        let target_annotation_map = target_annotation_map_result.unwrap();
+
+        let annotation_differences =
+            generate_annotation_differences(key, &source_annotation_map, &target_annotation_map);
+
+        for annotation_name in annotation_differences.unmodified {
+            info!(
+                name = ANNOTATION_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_ANNOTATION_TYPE,
+                status = SYNC_STATUS_MATCHES,
+                key = key,
+                source_version_id = "",
+                target_version_id = "",
+                source_annotation_name = annotation_name,
+                target_annotation_name = annotation_name,
+                source_annotation_etag = normalize_e_tag(&source_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
+                target_annotation_etag = normalize_e_tag(&target_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
+                source_annotation_size = source_annotation_map.get(&annotation_name).unwrap().size,
+                target_annotation_size = target_annotation_map.get(&annotation_name).unwrap().size
+            );
+            self.sync_stats_report
+                .lock()
+                .unwrap()
+                .increment_annotation_matches();
+        }
+
+        for annotation_name in annotation_differences.added {
+            info!(
+                name = ANNOTATION_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_ANNOTATION_TYPE,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = "",
+                target_version_id = "",
+                source_annotation_name = annotation_name,
+                target_annotation_name = "",
+                source_annotation_etag = normalize_e_tag(&source_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
+                target_annotation_etag = "",
+                source_annotation_size = source_annotation_map.get(&annotation_name).unwrap().size,
+                target_annotation_size = ""
+            );
+            self.sync_stats_report
+                .lock()
+                .unwrap()
+                .increment_annotation_mismatch()
+        }
+
+        for annotation_name in annotation_differences.deleted {
+            info!(
+                name = ANNOTATION_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_ANNOTATION_TYPE,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = "",
+                target_version_id = "",
+                source_annotation_name = "",
+                target_annotation_name = annotation_name,
+                source_annotation_etag = "",
+                target_annotation_etag = normalize_e_tag(&target_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
+                source_annotation_size = "",
+                target_annotation_size = target_annotation_map.get(&annotation_name).unwrap().size
+            );
+            self.sync_stats_report
+                .lock()
+                .unwrap()
+                .increment_annotation_mismatch();
+        }
+
+        for annotation_name in annotation_differences.modified {
+            info!(
+                name = ANNOTATION_SYNC_REPORT_LOG_NAME,
+                type = SYNC_REPORT_ANNOTATION_TYPE,
+                status = SYNC_STATUS_MISMATCH,
+                key = key,
+                source_version_id = "",
+                target_version_id = "",
+                source_annotation_name = annotation_name,
+                target_annotation_name = annotation_name,
+                source_annotation_etag = normalize_e_tag(&source_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
+                target_annotation_etag = normalize_e_tag(&target_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
+                source_annotation_size = source_annotation_map.get(&annotation_name).unwrap().size,
+                target_annotation_size = target_annotation_map.get(&annotation_name).unwrap().size
+            );
+            self.sync_stats_report
+                .lock()
+                .unwrap()
+                .increment_annotation_mismatch();
+        }
+
+        Ok(())
     }
 
     async fn handle_put_object_error(&self, key: &str, e: Error) -> Result<()> {
@@ -2603,7 +2772,13 @@ fn is_not_found_error(result: &Error) -> bool {
             return true;
         }
     }
-
+    if let Some(SdkError::ServiceError(e)) =
+        result.downcast_ref::<SdkError<ListObjectAnnotationsError, Response<SdkBody>>>()
+    {
+        if e.raw().status().as_u16() == 404 {
+            return true;
+        }
+    }
     false
 }
 

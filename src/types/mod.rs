@@ -33,6 +33,7 @@ pub const SYNC_REPORT_ETAG_TYPE: &str = "ETAG";
 pub const SYNC_REPORT_CHECKSUM_TYPE: &str = "CHECKSUM";
 pub const SYNC_REPORT_METADATA_TYPE: &str = "METADATA";
 pub const SYNC_REPORT_TAGGING_TYPE: &str = "TAGGING";
+pub const SYNC_REPORT_ANNOTATION_TYPE: &str = "ANNOTATION";
 pub const SYNC_REPORT_CONTENT_DISPOSITION_METADATA_KEY: &str = "Content-Disposition";
 pub const SYNC_REPORT_CONTENT_ENCODING_METADATA_KEY: &str = "Content-Encoding";
 pub const SYNC_REPORT_CONTENT_LANGUAGE_METADATA_KEY: &str = "Content-Language";
@@ -44,6 +45,7 @@ pub const SYNC_REPORT_USER_DEFINED_METADATA_KEY: &str = "x-amz-meta-";
 
 pub const METADATA_SYNC_REPORT_LOG_NAME: &str = "METADATA_SYNC_STATUS";
 pub const TAGGING_SYNC_REPORT_LOG_NAME: &str = "TAGGING_SYNC_STATUS";
+pub const ANNOTATION_SYNC_REPORT_LOG_NAME: &str = "ANNOTATION_SYNC_STATUS";
 pub const SYNC_STATUS_MATCHES: &str = "MATCHES";
 pub const SYNC_STATUS_MISMATCH: &str = "MISMATCH";
 pub const SYNC_STATUS_NOT_FOUND: &str = "NOT_FOUND";
@@ -91,6 +93,8 @@ pub struct SyncStatsReport {
     pub metadata_mismatch: usize,
     pub tagging_matches: usize,
     pub tagging_mismatch: usize,
+    pub annotation_matches: usize,
+    pub annotation_mismatch: usize,
 }
 
 impl SyncStatsReport {
@@ -129,6 +133,12 @@ impl SyncStatsReport {
     }
     pub fn increment_tagging_mismatch(&mut self) {
         self.tagging_mismatch += 1;
+    }
+    pub fn increment_annotation_matches(&mut self) {
+        self.annotation_matches += 1;
+    }
+    pub fn increment_annotation_mismatch(&mut self) {
+        self.annotation_mismatch += 1;
     }
 }
 

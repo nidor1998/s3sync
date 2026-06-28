@@ -89,6 +89,7 @@ pub struct Config {
     pub report_sync_status: bool,
     pub report_metadata_sync_status: bool,
     pub report_tagging_sync_status: bool,
+    pub report_annotations_sync_status: bool,
     pub event_manager: EventManager,
     pub preprocess_manager: PreprocessManager,
     pub preprocess_callback_lua_script: Option<String>,

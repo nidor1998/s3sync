@@ -1386,6 +1386,9 @@ impl StorageTrait for S3Storage {
         let source_annotation_size = source_annotation.content_length.unwrap() as usize;
 
         if self.config.dry_run {
+            self.send_stats(SyncBytes(source_annotation_size as u64))
+                .await;
+
             let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_VERIFIED);
             event_data.dry_run = true;
             event_data.key = Some(key.to_string());

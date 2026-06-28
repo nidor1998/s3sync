@@ -92,6 +92,7 @@ const DEFAULT_REQUEST_PAYER: bool = false;
 const DEFAULT_REPORT_SYNC_STATUS: bool = false;
 const DEFAULT_REPORT_METADATA_SYNC_STATUS: bool = false;
 const DEFAULT_REPORT_TAGGING_SYNC_STATUS: bool = false;
+const DEFAULT_REPORT_ANNOTATIONS_SYNC_STATUS: bool = false;
 #[allow(dead_code)]
 const DEFAULT_ALLOW_LUA_OS_LIBRARY: bool = false;
 #[allow(dead_code)]
@@ -208,8 +209,12 @@ const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_METADATA_SYNC_STATUS: &str =
     "with --report-metadata-sync-status, target storage must be s3://\n";
 const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS: &str =
     "with --report-tagging-sync-status, source storage must be s3://\n";
+const SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS: &str =
+    "with --report-annotations-sync-status, source storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS: &str =
     "with --report-tagging-sync-status, target storage must be s3://\n";
+const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS: &str =
+    "with --report-annotations-sync-status, target storage must be s3://\n";
 const NO_SOURCE_CREDENTIAL_REQUIRED: &str = "no source credential required\n";
 const NO_TARGET_CREDENTIAL_REQUIRED: &str = "no target credential required\n";
 #[allow(dead_code)]
@@ -601,7 +606,7 @@ If this option is enabled, the --remove-modified-filter and
 If this option is enabled, extra API calls are required."#)]
     enable_sync_object_annotations: bool,
 
-    #[arg(long, env, default_value_t = DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION_, conflicts_with_all = ["enable_sync_object_annotations"], help_heading = "Object Annotation",
+    #[arg(long, env, default_value_t = DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION_, conflicts_with_all = ["enable_versioning", "enable_sync_object_annotations"], help_heading = "Object Annotation",
     long_help=r#"Copy the latest object annotation from the source if necessary.
 If this option is enabled, the --remove-modified-filter and
 --head-each-target options are automatically enabled. And extra API calls are required."#)]
@@ -706,6 +711,17 @@ Note: s3sync generated user-defined metadata(s3sync_origin_version_id/s3sync_ori
 It must be used with --report-sync-status."#
     )]
     report_tagging_sync_status: bool,
+
+    #[arg(
+        long,
+        env,
+        default_value_t = DEFAULT_REPORT_ANNOTATIONS_SYNC_STATUS,
+        requires = "report_sync_status",
+        help_heading = "Reporting",
+        long_help = r#"Report annotations sync status to the target storage.
+It must be used with --report-sync-status."#
+    )]
+    report_annotations_sync_status: bool,
 
     /// Show trace as json format.
     #[arg(long, env, default_value_t = DEFAULT_JSON_TRACING, help_heading = "Tracing/Logging")]
@@ -1015,6 +1031,7 @@ impl CLIArgs {
         self.check_point_in_time_conflict()?;
         self.check_report_metadata_sync_status_conflict()?;
         self.check_report_tagging_sync_status_conflict()?;
+        self.check_report_annotations_sync_status_conflict()?;
         self.check_if_match_conflict()?;
         self.check_if_none_match_conflict()?;
         self.check_copy_source_if_match_conflict()?;
@@ -1591,6 +1608,28 @@ impl CLIArgs {
         let target = storage_path::parse_storage_path(&self.target);
         if matches!(target, StoragePath::Local(_)) {
             return Err(TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_TAGGING_SYNC_STATUS.to_string());
+        }
+
+        Ok(())
+    }
+
+    fn check_report_annotations_sync_status_conflict(&self) -> Result<(), String> {
+        if !self.report_annotations_sync_status {
+            return Ok(());
+        }
+
+        let source = storage_path::parse_storage_path(&self.source);
+        if matches!(source, StoragePath::Local(_)) {
+            return Err(
+                SOURCE_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS.to_string(),
+            );
+        }
+
+        let target = storage_path::parse_storage_path(&self.target);
+        if matches!(target, StoragePath::Local(_)) {
+            return Err(
+                TARGET_LOCAL_STORAGE_SPECIFIED_WITH_REPORT_ANNOTATIONS_SYNC_STATUS.to_string(),
+            );
         }
 
         Ok(())
@@ -2219,6 +2258,7 @@ impl TryFrom<CLIArgs> for Config {
             report_sync_status: value.report_sync_status,
             report_metadata_sync_status: value.report_metadata_sync_status,
             report_tagging_sync_status: value.report_tagging_sync_status,
+            report_annotations_sync_status: value.report_annotations_sync_status,
             event_manager,
             preprocess_manager,
             preprocess_callback_lua_script,
