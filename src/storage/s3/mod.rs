@@ -1415,6 +1415,7 @@ impl StorageTrait for S3Storage {
 
         // As of June 2026, there are reportedly no annotations larger than 1 MB.
         if source_annotation_size > 8 * 1024 * 1024 {
+            // This is the safeguard against the case where the size is too large.
             return Err(anyhow!("invalid source annotation size"));
         }
 
