@@ -9,9 +9,8 @@ use aws_sdk_s3::operation::put_object::builders::PutObjectOutputBuilder;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
-    AnnotationDirective, ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart,
-    MetadataDirective, ObjectPart, RequestPayer, ServerSideEncryption, StorageClass,
-    TaggingDirective,
+    ChecksumAlgorithm, ChecksumType, CompletedMultipartUpload, CompletedPart, MetadataDirective,
+    ObjectPart, RequestPayer, ServerSideEncryption, StorageClass, TaggingDirective,
 };
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{Engine as _, engine::general_purpose};
@@ -1562,24 +1561,6 @@ impl UploadManager {
         }
 
         let put_object_output = if self.config.server_side_copy {
-            let object_annotation_directive =
-                if self.config.enable_sync_object_annotations && !self.express_onezone_storage {
-                    Some(AnnotationDirective::Copy)
-                } else {
-                    if self
-                        .config
-                        .target_client_config
-                        .as_ref()
-                        .unwrap()
-                        .endpoint_url
-                        .is_none()
-                        && !self.express_onezone_storage
-                    {
-                        Some(AnnotationDirective::Exclude)
-                    } else {
-                        None
-                    }
-                };
             let copy_source = self
                 .source
                 .generate_copy_source_key(self.source_key.as_ref(), source_version_id.clone());
@@ -1614,7 +1595,6 @@ impl UploadManager {
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .set_copy_source_if_match(self.copy_source_if_match.clone())
                 .set_if_none_match(self.if_none_match.clone())
-                .set_annotation_directive(object_annotation_directive)
                 .send()
                 .await?;
             let _ = self

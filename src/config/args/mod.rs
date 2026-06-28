@@ -111,10 +111,10 @@ const DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
 const LOCAL_STORAGE_SPECIFIED: &str = "with --enable-versioning/--sync-latest-tagging/--copy-source-if-match, both storage must be s3://\n";
-const LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "with --enable-sync-object-annotations/--sync-latest-object-annotations/--check-report-annotations-sync-status, both storage must be s3://\n";
+const LOCAL_STORAGE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "with --enable-sync-object-annotations/--sync-latest-object-annotations/--report-annotations-sync-status, both storage must be s3://\n";
 const VERSIONING_NOT_SUPPORTED_WITH_EXPRESS_ONEZONE: &str =
     "--enable-versioning is not supported with express onezone storage class\n";
-const EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "--enable-sync-object-annotations/--sync-latest-object-annotations/--check-report-annotations-sync-status are not supported with express onezone storage class\n";
+const EXPRESS_ONEZONE_SPECIFIED_FOR_OBJECT_ANNOTATION: &str = "--enable-sync-object-annotations/--sync-latest-object-annotations/--report-annotations-sync-status are not supported with express onezone storage class\n";
 const LOCAL_STORAGE_SPECIFIED_WITH_STORAGE_CLASS: &str =
     "with --storage-class, target storage must be s3://\n";
 const TARGET_LOCAL_STORAGE_SPECIFIED_WITH_SSE: &str =
