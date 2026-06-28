@@ -449,43 +449,10 @@ impl ObjectSyncer {
                 "head_object_checker.is_sync_required() ended.",
             );
 
-            // Even if the object is not required to sync, we need to check tagging and metadata if report_sync_status is enabled.
+            // Even if the object is not required to sync, we need to check tagging and metadata and annotation if report_sync_status is enabled.
             if sync_required || self.base.config.report_sync_status {
-                let put_object_output = self
-                    .sync_or_delete_object(object.clone(), target_etag)
+                self.sync_or_delete_object(object.clone(), target_etag)
                     .await?;
-                // If the object is not required to sync, put_object_output is None.
-                // And no need to sync object annotation.
-                if put_object_output.is_none() {
-                    return Ok(());
-                }
-
-                if !self.base.config.enable_sync_object_annotations {
-                    return Ok(());
-                }
-
-                let target_etag = put_object_output
-                    .as_ref()
-                    .unwrap()
-                    .e_tag()
-                    .map(|etag| etag.to_string());
-
-                // If single part upload is used, there is no need to sync object annotation(Done by ServerSide Copy: CopyObject)
-                if self.base.config.server_side_copy && !is_multipart_upload_e_tag(&target_etag) {
-                    return Ok(());
-                }
-
-                let source_version_id =
-                    object.version_id().map(|version_id| version_id.to_string());
-                let target_version_id = put_object_output
-                    .as_ref()
-                    .unwrap()
-                    .version_id()
-                    .map(|version_id| version_id.to_string());
-
-                self.sync_object_annotations(&key, source_version_id, target_version_id)
-                    .await?;
-
                 return Ok(());
             }
         }
@@ -554,38 +521,7 @@ impl ObjectSyncer {
 
         for object in objects_to_sync {
             if self.base.config.enable_versioning {
-                let put_object_output = self.sync_or_delete_object(object.clone(), None).await?;
-                // If the object is not required to sync, put_object_output is None.
-                // And no need to sync object annotation.
-                if put_object_output.is_none() {
-                    continue;
-                }
-
-                if !self.base.config.enable_sync_object_annotations {
-                    continue;
-                }
-
-                let target_etag = put_object_output
-                    .as_ref()
-                    .unwrap()
-                    .e_tag()
-                    .map(|etag| etag.to_string());
-
-                // If single part upload is used, there is no need to sync object annotation(Done by ServerSide Copy: CopyObject)
-                if self.base.config.server_side_copy && !is_multipart_upload_e_tag(&target_etag) {
-                    continue;
-                }
-
-                let source_version_id =
-                    object.version_id().map(|version_id| version_id.to_string());
-                let target_version_id = put_object_output
-                    .as_ref()
-                    .unwrap()
-                    .version_id()
-                    .map(|version_id| version_id.to_string());
-
-                self.sync_object_annotations(object.key(), source_version_id, target_version_id)
-                    .await?;
+                self.sync_or_delete_object(object.clone(), None).await?;
             } else {
                 // If point-in-time is enabled, head_object_checker may be used.
                 self.sync_object(object).await?;
@@ -595,7 +531,7 @@ impl ObjectSyncer {
         Ok(())
     }
 
-    // skipcq: RS-R1000
+    #[allow(clippy::needless_bool)]
     async fn sync_or_delete_object(
         &self,
         object: S3syncObject,
@@ -1037,6 +973,32 @@ impl ObjectSyncer {
             }
         }
 
+        let target_etag = put_object_output
+            .as_ref()
+            .unwrap()
+            .e_tag()
+            .map(|etag| etag.to_string());
+
+        // If single part upload is used, there is no need to sync object annotation(Done by ServerSide Copy: CopyObject)
+        let need_sync_annotations =
+            if self.base.config.server_side_copy && !is_multipart_upload_e_tag(&target_etag) {
+                false
+            } else {
+                true
+            };
+
+        if self.base.config.enable_sync_object_annotations && need_sync_annotations {
+            let source_version_id = object.version_id().map(|version_id| version_id.to_string());
+            let target_version_id = put_object_output
+                .as_ref()
+                .unwrap()
+                .version_id()
+                .map(|version_id| version_id.to_string());
+
+            self.sync_object_annotations(key, source_version_id, target_version_id)
+                .await?;
+        }
+
         if !is_callback_cancelled {
             self.base
                 .send_stats(SyncComplete {
@@ -1222,16 +1184,7 @@ impl ObjectSyncer {
             let target = dyn_clone::clone_box(&**self.base.target.as_ref().unwrap());
             let target_version_id = target_version_id.clone();
             let key = key.to_string();
-
-            let permit = self
-                .base
-                .config
-                .clone()
-                .target_client_config
-                .unwrap()
-                .parallel_upload_semaphore
-                .acquire_owned()
-                .await?;
+            let permit = semaphore.clone().acquire_owned().await;
 
             let task: JoinHandle<Result<()>> = task::spawn(async move {
                 let _permit = permit; // Keep the semaphore permit in scope
