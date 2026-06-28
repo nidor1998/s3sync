@@ -987,7 +987,10 @@ impl ObjectSyncer {
                 true
             };
 
-        if self.base.config.enable_sync_object_annotations && need_sync_annotations {
+        if (self.base.config.enable_sync_object_annotations
+            || self.base.config.sync_latest_object_annotations)
+            && need_sync_annotations
+        {
             let source_version_id = object.version_id().map(|version_id| version_id.to_string());
             let target_version_id = put_object_output
                 .as_ref()
