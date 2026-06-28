@@ -677,7 +677,7 @@ Example: 2025-07-16T12:00:00Z"#
         long,
         env,
         default_value_t = DEFAULT_REPORT_SYNC_STATUS,
-        conflicts_with_all = ["dry_run", "delete", "enable_versioning", "head_each_target"],
+        conflicts_with_all = ["dry_run", "delete", "enable_versioning", "head_each_target", "point_in_time"],
         help_heading = "Reporting",
         long_help = r#"Report sync status to the target storage.
 Default verification is for ETag. For additional checksum, use --check-additional-checksum.
