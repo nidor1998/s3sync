@@ -1112,8 +1112,12 @@ impl ObjectSyncer {
             }
         };
 
-        let annotation_differences =
-            generate_annotation_differences(key, &source_annotation_map, &target_annotation_map);
+        let annotation_differences = generate_annotation_differences(
+            key,
+            &source_annotation_map,
+            &target_annotation_map,
+            self.base.config.disable_check_annotation_etag,
+        );
         let need_modify = !(annotation_differences.added.is_empty()
             && annotation_differences.modified.is_empty()
             && annotation_differences.deleted.is_empty());
@@ -1236,8 +1240,12 @@ impl ObjectSyncer {
         }
         let target_annotation_map = target_annotation_map_result.unwrap();
 
-        let annotation_differences =
-            generate_annotation_differences(key, &source_annotation_map, &target_annotation_map);
+        let annotation_differences = generate_annotation_differences(
+            key,
+            &source_annotation_map,
+            &target_annotation_map,
+            self.base.config.disable_check_annotation_etag,
+        );
 
         for annotation_name in annotation_differences.unmodified {
             info!(

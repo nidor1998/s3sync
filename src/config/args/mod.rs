@@ -107,6 +107,7 @@ const DEFAULT_IF_NONE_MATCH: bool = false;
 const DEFAULT_COPY_SOURCE_IF_MATCH: bool = false;
 const DEFAULT_IGNORE_GLACIER_WARNINGS: bool = false;
 const DEFAULT_ENABLE_SYNC_OBJECT_ANNOTATION: bool = false;
+const DEFAULT_DISABLE_CHECK_ANNOTATION_ETAG: bool = false;
 const DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION: bool = false;
 
 const NO_S3_STORAGE_SPECIFIED: &str = "either SOURCE or TARGET must be s3://\n";
@@ -602,6 +603,10 @@ If this option is enabled, the --remove-modified-filter and
     long_help=r#"Copy object annotations from the source if necessary.
 If this option is enabled, extra API calls are required."#)]
     enable_sync_object_annotations: bool,
+
+    #[arg(long, env, default_value_t = DEFAULT_DISABLE_CHECK_ANNOTATION_ETAG, help_heading = "Object Annotation",
+    long_help=r#"Don't use ETag for update annotation checking"#)]
+    disable_check_annotation_etag: bool,
 
     #[arg(long, env, default_value_t = DEFAULT_SYNC_LATEST_OBJECT_ANNOTATION, conflicts_with_all = ["enable_versioning", "enable_sync_object_annotations"], help_heading = "Object Annotation",
     long_help=r#"Copy the latest object annotation from the source if necessary.
@@ -2277,6 +2282,7 @@ impl TryFrom<CLIArgs> for Config {
             ignore_glacier_warnings: value.ignore_glacier_warnings,
             enable_sync_object_annotations: value.enable_sync_object_annotations,
             sync_latest_object_annotations: value.sync_latest_object_annotations,
+            disable_check_annotation_etag: value.disable_check_annotation_etag,
         })
     }
 }

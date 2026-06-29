@@ -220,6 +220,7 @@ pub fn generate_annotation_differences(
     key: &str,
     source_annotation_map: &AnnotationMap,
     target_annotation_map: &AnnotationMap,
+    disable_check_annotation_etag: bool,
 ) -> AnnotationDifferences {
     let mut annotation_differences = AnnotationDifferences {
         added: vec![],
@@ -258,9 +259,13 @@ pub fn generate_annotation_differences(
         let source_annotation = source_annotation_map.get(&annotation_name).unwrap();
         let target_annotation = target_annotation_map.get(&annotation_name).unwrap();
 
-        if source_annotation.e_tag() == target_annotation.e_tag()
-            && source_annotation.size == target_annotation.size
-        {
+        let etag_match = if disable_check_annotation_etag {
+            true
+        } else {
+            source_annotation.e_tag() == target_annotation.e_tag()
+        };
+
+        if etag_match && source_annotation.size == target_annotation.size {
             debug!(
                 key = key,
                 annotation_name = annotation_name,

@@ -106,6 +106,7 @@ pub struct Config {
     pub ignore_glacier_warnings: bool,
     pub enable_sync_object_annotations: bool,
     pub sync_latest_object_annotations: bool,
+    pub disable_check_annotation_etag: bool,
 }
 
 impl Config {

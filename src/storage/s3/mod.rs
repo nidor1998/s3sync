@@ -19,6 +19,8 @@ use aws_sdk_s3::types::{
 };
 use aws_smithy_types::byte_stream::ByteStream;
 use aws_smithy_types_convert::date_time::DateTimeExt;
+use base64::Engine;
+use base64::engine::general_purpose;
 use leaky_bucket::RateLimiter;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -1412,7 +1414,7 @@ impl StorageTrait for S3Storage {
 
         let checksum_algorithm = get_annotation_checksum_algorithm(&source_annotation);
 
-        // As of June 2026, there are reportedly no annotations larger than 1 MB.
+        // As of June 2026, there are reportedly no annotations larger than 1 MiB.
         if source_annotation_size > 8 * 1024 * 1024 {
             // This is the safeguard against the case where the size is too large.
             return Err(anyhow!("invalid source annotation size"));
@@ -1435,6 +1437,10 @@ impl StorageTrait for S3Storage {
             warn!(key = &key, "Failed to read annotation from the body: {e:?}");
             return Err(anyhow!(S3syncError::DownloadForceRetryableError));
         }
+
+        let md5_digest = md5::compute(&buffer);
+        let md5_digest_base64 = Some(general_purpose::STANDARD.encode(md5_digest.as_slice()));
+
         let buffer_stream = ByteStream::from(buffer);
 
         let result = self
@@ -1447,6 +1453,7 @@ impl StorageTrait for S3Storage {
             .set_version_id(target_version_id.clone())
             .annotation_name(annotation_name)
             .annotation_payload(buffer_stream)
+            .set_content_md5(md5_digest_base64)
             .set_checksum_algorithm(checksum_algorithm)
             .set_checksum_crc32(source_annotation.checksum_crc32)
             .set_checksum_crc32_c(source_annotation.checksum_crc32_c)
@@ -1474,17 +1481,23 @@ impl StorageTrait for S3Storage {
         event_data.byte_written = Some(source_annotation_size as u64);
         self.config.event_manager.trigger_event(event_data).await;
 
-        if result.e_tag == source_annotation.e_tag {
-            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_VERIFIED);
-            event_data.dry_run = false;
-            event_data.key = Some(key.to_string());
-            event_data.source_version_id = source_annotation.object_version_id.clone();
-            event_data.target_version_id = target_version_id.clone();
-            event_data.annotation_name = Some(annotation_name.to_string());
-            event_data.target_size = Some(source_annotation_size as u64);
-            event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
-            event_data.target_etag = result.e_tag.as_ref().map(|e| e.to_string());
-            self.config.event_manager.trigger_event(event_data).await;
+        let server_side_encryption = result.server_side_encryption().map(|s| s.to_string());
+        let skip_etag_verify =
+            server_side_encryption.is_some() && server_side_encryption.unwrap() != "AES256";
+
+        if skip_etag_verify || result.e_tag == source_annotation.e_tag {
+            if !skip_etag_verify {
+                let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_VERIFIED);
+                event_data.dry_run = false;
+                event_data.key = Some(key.to_string());
+                event_data.source_version_id = source_annotation.object_version_id.clone();
+                event_data.target_version_id = target_version_id.clone();
+                event_data.annotation_name = Some(annotation_name.to_string());
+                event_data.target_size = Some(source_annotation_size as u64);
+                event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+                event_data.target_etag = result.e_tag.as_ref().map(|e| e.to_string());
+                self.config.event_manager.trigger_event(event_data).await;
+            }
 
             info!(
                 key = key,
