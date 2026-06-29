@@ -106,6 +106,7 @@ pub trait StorageTrait: DynClone {
         &self,
         key: &str,
         version_id: Option<String>,
+        max_annotation_results: i32,
     ) -> Result<AnnotationMap>;
     #[allow(clippy::too_many_arguments)]
     async fn get_object(

@@ -52,8 +52,6 @@ use crate::types::{
 
 const EXPRESS_ONEZONE_STORAGE_SUFFIX: &str = "--x-s3";
 
-const MAX_ANNOTATION_RESULTS: i32 = 1000;
-
 mod client_builder;
 mod upload_manager;
 
@@ -650,6 +648,7 @@ impl StorageTrait for S3Storage {
         &self,
         key: &str,
         version_id: Option<String>,
+        max_annotation_results: i32,
     ) -> Result<AnnotationMap> {
         let mut continuation_token = None;
         let mut annotations_entries = vec![];
@@ -666,7 +665,7 @@ impl StorageTrait for S3Storage {
                 .set_version_id(version_id.clone())
                 .set_continuation_token(continuation_token)
                 .set_request_payer(self.request_payer.clone())
-                .max_annotation_results(MAX_ANNOTATION_RESULTS)
+                .max_annotation_results(max_annotation_results)
                 .send()
                 .await
                 .context("aws_sdk_s3::client::list_object_annotations() failed.")?;

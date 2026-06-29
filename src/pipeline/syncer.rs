@@ -1090,14 +1090,14 @@ impl ObjectSyncer {
             .source
             .as_ref()
             .unwrap()
-            .list_object_annotations(key, source_version_id.clone())
+            .list_object_annotations(key, source_version_id.clone(), self.base.config.max_keys)
             .await?;
         let target_annotation_map_result = self
             .base
             .target
             .as_ref()
             .unwrap()
-            .list_object_annotations(key, target_version_id.clone())
+            .list_object_annotations(key, target_version_id.clone(), self.base.config.max_keys)
             .await;
         let target_annotation_map = match target_annotation_map_result {
             Ok(target_annotation_map) => target_annotation_map,
@@ -1217,7 +1217,7 @@ impl ObjectSyncer {
             .source
             .as_ref()
             .unwrap()
-            .list_object_annotations(key, None)
+            .list_object_annotations(key, None, self.base.config.max_keys)
             .await?;
 
         let target_annotation_map_result = self
@@ -1225,7 +1225,7 @@ impl ObjectSyncer {
             .target
             .as_ref()
             .unwrap()
-            .list_object_annotations(key, None)
+            .list_object_annotations(key, None, self.base.config.max_keys)
             .await;
         if let Err(e) = target_annotation_map_result {
             // This is a report mode, so we do not return an error if the target object is not found.
@@ -1273,7 +1273,6 @@ impl ObjectSyncer {
                 source_annotation_etag = normalize_e_tag(&source_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
                 target_annotation_etag = "",
                 source_annotation_size = source_annotation_map.get(&annotation_name).unwrap().size,
-                target_annotation_size = ""
             );
             self.sync_stats_report
                 .lock()
@@ -1294,7 +1293,6 @@ impl ObjectSyncer {
                 target_annotation_name = annotation_name,
                 source_annotation_etag = "",
                 target_annotation_etag = normalize_e_tag(&target_annotation_map.get(&annotation_name).unwrap().e_tag.clone()),
-                source_annotation_size = "",
                 target_annotation_size = target_annotation_map.get(&annotation_name).unwrap().size
             );
             self.sync_stats_report

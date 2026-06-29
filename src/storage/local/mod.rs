@@ -1424,6 +1424,7 @@ impl StorageTrait for LocalStorage {
         &self,
         _key: &str,
         _version_id: Option<String>,
+        _max_annotation_results: i32,
     ) -> Result<AnnotationMap> {
         unimplemented!();
     }
