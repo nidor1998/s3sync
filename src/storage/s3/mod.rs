@@ -1385,6 +1385,9 @@ impl StorageTrait for S3Storage {
             .unwrap_or_default();
         let target_version_id_str = target_version_id.clone().unwrap_or_default();
         let source_annotation_size = source_annotation.content_length.unwrap() as usize;
+        let source_serve_side_encryption = source_annotation
+            .server_side_encryption.as_ref()
+            .map(|s| s.to_string());
 
         if self.config.dry_run {
             self.send_stats(SyncBytes(source_annotation_size as u64))
@@ -1481,9 +1484,13 @@ impl StorageTrait for S3Storage {
         event_data.byte_written = Some(source_annotation_size as u64);
         self.config.event_manager.trigger_event(event_data).await;
 
-        let server_side_encryption = result.server_side_encryption().map(|s| s.to_string());
-        let skip_etag_verify =
-            server_side_encryption.is_some() && server_side_encryption.unwrap() != "AES256";
+        let target_server_side_encryption = result.server_side_encryption().map(|s| s.to_string());
+        let mut skip_etag_verify = source_serve_side_encryption.is_some()
+            && source_serve_side_encryption.unwrap() != "AES256";
+        if !skip_etag_verify {
+            skip_etag_verify = target_server_side_encryption.is_some()
+                && target_server_side_encryption.unwrap() != "AES256";
+        }
 
         if skip_etag_verify || result.e_tag == source_annotation.e_tag {
             if !skip_etag_verify {
@@ -1527,7 +1534,7 @@ impl StorageTrait for S3Storage {
                 annotation_name = annotation_name,
                 annotation_size = source_annotation_size,
                 source_etag = source_annotation.e_tag.unwrap_or_default(),
-                annotation_etag = result.e_tag().unwrap_or_default(),
+                target_etag = result.e_tag().unwrap_or_default(),
                 "sync object annotation failed. etag mismatch."
             );
             return Err(anyhow!("sync object annotation failed. etag mismatch."));
