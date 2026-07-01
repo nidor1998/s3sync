@@ -95,6 +95,19 @@ impl EventCallback for UserDefinedEventCallback {
                 println!("Stats report: {event_data:?}");
             }
 
+            // This event is triggered when an annotation is copied from source to target and the etag is matched
+            EventType::SYNC_ANNOTATION_ETAG_VERIFIED => {
+                println!("Sync annotation etag verified: {event_data:?}");
+            }
+            // This event is triggered when an annotation is copied from source to target, but the etag is not matched
+            EventType::SYNC_ANNOTATION_ETAG_MISMATCH => {
+                println!("Sync annotation etag mismatch: {event_data:?}");
+            }
+            // This event is triggered when an annotation is deleted from target
+            EventType::SYNC_ANNOTATION_DELETED => {
+                println!("Sync annotation deleted: {event_data:?}");
+            }
+
             // Currently, all events are captured by above match arms,
             _ => {
                 println!("Other events: {event_data:?}");

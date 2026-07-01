@@ -79,6 +79,7 @@ impl Pipeline {
             config.sync_with_delete,
             config.filter_config.remove_modified_filter,
             config.sync_latest_tagging,
+            config.sync_latest_object_annotations,
         ) {
             Some(ObjectKeyMap::new(Mutex::new(HashMap::new())))
         } else {
@@ -261,6 +262,7 @@ impl Pipeline {
             self.config.sync_with_delete,
             self.config.filter_config.remove_modified_filter,
             self.config.sync_latest_tagging,
+            self.config.sync_latest_object_annotations,
         )
     }
 
@@ -903,8 +905,9 @@ fn is_listing_target_required(
     delete_target: bool,
     remove_modified_filter: bool,
     sync_latest_tagging: bool,
+    sync_latest_object_annotations: bool,
 ) -> bool {
-    if enable_versioning || sync_latest_tagging {
+    if enable_versioning || sync_latest_tagging || sync_latest_object_annotations {
         return false;
     }
 
@@ -1651,20 +1654,31 @@ mod tests {
     fn is_listing_target_required_test() {
         init_dummy_tracing_subscriber();
 
-        assert!(is_listing_target_required(false, true, false, false));
-        assert!(!is_listing_target_required(false, false, true, false));
-        assert!(is_listing_target_required(false, false, false, false));
-        assert!(is_listing_target_required(false, true, true, false));
+        assert!(is_listing_target_required(false, true, false, false, false));
+        assert!(!is_listing_target_required(
+            false, false, true, false, false
+        ));
+        assert!(!is_listing_target_required(
+            false, false, false, false, true
+        ));
+        assert!(is_listing_target_required(
+            false, false, false, false, false
+        ));
+        assert!(is_listing_target_required(false, true, true, false, false));
 
-        assert!(!is_listing_target_required(true, true, false, false));
-        assert!(!is_listing_target_required(true, false, true, false));
-        assert!(!is_listing_target_required(true, false, false, false));
-        assert!(!is_listing_target_required(true, true, true, false));
+        assert!(!is_listing_target_required(true, true, false, false, false));
+        assert!(!is_listing_target_required(true, false, true, false, false));
+        assert!(!is_listing_target_required(
+            true, false, false, false, false
+        ));
+        assert!(!is_listing_target_required(true, true, true, false, false));
 
-        assert!(!is_listing_target_required(false, true, false, true));
-        assert!(!is_listing_target_required(false, false, true, true));
-        assert!(!is_listing_target_required(false, false, false, true));
-        assert!(!is_listing_target_required(true, true, true, true));
+        assert!(!is_listing_target_required(false, true, false, true, false));
+        assert!(!is_listing_target_required(false, false, true, true, false));
+        assert!(!is_listing_target_required(
+            false, false, false, true, false
+        ));
+        assert!(!is_listing_target_required(true, true, true, true, false));
     }
 
     fn init_dummy_tracing_subscriber() {

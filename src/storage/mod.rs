@@ -4,11 +4,14 @@ use async_trait::async_trait;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::operation::copy_object::CopyObjectOutput;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
+use aws_sdk_s3::operation::delete_object_annotation::DeleteObjectAnnotationOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::get_object_annotation::GetObjectAnnotationOutput;
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
+use aws_sdk_s3::operation::put_object_annotation::PutObjectAnnotationOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
 use aws_sdk_s3::operation::upload_part::UploadPartOutput;
 use aws_sdk_s3::operation::upload_part_copy::UploadPartCopyOutput;
@@ -31,7 +34,9 @@ use crate::config::ClientConfig;
 use crate::storage::checksum::AdditionalChecksum;
 use crate::types::async_callback::AsyncReadWithCallback;
 use crate::types::token::PipelineCancellationToken;
-use crate::types::{ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics};
+use crate::types::{
+    AnnotationMap, ObjectChecksum, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
+};
 
 pub mod additional_checksum_verify;
 pub mod checksum;
@@ -97,6 +102,12 @@ pub trait StorageTrait: DynClone {
         max_keys: i32,
         warn_as_error: bool,
     ) -> Result<()>;
+    async fn list_object_annotations(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        max_annotation_results: i32,
+    ) -> Result<AnnotationMap>;
     #[allow(clippy::too_many_arguments)]
     async fn get_object(
         &self,
@@ -151,6 +162,13 @@ pub trait StorageTrait: DynClone {
         sse_c_key: SseCustomerKey,
         sse_c_key_md5: Option<String>,
     ) -> Result<Vec<ObjectPart>>;
+    async fn get_object_annotation(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        annotation_name: &str,
+        checksum_mode: Option<ChecksumMode>,
+    ) -> Result<GetObjectAnnotationOutput>;
     #[allow(clippy::too_many_arguments)]
     async fn put_object(
         &self,
@@ -182,6 +200,19 @@ pub trait StorageTrait: DynClone {
         key: &str,
         version_id: Option<String>,
     ) -> Result<DeleteObjectTaggingOutput>;
+    async fn delete_object_annotation(
+        &self,
+        key: &str,
+        target_version_id: Option<String>,
+        annotation_name: &str,
+    ) -> Result<DeleteObjectAnnotationOutput>;
+    async fn copy_object_annotation(
+        &self,
+        key: &str,
+        target_version_id: Option<String>,
+        annotation_name: &str,
+        source_annotation: GetObjectAnnotationOutput,
+    ) -> Result<PutObjectAnnotationOutput>;
     async fn is_versioning_enabled(&self) -> Result<bool>;
     fn get_client(&self) -> Option<Arc<Client>>;
     fn get_stats_sender(&self) -> Sender<SyncStatistics>;

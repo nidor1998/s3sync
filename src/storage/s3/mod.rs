@@ -3,18 +3,24 @@ use async_channel::Sender;
 use async_trait::async_trait;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::operation::delete_object::DeleteObjectOutput;
+use aws_sdk_s3::operation::delete_object_annotation::DeleteObjectAnnotationOutput;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingOutput;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::get_object_annotation::GetObjectAnnotationOutput;
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::operation::put_object::PutObjectOutput;
+use aws_sdk_s3::operation::put_object_annotation::PutObjectAnnotationOutput;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingOutput;
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::{
-    BucketVersioningStatus, ChecksumMode, DeleteMarkerEntry, ObjectAttributes, ObjectPart,
-    ObjectVersion, RequestPayer, Tagging,
+    BucketVersioningStatus, ChecksumAlgorithm, ChecksumMode, DeleteMarkerEntry, ObjectAttributes,
+    ObjectPart, ObjectVersion, RequestPayer, Tagging,
 };
+use aws_smithy_types::byte_stream::ByteStream;
 use aws_smithy_types_convert::date_time::DateTimeExt;
+use base64::Engine;
+use base64::engine::general_purpose;
 use leaky_bucket::RateLimiter;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -23,9 +29,10 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use tokio::io::AsyncReadExt;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::Config;
 use crate::config::ClientConfig;
@@ -36,11 +43,13 @@ use crate::storage::{
     convert_to_buf_byte_stream_with_callback,
 };
 use crate::types::SyncStatistics::{SyncBytes, SyncSkip};
+use crate::types::error::S3syncError;
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
 use crate::types::{
-    ObjectChecksum, ObjectVersions, S3syncObject, SseCustomerKey, StoragePath, SyncStatistics,
-    clone_object_version_with_key, get_additional_checksum, is_full_object_checksum,
+    AnnotationMap, ObjectChecksum, ObjectVersions, S3syncObject, SseCustomerKey, StoragePath,
+    SyncStatistics, clone_object_version_with_key, get_additional_checksum,
+    is_full_object_checksum,
 };
 
 const EXPRESS_ONEZONE_STORAGE_SUFFIX: &str = "--x-s3";
@@ -637,6 +646,59 @@ impl StorageTrait for S3Storage {
         Ok(())
     }
 
+    async fn list_object_annotations(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        max_annotation_results: i32,
+    ) -> Result<AnnotationMap> {
+        let mut continuation_token = None;
+        let mut annotations_entries = vec![];
+
+        // For the annotation's integrity, this method cannot be canceled.
+        loop {
+            let list_object_annotations_result = self
+                .client
+                .as_ref()
+                .unwrap()
+                .list_object_annotations()
+                .bucket(&self.bucket)
+                .key(generate_full_key(&self.prefix, key))
+                .set_version_id(version_id.clone())
+                .set_continuation_token(continuation_token)
+                .set_request_payer(self.request_payer.clone())
+                .max_annotation_results(max_annotation_results)
+                .send()
+                .await
+                .context("aws_sdk_s3::client::list_object_annotations() failed.")?;
+
+            if !list_object_annotations_result.annotations().is_empty() {
+                annotations_entries.extend_from_slice(list_object_annotations_result.annotations());
+            }
+
+            if list_object_annotations_result
+                .next_continuation_token
+                .is_none()
+            {
+                break;
+            }
+
+            continuation_token = list_object_annotations_result
+                .next_continuation_token()
+                .map(|s| s.to_string());
+        }
+
+        let mut annotations_map = AnnotationMap::new();
+        for annotation_entry in annotations_entries.iter() {
+            annotations_map.insert(
+                annotation_entry.annotation_name.clone(),
+                annotation_entry.clone(),
+            );
+        }
+
+        Ok(annotations_map)
+    }
+
     async fn get_object(
         &self,
         key: &str,
@@ -949,6 +1011,30 @@ impl StorageTrait for S3Storage {
         Ok(object_parts)
     }
 
+    async fn get_object_annotation(
+        &self,
+        key: &str,
+        version_id: Option<String>,
+        annotation_name: &str,
+        checksum_mode: Option<ChecksumMode>,
+    ) -> Result<GetObjectAnnotationOutput> {
+        let result = self
+            .client
+            .as_ref()
+            .unwrap()
+            .get_object_annotation()
+            .bucket(&self.bucket)
+            .key(generate_full_key(&self.prefix, key))
+            .set_version_id(version_id)
+            .annotation_name(annotation_name)
+            .set_checksum_mode(checksum_mode)
+            .set_request_payer(self.request_payer.clone())
+            .send()
+            .await?;
+
+        Ok(result)
+    }
+
     async fn put_object(
         &self,
         key: &str,
@@ -1226,6 +1312,237 @@ impl StorageTrait for S3Storage {
         Ok(result)
     }
 
+    async fn delete_object_annotation(
+        &self,
+        key: &str,
+        target_version_id: Option<String>,
+        annotation_name: &str,
+    ) -> Result<DeleteObjectAnnotationOutput> {
+        let target_key = generate_full_key(&self.prefix, key);
+        let version_id_str = target_version_id.clone().unwrap_or_default();
+
+        if self.config.dry_run {
+            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_DELETED);
+            event_data.dry_run = true;
+            event_data.key = Some(key.to_string());
+            event_data.target_version_id = target_version_id.clone();
+            event_data.annotation_name = Some(annotation_name.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
+            info!(
+                key = key,
+                target_version_id = version_id_str,
+                target_key = target_key,
+                annotation_name = annotation_name,
+                "[dry-run] delete object annotation completed.",
+            );
+
+            return Ok(DeleteObjectAnnotationOutput::builder().build());
+        }
+
+        let result = self
+            .client
+            .as_ref()
+            .unwrap()
+            .delete_object_annotation()
+            .bucket(&self.bucket)
+            .key(&target_key)
+            .set_version_id(target_version_id.clone())
+            .annotation_name(annotation_name)
+            .set_request_payer(self.request_payer.clone())
+            .send()
+            .await
+            .context("aws_sdk_s3::client::delete_object_annotation() failed.")?;
+
+        let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_DELETED);
+        event_data.dry_run = false;
+        event_data.key = Some(key.to_string());
+        event_data.target_version_id = target_version_id.clone();
+        event_data.annotation_name = Some(annotation_name.to_string());
+        self.config.event_manager.trigger_event(event_data).await;
+
+        info!(
+            key = key,
+            target_version_id = version_id_str,
+            target_key = target_key,
+            annotation_name = annotation_name,
+            "delete object annotation completed.",
+        );
+
+        Ok(result)
+    }
+
+    async fn copy_object_annotation(
+        &self,
+        key: &str,
+        target_version_id: Option<String>,
+        annotation_name: &str,
+        source_annotation: GetObjectAnnotationOutput,
+    ) -> Result<PutObjectAnnotationOutput> {
+        let source_version_id_str = source_annotation
+            .object_version_id
+            .clone()
+            .unwrap_or_default();
+        let target_version_id_str = target_version_id.clone().unwrap_or_default();
+        let source_annotation_size = source_annotation.content_length.unwrap() as usize;
+        let source_serve_side_encryption = source_annotation
+            .server_side_encryption.as_ref()
+            .map(|s| s.to_string());
+
+        if self.config.dry_run {
+            self.send_stats(SyncBytes(source_annotation_size as u64))
+                .await;
+
+            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_VERIFIED);
+            event_data.dry_run = true;
+            event_data.key = Some(key.to_string());
+            event_data.source_version_id = source_annotation.object_version_id.clone();
+            event_data.target_version_id = target_version_id.clone();
+            event_data.annotation_name = Some(annotation_name.to_string());
+            event_data.target_size = Some(source_annotation_size as u64);
+            event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+            event_data.target_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
+            info!(
+                key = key,
+                source_version_id = source_version_id_str,
+                target_version_id = target_version_id_str,
+                annotation_name = annotation_name,
+                "[dry-run] sync object annotation completed.",
+            );
+
+            return Ok(PutObjectAnnotationOutput::builder().build());
+        }
+
+        let checksum_algorithm = get_annotation_checksum_algorithm(&source_annotation);
+
+        // As of June 2026, there are reportedly no annotations larger than 1 MiB.
+        if source_annotation_size > 8 * 1024 * 1024 {
+            // This is the safeguard against the case where the size is too large.
+            return Err(anyhow!("invalid source annotation size"));
+        }
+
+        let mut buffer = Vec::<u8>::with_capacity(source_annotation_size);
+        buffer.resize_with(source_annotation_size, Default::default);
+
+        let mut body = convert_to_buf_byte_stream_with_callback(
+            source_annotation.annotation_payload.into_async_read(),
+            self.get_stats_sender(),
+            self.rate_limit_bandwidth.clone(),
+            None,
+            None,
+        )
+        .into_async_read();
+
+        let read_result = body.read_exact(buffer.as_mut_slice()).await;
+        if let Err(e) = read_result {
+            warn!(key = &key, "Failed to read annotation from the body: {e:?}");
+            return Err(anyhow!(S3syncError::DownloadForceRetryableError));
+        }
+
+        let md5_digest = md5::compute(&buffer);
+        let md5_digest_base64 = Some(general_purpose::STANDARD.encode(md5_digest.as_slice()));
+
+        let buffer_stream = ByteStream::from(buffer);
+
+        let result = self
+            .client
+            .as_ref()
+            .unwrap()
+            .put_object_annotation()
+            .bucket(&self.bucket)
+            .key(generate_full_key(&self.prefix, key))
+            .set_version_id(target_version_id.clone())
+            .annotation_name(annotation_name)
+            .annotation_payload(buffer_stream)
+            .set_content_md5(md5_digest_base64)
+            .set_checksum_algorithm(checksum_algorithm)
+            .set_checksum_crc32(source_annotation.checksum_crc32)
+            .set_checksum_crc32_c(source_annotation.checksum_crc32_c)
+            .set_checksum_crc64_nvme(source_annotation.checksum_crc64_nvme)
+            .set_checksum_sha1(source_annotation.checksum_sha1)
+            .set_checksum_sha256(source_annotation.checksum_sha256)
+            .set_checksum_sha512(source_annotation.checksum_sha512)
+            .set_checksum_md5(source_annotation.checksum_md5)
+            .set_checksum_xxhash64(source_annotation.checksum_xxhash64)
+            .set_checksum_xxhash3(source_annotation.checksum_xxhash3)
+            .set_checksum_xxhash128(source_annotation.checksum_xxhash128)
+            .set_request_payer(self.request_payer.clone())
+            .send()
+            .await
+            .context("aws_sdk_s3::client::put_object_annotation() failed.")?;
+
+        let mut event_data = EventData::new(EventType::SYNC_WRITE);
+        event_data.dry_run = false;
+        event_data.key = Some(key.to_string());
+        event_data.source_version_id = source_annotation.object_version_id.clone();
+        event_data.target_version_id = target_version_id.clone();
+        event_data.annotation_name = Some(annotation_name.to_string());
+        event_data.source_size = Some(source_annotation_size as u64);
+        event_data.target_size = Some(source_annotation_size as u64);
+        event_data.byte_written = Some(source_annotation_size as u64);
+        self.config.event_manager.trigger_event(event_data).await;
+
+        let target_server_side_encryption = result.server_side_encryption().map(|s| s.to_string());
+        let mut skip_etag_verify = source_serve_side_encryption.is_some()
+            && source_serve_side_encryption.unwrap() != "AES256";
+        if !skip_etag_verify {
+            skip_etag_verify = target_server_side_encryption.is_some()
+                && target_server_side_encryption.unwrap() != "AES256";
+        }
+
+        if skip_etag_verify || result.e_tag == source_annotation.e_tag {
+            if !skip_etag_verify {
+                let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_VERIFIED);
+                event_data.dry_run = false;
+                event_data.key = Some(key.to_string());
+                event_data.source_version_id = source_annotation.object_version_id.clone();
+                event_data.target_version_id = target_version_id.clone();
+                event_data.annotation_name = Some(annotation_name.to_string());
+                event_data.target_size = Some(source_annotation_size as u64);
+                event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+                event_data.target_etag = result.e_tag.as_ref().map(|e| e.to_string());
+                self.config.event_manager.trigger_event(event_data).await;
+            }
+
+            info!(
+                key = key,
+                source_version_id = source_version_id_str,
+                target_version_id = target_version_id_str,
+                annotation_name = annotation_name,
+                annotation_size = source_annotation_size,
+                annotation_etag = result.e_tag().unwrap_or_default(),
+                "sync object annotation completed."
+            );
+        } else {
+            let mut event_data = EventData::new(EventType::SYNC_ANNOTATION_ETAG_MISMATCH);
+            event_data.dry_run = false;
+            event_data.key = Some(key.to_string());
+            event_data.source_version_id = source_annotation.object_version_id.clone();
+            event_data.target_version_id = target_version_id.clone();
+            event_data.annotation_name = Some(annotation_name.to_string());
+            event_data.target_size = Some(source_annotation_size as u64);
+            event_data.source_etag = source_annotation.e_tag.as_ref().map(|e| e.to_string());
+            event_data.target_etag = result.e_tag.as_ref().map(|e| e.to_string());
+            self.config.event_manager.trigger_event(event_data).await;
+
+            error!(
+                key = key,
+                source_version_id = source_version_id_str,
+                target_version_id = target_version_id_str,
+                annotation_name = annotation_name,
+                annotation_size = source_annotation_size,
+                source_etag = source_annotation.e_tag.unwrap_or_default(),
+                target_etag = result.e_tag().unwrap_or_default(),
+                "sync object annotation failed. etag mismatch."
+            );
+            return Err(anyhow!("sync object annotation failed. etag mismatch."));
+        }
+
+        Ok(result)
+    }
+
     async fn is_versioning_enabled(&self) -> Result<bool> {
         let result = self
             .client
@@ -1284,6 +1601,35 @@ impl StorageTrait for S3Storage {
     fn set_warning(&self) {
         self.has_warning
             .store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+fn get_annotation_checksum_algorithm(
+    source_annotation: &GetObjectAnnotationOutput,
+) -> Option<ChecksumAlgorithm> {
+    // Multiple checksum algorithms are not supported.
+    if source_annotation.checksum_sha512.is_some() {
+        Some(ChecksumAlgorithm::Sha512)
+    } else if source_annotation.checksum_sha256.is_some() {
+        Some(ChecksumAlgorithm::Sha256)
+    } else if source_annotation.checksum_sha1.is_some() {
+        Some(ChecksumAlgorithm::Sha1)
+    } else if source_annotation.checksum_md5.is_some() {
+        Some(ChecksumAlgorithm::Md5)
+    } else if source_annotation.checksum_crc64_nvme.is_some() {
+        Some(ChecksumAlgorithm::Crc64Nvme)
+    } else if source_annotation.checksum_crc32.is_some() {
+        Some(ChecksumAlgorithm::Crc32)
+    } else if source_annotation.checksum_crc32_c.is_some() {
+        Some(ChecksumAlgorithm::Crc32C)
+    } else if source_annotation.checksum_xxhash64.is_some() {
+        Some(ChecksumAlgorithm::Xxhash64)
+    } else if source_annotation.checksum_xxhash3.is_some() {
+        Some(ChecksumAlgorithm::Xxhash3)
+    } else if source_annotation.checksum_xxhash128.is_some() {
+        Some(ChecksumAlgorithm::Xxhash128)
+    } else {
+        None
     }
 }
 

@@ -50,6 +50,12 @@ function on_event(event_data)
         print("stats_duration_sec:", event_data.stats_duration_sec)
 
         return
+    elseif event_data.event_type == 1 << 16 then
+        print("SYNC_ANNOTATION_ETAG_VERIFIED")
+    elseif event_data.event_type == 1 << 17 then
+        print("SYNC_ANNOTATION_ETAG_MISMATCH")
+    elseif event_data.event_type == 1 << 18 then
+        print("SYNC_ANNOTATION_DELETED")
     else
         print("UNKNOWN_EVENT")
     end
@@ -73,6 +79,7 @@ function on_event(event_data)
     print("byte_written", event_data.byte_written)
     print("upload_id", event_data.upload_id)
     print("part_number", event_data.part_number)
+    print("annotation_name", event_data.annotation_name)
     print("message:", event_data.message)
     print("")
 end
