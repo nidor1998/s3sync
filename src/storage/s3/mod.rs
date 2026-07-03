@@ -1386,7 +1386,8 @@ impl StorageTrait for S3Storage {
         let target_version_id_str = target_version_id.clone().unwrap_or_default();
         let source_annotation_size = source_annotation.content_length.unwrap() as usize;
         let source_serve_side_encryption = source_annotation
-            .server_side_encryption.as_ref()
+            .server_side_encryption
+            .as_ref()
             .map(|s| s.to_string());
 
         if self.config.dry_run {
