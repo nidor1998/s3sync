@@ -2488,6 +2488,48 @@ mod tests {
             assert!(pipeline.has_warning());
         }
 
+        {
+            let source_bucket_url = format!("s3://{}/", bucket1);
+            let target_bucket_url = format!("s3://{}/", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--report-sync-status",
+                "--report-metadata-sync-status",
+                "--report-tagging-sync-status",
+                "--report-annotations-sync-status",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let sync_stats_tmp = pipeline.get_sync_stats_report();
+            let sync_stats = sync_stats_tmp.lock().unwrap();
+            assert_eq!(sync_stats.number_of_objects, 2);
+            assert_eq!(sync_stats.etag_matches, 2);
+            assert_eq!(sync_stats.checksum_matches, 0);
+            assert_eq!(sync_stats.metadata_matches, 2);
+            assert_eq!(sync_stats.tagging_matches, 2);
+            assert_eq!(sync_stats.not_found, 0);
+            assert_eq!(sync_stats.etag_mismatch, 0);
+            assert_eq!(sync_stats.checksum_mismatch, 0);
+            assert_eq!(sync_stats.etag_unknown, 0);
+            assert_eq!(sync_stats.checksum_unknown, 0);
+            assert_eq!(sync_stats.annotation_matches, 4);
+            assert_eq!(sync_stats.annotation_mismatch, 1);
+
+            assert!(pipeline.has_warning());
+        }
+
         helper.delete_bucket_with_cascade(&bucket1).await;
         helper.delete_bucket_with_cascade(&bucket2).await;
     }
