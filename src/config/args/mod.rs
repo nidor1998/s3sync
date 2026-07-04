@@ -940,7 +940,7 @@ If the timeout is exceeded, the callback will be terminated with an error."#)]
 It allows the Lua script to load unsafe standard libraries or C modules."#)]
     allow_lua_unsafe_vm: bool,
 
-    #[arg(long, env, conflicts_with_all = ["enable_versioning"], default_value_t = DEFAULT_SYNC_WITH_DELETE, help_heading = "Dangerous",
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "sync_latest_tagging", "sync_latest_object_annotations"], default_value_t = DEFAULT_SYNC_WITH_DELETE, help_heading = "Dangerous",
     long_help=r#"Delete objects that exist in the target but not in the source.
 Exclude filters other than --filter-exclude-regex will not prevent an object from being deleted.
 [Warning] Since this can cause data loss, test first with the --dry-run option.
