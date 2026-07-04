@@ -1097,7 +1097,7 @@ impl StorageTrait for S3Storage {
                 "[dry-run] sync completed.",
             );
 
-            return Ok(PutObjectOutput::builder().build());
+            return Ok(PutObjectOutput::builder().e_tag("dry-run").build());
         }
 
         // In the case of full object checksum, we don't need to calculate checksum for each part and
