@@ -265,7 +265,7 @@ pub fn generate_annotation_differences(
             source_annotation.e_tag() == target_annotation.e_tag()
         };
 
-        if etag_match && source_annotation.size == target_annotation.size {
+        if etag_match && source_annotation.last_modified <= target_annotation.last_modified {
             debug!(
                 key = key,
                 annotation_name = annotation_name,
@@ -273,6 +273,8 @@ pub fn generate_annotation_differences(
                 target_annotation_etag = target_annotation.e_tag(),
                 source_annotation_size = source_annotation.size,
                 target_annotation_size = target_annotation.size,
+                source_last_modified = source_annotation.last_modified.to_string(),
+                target_last_modified = target_annotation.last_modified.to_string(),
                 "object annotation unmodified"
             );
             annotation_differences.unmodified.push(annotation_name);
@@ -284,6 +286,8 @@ pub fn generate_annotation_differences(
                 target_annotation_etag = target_annotation.e_tag(),
                 source_annotation_size = source_annotation.size,
                 target_annotation_size = target_annotation.size,
+                source_last_modified = source_annotation.last_modified.to_string(),
+                target_last_modified = target_annotation.last_modified.to_string(),
                 "object annotation modified"
             );
             annotation_differences.modified.push(annotation_name);
