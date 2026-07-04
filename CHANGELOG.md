@@ -5,11 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.59.0] - 2026-07-04
+
+### Added
+
+- Added object annotations support.
+    - `--enable-sync-object-annotations`
+    - `--disable-check-annotation-etag`
+    - `--sync-latest-object-annotations`
+    - `--report-annotations-sync-status`
+
 ## [1.58.9] - 2026-06-27
 
 Monthly update.
 
 ### Security
+
 - Harden directory traversal check used when saving S3 objects to local
   files: reject `.` and `..` path segments (previously only `../` and
   `..\` were caught), and detect separators on both `/` and `\`. Does not
