@@ -655,6 +655,8 @@ impl StorageTrait for S3Storage {
         let mut continuation_token = None;
         let mut annotations_entries = vec![];
 
+        self.exec_rate_limit_objects_per_sec().await;
+
         // For the annotation's integrity, this method cannot be canceled.
         loop {
             let list_object_annotations_result = self
@@ -1018,6 +1020,8 @@ impl StorageTrait for S3Storage {
         annotation_name: &str,
         checksum_mode: Option<ChecksumMode>,
     ) -> Result<GetObjectAnnotationOutput> {
+        self.exec_rate_limit_objects_per_sec().await;
+
         let result = self
             .client
             .as_ref()
@@ -1339,6 +1343,8 @@ impl StorageTrait for S3Storage {
 
             return Ok(DeleteObjectAnnotationOutput::builder().build());
         }
+
+        self.exec_rate_limit_objects_per_sec().await;
 
         let result = self
             .client
