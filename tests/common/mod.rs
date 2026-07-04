@@ -1,25 +1,29 @@
 #![allow(dead_code)]
 #![allow(clippy::assertions_on_constants)]
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use async_channel::Receiver;
 use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
 use aws_config::{BehaviorVersion, ConfigLoader};
 use aws_sdk_s3::client::Client;
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
+use aws_sdk_s3::operation::get_object_annotation::GetObjectAnnotationOutput;
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::primitives::{DateTime, DateTimeFormat};
 use aws_sdk_s3::types::{
-    BucketInfo, BucketLocationConstraint, BucketType, BucketVersioningStatus, ChecksumMode,
-    CreateBucketConfiguration, DataRedundancy, LocationInfo, LocationType, Object, ObjectVersion,
-    ServerSideEncryption, ServerSideEncryptionByDefault, ServerSideEncryptionConfiguration,
-    ServerSideEncryptionRule, Tag, Tagging, VersioningConfiguration,
+    BucketInfo, BucketLocationConstraint, BucketType, BucketVersioningStatus, ChecksumAlgorithm,
+    ChecksumMode, CreateBucketConfiguration, DataRedundancy, LocationInfo, LocationType, Object,
+    ObjectVersion, ServerSideEncryption, ServerSideEncryptionByDefault,
+    ServerSideEncryptionConfiguration, ServerSideEncryptionRule, Tag, Tagging,
+    VersioningConfiguration,
 };
+use aws_smithy_runtime_api::client::retries::ShouldAttempt::No;
 use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
 use aws_types::SdkConfig;
+use base64::engine::general_purpose;
 use filetime::{FileTime, set_file_mtime};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -36,13 +40,17 @@ use uuid::Uuid;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
 
-use sha2::{Digest, Sha256};
-
 use s3sync::Config;
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
-use s3sync::types::SyncStatistics;
+use s3sync::storage::checksum::sha256::ChecksumSha256;
+use s3sync::storage::convert_to_buf_byte_stream_with_callback;
+use s3sync::storage::s3::generate_full_key;
 use s3sync::types::token::create_pipeline_cancellation_token;
+use s3sync::types::{AnnotationMap, SyncStatistics};
+use sha2::{Digest, Sha256};
+use tokio::io::AsyncReadExt;
+use tracing::warn;
 
 pub const REGION: &str = "ap-northeast-1";
 pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
@@ -118,6 +126,10 @@ pub const TEST_SSE_C_KEY_1: &str = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
 pub const TEST_SSE_C_KEY_1_MD5: &str = "zZ5FnqcIqUjVwvWmyog4zw==";
 pub const TEST_SSE_C_KEY_2: &str = "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=";
 pub const TEST_SSE_C_KEY_2_MD5: &str = "GoDL8oWeAZVZNl1r5Hh5Tg==";
+
+pub const TEST_ANNOTATION_NAME: &str = "test_annotation_name";
+pub const TEST_ANNOTATION_VALUE: &str = "test_annotation_value";
+pub const TEST_ANNOTATION_VALUE_SHA2: &str = "IwJ14SmNbnE0GVLVoIDS9ZFeNQsG5sWW6D7lGNoRo7M=";
 
 const PROFILE_NAME: &str = "s3sync-e2e-test";
 
@@ -584,6 +596,50 @@ impl TestHelper {
             .unwrap();
     }
 
+    pub async fn put_test_object(&self, bucket: &str, key: &str, body: &str) {
+        let stream = ByteStream::from(body.as_bytes().to_vec());
+        self.client
+            .put_object()
+            .bucket(bucket)
+            .key(key)
+            .body(stream)
+            .send()
+            .await
+            .unwrap();
+    }
+
+    pub async fn put_test_object_kms(&self, bucket: &str, key: &str, body: &str) {
+        let stream = ByteStream::from(body.as_bytes().to_vec());
+        self.client
+            .put_object()
+            .bucket(bucket)
+            .key(key)
+            .body(stream)
+            .server_side_encryption(ServerSideEncryption::AwsKms)
+            .send()
+            .await
+            .unwrap();
+    }
+
+    pub async fn put_test_object_version(
+        &self,
+        bucket: &str,
+        key: &str,
+        body: &str,
+    ) -> Option<String> {
+        let stream = ByteStream::from(body.as_bytes().to_vec());
+        let result = self
+            .client
+            .put_object()
+            .bucket(bucket)
+            .key(key)
+            .body(stream)
+            .send()
+            .await
+            .unwrap();
+        result.version_id().map(|s| s.to_string())
+    }
+
     pub async fn put_object_tagging(
         &self,
         bucket: &str,
@@ -597,6 +653,189 @@ impl TestHelper {
             .key(key)
             .set_version_id(version_id)
             .tagging(tagging)
+            .send()
+            .await
+            .unwrap();
+    }
+
+    pub async fn list_object_annotations(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+        max_annotation_results: i32,
+    ) -> Result<AnnotationMap> {
+        let mut continuation_token = None;
+        let mut annotations_entries = vec![];
+
+        // For the annotation's integrity, this method cannot be canceled.
+        loop {
+            let list_object_annotations_result = self
+                .client
+                .list_object_annotations()
+                .bucket(bucket)
+                .key(key)
+                .set_version_id(version_id.clone())
+                .set_continuation_token(continuation_token)
+                .max_annotation_results(max_annotation_results)
+                .send()
+                .await
+                .unwrap();
+            if !list_object_annotations_result.annotations().is_empty() {
+                annotations_entries.extend_from_slice(list_object_annotations_result.annotations());
+            }
+
+            if list_object_annotations_result
+                .next_continuation_token
+                .is_none()
+            {
+                break;
+            }
+
+            continuation_token = list_object_annotations_result
+                .next_continuation_token()
+                .map(|s| s.to_string());
+        }
+
+        let mut annotations_map = AnnotationMap::new();
+        for annotation_entry in annotations_entries.iter() {
+            annotations_map.insert(
+                annotation_entry.annotation_name.clone(),
+                annotation_entry.clone(),
+            );
+        }
+
+        Ok(annotations_map)
+    }
+
+    pub async fn list_object_versions_string(&self, bucket: &str, key: &str) -> Vec<String> {
+        let mut key_marker = None;
+        let mut version_id_marker = None;
+
+        let mut versions = vec![];
+        loop {
+            let list_object_versions = self
+                .client
+                .list_object_versions()
+                .bucket(bucket)
+                .prefix(key)
+                .set_key_marker(key_marker)
+                .set_version_id_marker(version_id_marker)
+                .max_keys(1000);
+
+            let list_object_versions_output = list_object_versions.send().await.unwrap();
+            for version in list_object_versions_output.versions().iter() {
+                versions.push(version.version_id().unwrap().to_string());
+            }
+
+            if !list_object_versions_output.is_truncated().unwrap() {
+                break;
+            }
+
+            key_marker = list_object_versions_output
+                .next_key_marker()
+                .map(|marker| marker.to_string());
+            version_id_marker = list_object_versions_output
+                .next_version_id_marker()
+                .map(|marker| marker.to_string());
+        }
+
+        versions
+    }
+
+    pub async fn get_object_annotation(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+        annotation_name: &str,
+    ) -> String {
+        let result = self
+            .client
+            .get_object_annotation()
+            .bucket(bucket)
+            .key(key)
+            .set_version_id(version_id)
+            .annotation_name(annotation_name)
+            .send()
+            .await
+            .unwrap();
+
+        let content_length = result.content_length().unwrap();
+        let mut buffer = Vec::<u8>::with_capacity(content_length as usize);
+        buffer.resize_with(content_length as usize, Default::default);
+
+        let mut body = result.annotation_payload.into_async_read();
+        body.read_exact(buffer.as_mut_slice()).await.unwrap();
+        let annotation_payload_string = String::from_utf8(buffer).unwrap();
+        annotation_payload_string
+    }
+
+    pub async fn is_object_annotation_exist(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+        annotation_name: &str,
+    ) -> bool {
+        let result = self
+            .client
+            .get_object_annotation()
+            .bucket(bucket)
+            .key(key)
+            .set_version_id(version_id)
+            .annotation_name(annotation_name)
+            .send()
+            .await;
+        result.is_ok()
+    }
+
+    pub async fn put_object_annotation(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+        annotation_name: &str,
+        annotation_payload: &str,
+        checksum_sha256: Option<String>,
+    ) {
+        let buffer_stream = ByteStream::from(annotation_payload.as_bytes().to_vec());
+
+        let checksum_algorithm = if checksum_sha256.is_some() {
+            Some(ChecksumAlgorithm::Sha256)
+        } else {
+            None
+        };
+
+        let result = self
+            .client
+            .put_object_annotation()
+            .bucket(bucket)
+            .key(key)
+            .set_version_id(version_id)
+            .annotation_name(annotation_name)
+            .annotation_payload(buffer_stream)
+            .set_checksum_algorithm(checksum_algorithm)
+            .set_checksum_sha256(checksum_sha256)
+            .send()
+            .await
+            .unwrap();
+    }
+
+    pub async fn delete_object_annotation(
+        &self,
+        bucket: &str,
+        key: &str,
+        version_id: Option<String>,
+        annotation_name: &str,
+    ) {
+        let result = self
+            .client
+            .delete_object_annotation()
+            .bucket(bucket)
+            .key(key)
+            .set_version_id(version_id)
+            .annotation_name(annotation_name)
             .send()
             .await
             .unwrap();
@@ -1227,6 +1466,25 @@ impl TestHelper {
             "s3sync",
             "--target-profile",
             "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_always_overwrite(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--remove-modified-filter",
             LARGE_FILE_DIR,
             target_bucket_url,
         ];

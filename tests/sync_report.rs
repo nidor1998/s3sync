@@ -2133,4 +2133,362 @@ mod tests {
         helper.delete_bucket_with_cascade(&bucket1).await;
         helper.delete_bucket_with_cascade(&bucket2).await;
     }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_annotation_report() {
+        TestHelper::init_tracing_subscriber_for_report();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+        }
+
+        {
+            helper
+                .put_test_object(&bucket1, "test_object", "test_object_content")
+                .await;
+            helper
+                .put_test_object(&bucket1, "test_object2", "test_object_2_content")
+                .await;
+
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name1",
+                    "test_annotation_value1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name2",
+                    "test_annotation_value2",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object2",
+                    None,
+                    "test_annotation_name3",
+                    "test_annotation_value3",
+                    None,
+                )
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-sync-object-annotations",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 2);
+            assert_eq!(stats.e_tag_verified, 2);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}/", bucket1);
+            let target_bucket_url = format!("s3://{}/", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--report-sync-status",
+                "--report-annotations-sync-status",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let sync_stats_tmp = pipeline.get_sync_stats_report();
+            let sync_stats = sync_stats_tmp.lock().unwrap();
+            assert_eq!(sync_stats.number_of_objects, 2);
+            assert_eq!(sync_stats.etag_matches, 2);
+            assert_eq!(sync_stats.checksum_matches, 0);
+            assert_eq!(sync_stats.metadata_matches, 0);
+            assert_eq!(sync_stats.tagging_matches, 0);
+            assert_eq!(sync_stats.not_found, 0);
+            assert_eq!(sync_stats.etag_mismatch, 0);
+            assert_eq!(sync_stats.checksum_mismatch, 0);
+            assert_eq!(sync_stats.etag_unknown, 0);
+            assert_eq!(sync_stats.checksum_unknown, 0);
+            assert_eq!(sync_stats.annotation_matches, 3);
+            assert_eq!(sync_stats.annotation_mismatch, 0);
+
+            assert!(!pipeline.has_warning());
+        }
+
+        {
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name1",
+                    "test_annotation_value2",
+                    None,
+                )
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}/", bucket1);
+            let target_bucket_url = format!("s3://{}/", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--report-sync-status",
+                "--report-annotations-sync-status",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let sync_stats_tmp = pipeline.get_sync_stats_report();
+            let sync_stats = sync_stats_tmp.lock().unwrap();
+            assert_eq!(sync_stats.number_of_objects, 2);
+            assert_eq!(sync_stats.etag_matches, 2);
+            assert_eq!(sync_stats.checksum_matches, 0);
+            assert_eq!(sync_stats.metadata_matches, 0);
+            assert_eq!(sync_stats.tagging_matches, 0);
+            assert_eq!(sync_stats.not_found, 0);
+            assert_eq!(sync_stats.etag_mismatch, 0);
+            assert_eq!(sync_stats.checksum_mismatch, 0);
+            assert_eq!(sync_stats.etag_unknown, 0);
+            assert_eq!(sync_stats.checksum_unknown, 0);
+            assert_eq!(sync_stats.annotation_matches, 2);
+            assert_eq!(sync_stats.annotation_mismatch, 1);
+
+            assert!(pipeline.has_warning());
+        }
+
+        {
+            helper
+                .put_object_annotation(
+                    &bucket2,
+                    "test_object",
+                    None,
+                    "test_annotation_name1",
+                    "test_annotation_value2",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name_added",
+                    "test_annotation_value_added",
+                    None,
+                )
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}/", bucket1);
+            let target_bucket_url = format!("s3://{}/", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--report-sync-status",
+                "--report-annotations-sync-status",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let sync_stats_tmp = pipeline.get_sync_stats_report();
+            let sync_stats = sync_stats_tmp.lock().unwrap();
+            assert_eq!(sync_stats.number_of_objects, 2);
+            assert_eq!(sync_stats.etag_matches, 2);
+            assert_eq!(sync_stats.checksum_matches, 0);
+            assert_eq!(sync_stats.metadata_matches, 0);
+            assert_eq!(sync_stats.tagging_matches, 0);
+            assert_eq!(sync_stats.not_found, 0);
+            assert_eq!(sync_stats.etag_mismatch, 0);
+            assert_eq!(sync_stats.checksum_mismatch, 0);
+            assert_eq!(sync_stats.etag_unknown, 0);
+            assert_eq!(sync_stats.checksum_unknown, 0);
+            assert_eq!(sync_stats.annotation_matches, 3);
+            assert_eq!(sync_stats.annotation_mismatch, 1);
+
+            assert!(pipeline.has_warning());
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}/", bucket1);
+            let target_bucket_url = format!("s3://{}/", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--sync-latest-object-annotations",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}/", bucket1);
+            let target_bucket_url = format!("s3://{}/", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--report-sync-status",
+                "--report-annotations-sync-status",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let sync_stats_tmp = pipeline.get_sync_stats_report();
+            let sync_stats = sync_stats_tmp.lock().unwrap();
+            assert_eq!(sync_stats.number_of_objects, 2);
+            assert_eq!(sync_stats.etag_matches, 2);
+            assert_eq!(sync_stats.checksum_matches, 0);
+            assert_eq!(sync_stats.metadata_matches, 0);
+            assert_eq!(sync_stats.tagging_matches, 0);
+            assert_eq!(sync_stats.not_found, 0);
+            assert_eq!(sync_stats.etag_mismatch, 0);
+            assert_eq!(sync_stats.checksum_mismatch, 0);
+            assert_eq!(sync_stats.etag_unknown, 0);
+            assert_eq!(sync_stats.checksum_unknown, 0);
+            assert_eq!(sync_stats.annotation_matches, 4);
+            assert_eq!(sync_stats.annotation_mismatch, 0);
+
+            assert!(!pipeline.has_warning());
+        }
+
+        {
+            helper
+                .put_object_annotation(
+                    &bucket2,
+                    "test_object",
+                    None,
+                    "test_annotation_new_name",
+                    "test_annotation_new_value",
+                    None,
+                )
+                .await;
+        }
+
+        {
+            let source_bucket_url = format!("s3://{}/", bucket1);
+            let target_bucket_url = format!("s3://{}/", bucket2);
+
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--report-sync-status",
+                "--report-annotations-sync-status",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let sync_stats_tmp = pipeline.get_sync_stats_report();
+            let sync_stats = sync_stats_tmp.lock().unwrap();
+            assert_eq!(sync_stats.number_of_objects, 2);
+            assert_eq!(sync_stats.etag_matches, 2);
+            assert_eq!(sync_stats.checksum_matches, 0);
+            assert_eq!(sync_stats.metadata_matches, 0);
+            assert_eq!(sync_stats.tagging_matches, 0);
+            assert_eq!(sync_stats.not_found, 0);
+            assert_eq!(sync_stats.etag_mismatch, 0);
+            assert_eq!(sync_stats.checksum_mismatch, 0);
+            assert_eq!(sync_stats.etag_unknown, 0);
+            assert_eq!(sync_stats.checksum_unknown, 0);
+            assert_eq!(sync_stats.annotation_matches, 4);
+            assert_eq!(sync_stats.annotation_mismatch, 1);
+
+            assert!(pipeline.has_warning());
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
 }

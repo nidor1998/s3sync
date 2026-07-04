@@ -1676,6 +1676,91 @@ mod tests {
         assert!(!is_express_onezone_storage("bucket"));
     }
 
+    #[test]
+    fn get_annotation_checksum_algorithm_test() {
+        init_dummy_tracing_subscriber();
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_sha512(Some("sha512".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Sha512)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_sha256(Some("sha256".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Sha256)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_sha1(Some("sha1".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Sha1)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_md5(Some("md5".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Md5)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_crc64_nvme(Some("crc64_nvme".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Crc64Nvme)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_crc32(Some("crc32".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Crc32)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_crc32_c(Some("crc32c".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Crc32C)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_xxhash64(Some("xxhash64".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Xxhash64)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_xxhash3(Some("xxhash3".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Xxhash3)
+        );
+
+        let source_annotation = GetObjectAnnotationOutput::builder()
+            .set_checksum_xxhash128(Some("xxhash128".to_string()))
+            .build();
+        assert_eq!(
+            get_annotation_checksum_algorithm(&source_annotation),
+            Some(ChecksumAlgorithm::Xxhash128)
+        );
+    }
+
     #[tokio::test]
     async fn create_storage() {
         init_dummy_tracing_subscriber();
