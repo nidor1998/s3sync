@@ -420,6 +420,8 @@ s3sync updates only the annotations that have changed. To detect changes, it com
 
 If s3sync fails to create, update, or delete an annotation, the object transfer is treated as a failure; the object itself, however, is not deleted.
 
+With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed by a tool other than s3sync.
+
 ### Versioning support
 
 All versions of the object can be synchronized. (Except intermediate delete markers)  

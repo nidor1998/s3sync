@@ -152,6 +152,8 @@ correctly.
   So even when `--server-side-copy` is specified, use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option if you need to copy the annotations of multipart-uploaded objects.  
   s3sync verifies an object's annotations against its ETag (MD5 or equivalent) where possible, or against an additional checksum obtained from the source bucket.
 
+  With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed by a tool other than s3sync.
+
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
   Sync statistics report feature supports objects that any tools have transferred, such as AWS CLI, Rclone, s5cmd, and
