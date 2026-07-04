@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 #![allow(clippy::assertions_on_constants)]
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use async_channel::Receiver;
 use aws_config::meta::region::{ProvideRegion, RegionProviderChain};
 use aws_config::{BehaviorVersion, ConfigLoader};
 use aws_sdk_s3::client::Client;
 use aws_sdk_s3::config::Builder;
 use aws_sdk_s3::operation::get_object::GetObjectOutput;
-use aws_sdk_s3::operation::get_object_annotation::GetObjectAnnotationOutput;
 use aws_sdk_s3::operation::get_object_tagging::GetObjectTaggingOutput;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::primitives::ByteStream;
@@ -20,10 +19,8 @@ use aws_sdk_s3::types::{
     ServerSideEncryptionConfiguration, ServerSideEncryptionRule, Tag, Tagging,
     VersioningConfiguration,
 };
-use aws_smithy_runtime_api::client::retries::ShouldAttempt::No;
 use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
 use aws_types::SdkConfig;
-use base64::engine::general_purpose;
 use filetime::{FileTime, set_file_mtime};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -43,14 +40,10 @@ use walkdir::WalkDir;
 use s3sync::Config;
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
-use s3sync::storage::checksum::sha256::ChecksumSha256;
-use s3sync::storage::convert_to_buf_byte_stream_with_callback;
-use s3sync::storage::s3::generate_full_key;
 use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::{AnnotationMap, SyncStatistics};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncReadExt;
-use tracing::warn;
 
 pub const REGION: &str = "ap-northeast-1";
 pub const EXPRESS_ONE_ZONE_AZ: &str = "apne1-az4";
@@ -807,7 +800,7 @@ impl TestHelper {
             None
         };
 
-        let result = self
+        let _result = self
             .client
             .put_object_annotation()
             .bucket(bucket)
@@ -829,7 +822,7 @@ impl TestHelper {
         version_id: Option<String>,
         annotation_name: &str,
     ) {
-        let result = self
+        let _result = self
             .client
             .delete_object_annotation()
             .bucket(bucket)
