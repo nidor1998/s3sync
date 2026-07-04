@@ -580,7 +580,11 @@ impl UploadManager {
 
         Ok(PutObjectOutput::builder()
             .e_tag(complete_multipart_upload_output.e_tag().unwrap())
-            .set_version_id(complete_multipart_upload_output.version_id().map(|v| v.to_string()))
+            .set_version_id(
+                complete_multipart_upload_output
+                    .version_id()
+                    .map(|v| v.to_string()),
+            )
             .build())
     }
 
