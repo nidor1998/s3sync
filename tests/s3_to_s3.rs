@@ -7555,6 +7555,242 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_sync_annotation_kms_with_sync_latest() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+
+            helper
+                .put_test_object_kms(&bucket1, "test_object", "test_object_content")
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name1",
+                    "test_annotation_value1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name2",
+                    "test_annotation_value2",
+                    None,
+                )
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-sync-object-annotations",
+                "--sse",
+                "aws:kms",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+        }
+
+        {
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name_added",
+                    "test_annotation_value_added",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name1",
+                    "test_annotation_value1_modified",
+                    None,
+                )
+                .await;
+            helper
+                .delete_object_annotation(&bucket1, "test_object", None, "test_annotation_name2")
+                .await;
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--sync-latest-object-annotations",
+                "--sse",
+                "aws:kms",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object", None, "test_annotation_name1")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_modified");
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object", None, "test_annotation_name_added")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value_added");
+            let is_annotation_exist = helper
+                .is_object_annotation_exist(&bucket2, "test_object", None, "test_annotation_name2")
+                .await;
+            assert!(!is_annotation_exist);
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--sync-latest-object-annotations",
+                "--sse",
+                "aws:kms",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object", None, "test_annotation_name1")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_modified");
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object", None, "test_annotation_name_added")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value_added");
+            let is_annotation_exist = helper
+                .is_object_annotation_exist(&bucket2, "test_object", None, "test_annotation_name2")
+                .await;
+            assert!(!is_annotation_exist);
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
+
+        {
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name1",
+                    "test_annotation_value1_modified2",
+                    None,
+                )
+                .await;
+            helper
+                .delete_object_annotation(&bucket1, "test_object", None, "test_annotation_name2")
+                .await;
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--sync-latest-object-annotations",
+                "--sse",
+                "aws:kms",
+                "--disable-check-annotation-etag",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object", None, "test_annotation_name1")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_modified2");
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_sync_annotation_with_sync_latest_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -8000,10 +8236,9 @@ mod tests {
             assert_eq!(stats.sync_skip, 0);
         }
 
+        tokio::time::sleep(std::time::Duration::from_secs(SLEEP_SECS_BEFORE_RESYNC)).await;
+
         {
-            helper
-                .put_test_object(&bucket1, "test_object", "test_object_content")
-                .await;
             helper
                 .put_object_annotation(
                     &bucket1,
