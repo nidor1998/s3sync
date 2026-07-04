@@ -6847,6 +6847,106 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_sync_annotation_without_prefix_max_keys() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+
+            helper
+                .put_test_object(&bucket1, "test_object", "test_object_content")
+                .await;
+            helper
+                .put_test_object(&bucket1, "test_object2", "test_object_2_content")
+                .await;
+
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name1",
+                    "test_annotation_value1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    None,
+                    "test_annotation_name2",
+                    "test_annotation_value2",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object2",
+                    None,
+                    "test_annotation_name3",
+                    "test_annotation_value3",
+                    None,
+                )
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-sync-object-annotations",
+                "--max-keys",
+                "1",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 2);
+            assert_eq!(stats.e_tag_verified, 2);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object", None, "test_annotation_name1")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1");
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object", None, "test_annotation_name2")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value2");
+            let annotation_value = helper
+                .get_object_annotation(&bucket2, "test_object2", None, "test_annotation_name3")
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value3");
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_sync_annotation_dry_run() {
         TestHelper::init_dummy_tracing_subscriber();
 
