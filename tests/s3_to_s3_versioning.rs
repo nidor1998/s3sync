@@ -2783,4 +2783,417 @@ mod tests {
         helper.delete_bucket_with_cascade(&bucket1).await;
         helper.delete_bucket_with_cascade(&bucket2).await;
     }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_annotation_versioning() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        let v1_version;
+        let v2_version;
+        {
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            v1_version = helper
+                .put_test_object_version(&bucket1, "test_object", "test_object_content_v1")
+                .await;
+            v2_version = helper
+                .put_test_object_version(&bucket1, "test_object", "test_object_content_v1")
+                .await;
+
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    v1_version.clone(),
+                    "test_annotation_name1",
+                    "test_annotation_value1_v1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    v1_version.clone(),
+                    "test_annotation_name2",
+                    "test_annotation_value2_v1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "test_object",
+                    v2_version.clone(),
+                    "test_annotation_name1",
+                    "test_annotation_value1_v2",
+                    None,
+                )
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-sync-object-annotations",
+                "--enable-versioning",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 2);
+            assert_eq!(stats.e_tag_verified, 2);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+
+            let versions_array = helper
+                .list_object_versions_string(&bucket2, "test_object")
+                .await;
+
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "test_object",
+                    Some(versions_array[0].clone()),
+                    "test_annotation_name1",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_v2");
+            let is_annotation_exist = helper
+                .is_object_annotation_exist(
+                    &bucket2,
+                    "test_object",
+                    Some(versions_array[0].clone()),
+                    "test_annotation_name2",
+                )
+                .await;
+            assert!(!is_annotation_exist);
+
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "test_object",
+                    Some(versions_array[1].clone()),
+                    "test_annotation_name1",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_v1");
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "test_object",
+                    Some(versions_array[1].clone()),
+                    "test_annotation_name2",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value2_v1");
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_annotation_versioning_multipart() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        let v1_version;
+        let v2_version;
+        {
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper
+                .sync_large_test_data_always_overwrite(&target_bucket_url)
+                .await;
+            helper
+                .sync_large_test_data_always_overwrite(&target_bucket_url)
+                .await;
+
+            let versions_array = helper
+                .list_object_versions_string(&bucket1, "large_file")
+                .await;
+            v1_version = versions_array[1].clone();
+            v2_version = versions_array[0].clone();
+
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "large_file",
+                    Some(v1_version.clone()),
+                    "test_annotation_name1",
+                    "test_annotation_value1_v1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "large_file",
+                    Some(v1_version.clone()),
+                    "test_annotation_name2",
+                    "test_annotation_value2_v1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "large_file",
+                    Some(v2_version.clone()),
+                    "test_annotation_name1",
+                    "test_annotation_value1_v2",
+                    None,
+                )
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-sync-object-annotations",
+                "--enable-versioning",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 2);
+            assert_eq!(stats.e_tag_verified, 2);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+
+            let versions_array = helper
+                .list_object_versions_string(&bucket2, "large_file")
+                .await;
+
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[0].clone()),
+                    "test_annotation_name1",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_v2");
+            let is_annotation_exist = helper
+                .is_object_annotation_exist(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[0].clone()),
+                    "test_annotation_name2",
+                )
+                .await;
+            assert!(!is_annotation_exist);
+
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[1].clone()),
+                    "test_annotation_name1",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_v1");
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[1].clone()),
+                    "test_annotation_name2",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value2_v1");
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_annotation_versioning_multipart_server_side_copy() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        let v1_version;
+        let v2_version;
+        {
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper
+                .sync_large_test_data_always_overwrite(&target_bucket_url)
+                .await;
+            helper
+                .sync_large_test_data_always_overwrite(&target_bucket_url)
+                .await;
+
+            let versions_array = helper
+                .list_object_versions_string(&bucket1, "large_file")
+                .await;
+            v1_version = versions_array[1].clone();
+            v2_version = versions_array[0].clone();
+
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "large_file",
+                    Some(v1_version.clone()),
+                    "test_annotation_name1",
+                    "test_annotation_value1_v1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "large_file",
+                    Some(v1_version.clone()),
+                    "test_annotation_name2",
+                    "test_annotation_value2_v1",
+                    None,
+                )
+                .await;
+            helper
+                .put_object_annotation(
+                    &bucket1,
+                    "large_file",
+                    Some(v2_version.clone()),
+                    "test_annotation_name1",
+                    "test_annotation_value1_v2",
+                    None,
+                )
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-sync-object-annotations",
+                "--enable-versioning",
+                "--server-side-copy",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 2);
+            assert_eq!(stats.e_tag_verified, 2);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+            assert_eq!(stats.sync_skip, 0);
+
+            let versions_array = helper
+                .list_object_versions_string(&bucket2, "large_file")
+                .await;
+
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[0].clone()),
+                    "test_annotation_name1",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_v2");
+            let is_annotation_exist = helper
+                .is_object_annotation_exist(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[0].clone()),
+                    "test_annotation_name2",
+                )
+                .await;
+            assert!(!is_annotation_exist);
+
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[1].clone()),
+                    "test_annotation_name1",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value1_v1");
+            let annotation_value = helper
+                .get_object_annotation(
+                    &bucket2,
+                    "large_file",
+                    Some(versions_array[1].clone()),
+                    "test_annotation_name2",
+                )
+                .await;
+            assert_eq!(annotation_value, "test_annotation_value2_v1");
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
 }

@@ -89,6 +89,7 @@ pub struct Config {
     pub report_sync_status: bool,
     pub report_metadata_sync_status: bool,
     pub report_tagging_sync_status: bool,
+    pub report_annotations_sync_status: bool,
     pub event_manager: EventManager,
     pub preprocess_manager: PreprocessManager,
     pub preprocess_callback_lua_script: Option<String>,
@@ -103,6 +104,9 @@ pub struct Config {
     pub copy_source_if_match: bool,
     pub max_delete: Option<u64>,
     pub ignore_glacier_warnings: bool,
+    pub enable_sync_object_annotations: bool,
+    pub sync_latest_object_annotations: bool,
+    pub disable_check_annotation_etag: bool,
 }
 
 impl Config {

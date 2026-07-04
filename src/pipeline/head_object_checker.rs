@@ -268,6 +268,7 @@ impl HeadObjectChecker {
             self.target.is_local_storage(),
             self.config.head_each_target,
             self.config.sync_latest_tagging,
+            self.config.sync_latest_object_annotations,
         )
     }
 
@@ -284,12 +285,13 @@ fn is_head_object_check_required(
     local_storage: bool,
     head_each_target: bool,
     sync_latest_tagging: bool,
+    sync_latest_object_annotation: bool,
 ) -> bool {
     if local_storage {
         return true;
     }
 
-    head_each_target || sync_latest_tagging
+    head_each_target || sync_latest_tagging || sync_latest_object_annotation
 }
 
 fn check_target_local_storage_allow_overwrite(
@@ -334,21 +336,25 @@ mod tests {
     fn is_head_object_required_true() {
         init_dummy_tracing_subscriber();
 
-        assert!(is_head_object_check_required(false, true, false));
-        assert!(is_head_object_check_required(true, false, false));
-        assert!(is_head_object_check_required(true, true, false));
+        assert!(is_head_object_check_required(false, true, false, false));
+        assert!(is_head_object_check_required(true, false, false, false));
+        assert!(is_head_object_check_required(true, true, false, false));
 
-        assert!(is_head_object_check_required(false, true, true));
-        assert!(is_head_object_check_required(true, false, true));
-        assert!(is_head_object_check_required(true, true, true));
-        assert!(is_head_object_check_required(false, false, true));
+        assert!(is_head_object_check_required(false, true, true, false));
+        assert!(is_head_object_check_required(true, false, true, false));
+        assert!(is_head_object_check_required(true, true, true, false));
+        assert!(is_head_object_check_required(false, false, true, false));
+
+        assert!(is_head_object_check_required(false, false, false, true));
+        assert!(is_head_object_check_required(false, false, true, true));
+        assert!(is_head_object_check_required(false, true, true, true));
     }
 
     #[test]
     fn is_head_object_required_false() {
         init_dummy_tracing_subscriber();
 
-        assert!(!is_head_object_check_required(false, false, false));
+        assert!(!is_head_object_check_required(false, false, false, false));
     }
 
     #[test]

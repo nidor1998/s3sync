@@ -47,6 +47,7 @@ project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://git
     * [Additional checksum-based incremental transfer](#Additional-checksum-based-incremental-transfer)
     * [Proxy support](#Proxy-support)
     * [Amazon S3 Express One Zone support](#Amazon-S3-Express-One-Zone-support)
+    * [Object Annotation support](#Object-Annotation-support)
     * [Versioning support](#Versioning-support)
     * [Point-in-time snapshot](#Point-in-time-snapshot)
     * [Server-side copy support](#Server-side-copy-support)
@@ -400,6 +401,27 @@ s3sync gathers all objects in the target bucket at first step (not concurrently)
 In S3 Express One Zone, ETag is not MD5. So, s3sync uses additional checksum algorithm for verification by default(
 CRC64NVME).
 
+### Object Annotation support
+
+For S3-to-S3 transfers, s3sync can sync objects along with their object annotations.  
+Use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option to sync objects together with their annotations.  
+s3sync updates only the annotations that have changed.  
+
+Note that copying annotations requires additional API calls.  
+
+Annotations can be synced in parallel (`--max-parallel-uploads`).  
+With the `--server-side-copy` option, Amazon S3 copies the annotations to the target bucket entirely within Amazon S3.  
+However, Amazon S3's `CopyPart` API (used by server-side copy) does not copy the annotations of objects that were multipart-uploaded.  
+So even when `--server-side-copy` is specified, use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option if you need to copy the annotations of multipart-uploaded objects.  
+
+s3sync verifies an object's annotations against its ETag (MD5 or equivalent) where possible, or against an additional checksum obtained from the source bucket.
+
+s3sync updates only the annotations that have changed. To detect changes, it compares objects by their ETag where possible; when the ETag cannot be used (for example, when SSE-KMS encryption is enabled), it falls back to the object's Last-Modified timestamp.
+
+If s3sync fails to create, update, or delete an annotation, the object transfer is treated as a failure; the object itself, however, is not deleted.
+
+With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed by a tool other than s3sync.
+
 ### Versioning support
 
 All versions of the object can be synchronized. (Except intermediate delete markers)  
@@ -487,8 +509,8 @@ The following is an example of the report (the last two lines of the above comma
 
   </details>
 
-You can check the synchronization status of the object's tagging and metadata with `--report-metadata-sync-status` and
-`--report-tagging-sync-status` options.
+You can check the synchronization status of the object's tagging, metadata, annnotation with `--report-metadata-sync-status`,
+`--report-tagging-sync-status` and `--report-annotations-sync-status` option.
 
 Note: For reporting, s3sync uses a special process exit code. `0` If all objects are synchronized correctly. `3` If some
 objects are not synchronized correctly.
@@ -1273,6 +1295,8 @@ AWS Configuration:
           Source secret access key [env: SOURCE_SECRET_ACCESS_KEY=]
       --source-session-token <SOURCE_SESSION_TOKEN>
           Source session token [env: SOURCE_SESSION_TOKEN=]
+      --source-no-sign-request
+          Do not sign requests for the source bucket (anonymous access for public buckets) [env: SOURCE_NO_SIGN_REQUEST=]
       --target-profile <TARGET_PROFILE>
           Target AWS CLI profile [env: TARGET_PROFILE=]
       --target-access-key <TARGET_ACCESS_KEY>
@@ -1281,8 +1305,6 @@ AWS Configuration:
           Target secret access key [env: TARGET_SECRET_ACCESS_KEY=]
       --target-session-token <TARGET_SESSION_TOKEN>
           Target session token [env: TARGET_SESSION_TOKEN=]
-      --source-no-sign-request
-          Do not sign requests for the source bucket (anonymous access for public buckets) [env: SOURCE_NO_SIGN_REQUEST=]
 
 Source Options:
       --source-region <SOURCE_REGION>
@@ -1472,6 +1494,14 @@ Tagging:
                              If this option is enabled, the --remove-modified-filter and
                              --head-each-target options are automatically enabled. [env: SYNC_LATEST_TAGGING=]
 
+Object Annotation:
+      --enable-sync-object-annotations  Copy object annotations from the source if necessary.
+                                        If this option is enabled, extra API calls are required. [env: ENABLE_SYNC_OBJECT_ANNOTATIONS=]
+      --disable-check-annotation-etag   Don't use ETag for update annotation checking [env: DISABLE_CHECK_ANNOTATION_ETAG=]
+      --sync-latest-object-annotations  Copy the latest object annotation from the source if necessary.
+                                        If this option is enabled, the --remove-modified-filter and
+                                        --head-each-target options are automatically enabled. And extra API calls are required. [env: SYNC_LATEST_OBJECT_ANNOTATIONS=]
+
 Versioning:
       --enable-versioning              Sync all version objects in the source storage to the target versioning storage.
                                          [env: ENABLE_VERSIONING=]
@@ -1500,15 +1530,17 @@ Encryption:
           Target base64 encoded MD5 digest of target-sse-c-key [env: TARGET_SSE_C_KEY_MD5=]
 
 Reporting:
-      --report-sync-status           Report sync status to the target storage.
-                                     Default verification is for ETag. For additional checksum, use --check-additional-checksum.
-                                     For more precise control, use with --auto-chunksize. [env: REPORT_SYNC_STATUS=]
-      --report-metadata-sync-status  Report metadata sync status to the target storage.
-                                     It must be used with --report-sync-status.
-                                     Note: s3sync generated user-defined metadata(s3sync_origin_version_id/s3sync_origin_last_modified) were ignored.
-                                           Because they are usually different from the source storage. [env: REPORT_METADATA_SYNC_STATUS=]
-      --report-tagging-sync-status   Report tagging sync status to the target storage.
-                                     It must be used with --report-sync-status. [env: REPORT_TAGGING_SYNC_STATUS=]
+      --report-sync-status              Report sync status to the target storage.
+                                        Default verification is for ETag. For additional checksum, use --check-additional-checksum.
+                                        For more precise control, use with --auto-chunksize. [env: REPORT_SYNC_STATUS=]
+      --report-metadata-sync-status     Report metadata sync status to the target storage.
+                                        It must be used with --report-sync-status.
+                                        Note: s3sync generated user-defined metadata(s3sync_origin_version_id/s3sync_origin_last_modified) were ignored.
+                                              Because they are usually different from the source storage. [env: REPORT_METADATA_SYNC_STATUS=]
+      --report-tagging-sync-status      Report tagging sync status to the target storage.
+                                        It must be used with --report-sync-status. [env: REPORT_TAGGING_SYNC_STATUS=]
+      --report-annotations-sync-status  Report annotations sync status to the target storage.
+                                        It must be used with --report-sync-status. [env: REPORT_ANNOTATIONS_SYNC_STATUS=]
 
 Tracing/Logging:
       --json-tracing           Show trace as json format [env: JSON_TRACING=]

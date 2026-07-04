@@ -43,6 +43,15 @@ bitflags! {
         // This event is triggered after the PIPELINE_END event
         const STATS_REPORT = 1u64 << 15;
 
+        // This event is triggered when an annotation is copied from source to target and the etag is matched
+        const SYNC_ANNOTATION_ETAG_VERIFIED = 1u64 << 16;
+
+        // This event is triggered when an annotation is copied from source to target, but the etag is not matched
+        const SYNC_ANNOTATION_ETAG_MISMATCH = 1u64 << 17;
+
+        // This event is triggered when an annotation is deleted from target
+        const SYNC_ANNOTATION_DELETED = 1u64 << 18;
+
         // This is a special event mask to indicate that all events should be captured
         const ALL_EVENTS  = !0;
     }
@@ -67,6 +76,7 @@ pub struct EventData {
     pub source_content_type: Option<String>,
     pub source_user_defined_metadata: Option<String>,
     pub source_tagging: Option<String>,
+    pub annotation_name: Option<String>,
     pub byte_written: Option<u64>,
     pub upload_id: Option<String>,
     pub part_number: Option<u64>,

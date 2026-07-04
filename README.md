@@ -137,6 +137,23 @@ correctly.
   s3sync can be used
   with [Amazon S3 Express one Zone](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-express-Endpoints.html).
 
+- Object Annotation support  
+  For S3-to-S3 transfers, s3sync can sync objects along with their object annotations.  
+  Use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option to sync objects together with their annotations.  
+
+  s3sync updates only the annotations that have changed. To detect changes, it compares objects by their ETag where possible; when the ETag cannot be used (for example, when SSE-KMS encryption is enabled), it falls back to the object's Last-Modified timestamp.  
+  If s3sync fails to create, update, or delete an annotation, the object transfer is treated as a failure; the object itself, however, is not deleted.  
+
+  Note that copying annotations requires additional API calls.  
+
+  Annotations can be synced in parallel (`--max-parallel-uploads`).  
+  With the `--server-side-copy` option, Amazon S3 copies the annotations to the target bucket entirely within Amazon S3.  
+  However, Amazon S3's `CopyPart` API (used by server-side copy) does not copy the annotations of objects that were multipart-uploaded.  
+  So even when `--server-side-copy` is specified, use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option if you need to copy the annotations of multipart-uploaded objects.  
+  s3sync verifies an object's annotations against its ETag (MD5 or equivalent) where possible, or against an additional checksum obtained from the source bucket.
+
+  With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed by a tool other than s3sync.
+
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
   Sync statistics report feature supports objects that any tools have transferred, such as AWS CLI, Rclone, s5cmd, and
@@ -200,8 +217,8 @@ correctly.
 
   </details>
 
-  You can check the synchronization status of the object's tagging and metadata with `--report-metadata-sync-status` and
-  `--report-tagging-sync-status` option.
+  You can check the synchronization status of the object's tagging, metadata, annnotation with `--report-metadata-sync-status`, 
+  `--report-tagging-sync-status` and `--report-annotations-sync-status` option.
 
 - Robust retry logic  
   For long-time running operations, s3sync has a robust original retry logic in addition to AWS SDK's retry logic.

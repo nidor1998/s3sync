@@ -140,6 +140,8 @@ fn show_sync_report_summary(sync_stats_report: MutexGuard<'_, SyncStatsReport>) 
         tagging_mismatch = sync_stats_report.tagging_mismatch,
         etag_unknown = sync_stats_report.etag_unknown,
         checksum_unknown = sync_stats_report.checksum_unknown,
+        annotation_matches = sync_stats_report.annotation_matches,
+        annotation_mismatch = sync_stats_report.annotation_mismatch,
     );
 }
 
