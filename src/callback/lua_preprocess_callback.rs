@@ -379,11 +379,90 @@ impl LuaPreprocessCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aws_sdk_s3::types::{
+        ChecksumType, ObjectLockLegalHoldStatus, ObjectLockMode, ReplicationStatus, RequestCharged,
+        ServerSideEncryption,
+    };
 
     #[tokio::test]
     async fn create_callback() {
         let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, false, false, 0);
         let _callback = LuaPreprocessCallback::new(8 * 1024 * 1024, true, false, 0);
         let _callback = LuaPreprocessCallback::new(0, true, true, 0);
+    }
+
+    #[tokio::test]
+    async fn preprocess_before_upload_with_all_fields() {
+        let mut callback = LuaPreprocessCallback::new(8 * 1024 * 1024, false, false, 5000);
+        callback
+            .load_and_compile("./test_data/script/preprocess_callback.lua")
+            .unwrap();
+
+        // Every optional field is populated so the field-conversion closures execute.
+        let source_object = GetObjectOutput::builder()
+            .accept_ranges("bytes")
+            .bucket_key_enabled(true)
+            .cache_control("no-cache")
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_type(ChecksumType::FullObject)
+            .content_disposition("attachment")
+            .content_encoding("deflate")
+            .content_language("en-US")
+            .content_length(6)
+            .content_range("bytes 0-5/6")
+            .content_type("text/plain")
+            .e_tag("e_tag")
+            .expires_string("2055-05-20T00:00:00.000Z")
+            .last_modified(DateTime::from_secs(1))
+            .metadata("key1", "value1")
+            .missing_meta(0)
+            .object_lock_legal_hold_status(ObjectLockLegalHoldStatus::On)
+            .object_lock_mode(ObjectLockMode::Governance)
+            .object_lock_retain_until_date(DateTime::from_secs(2))
+            .parts_count(1)
+            .replication_status(ReplicationStatus::Complete)
+            .request_charged(RequestCharged::Requester)
+            .restore("restore")
+            .server_side_encryption(ServerSideEncryption::Aes256)
+            .sse_customer_algorithm("AES256")
+            .sse_customer_key_md5("md5")
+            .ssekms_key_id("kms_key")
+            .storage_class(StorageClass::Standard)
+            .tag_count(1)
+            .version_id("version1")
+            .website_redirect_location("/redirect")
+            .build();
+
+        // The upload metadata is also fully populated to exercise its closures.
+        let mut metadata = UploadMetadata {
+            acl: Some(ObjectCannedAcl::Private),
+            cache_control: Some("no-cache".to_string()),
+            content_disposition: Some("attachment".to_string()),
+            content_encoding: Some("deflate".to_string()),
+            content_language: Some("en-US".to_string()),
+            content_type: Some("text/plain".to_string()),
+            expires: Some(DateTime::from_secs(3)),
+            metadata: Some(HashMap::from([(
+                "existing".to_string(),
+                "value".to_string(),
+            )])),
+            request_payer: Some(RequestPayer::Requester),
+            storage_class: Some(StorageClass::Standard),
+            website_redirect_location: Some("/redirect".to_string()),
+            tagging: Some("tag1=value1".to_string()),
+        };
+
+        callback
+            .preprocess_before_upload("key1", &source_object, &mut metadata)
+            .await
+            .unwrap();
+
+        // The lua script updates the metadata fields.
+        assert_eq!(metadata.cache_control.unwrap(), "s-maxage=1604800");
+        assert_eq!(metadata.content_type.unwrap(), "application/vnd.ms-excel");
     }
 }

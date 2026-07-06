@@ -712,6 +712,203 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    #[should_panic(expected = "parts_size is empty")]
+    async fn generate_checksum_from_path_empty_parts_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = generate_checksum_from_path(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Sha256,
+            vec![],
+            8 * 1024 * 1024,
+            false,
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "parts_size is empty")]
+    async fn generate_checksum_from_path_for_check_empty_parts_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = generate_checksum_from_path_for_check(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Sha256,
+            true,
+            vec![],
+            false,
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "multipart is false but object_parts has more than 1 element")]
+    async fn generate_checksum_from_path_for_check_not_multipart_many_parts_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = generate_checksum_from_path_for_check(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Sha256,
+            false,
+            vec![2, 3],
+            false,
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+    }
+
+    #[cfg(target_family = "unix")]
+    #[tokio::test]
+    async fn generate_checksum_from_path_read_error_test() {
+        init_dummy_tracing_subscriber();
+
+        // Reading a directory fails with an error that is not UnexpectedEof.
+        let result = generate_checksum_from_path(
+            PathBuf::from("test_data").as_path(),
+            ChecksumAlgorithm::Sha256,
+            vec![10],
+            8 * 1024 * 1024,
+            false,
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+
+        assert!(
+            result
+                .err()
+                .unwrap()
+                .to_string()
+                .starts_with("Failed to read")
+        );
+    }
+
+    #[cfg(target_family = "unix")]
+    #[tokio::test]
+    async fn generate_checksum_from_path_for_check_read_error_test() {
+        init_dummy_tracing_subscriber();
+
+        // Reading a directory fails with an error that is not UnexpectedEof.
+        let result = generate_checksum_from_path_for_check(
+            PathBuf::from("test_data").as_path(),
+            ChecksumAlgorithm::Sha256,
+            true,
+            vec![10],
+            false,
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+
+        assert!(
+            result
+                .err()
+                .unwrap()
+                .to_string()
+                .starts_with("Failed to read")
+        );
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_cancel_with_trace_test() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_trace_subscriber();
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        let result = generate_checksum_from_path(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Sha256,
+            vec![1],
+            8 * 1024 * 1024,
+            false,
+            cancel_token,
+        )
+        .await;
+
+        assert!(crate::types::error::is_cancelled_error(
+            &result.err().unwrap()
+        ));
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_for_check_cancel_with_trace_test() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_trace_subscriber();
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        let result = generate_checksum_from_path_for_check(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Sha256,
+            true,
+            vec![1],
+            false,
+            cancel_token,
+        )
+        .await;
+
+        assert!(crate::types::error::is_cancelled_error(
+            &result.err().unwrap()
+        ));
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_for_check_not_multipart_with_trace_test() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_trace_subscriber();
+
+        let checksum = generate_checksum_from_path_for_check(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Sha256,
+            false,
+            vec![5],
+            false,
+            create_pipeline_cancellation_token(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(checksum, TEST_SHA256_BASE64_DIGEST.to_string());
+    }
+
+    #[tokio::test]
+    async fn generate_checksum_from_path_chunksize_cancel_with_trace_test() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_trace_subscriber();
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        let result = generate_checksum_from_path_with_chunksize(
+            PathBuf::from("test_data/5byte.dat").as_path(),
+            ChecksumAlgorithm::Sha256,
+            2,
+            1,
+            false,
+            cancel_token,
+        )
+        .await;
+
+        assert!(crate::types::error::is_cancelled_error(
+            &result.err().unwrap()
+        ));
+    }
+
+    // A thread-local subscriber that enables s3sync events so that lazily evaluated
+    // tracing macro fields are executed.
+    fn set_scoped_trace_subscriber() -> tracing::subscriber::DefaultGuard {
+        tracing::subscriber::set_default(
+            tracing_subscriber::fmt()
+                .with_env_filter(EnvFilter::try_new("s3sync=trace").unwrap())
+                .with_writer(std::io::sink)
+                .finish(),
+        )
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

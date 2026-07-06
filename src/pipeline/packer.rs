@@ -114,3 +114,59 @@ fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &st
             .as_ref()
             .is_some_and(|point| point == error_simulation_point)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Config;
+    use crate::config::args::parse_from_args;
+    use crate::types::S3syncObject;
+    use crate::types::token::create_pipeline_cancellation_token;
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+    use tracing_subscriber::EnvFilter;
+
+    #[tokio::test]
+    async fn pack_cancelled_test() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+
+        // Keep the sender half alive so recv() blocks and the select! races the
+        // cancellation branch instead of completing on a closed channel.
+        let (_sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let (next_sender, _next_receiver) = async_channel::bounded::<S3syncObject>(1000);
+
+        let stage = Stage::new(
+            config,
+            None,
+            None,
+            Some(receiver),
+            Some(next_sender),
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let packer = ObjectVersionsPacker::new(stage);
+
+        cancellation_token.cancel();
+
+        assert!(packer.pack().await.is_ok());
+    }
+
+    fn init_dummy_tracing_subscriber() {
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
+            .try_init();
+    }
+}

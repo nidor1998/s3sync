@@ -187,6 +187,25 @@ mod tests {
             .unwrap();
     }
 
+    #[test]
+    #[should_panic(expected = "key already exists in the key map")]
+    fn insert_key_duplicate_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test-key1")
+                .size(1)
+                .last_modified(DateTime::from_secs(1))
+                .build(),
+        );
+        let key_map = ObjectKeyMap::new(Mutex::new(HashMap::new()));
+
+        insert_key(&object, &key_map, false);
+        // Inserting the same key again must panic.
+        insert_key(&object, &key_map, false);
+    }
+
     #[tokio::test]
     async fn aggregate_sha1_test() {
         init_dummy_tracing_subscriber();

@@ -210,6 +210,62 @@ mod tests {
         assert_eq!(diff_set, expected_set);
     }
 
+    #[tokio::test]
+    async fn list_cancelled_test() {
+        use crate::Config;
+        use crate::config::args::parse_from_args;
+        use crate::pipeline::stage::Stage;
+        use crate::types::token::create_pipeline_cancellation_token;
+        use std::sync::Arc;
+        use std::sync::atomic::AtomicBool;
+
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+
+        // generate_diff returns keys present in the target but not the source, so the
+        // target must hold a key that is missing from the source for a non-empty diff.
+        let mut target_key_map = HashMap::new();
+        target_key_map.insert(
+            ObjectKey::KeyString("key1".to_string()),
+            ObjectEntry {
+                last_modified: DateTime::from_secs(1),
+                content_length: 1,
+                e_tag: None,
+            },
+        );
+        let source_key_map = ObjectKeyMap::new(Mutex::new(HashMap::new()));
+        let target_key_map = ObjectKeyMap::new(Mutex::new(target_key_map));
+
+        let stage = Stage::new(
+            config,
+            None,
+            None,
+            None,
+            None,
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let diff_lister = DiffLister::new(stage);
+
+        // Cancel before running so the in-loop cancellation branch is taken.
+        cancellation_token.cancel();
+
+        assert!(
+            diff_lister
+                .list(&source_key_map, &target_key_map)
+                .await
+                .is_ok()
+        );
+    }
+
     #[test]
     #[should_panic]
     fn generate_diff_panic_test() {

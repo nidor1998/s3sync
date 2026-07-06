@@ -201,4 +201,53 @@ rusty_fork_test! {
             stderr_tracing: true,
         });
     }
+
+    #[test]
+    fn init_stdout_tracing_and_emit_event() {
+        // Emitting an event after initialization exercises the writer factory closure
+        // and the PipeSafeWriter stdout path.
+        init_tracing(&TracingConfig {
+            tracing_level: log::Level::Info,
+            json_tracing: false,
+            aws_sdk_tracing: false,
+            span_events_tracing: false,
+            disable_color_tracing: true,
+            stderr_tracing: false,
+        });
+        tracing::info!("s3sync test tracing event");
+    }
+
+    #[test]
+    fn init_stderr_tracing_and_emit_event() {
+        // Emitting an event after initialization exercises the writer factory closure
+        // and the PipeSafeWriter stderr path.
+        init_tracing(&TracingConfig {
+            tracing_level: log::Level::Info,
+            json_tracing: false,
+            aws_sdk_tracing: false,
+            span_events_tracing: false,
+            disable_color_tracing: true,
+            stderr_tracing: true,
+        });
+        tracing::info!("s3sync test tracing event");
+    }
+}
+
+#[cfg(test)]
+mod pipe_safe_writer_tests {
+    use super::*;
+
+    #[test]
+    fn write_and_flush_stdout() {
+        let mut writer = PipeSafeWriter::Stdout;
+        assert_eq!(writer.write(b"x").unwrap(), 1);
+        writer.flush().unwrap();
+    }
+
+    #[test]
+    fn write_and_flush_stderr() {
+        let mut writer = PipeSafeWriter::Stderr;
+        assert_eq!(writer.write(b"y").unwrap(), 1);
+        writer.flush().unwrap();
+    }
 }

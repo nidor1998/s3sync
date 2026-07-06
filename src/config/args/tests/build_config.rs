@@ -746,6 +746,43 @@ mod tests {
         assert!(parse_from_args(args).is_err());
     }
 
+    #[test]
+    #[cfg(target_family = "unix")]
+    fn build_from_target_local_inaccessible_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        init_dummy_tracing_subscriber();
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        // A target path whose parent directory is not accessible makes try_exists() return
+        // an error, which must be reported as an invalid target local storage.
+        let temp_dir = tempfile::tempdir().unwrap();
+        let no_access = temp_dir.path().join("no_access");
+        std::fs::create_dir(&no_access).unwrap();
+        std::fs::set_permissions(&no_access, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+        let target = no_access.join("child");
+        let target_str = target.to_str().unwrap();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source",
+            target_str,
+        ];
+        let config = build_config_from_args(args);
+
+        // Restore permissions before assertions so the temp dir can be cleaned up.
+        std::fs::set_permissions(&no_access, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert!(config.is_err());
+        assert_eq!(config.unwrap_err(), TARGET_LOCAL_STORAGE_INVALID);
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

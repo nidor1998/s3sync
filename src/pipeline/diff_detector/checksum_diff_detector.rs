@@ -1049,6 +1049,191 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    #[should_panic(expected = "No checksum algorithm configured for filtering.")]
+    async fn are_different_checksums_panic_without_algorithm() {
+        init_dummy_tracing_subscriber();
+
+        // The source storage must be local storage so that head_object() succeeds without AWS.
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ChecksumDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        let _ = diff_detector
+            .are_different_checksums("6byte.dat", None, &head_object_output)
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "No checksum algorithm configured for filtering.")]
+    async fn is_source_local_checksum_panic_without_algorithm() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ChecksumDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        let _ = diff_detector
+            .is_source_local_checksum_different_from_target_s3("6byte.dat", &head_object_output)
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "No checksum algorithm configured for filtering.")]
+    async fn is_target_local_checksum_panic_without_algorithm() {
+        init_dummy_tracing_subscriber();
+
+        // The source storage must be local storage so that head_object() succeeds without AWS.
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ChecksumDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        let _ = diff_detector
+            .is_target_local_checksum_different_from_source_s3(
+                "6byte.dat",
+                None,
+                &head_object_output,
+            )
+            .await;
+    }
+
+    #[tokio::test]
+    async fn is_source_local_checksum_size_mismatch_with_tracing() {
+        init_dummy_tracing_subscriber();
+        let scoped_subscriber = tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::try_new("s3sync=trace").unwrap())
+            .with_writer(std::io::sink)
+            .finish();
+        let _guard = tracing::subscriber::set_default(scoped_subscriber);
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-additional-checksum",
+            "CRC64NVME",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        config.additional_checksum_algorithm = Some(ChecksumAlgorithm::Crc64Nvme);
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+        let has_warning = Arc::new(AtomicBool::new(false));
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            has_warning.clone(),
+        )
+        .await;
+
+        let diff_detector = ChecksumDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        // The checksums are the same, but the sizes are different.
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(5))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .checksum_crc64_nvme(TEST_OBJECT_CHECKSUM)
+            .build();
+
+        assert!(
+            !diff_detector
+                .is_source_local_checksum_different_from_target_s3("6byte.dat", &head_object_output)
+                .await
+                .unwrap()
+        );
+        assert!(has_warning.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

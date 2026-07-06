@@ -303,6 +303,38 @@ mod tests {
         assert!(run(config).await.is_err());
     }
 
+    #[test]
+    fn show_sync_report_summary_outputs_fields() {
+        use std::sync::Mutex;
+
+        // A scoped subscriber that enables s3sync events ensures the info! fields are
+        // evaluated (tracing evaluates fields lazily).
+        let scoped_subscriber = tracing_subscriber::fmt()
+            .with_env_filter("s3sync=info")
+            .with_writer(std::io::sink)
+            .finish();
+        let _guard = tracing::subscriber::set_default(scoped_subscriber);
+
+        let report = Mutex::new(SyncStatsReport {
+            number_of_objects: 10,
+            not_found: 1,
+            etag_matches: 2,
+            etag_mismatch: 3,
+            etag_unknown: 4,
+            checksum_matches: 5,
+            checksum_mismatch: 6,
+            checksum_unknown: 7,
+            metadata_matches: 8,
+            metadata_mismatch: 9,
+            tagging_matches: 11,
+            tagging_mismatch: 12,
+            annotation_matches: 13,
+            annotation_mismatch: 14,
+        });
+
+        show_sync_report_summary(report.lock().unwrap());
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("trace")

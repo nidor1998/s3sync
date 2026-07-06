@@ -1332,6 +1332,412 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn check_both_s3_last_modified_conversion_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "s3://dummy-source-bucket/dir1/",
+            "s3://dummy-target-bucket/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector::boxed_new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
+        );
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        // The last modified date is too far in the future to be converted to chrono.
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(20_000_000_000_000))
+                .e_tag("e_tag")
+                .build(),
+        );
+        assert!(
+            diff_detector
+                .is_different(&source_object, &head_object_output)
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn check_both_s3_e_tags_mismatch_without_report() {
+        init_dummy_tracing_subscriber();
+        let scoped_subscriber = tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::try_new("s3sync=trace").unwrap())
+            .with_writer(std::io::sink)
+            .finish();
+        let _guard = tracing::subscriber::set_default(scoped_subscriber);
+
+        // The source storage must be local storage so that head_object() succeeds without AWS.
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("target-e-tag")
+            .build();
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("source-e-tag")
+                .build(),
+        );
+        assert!(
+            diff_detector
+                .are_different_e_tags("6byte.dat", &source_object, &head_object_output)
+                .await
+                .unwrap()
+        );
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "source is not local storage.")]
+    async fn is_source_local_e_tag_panic_if_source_is_not_local() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "s3://dummy-source-bucket/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        let _ = diff_detector
+            .is_source_local_e_tag_different_from_target_s3("6byte.dat", &head_object_output)
+            .await;
+    }
+
+    #[tokio::test]
+    async fn is_source_local_e_tag_get_object_parts_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--aws-max-attempts",
+            "1",
+            "--target-access-key",
+            "dummy_access_key",
+            "--target-secret-access-key",
+            "dummy_secret_access_key",
+            "--target-region",
+            "us-east-1",
+            "--target-endpoint-url",
+            "http://127.0.0.1:1",
+            "./test_data/source/dir1/",
+            "s3://dummy-target-bucket/dir1/",
+        ];
+        // auto-chunksize cannot be combined with a local source at the CLI level,
+        // so it is enabled directly to reach the target.get_object_parts() branch.
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        config.transfer_config.auto_chunksize = true;
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .e_tag("e_tag")
+            .build();
+        let result = diff_detector
+            .is_source_local_e_tag_different_from_target_s3("6byte.dat", &head_object_output)
+            .await;
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("get_object_parts() failed.")
+        );
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "target is not local storage.")]
+    async fn is_target_local_e_tag_panic_if_target_is_not_local() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "./test_data/source/dir1/",
+            "s3://dummy-target-bucket/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("e_tag")
+                .build(),
+        );
+        let _ = diff_detector
+            .is_target_local_e_tag_different_from_source_s3("6byte.dat", &source_object)
+            .await;
+    }
+
+    #[tokio::test]
+    async fn is_target_local_e_tag_get_object_parts_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--auto-chunksize",
+            "--aws-max-attempts",
+            "1",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "--source-region",
+            "us-east-1",
+            "--source-endpoint-url",
+            "http://127.0.0.1:1",
+            "s3://dummy-source-bucket/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("e_tag")
+                .build(),
+        );
+        let result = diff_detector
+            .is_target_local_e_tag_different_from_source_s3("6byte.dat", &source_object)
+            .await;
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("get_object_parts() failed.")
+        );
+    }
+
+    #[tokio::test]
+    async fn is_target_local_e_tag_last_modified_conversion_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        // The last modified date is too far in the future to be converted to chrono.
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(20_000_000_000_000))
+                .e_tag("e_tag")
+                .build(),
+        );
+        assert!(
+            diff_detector
+                .is_target_local_e_tag_different_from_source_s3("6byte.dat", &source_object)
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn is_target_local_e_tag_mismatch_without_report() {
+        init_dummy_tracing_subscriber();
+        let scoped_subscriber = tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::try_new("s3sync=trace").unwrap())
+            .with_writer(std::io::sink)
+            .finish();
+        let _guard = tracing::subscriber::set_default(scoped_subscriber);
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let diff_detector = ETagDiffDetector {
+            config: config.clone(),
+            source: dyn_clone::clone_box(&*(source)),
+            target: dyn_clone::clone_box(&*(target)),
+            sync_stats_report: Arc::new(Mutex::new(SyncStatsReport::default())),
+            cancellation_token: create_pipeline_cancellation_token(),
+        };
+
+        let source_object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("source-e-tag")
+                .build(),
+        );
+        assert!(
+            diff_detector
+                .is_target_local_e_tag_different_from_source_s3("6byte.dat", &source_object)
+                .await
+                .unwrap()
+        );
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

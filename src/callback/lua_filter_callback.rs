@@ -81,11 +81,37 @@ impl LuaFilterCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aws_sdk_s3::primitives::DateTime;
+    use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumType, Object};
 
     #[tokio::test]
     async fn create_callback() {
         let _callback = LuaFilterCallback::new(8 * 1024 * 1024, false, false, 0);
         let _callback = LuaFilterCallback::new(8 * 1024 * 1024, true, false, 0);
         let _callback = LuaFilterCallback::new(0, true, true, 0);
+    }
+
+    #[tokio::test]
+    async fn filter_with_checksum_fields() {
+        let mut callback = LuaFilterCallback::new(8 * 1024 * 1024, false, false, 5000);
+        callback
+            .load_and_compile("./test_data/script/filter_callback.lua")
+            .unwrap();
+
+        // checksum_algorithm and checksum_type are populated to exercise the
+        // field-conversion closures.
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("dir21/6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .e_tag("e_tag")
+                .checksum_algorithm(ChecksumAlgorithm::Sha256)
+                .checksum_type(ChecksumType::FullObject)
+                .build(),
+        );
+
+        // The lua filter returns a match for keys containing "dir21/".
+        assert!(callback.filter(&object).await.unwrap());
     }
 }

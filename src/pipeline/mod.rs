@@ -1681,6 +1681,41 @@ mod tests {
         assert!(!is_listing_target_required(true, true, true, true, false));
     }
 
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn is_source_bucket_versioning_enabled_error() {
+        init_dummy_tracing_subscriber();
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let args = vec![
+            "s3sync",
+            "--source-endpoint-url",
+            "https://invalid-s3-endpoint-url.6329313.local:65535",
+            "--target-endpoint-url",
+            "https://invalid-s3-endpoint-url.6329313.local:65535",
+            "--aws-max-attempts",
+            "1",
+            "--force-retry-count",
+            "1",
+            "--force-retry-interval-milliseconds",
+            "1",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let pipeline = Pipeline::new(config, create_pipeline_cancellation_token()).await;
+        // GetBucketVersioning fails against the invalid endpoint, so the error is stored
+        // and the method returns false.
+        assert!(!pipeline.is_source_bucket_versioning_enabled().await);
+        assert!(pipeline.has_error());
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

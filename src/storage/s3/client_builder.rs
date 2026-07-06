@@ -708,6 +708,73 @@ mod tests {
         assert_eq!(creds.secret_access_key(), "config_only_secret_access_key");
     }
 
+    #[test]
+    fn build_profile_files_with_config_file_only() {
+        init_dummy_tracing_subscriber();
+
+        // The default credentials file location is included when only
+        // --aws-config-file is specified.
+        let client_config = create_client_config_with_location(ClientConfigLocation {
+            aws_config_file: Some("./test_data/test_config/config".into()),
+            aws_shared_credentials_file: None,
+        });
+
+        assert!(client_config.build_profile_files().is_some());
+    }
+
+    #[test]
+    fn build_profile_files_with_credentials_file_only() {
+        init_dummy_tracing_subscriber();
+
+        // The default config file location is included when only
+        // --aws-shared-credentials-file is specified.
+        let client_config = create_client_config_with_location(ClientConfigLocation {
+            aws_config_file: None,
+            aws_shared_credentials_file: Some("./test_data/test_config/credentials".into()),
+        });
+
+        assert!(client_config.build_profile_files().is_some());
+    }
+
+    #[test]
+    fn build_profile_files_without_files() {
+        init_dummy_tracing_subscriber();
+
+        let client_config = create_client_config_with_location(ClientConfigLocation {
+            aws_config_file: None,
+            aws_shared_credentials_file: None,
+        });
+
+        assert!(client_config.build_profile_files().is_none());
+    }
+
+    fn create_client_config_with_location(
+        client_config_location: ClientConfigLocation,
+    ) -> ClientConfig {
+        ClientConfig {
+            client_config_location,
+            credential: crate::types::S3Credentials::Profile("aws".to_string()),
+            region: None,
+            endpoint_url: None,
+            force_path_style: false,
+            retry_config: crate::config::RetryConfig {
+                aws_max_attempts: 10,
+                initial_backoff_milliseconds: 100,
+            },
+            cli_timeout_config: crate::config::CLITimeoutConfig {
+                operation_timeout_milliseconds: None,
+                operation_attempt_timeout_milliseconds: None,
+                connect_timeout_milliseconds: None,
+                read_timeout_milliseconds: None,
+            },
+            disable_stalled_stream_protection: false,
+            request_checksum_calculation: RequestChecksumCalculation::WhenRequired,
+            parallel_upload_semaphore: Arc::new(Semaphore::new(1)),
+            accelerate: false,
+            request_payer: None,
+        }
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

@@ -60,3 +60,24 @@ impl PreprocessCallback for UserDefinedPreprocessCallback {
         // Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::preprocess_callback::is_callback_cancelled;
+
+    #[tokio::test]
+    async fn preprocess_before_upload_returns_cancelled() {
+        let mut callback = UserDefinedPreprocessCallback::new();
+        assert!(!callback.is_enabled());
+
+        let source_object = GetObjectOutput::builder().build();
+        let mut metadata = UploadMetadata::default();
+        let result = callback
+            .preprocess_before_upload("key", &source_object, &mut metadata)
+            .await;
+
+        // The default implementation cancels the upload.
+        assert!(is_callback_cancelled(&result.unwrap_err()));
+    }
+}

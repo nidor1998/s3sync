@@ -293,7 +293,19 @@ fn is_precondition_failed_error(result: &Error) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Config;
+    use crate::config::args::parse_from_args;
+    use crate::pipeline::storage_factory::create_storage_pair;
+    use crate::storage::StoragePair;
+    use crate::types::token::create_pipeline_cancellation_token;
+    use crate::types::{ObjectEntry, S3syncObject};
+    use aws_sdk_s3::primitives::DateTime;
+    use aws_sdk_s3::types::Object;
     use aws_smithy_runtime_api::http::StatusCode;
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    use std::sync::atomic::AtomicBool;
+    use tracing_subscriber::EnvFilter;
 
     fn build_delete_object_precondition_failed_error()
     -> SdkError<DeleteObjectError, Response<SdkBody>> {
@@ -308,10 +320,268 @@ mod tests {
         SdkError::service_error(unhandled_error, response)
     }
 
+    fn build_delete_object_not_precondition_error() -> SdkError<DeleteObjectError, Response<SdkBody>>
+    {
+        let unhandled_error = DeleteObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("SomethingElse")
+                .build(),
+        );
+
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+
+        SdkError::service_error(unhandled_error, response)
+    }
+
     #[test]
     fn is_precondition_failed_error_test() {
         assert!(is_precondition_failed_error(&anyhow!(
             build_delete_object_precondition_failed_error()
         )));
+    }
+
+    #[test]
+    fn is_precondition_failed_error_false_test() {
+        // A different error code must not be treated as a precondition failure.
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_delete_object_not_precondition_error()
+        )));
+        // A non-SDK error must not be treated as a precondition failure.
+        assert!(!is_precondition_failed_error(&anyhow!("some other error")));
+    }
+
+    #[test]
+    #[should_panic(expected = "get_etag_from_target_key_map is not supported when versioning")]
+    fn get_etag_from_target_key_map_versioning_panic() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        // Enabling versioning at the CLI requires both storages to be S3, so it is set directly.
+        config.enable_versioning = true;
+
+        let stage = Stage::new(
+            config,
+            None,
+            None,
+            None,
+            None,
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let deleter = ObjectDeleter::new(stage, 0, None, Arc::new(AtomicU64::new(0)));
+        deleter.get_etag_from_target_key_map("key");
+    }
+
+    #[test]
+    fn get_etag_from_target_key_map_missing_key() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        // Present but empty key map: key is missing => None.
+        let empty_map = ObjectKeyMap::new(Mutex::new(HashMap::new()));
+        let stage = Stage::new(
+            config.clone(),
+            None,
+            None,
+            None,
+            None,
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let deleter = ObjectDeleter::new(stage, 0, Some(empty_map), Arc::new(AtomicU64::new(0)));
+        assert!(deleter.get_etag_from_target_key_map("missing").is_none());
+
+        // No key map at all => None.
+        let stage = Stage::new(
+            config,
+            None,
+            None,
+            None,
+            None,
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let deleter = ObjectDeleter::new(stage, 0, None, Arc::new(AtomicU64::new(0)));
+        assert!(deleter.get_etag_from_target_key_map("missing").is_none());
+    }
+
+    #[test]
+    fn get_etag_from_target_key_map_found() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let mut map = HashMap::new();
+        map.insert(
+            ObjectKey::KeyString("key1".to_string()),
+            ObjectEntry {
+                last_modified: DateTime::from_secs(1),
+                content_length: 1,
+                e_tag: Some("etag1".to_string()),
+            },
+        );
+        let key_map = ObjectKeyMap::new(Mutex::new(map));
+        let stage = Stage::new(
+            config,
+            None,
+            None,
+            None,
+            None,
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let deleter = ObjectDeleter::new(stage, 0, Some(key_map), Arc::new(AtomicU64::new(0)));
+        assert_eq!(
+            deleter.get_etag_from_target_key_map("key1"),
+            Some("etag1".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn receive_and_delete_non_precondition_error() {
+        init_dummy_tracing_subscriber();
+        let scoped_subscriber = tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::try_new("s3sync=trace").unwrap())
+            .with_writer(std::io::sink)
+            .finish();
+        let _guard = tracing::subscriber::set_default(scoped_subscriber);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let target_path = temp_dir.path().to_str().unwrap();
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            target_path,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        // The file does not exist in the target directory, so delete fails with a
+        // non-precondition error.
+        sender
+            .send(S3syncObject::NotVersioning(
+                Object::builder()
+                    .key("does_not_exist.dat")
+                    .size(6)
+                    .last_modified(DateTime::from_secs(1))
+                    .build(),
+            ))
+            .await
+            .unwrap();
+        sender.close();
+
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _stats_receiver) = async_channel::unbounded();
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let _ = source;
+        let stage = Stage::new(
+            config,
+            None,
+            Some(target),
+            Some(receiver),
+            None,
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let deleter = ObjectDeleter::new(stage, 0, None, Arc::new(AtomicU64::new(0)));
+
+        assert!(deleter.delete_target().await.is_err());
+        assert!(cancellation_token.is_cancelled());
+    }
+
+    #[tokio::test]
+    async fn receive_and_delete_send_next_stage_closed() {
+        init_dummy_tracing_subscriber();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let target_path = temp_dir.path().to_str().unwrap();
+        // Create a file so that delete succeeds.
+        tokio::fs::write(temp_dir.path().join("to_delete.dat"), b"data12")
+            .await
+            .unwrap();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            target_path,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        sender
+            .send(S3syncObject::NotVersioning(
+                Object::builder()
+                    .key("to_delete.dat")
+                    .size(6)
+                    .last_modified(DateTime::from_secs(1))
+                    .build(),
+            ))
+            .await
+            .unwrap();
+        sender.close();
+
+        // The next stage receiver is dropped so send() returns SendResult::Closed.
+        let (next_sender, next_receiver) = async_channel::bounded::<S3syncObject>(1000);
+        drop(next_receiver);
+
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _stats_receiver) = async_channel::unbounded();
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let _ = source;
+        let stage = Stage::new(
+            config,
+            None,
+            Some(target),
+            Some(receiver),
+            Some(next_sender),
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let deleter = ObjectDeleter::new(stage, 0, None, Arc::new(AtomicU64::new(0)));
+
+        assert!(deleter.delete_target().await.is_ok());
+    }
+
+    fn init_dummy_tracing_subscriber() {
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
+            .try_init();
     }
 }

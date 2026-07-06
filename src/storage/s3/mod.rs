@@ -1983,6 +1983,147 @@ mod tests {
         assert_eq!(generate_full_key("data1", "data1"), "data1data1");
     }
 
+    #[test]
+    fn get_annotation_checksum_algorithm_none_test() {
+        init_dummy_tracing_subscriber();
+
+        let source_annotation = GetObjectAnnotationOutput::builder().build();
+        assert_eq!(get_annotation_checksum_algorithm(&source_annotation), None);
+    }
+
+    fn build_versioning_object(version_id: &str, is_latest: bool, secs: i64) -> S3syncObject {
+        S3syncObject::Versioning(
+            ObjectVersion::builder()
+                .key("key1")
+                .version_id(version_id)
+                .is_latest(is_latest)
+                .last_modified(aws_sdk_s3::primitives::DateTime::from_secs(secs))
+                .build(),
+        )
+    }
+
+    async fn receive_version_ids(
+        receiver: &async_channel::Receiver<S3syncObject>,
+        count: usize,
+    ) -> Vec<String> {
+        let mut version_ids = Vec::new();
+        for _ in 0..count {
+            let object = receiver.recv().await.unwrap();
+            version_ids.push(object.version_id().unwrap().to_string());
+        }
+        version_ids
+    }
+
+    #[tokio::test]
+    async fn send_object_versions_with_sort_test() {
+        init_dummy_tracing_subscriber();
+
+        let (sender, receiver) = async_channel::unbounded::<S3syncObject>();
+
+        // The latest version is placed at the end of the input so that the
+        // comparator evaluates it as `a`(a.is_latest() => Ordering::Greater).
+        let mut object_versions = vec![
+            build_versioning_object("v-mid", false, 200),
+            build_versioning_object("v-old", false, 100),
+            build_versioning_object("v-latest", true, 300),
+        ];
+        S3Storage::send_object_versions_with_sort(&sender, &mut object_versions)
+            .await
+            .unwrap();
+        assert_eq!(
+            receive_version_ids(&receiver, 3).await,
+            vec!["v-old", "v-mid", "v-latest"]
+        );
+
+        // The latest version is placed at the beginning of the input so that the
+        // comparator evaluates it as `b`(b.is_latest() => Ordering::Less).
+        let mut object_versions = vec![
+            build_versioning_object("v-latest", true, 300),
+            build_versioning_object("v-mid", false, 200),
+            build_versioning_object("v-old", false, 100),
+        ];
+        S3Storage::send_object_versions_with_sort(&sender, &mut object_versions)
+            .await
+            .unwrap();
+        assert_eq!(
+            receive_version_ids(&receiver, 3).await,
+            vec!["v-old", "v-mid", "v-latest"]
+        );
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "s3 path not found")]
+    async fn boxed_new_with_local_path_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "source_access_key",
+            "--source-secret-access-key",
+            "source_secret_access_key",
+            "--target-access-key",
+            "target_access_key",
+            "--target-secret-access-key",
+            "target_secret_access_key",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        S3Storage::boxed_new(
+            config,
+            StoragePath::Local(PathBuf::from("./test_data")),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            None,
+            None,
+            None,
+            None,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn get_local_path_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "source_access_key",
+            "--source-secret-access-key",
+            "source_secret_access_key",
+            "--target-access-key",
+            "target_access_key",
+            "--target-secret-access-key",
+            "target_secret_access_key",
+            "s3://source-bucket",
+            "s3://target-bucket",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let storage = S3StorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            stats_sender,
+            config.source_client_config.clone(),
+            None,
+            None,
+            None,
+            Arc::new(AtomicBool::new(false)),
+            None,
+        )
+        .await;
+
+        let _ = storage.get_local_path();
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

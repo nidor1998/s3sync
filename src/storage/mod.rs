@@ -645,6 +645,68 @@ mod tests {
         assert!(parse_range_header_string("bytes=-55").is_none());
     }
 
+    #[test]
+    fn get_range_from_content_range_without_hyphen_test() {
+        init_dummy_tracing_subscriber();
+
+        // The byte range part has no '-', so the length of the split result is not 2.
+        let get_object_output = GetObjectOutput::builder()
+            .set_content_length(Some(6))
+            .content_range("bytes 04/6")
+            .build();
+        assert_eq!(get_range_from_content_range(&get_object_output), None);
+    }
+
+    #[test]
+    fn test_parse_range_header_invalid_format_error() {
+        init_dummy_tracing_subscriber();
+
+        let result = parse_range_header("bytes=0");
+        assert!(
+            result
+                .err()
+                .unwrap()
+                .to_string()
+                .starts_with("Invalid range format")
+        );
+
+        let result = parse_range_header("bytes=0-1-2");
+        assert!(
+            result
+                .err()
+                .unwrap()
+                .to_string()
+                .starts_with("Invalid range format")
+        );
+    }
+
+    #[test]
+    fn test_parse_range_header_string_without_hyphen() {
+        init_dummy_tracing_subscriber();
+
+        assert!(parse_range_header_string("bytes=0").is_none());
+        assert!(parse_range_header_string("bytes=0-1-2").is_none());
+    }
+
+    #[tokio::test]
+    async fn create_large_file_test_helper() {
+        init_dummy_tracing_subscriber();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let dir = temp_dir.path().join("large_data");
+        let path = dir.join("1KiB.dat");
+        let path_str = path.to_str().unwrap();
+        let dir_str = dir.to_str().unwrap();
+
+        // The first call creates the file.
+        test_helpers::create_large_file(path_str, dir_str, 1024).await;
+        assert_eq!(tokio::fs::metadata(&path).await.unwrap().len(), 1024);
+
+        // The second call returns early because the file already exists.
+        test_helpers::create_large_file(path_str, dir_str, 2048).await;
+        assert_eq!(tokio::fs::metadata(&path).await.unwrap().len(), 1024);
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(
