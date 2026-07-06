@@ -91,4 +91,10 @@ mod tests {
         AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, false);
         AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, true);
     }
+
+    #[test]
+    #[should_panic(expected = "Unknown ChecksumAlgorithm")]
+    fn unknown_checksum_algorithm_panic_test() {
+        AdditionalChecksum::new(ChecksumAlgorithm::Md5, false);
+    }
 }

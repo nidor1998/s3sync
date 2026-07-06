@@ -778,6 +778,72 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    #[should_panic(expected = "object_parts is empty")]
+    async fn generate_e_tag_hash_from_path_auto_chunksize_empty_parts_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = generate_e_tag_hash_from_path_with_auto_chunksize(
+            &PathBuf::from("./test_data/5byte.dat"),
+            vec![],
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+    }
+
+    #[cfg(target_family = "unix")]
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_auto_chunksize_read_error_test() {
+        init_dummy_tracing_subscriber();
+
+        // Reading a directory fails with an error that is not UnexpectedEof.
+        let result = generate_e_tag_hash_from_path_with_auto_chunksize(
+            &PathBuf::from("./test_data"),
+            vec![10],
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+
+        assert!(
+            result
+                .err()
+                .unwrap()
+                .to_string()
+                .starts_with("Failed to read")
+        );
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_auto_chunksize_cancel_with_trace_test() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_trace_subscriber();
+
+        let cancel_token = create_pipeline_cancellation_token();
+        cancel_token.cancel();
+
+        let result = generate_e_tag_hash_from_path_with_auto_chunksize(
+            &PathBuf::from("./test_data/5byte.dat"),
+            vec![1],
+            cancel_token,
+        )
+        .await;
+
+        assert!(crate::types::error::is_cancelled_error(
+            &result.err().unwrap()
+        ));
+    }
+
+    // A thread-local subscriber that enables s3sync events so that lazily evaluated
+    // tracing macro fields are executed.
+    fn set_scoped_trace_subscriber() -> tracing::subscriber::DefaultGuard {
+        tracing::subscriber::set_default(
+            tracing_subscriber::fmt()
+                .with_env_filter(EnvFilter::try_new("s3sync=trace").unwrap())
+                .with_writer(std::io::sink)
+                .finish(),
+        )
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

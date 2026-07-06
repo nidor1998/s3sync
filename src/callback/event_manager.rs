@@ -192,6 +192,31 @@ mod tests {
         assert!(event_manager.event_callback.is_none());
     }
 
+    #[tokio::test]
+    async fn update_sync_stats_pipeline_end_short_duration() {
+        use crate::types::event_callback::{EventData, EventType};
+
+        // dry_run is false by default, and the pipeline ends within a second, so the
+        // sub-one-second branch (per-sec == total) of PIPELINE_END is taken.
+        let event_manager = EventManager::new();
+        event_manager
+            .update_sync_stats(&EventData::new(EventType::PIPELINE_START))
+            .await;
+
+        let mut complete = EventData::new(EventType::SYNC_COMPLETE);
+        complete.source_size = Some(100);
+        event_manager.update_sync_stats(&complete).await;
+
+        event_manager
+            .update_sync_stats(&EventData::new(EventType::PIPELINE_END))
+            .await;
+
+        let stats = event_manager.sync_stats.lock().await;
+        assert_eq!(stats.stats_transferred_byte, 100);
+        assert_eq!(stats.stats_transferred_byte_per_sec, 100);
+        assert_eq!(stats.stats_transferred_object_per_sec, 1);
+    }
+
     #[test]
     fn from_sync_stats_to_event_data() {
         let sync_stats = SyncStats {

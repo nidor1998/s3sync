@@ -491,6 +491,142 @@ mod tests {
         result.unwrap();
     }
 
+    #[tokio::test]
+    #[should_panic(expected = "versioning object has been detected.")]
+    async fn is_sync_required_versioning_object_panic() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-size",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
+        );
+
+        // A versioning object without point-in-time must panic.
+        let source_object = S3syncObject::Versioning(
+            aws_sdk_s3::types::ObjectVersion::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .version_id("version1")
+                .build(),
+        );
+        let _ = head_object_checker.is_sync_required(&source_object).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "unexpected object has been detected.")]
+    async fn is_sync_required_delete_marker_panic() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-size",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
+        );
+
+        let source_object = S3syncObject::DeleteMarker(
+            aws_sdk_s3::types::DeleteMarkerEntry::builder()
+                .key("6byte.dat")
+                .last_modified(DateTime::from_secs(1))
+                .version_id("version1")
+                .build(),
+        );
+        let _ = head_object_checker.is_sync_required(&source_object).await;
+    }
+
+    #[tokio::test]
+    async fn is_sync_required_versioning_object_point_in_time() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--check-size",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        // point-in-time cannot be combined with a local source at the CLI level,
+        // so it is set directly to reach the is_old_object() branch for a versioning object.
+        config.point_in_time = Some(chrono::Utc::now());
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+
+        let StoragePair { target, source } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let head_object_checker = HeadObjectChecker::new(
+            config.clone(),
+            dyn_clone::clone_box(&*(source)),
+            dyn_clone::clone_box(&*(target)),
+            1,
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            create_pipeline_cancellation_token(),
+        );
+
+        let source_object = S3syncObject::Versioning(
+            aws_sdk_s3::types::ObjectVersion::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .version_id("version1")
+                .build(),
+        );
+        // Must not panic: the point-in-time branch delegates to is_old_object().
+        let (result, _) = head_object_checker.is_sync_required(&source_object).await;
+        assert!(result.is_ok());
+    }
+
     fn build_head_object_service_not_found_error() -> SdkError<HeadObjectError, Response<SdkBody>> {
         let not_found = aws_sdk_s3::types::error::NotFound::builder().build();
         let head_object_error = HeadObjectError::NotFound(not_found);

@@ -191,11 +191,32 @@ impl EventCallback for LuaEventCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::event_callback::{EventData, EventType};
+    use aws_sdk_s3::types::ChecksumAlgorithm;
 
     #[tokio::test]
     async fn create_callback() {
         let _callback = LuaEventCallback::new(8 * 1024 * 1024, false, false, 0);
         let _callback = LuaEventCallback::new(8 * 1024 * 1024, true, false, 0);
         let _callback = LuaEventCallback::new(0, true, true, 0);
+    }
+
+    #[tokio::test]
+    async fn on_event_with_all_fields() {
+        let mut callback = LuaEventCallback::new(8 * 1024 * 1024, false, false, 5000);
+        callback
+            .load_and_compile("./test_data/script/event_callback.lua")
+            .unwrap();
+
+        // A populated checksum_algorithm exercises the field-conversion closures.
+        let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
+        event_data.key = Some("key1".to_string());
+        event_data.checksum_algorithm = Some(ChecksumAlgorithm::Sha256);
+        event_data.source_last_modified = Some(aws_sdk_s3::primitives::DateTime::from_secs(1));
+        event_data.target_last_modified = Some(aws_sdk_s3::primitives::DateTime::from_secs(2));
+        event_data.source_size = Some(6);
+        event_data.target_size = Some(6);
+
+        callback.on_event(event_data).await;
     }
 }

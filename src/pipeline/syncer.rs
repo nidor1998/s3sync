@@ -3541,6 +3541,104 @@ mod tests {
     }
 
     #[test]
+    fn classifier_service_error_without_matching_code() {
+        init_dummy_tracing_subscriber();
+
+        // Service errors whose metadata has no error code must fall through to `false`
+        // instead of being classified.
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_put_object_service_error_without_code()
+        )));
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_copy_object_service_error_without_code()
+        )));
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_upload_part_copy_service_error_without_code()
+        )));
+        assert!(!is_precondition_failed_error(&anyhow!(
+            build_complete_multipart_upload_service_error_without_code()
+        )));
+
+        assert!(!is_access_denied_error(&anyhow!(
+            build_put_object_service_error_without_code()
+        )));
+        assert!(!is_invalid_object_state_error(&anyhow!(
+            build_get_object_service_error_without_code()
+        )));
+
+        // A HeadObject service error that is not NotFound, and a ListObjectAnnotations
+        // service error whose status is not 404, must not be classified as not-found.
+        assert!(!is_not_found_error(&anyhow!(
+            build_head_object_service_error_generic()
+        )));
+        assert!(!is_not_found_error(&anyhow!(
+            build_list_object_annotations_non_404_error()
+        )));
+    }
+
+    fn build_put_object_service_error_without_code() -> SdkError<PutObjectError, Response<SdkBody>>
+    {
+        let unhandled_error =
+            PutObjectError::generic(aws_sdk_s3::error::ErrorMetadata::builder().build());
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_copy_object_service_error_without_code() -> SdkError<CopyObjectError, Response<SdkBody>>
+    {
+        let unhandled_error =
+            CopyObjectError::generic(aws_sdk_s3::error::ErrorMetadata::builder().build());
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_upload_part_copy_service_error_without_code()
+    -> SdkError<UploadPartCopyError, Response<SdkBody>> {
+        let unhandled_error =
+            UploadPartCopyError::generic(aws_sdk_s3::error::ErrorMetadata::builder().build());
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_complete_multipart_upload_service_error_without_code()
+    -> SdkError<CompleteMultipartUploadError, Response<SdkBody>> {
+        let unhandled_error = CompleteMultipartUploadError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder().build(),
+        );
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_get_object_service_error_without_code() -> SdkError<GetObjectError, Response<SdkBody>>
+    {
+        let unhandled_error =
+            GetObjectError::generic(aws_sdk_s3::error::ErrorMetadata::builder().build());
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_head_object_service_error_generic() -> SdkError<HeadObjectError, Response<SdkBody>> {
+        let unhandled_error = HeadObjectError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("InternalError")
+                .build(),
+        );
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    fn build_list_object_annotations_non_404_error()
+    -> SdkError<ListObjectAnnotationsError, Response<SdkBody>> {
+        let unhandled_error = ListObjectAnnotationsError::generic(
+            aws_sdk_s3::error::ErrorMetadata::builder()
+                .code("InternalError")
+                .build(),
+        );
+        let response = Response::new(StatusCode::try_from(500).unwrap(), SdkBody::from(r#""#));
+        SdkError::service_error(unhandled_error, response)
+    }
+
+    #[test]
     fn build_tagging_test() {
         init_dummy_tracing_subscriber();
 
@@ -3914,6 +4012,112 @@ mod tests {
         let response = Response::new(StatusCode::try_from(412).unwrap(), SdkBody::from(r#""#));
 
         SdkError::service_error(unhandled_error, response)
+    }
+
+    async fn build_local_object_syncer(
+        config: Config,
+        target_key_map: Option<ObjectKeyMap>,
+    ) -> ObjectSyncer {
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        ObjectSyncer::new(
+            Stage::new(
+                config,
+                Some(dyn_clone::clone_box(&*source)),
+                Some(dyn_clone::clone_box(&*target)),
+                None,
+                None,
+                cancellation_token,
+                Arc::new(AtomicBool::new(false)),
+            ),
+            0,
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            target_key_map,
+        )
+    }
+
+    #[tokio::test]
+    async fn get_etag_from_target_key_map_miss() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        // Present but empty key map: neither the sha1 digest nor the string key is found.
+        let empty_map = ObjectKeyMap::new(Mutex::new(std::collections::HashMap::new()));
+        let syncer = build_local_object_syncer(config.clone(), Some(empty_map)).await;
+        assert!(syncer.get_etag_from_target_key_map("missing").is_none());
+
+        // No key map at all.
+        let syncer = build_local_object_syncer(config, None).await;
+        assert!(syncer.get_etag_from_target_key_map("missing").is_none());
+    }
+
+    #[tokio::test]
+    async fn get_first_chunk_range_local_smaller_than_chunksize() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--multipart-threshold",
+            "5MiB",
+            "--multipart-chunksize",
+            "8MiB",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let syncer = build_local_object_syncer(config, None).await;
+
+        // 6MiB: multipart is required (>= 5MiB threshold) but the object is smaller than the
+        // 8MiB chunk size, so the first chunk range spans the whole object.
+        let size = 6 * 1024 * 1024;
+        let object = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("6mib.dat")
+                .size(size)
+                .last_modified(aws_sdk_s3::primitives::DateTime::from_secs(1))
+                .build(),
+        );
+        let range = syncer.get_first_chunk_range(object).await.unwrap();
+        assert_eq!(range, Some(format!("bytes=0-{}", size - 1)));
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "delete operation is not allowed to be used without versioning")]
+    async fn sync_or_delete_object_delete_marker_without_versioning_panics() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let syncer = build_local_object_syncer(config, None).await;
+
+        let object = S3syncObject::DeleteMarker(
+            aws_sdk_s3::types::DeleteMarkerEntry::builder()
+                .key("6byte.dat")
+                .last_modified(aws_sdk_s3::primitives::DateTime::from_secs(1))
+                .version_id("version1")
+                .build(),
+        );
+        let _ = syncer.sync_or_delete_object(object, None).await;
     }
 
     fn init_dummy_tracing_subscriber() {

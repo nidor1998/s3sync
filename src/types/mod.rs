@@ -1195,6 +1195,27 @@ mod tests {
         );
     }
 
+    #[test]
+    #[should_panic(expected = "unknown algorithm")]
+    fn get_additional_checksum_unknown_algorithm_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let get_object_output = GetObjectOutput::builder().build();
+        let _ = get_additional_checksum(&get_object_output, Some(ChecksumAlgorithm::Md5));
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown algorithm")]
+    fn get_additional_checksum_with_head_object_unknown_algorithm_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let head_object_output = HeadObjectOutput::builder().build();
+        let _ = get_additional_checksum_with_head_object(
+            &head_object_output,
+            Some(ChecksumAlgorithm::Md5),
+        );
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

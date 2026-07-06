@@ -3618,6 +3618,970 @@ mod tests {
         assert_eq!(storage.get_local_path().to_str().unwrap(), "./test_data/");
     }
 
+    async fn create_boxed_storage(
+        config: &Config,
+        path: StoragePath,
+        cancellation_token: PipelineCancellationToken,
+        has_warning: Arc<AtomicBool>,
+    ) -> Storage {
+        let (stats_sender, _) = async_channel::unbounded();
+
+        LocalStorageFactory::create(
+            config.clone(),
+            path,
+            cancellation_token,
+            stats_sender,
+            config.target_client_config.clone(),
+            None,
+            None,
+            None,
+            has_warning,
+            None,
+        )
+        .await
+    }
+
+    fn build_local_storage_struct(
+        config: &Config,
+        cancellation_token: PipelineCancellationToken,
+        has_warning: Arc<AtomicBool>,
+    ) -> LocalStorage {
+        let local_path = if let StoragePath::Local(local_path) = config.target.clone() {
+            local_path
+        } else {
+            panic!("local path not found")
+        };
+        let (stats_sender, _) = async_channel::unbounded();
+
+        LocalStorage {
+            config: config.clone(),
+            path: local_path,
+            cancellation_token,
+            stats_sender,
+            rate_limit_objects_per_sec: None,
+            rate_limit_bandwidth: None,
+            has_warning,
+            listing_worker_semaphore: Arc::new(Semaphore::new(
+                config.max_parallel_listings as usize,
+            )),
+            object_to_list: None,
+        }
+    }
+
+    // Enables s3sync tracing events in the current thread so that lazily evaluated
+    // tracing macro fields are executed. The output is discarded.
+    fn set_scoped_s3sync_tracing_subscriber() -> tracing::subscriber::DefaultGuard {
+        let subscriber = tracing_subscriber::fmt()
+            .with_env_filter(EnvFilter::try_new("s3sync=trace").unwrap())
+            .with_writer(std::io::sink)
+            .finish();
+        tracing::subscriber::set_default(subscriber)
+    }
+
+    fn build_local_to_local_config(
+        additional_args: &[&str],
+        source_path: &str,
+        target_path: &str,
+    ) -> Config {
+        let mut args = vec!["s3sync", "--allow-both-local-storage"];
+        args.extend_from_slice(additional_args);
+        args.push(source_path);
+        args.push(target_path);
+
+        Config::try_from(parse_from_args(args).unwrap()).unwrap()
+    }
+
+    async fn create_unimplemented_test_storage() -> Storage {
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            "./test_data/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn list_object_versions_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
+        let _ = storage.list_object_versions(&sender, 1000, false).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn list_object_annotations_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage.list_object_annotations("key", None, 1000).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn get_object_versions_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage.get_object_versions("key", 1000).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn get_object_tagging_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage.get_object_tagging("key", None).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn head_object_first_part_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage
+            .head_object_first_part("key", None, None, None, SseCustomerKey { key: None }, None)
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn get_object_parts_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage
+            .get_object_parts("key", None, None, SseCustomerKey { key: None }, None)
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn get_object_parts_attributes_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage
+            .get_object_parts_attributes(
+                "key",
+                None,
+                1000,
+                None,
+                SseCustomerKey { key: None },
+                None,
+            )
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn get_object_annotation_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage
+            .get_object_annotation("key", None, "annotation", None)
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn put_object_tagging_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let tagging = Tagging::builder()
+            .set_tag_set(Some(vec![]))
+            .build()
+            .unwrap();
+        let _ = storage.put_object_tagging("key", None, tagging).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn delete_object_tagging_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage.delete_object_tagging("key", None).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn delete_object_annotation_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage
+            .delete_object_annotation("key", None, "annotation")
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn copy_object_annotation_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let source_annotation = GetObjectAnnotationOutput::builder().build();
+        let _ = storage
+            .copy_object_annotation("key", None, "annotation", source_annotation)
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn is_versioning_enabled_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage.is_versioning_enabled().await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "not implemented")]
+    async fn generate_copy_source_key_unimplemented() {
+        init_dummy_tracing_subscriber();
+
+        let storage = create_unimplemented_test_storage().await;
+        let _ = storage.generate_copy_source_key("key", None);
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn check_dir_entry_is_regular_file_error() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let sub_dir = temp_dir.path().join("sub");
+        fs::create_dir(&sub_dir).unwrap();
+        let file_path = sub_dir.join("file.dat");
+        fs::write(&file_path, b"data").unwrap();
+
+        let entry = WalkDir::new(&file_path)
+            .into_iter()
+            .next()
+            .unwrap()
+            .unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            target_path.as_str(),
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let has_warning = Arc::new(AtomicBool::new(false));
+        let storage = build_local_storage_struct(
+            &config,
+            create_pipeline_cancellation_token(),
+            has_warning.clone(),
+        );
+
+        let mut permissions = fs::metadata(&sub_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&sub_dir, permissions.clone()).unwrap();
+
+        let warning_result = storage.check_dir_entry(&entry, false).await;
+        let error_result = storage.check_dir_entry(&entry, true).await;
+
+        permissions.set_mode(0o755);
+        fs::set_permissions(&sub_dir, permissions).unwrap();
+
+        assert!(!warning_result.unwrap());
+        assert!(error_result.is_err());
+        assert!(has_warning.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn list_storage_parallel_permission_denied_dir_warning() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let accessible_dir = temp_dir.path().join("accessible");
+        fs::create_dir(&accessible_dir).unwrap();
+        fs::write(accessible_dir.join("a.dat"), b"data").unwrap();
+        let denied_dir = temp_dir.path().join("denied");
+        fs::create_dir(&denied_dir).unwrap();
+        fs::write(denied_dir.join("b.dat"), b"data").unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            target_path.as_str(),
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let has_warning = Arc::new(AtomicBool::new(false));
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            has_warning.clone(),
+        )
+        .await;
+
+        let mut permissions = fs::metadata(&denied_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&denied_dir, permissions.clone()).unwrap();
+
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let result = storage.list_objects(&sender, 1000, false).await;
+
+        permissions.set_mode(0o755);
+        fs::set_permissions(&denied_dir, permissions).unwrap();
+
+        assert!(result.is_ok());
+        assert!(has_warning.load(Ordering::SeqCst));
+        assert_eq!(receiver.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn put_object_single_part_cancelled() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(
+            &["--multipart-chunksize", "5MiB"],
+            source_path.as_str(),
+            target_path.as_str(),
+        );
+
+        let cancellation_token = create_pipeline_cancellation_token();
+        cancellation_token.cancel();
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            cancellation_token,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const DATA_SIZE: usize = 6 * 1024 * 1024;
+        let get_object_output = GetObjectOutputBuilder::default()
+            .last_modified(DateTime::from_secs(1))
+            .content_length(DATA_SIZE as i64)
+            .body(ByteStream::from(vec![0u8; DATA_SIZE]))
+            .build();
+
+        let e = storage
+            .put_object(
+                "data1",
+                source_storage,
+                DATA_SIZE as u64,
+                None,
+                get_object_output,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::Cancelled
+        );
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_directory_traversal() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(&[], source_path.as_str(), target_path.as_str());
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let e = storage
+            .put_object(
+                "target/../../etc/passwd",
+                source_storage,
+                6,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(6)
+                    .set_content_range(Some("bytes 0-5/6".to_string()))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::DirectoryTraversalError
+        );
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "dry-run is not supported")]
+    async fn put_object_multipart_dry_run_panic() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config =
+            build_local_to_local_config(&["--dry-run"], source_path.as_str(), target_path.as_str());
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let _ = storage
+            .put_object(
+                "data1",
+                source_storage,
+                6,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(6)
+                    .set_content_range(Some("bytes 0-5/6".to_string()))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await;
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_directory_key() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(&[], source_path.as_str(), target_path.as_str());
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        storage
+            .put_object(
+                "dir1/",
+                source_storage,
+                0,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(0)
+                    .set_content_range(Some("bytes 0-0/0".to_string()))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(target_dir.path().join("dir1").is_dir());
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_invalid_first_chunk_size() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(&[], source_path.as_str(), target_path.as_str());
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const CLAIMED_SIZE: usize = 5 * 1024 * 1024;
+        let e = storage
+            .put_object(
+                "data1",
+                source_storage,
+                CLAIMED_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(CLAIMED_SIZE as i64)
+                    .set_content_range(Some(format!(
+                        "bytes 0-{}/{}",
+                        CLAIMED_SIZE - 1,
+                        CLAIMED_SIZE
+                    )))
+                    .body(ByteStream::from(vec![0u8; 1024]))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert!(e.to_string().contains("Invalid first chunk data size"));
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_first_chunk_cancelled() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(
+            &["--multipart-chunksize", "5MiB"],
+            source_path.as_str(),
+            target_path.as_str(),
+        );
+
+        let cancellation_token = create_pipeline_cancellation_token();
+        cancellation_token.cancel();
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            cancellation_token,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const DATA_SIZE: usize = 6 * 1024 * 1024;
+        let e = storage
+            .put_object(
+                "data1",
+                source_storage,
+                DATA_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(DATA_SIZE as i64)
+                    .set_content_range(Some(format!("bytes 0-{}/{}", DATA_SIZE - 1, DATA_SIZE)))
+                    .body(ByteStream::from(vec![0u8; DATA_SIZE]))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::Cancelled
+        );
+    }
+
+    // /sys files report a size of 4096 bytes but contain only a few bytes.
+    // So the part read from the source storage hits EOF before the claimed chunk size.
+    #[tokio::test]
+    #[cfg(target_os = "linux")]
+    async fn put_object_multipart_part_read_size_mismatch() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        let target_dir = tempfile::tempdir().unwrap();
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config =
+            build_local_to_local_config(&[], "/sys/devices/system/cpu/", target_path.as_str());
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const FIRST_CHUNK_SIZE: usize = 4;
+        const CLAIMED_SOURCE_SIZE: u64 = 1028;
+        let e = storage
+            .put_object(
+                "online",
+                source_storage,
+                CLAIMED_SOURCE_SIZE,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(FIRST_CHUNK_SIZE as i64)
+                    .set_content_range(Some(format!(
+                        "bytes 0-{}/{}",
+                        FIRST_CHUNK_SIZE - 1,
+                        CLAIMED_SOURCE_SIZE
+                    )))
+                    .body(ByteStream::from(vec![0u8; FIRST_CHUNK_SIZE]))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert!(e.to_string().contains("Invalid chunk data size"));
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_cancelled_after_parts() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(
+            &["--multipart-chunksize", "5MiB"],
+            source_path.as_str(),
+            target_path.as_str(),
+        );
+
+        const CHUNK_SIZE: usize = 5 * 1024 * 1024;
+        const SOURCE_SIZE: usize = 10 * 1024 * 1024;
+        let mut source_data = vec![b'a'; CHUNK_SIZE];
+        source_data.resize(SOURCE_SIZE, b'b');
+        std::fs::write(source_dir.path().join("large.dat"), &source_data).unwrap();
+
+        let cancellation_token = create_pipeline_cancellation_token();
+        cancellation_token.cancel();
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            cancellation_token,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        let e = storage
+            .put_object(
+                "large.dat",
+                source_storage,
+                SOURCE_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(CHUNK_SIZE as i64)
+                    .set_content_range(Some(format!("bytes 0-{}/{}", CHUNK_SIZE - 1, SOURCE_SIZE)))
+                    .body(ByteStream::from(vec![b'a'; CHUNK_SIZE]))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::Cancelled
+        );
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_success() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(
+            &[
+                "--multipart-chunksize",
+                "5MiB",
+                "--multipart-threshold",
+                "5MiB",
+            ],
+            source_path.as_str(),
+            target_path.as_str(),
+        );
+
+        const CHUNK_SIZE: usize = 5 * 1024 * 1024;
+        const SOURCE_SIZE: usize = 10 * 1024 * 1024;
+        let mut source_data = vec![b'a'; CHUNK_SIZE];
+        source_data.resize(SOURCE_SIZE, b'b');
+        std::fs::write(source_dir.path().join("large.dat"), &source_data).unwrap();
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        storage
+            .put_object(
+                "large.dat",
+                source_storage,
+                SOURCE_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(CHUNK_SIZE as i64)
+                    .set_content_range(Some(format!("bytes 0-{}/{}", CHUNK_SIZE - 1, SOURCE_SIZE)))
+                    .body(ByteStream::from(vec![b'a'; CHUNK_SIZE]))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+
+        let target_data = std::fs::read(target_dir.path().join("large.dat")).unwrap();
+        assert_eq!(target_data, source_data);
+    }
+
+    #[tokio::test]
+    async fn verify_local_file_content_length_mismatch_warning() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        let target_dir = tempfile::tempdir().unwrap();
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let real_path = target_dir.path().join("data1");
+        std::fs::write(&real_path, b"data12").unwrap();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "s3://dummy-bucket",
+            target_path.as_str(),
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let has_warning = Arc::new(AtomicBool::new(false));
+        let storage = build_local_storage_struct(
+            &config,
+            create_pipeline_cancellation_token(),
+            has_warning.clone(),
+        );
+
+        // source_express_onezone_storage = true skips the e_tag verification.
+        storage
+            .verify_local_file(
+                "data1", None, &None, &None, 999, None, None, &real_path, None, 6, true, None, None,
+            )
+            .await
+            .unwrap();
+
+        assert!(has_warning.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn verify_local_file_additional_checksum_mismatch_warning() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        let target_dir = tempfile::tempdir().unwrap();
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let real_path = target_dir.path().join("data1");
+        std::fs::write(&real_path, b"data12").unwrap();
+
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "--enable-additional-checksum",
+            "s3://dummy-bucket",
+            target_path.as_str(),
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let has_warning = Arc::new(AtomicBool::new(false));
+        let storage = build_local_storage_struct(
+            &config,
+            create_pipeline_cancellation_token(),
+            has_warning.clone(),
+        );
+
+        // source_express_onezone_storage = true skips the e_tag verification.
+        storage
+            .verify_local_file(
+                "data1",
+                None,
+                &None,
+                &None,
+                6,
+                Some("invalidchecksum".to_string()),
+                Some(ChecksumAlgorithm::Sha256),
+                &real_path,
+                None,
+                6,
+                true,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+
+        assert!(has_warning.load(Ordering::SeqCst));
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(

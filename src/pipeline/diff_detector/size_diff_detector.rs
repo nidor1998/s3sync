@@ -60,8 +60,44 @@ mod tests {
     use crate::config::args::parse_from_args;
     use aws_sdk_s3::operation::head_object;
     use aws_sdk_s3::primitives::DateTime;
-    use aws_sdk_s3::types::Object;
+    use aws_sdk_s3::types::{Object, ObjectVersion};
     use tracing_subscriber::EnvFilter;
+
+    #[tokio::test]
+    async fn check_same_size_with_version_id() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+
+        let diff_detector = SizeDiffDetector::boxed_new(config);
+
+        let head_object_output = head_object::builders::HeadObjectOutputBuilder::default()
+            .set_content_length(Some(6))
+            .last_modified(DateTime::from_secs(1))
+            .version_id("target-version-id")
+            .build();
+        let source_object = S3syncObject::Versioning(
+            ObjectVersion::builder()
+                .key("6byte.dat")
+                .size(6)
+                .last_modified(DateTime::from_secs(1))
+                .version_id("source-version-id")
+                .e_tag("e_tag")
+                .build(),
+        );
+        assert!(
+            !diff_detector
+                .is_different(&source_object, &head_object_output)
+                .await
+                .unwrap()
+        );
+    }
 
     #[tokio::test]
     async fn check_same_size() {

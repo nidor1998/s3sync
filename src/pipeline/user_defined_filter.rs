@@ -141,3 +141,105 @@ fn is_error_simulation_point(config: &crate::Config, error_simulation_point: &st
             .as_ref()
             .is_some_and(|point| point == error_simulation_point)
 }
+
+#[cfg(all(test, feature = "lua_support"))]
+mod tests {
+    use super::*;
+    use crate::Config;
+    use crate::config::args::parse_from_args;
+    use crate::types::S3syncObject;
+    use crate::types::token::create_pipeline_cancellation_token;
+    use aws_sdk_s3::primitives::DateTime;
+    use aws_sdk_s3::types::Object;
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+    use tracing_subscriber::EnvFilter;
+
+    fn build_config() -> Config {
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--filter-callback-lua-script",
+            "./test_data/script/filter_callback.lua",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        Config::try_from(parse_from_args(args).unwrap()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn filter_send_next_stage_closed() {
+        init_dummy_tracing_subscriber();
+
+        let config = build_config();
+        let cancellation_token = create_pipeline_cancellation_token();
+
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        // The next stage receiver is dropped so send() returns SendResult::Closed.
+        let (next_sender, next_receiver) = async_channel::bounded::<S3syncObject>(1000);
+        drop(next_receiver);
+
+        // "dir21/" makes the lua filter return a truthy value, so the object is synced.
+        sender
+            .send(S3syncObject::NotVersioning(
+                Object::builder()
+                    .key("dir21/6byte.dat")
+                    .size(6)
+                    .last_modified(DateTime::from_secs(1))
+                    .build(),
+            ))
+            .await
+            .unwrap();
+        sender.close();
+
+        let stage = Stage::new(
+            config,
+            None,
+            None,
+            Some(receiver),
+            Some(next_sender),
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let mut user_defined_filter = UserDefinedFilter::new(stage);
+
+        assert!(user_defined_filter.filter().await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn filter_cancelled() {
+        init_dummy_tracing_subscriber();
+
+        let config = build_config();
+        let cancellation_token = create_pipeline_cancellation_token();
+
+        // Keep the sender half alive so recv() blocks and the cancellation branch is taken.
+        let (_sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let (next_sender, _next_receiver) = async_channel::bounded::<S3syncObject>(1000);
+
+        let stage = Stage::new(
+            config,
+            None,
+            None,
+            Some(receiver),
+            Some(next_sender),
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let mut user_defined_filter = UserDefinedFilter::new(stage);
+
+        cancellation_token.cancel();
+
+        assert!(user_defined_filter.filter().await.is_ok());
+    }
+
+    fn init_dummy_tracing_subscriber() {
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or_else(|_| EnvFilter::try_new("dummy=trace"))
+                    .unwrap(),
+            )
+            .try_init();
+    }
+}

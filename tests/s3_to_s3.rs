@@ -1367,6 +1367,153 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_with_multipart_upload_disable_multipart_verify_chunksize_mismatch() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let test_dir = format!("./playground/chunksize_mismatch_{}", Uuid::new_v4());
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+
+            TestHelper::create_large_file_in(&test_dir);
+
+            // Upload the source object with 5MiB parts.
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-chunksize",
+                "5MiB",
+                &test_dir,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            // Sync to the target with a different (8MiB) chunk size. The resulting multipart
+            // ETag differs from the source, but --disable-multipart-verify skips the ETag
+            // verification instead of emitting a warning.
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-chunksize",
+                "8MiB",
+                "--disable-multipart-verify",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        TestHelper::delete_all_files(&test_dir);
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_multipart_upload_disable_multipart_verify_checksum_mismatch() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+        let test_dir = format!("./playground/checksum_mismatch_{}", Uuid::new_v4());
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+
+            TestHelper::create_large_file_in(&test_dir);
+
+            // Upload the source object with 5MiB parts and a SHA256 composite checksum.
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-chunksize",
+                "5MiB",
+                "--additional-checksum-algorithm",
+                "SHA256",
+                &test_dir,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            // Sync to the target with a different (8MiB) chunk size and additional checksum.
+            // The composite checksum differs from the source, but --disable-multipart-verify
+            // skips the additional checksum verification instead of emitting a warning.
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-chunksize",
+                "8MiB",
+                "--additional-checksum-algorithm",
+                "SHA256",
+                "--enable-additional-checksum",
+                "--disable-multipart-verify",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        TestHelper::delete_all_files(&test_dir);
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_with_multipart_upload_if_none_match() {
         TestHelper::init_dummy_tracing_subscriber();
 
