@@ -27,14 +27,17 @@ use anyhow::{Context, Error, Result, anyhow};
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadError;
 use aws_sdk_s3::operation::copy_object::CopyObjectError;
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
+use aws_sdk_s3::operation::delete_object_annotation::DeleteObjectAnnotationError;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingError;
 use aws_sdk_s3::operation::get_object::{GetObjectError, GetObjectOutput};
+use aws_sdk_s3::operation::get_object_annotation::GetObjectAnnotationError;
 use aws_sdk_s3::operation::get_object_attributes::GetObjectAttributesError;
 use aws_sdk_s3::operation::get_object_tagging::{GetObjectTaggingError, GetObjectTaggingOutput};
 use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::operation::list_object_annotations::ListObjectAnnotationsError;
 use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
+use aws_sdk_s3::operation::put_object_annotation::PutObjectAnnotationError;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
 use aws_sdk_s3::operation::upload_part_copy::UploadPartCopyError;
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
@@ -2680,6 +2683,25 @@ fn is_force_retryable_error(e: &Error) -> bool {
         return is_force_sdk_retryable_error(error);
     }
 
+    if let Some(error) = e.downcast_ref::<SdkError<ListObjectAnnotationsError, Response<SdkBody>>>()
+    {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<GetObjectAnnotationError, Response<SdkBody>>>() {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<PutObjectAnnotationError, Response<SdkBody>>>() {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) =
+        e.downcast_ref::<SdkError<DeleteObjectAnnotationError, Response<SdkBody>>>()
+    {
+        return is_force_sdk_retryable_error(error);
+    }
+
     let s3sync_error = e.downcast_ref::<S3syncError>();
     if s3sync_error.is_some() {
         return matches!(
@@ -2979,6 +3001,18 @@ mod tests {
         )));
         assert!(is_force_retryable_error(&anyhow!(
             build_list_object_versions_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_list_object_annotations_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_get_object_annotation_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_put_object_annotation_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_delete_object_annotation_timeout_error()
         )));
 
         assert!(!is_force_retryable_error(&anyhow!("error")));
@@ -3893,6 +3927,26 @@ mod tests {
 
     fn build_list_object_versions_timeout_error()
     -> SdkError<ListObjectVersionsError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_list_object_annotations_timeout_error()
+    -> SdkError<ListObjectAnnotationsError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_get_object_annotation_timeout_error()
+    -> SdkError<GetObjectAnnotationError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_put_object_annotation_timeout_error()
+    -> SdkError<PutObjectAnnotationError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_delete_object_annotation_timeout_error()
+    -> SdkError<DeleteObjectAnnotationError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
