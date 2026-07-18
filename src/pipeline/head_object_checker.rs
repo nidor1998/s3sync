@@ -5,7 +5,7 @@ use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::Response;
 use aws_smithy_types::body::SdkBody;
 use std::sync::{Arc, Mutex};
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 use crate::pipeline::diff_detector::always_different_diff_detector::AlwaysDifferentDiffDetector;
 use crate::pipeline::diff_detector::checksum_diff_detector::ChecksumDiffDetector;
@@ -16,7 +16,7 @@ use crate::pipeline::diff_detector::standard_diff_detector::StandardDiffDetector
 use crate::Config;
 use crate::storage::Storage;
 use crate::storage::local::fs_util::check_directory_traversal;
-use crate::types::SyncStatistics::{SyncError, SyncWarning};
+use crate::types::SyncStatistics::SyncWarning;
 use crate::types::error::S3syncError;
 use crate::types::event_callback::{EventData, EventType};
 use crate::types::token::PipelineCancellationToken;
@@ -225,26 +225,7 @@ impl HeadObjectChecker {
             return (Ok(true), None);
         }
 
-        self.target
-            .send_stats(SyncError {
-                key: key.to_string(),
-            })
-            .await;
-
-        let error = head_target_object_output
-            .as_ref()
-            .err()
-            .unwrap()
-            .to_string();
-        let source = head_target_object_output.as_ref().err().unwrap().source();
-        error!(
-            worker_index = self.worker_index,
-            error = error,
-            source = source,
-            "head_object() failed."
-        );
-
-        (Err(anyhow!("head_object() failed. key={}.", key,)), None)
+        (Err(head_target_object_output.err().unwrap()), None)
     }
 
     fn is_head_object_check_required(&self) -> bool {

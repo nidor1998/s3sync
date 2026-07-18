@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ServerSideEncryption;
@@ -408,8 +407,8 @@ impl ETagDiffDetector {
                             .await?
                         }
                     }
-                    _ => {
-                        return Err(anyhow!("get_object_parts() failed. key={}.", key,));
+                    Err(error) => {
+                        return Err(error);
                     }
                 }
             } else {
@@ -654,9 +653,9 @@ impl ETagDiffDetector {
                     .get_object_parts(
                         key,
                         None,
-                        self.config.target_sse_c.clone(),
-                        self.config.target_sse_c_key.clone(),
-                        self.config.target_sse_c_key_md5.clone(),
+                        self.config.source_sse_c.clone(),
+                        self.config.source_sse_c_key.clone(),
+                        self.config.source_sse_c_key_md5.clone(),
                     )
                     .await
                 {
@@ -681,8 +680,8 @@ impl ETagDiffDetector {
                             .await?
                         }
                     }
-                    _ => {
-                        return Err(anyhow!("get_object_parts() failed. key={}.", key,));
+                    Err(error) => {
+                        return Err(error);
                     }
                 }
             } else {
@@ -1530,12 +1529,7 @@ mod tests {
         let result = diff_detector
             .is_source_local_e_tag_different_from_target_s3("6byte.dat", &head_object_output)
             .await;
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("get_object_parts() failed.")
-        );
+        assert!(result.is_err())
     }
 
     #[tokio::test]
@@ -1632,12 +1626,7 @@ mod tests {
         let result = diff_detector
             .is_target_local_e_tag_different_from_source_s3("6byte.dat", &source_object)
             .await;
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("get_object_parts() failed.")
-        );
+        assert!(result.is_err())
     }
 
     #[tokio::test]

@@ -590,18 +590,34 @@ impl LocalStorage {
         file.flush().await?;
         drop(file);
 
-        let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key);
-        temp_file.persist(&real_path)?;
-
-        fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos)?;
-
         let target_object_parts = if let Some(object_checksum) = &object_checksum {
             object_checksum.object_parts.clone()
         } else {
             None
         };
 
-        let target_content_length = fs_util::get_file_size(&real_path).await?;
+        let target_content_length = fs_util::get_file_size(&temp_file.path().to_path_buf()).await?;
+        self.verify_local_file(
+            key,
+            object_checksum,
+            &source_sse,
+            &source_e_tag,
+            source_content_length,
+            source_final_checksum,
+            source_checksum_algorithm,
+            &temp_file.path().to_path_buf(),
+            target_object_parts,
+            target_content_length,
+            source_storage_class == Some(StorageClass::ExpressOnezone),
+            source_version_id.clone(),
+            source_last_modified_raw,
+        )
+        .await?;
+
+        let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key);
+        temp_file.persist(&real_path)?;
+
+        fs_util::set_last_modified(self.path.to_path_buf(), key, seconds, nanos)?;
 
         let mut event_data = EventData::new(EventType::SYNC_WRITE);
         event_data.key = Some(key.to_string());
@@ -621,23 +637,6 @@ impl LocalStorage {
         event_data.source_size = Some(source_content_length);
         event_data.target_size = Some(target_content_length);
         self.config.event_manager.trigger_event(event_data).await;
-
-        self.verify_local_file(
-            key,
-            object_checksum,
-            &source_sse,
-            &source_e_tag,
-            source_content_length,
-            source_final_checksum,
-            source_checksum_algorithm,
-            &real_path,
-            target_object_parts,
-            target_content_length,
-            source_storage_class == Some(StorageClass::ExpressOnezone),
-            source_version_id,
-            source_last_modified_raw,
-        )
-        .await?;
 
         let lossy_path = real_path.to_string_lossy().to_string();
         info!(
@@ -950,6 +949,30 @@ impl LocalStorage {
         file.flush().await?;
         drop(file);
 
+        let target_object_parts = if let Some(object_checksum) = &object_checksum {
+            object_checksum.object_parts.clone()
+        } else {
+            None
+        };
+
+        let target_content_length = fs_util::get_file_size(&temp_file.path().to_path_buf()).await?;
+        self.verify_local_file(
+            key,
+            object_checksum,
+            &source_sse,
+            &source_e_tag,
+            source_size,
+            source_additional_checksum,
+            source_checksum_algorithm,
+            &temp_file.path().to_path_buf(),
+            target_object_parts,
+            target_content_length,
+            source_storage_class == Some(StorageClass::ExpressOnezone),
+            source_version_id.clone(),
+            source_last_modified_raw,
+        )
+        .await?;
+
         let real_path = fs_util::key_to_file_path(self.path.to_path_buf(), key);
         temp_file.persist(&real_path)?;
 
@@ -959,12 +982,6 @@ impl LocalStorage {
             source_last_modified_seconds,
             source_last_modified_nanos,
         )?;
-
-        let target_object_parts = if let Some(object_checksum) = &object_checksum {
-            object_checksum.object_parts.clone()
-        } else {
-            None
-        };
 
         let total_upload_size: u64 = shared_total_upload_size.lock().unwrap().iter().sum();
         if total_upload_size == source_size {
@@ -979,8 +996,6 @@ impl LocalStorage {
             )));
         }
 
-        let target_content_length = fs_util::get_file_size(&real_path).await?;
-
         let mut event_data = EventData::new(EventType::SYNC_COMPLETE);
         event_data.key = Some(key.to_string());
         // skipcq: RS-W1070
@@ -991,23 +1006,6 @@ impl LocalStorage {
         event_data.source_size = Some(source_size);
         event_data.target_size = Some(target_content_length);
         self.config.event_manager.trigger_event(event_data).await;
-
-        self.verify_local_file(
-            key,
-            object_checksum,
-            &source_sse,
-            &source_e_tag,
-            source_size,
-            source_additional_checksum,
-            source_checksum_algorithm,
-            &real_path,
-            target_object_parts,
-            target_content_length,
-            source_storage_class == Some(StorageClass::ExpressOnezone),
-            source_version_id,
-            source_last_modified_raw,
-        )
-        .await?;
 
         let lossy_path = real_path.to_string_lossy().to_string();
         info!(

@@ -322,6 +322,7 @@ impl S3syncObject {
         match &self {
             Self::Versioning(object) => object.size().unwrap(),
             Self::NotVersioning(object) => object.size().unwrap(),
+            Self::DeleteMarker(_object) => 0,
             _ => panic!("doesn't have size."),
         }
     }
@@ -339,7 +340,8 @@ impl S3syncObject {
         match &self {
             Self::Versioning(object) => object.e_tag(),
             Self::NotVersioning(object) => object.e_tag(),
-            _ => panic!("doesn't have ETag."),
+            Self::DeleteMarker(_object) => None,
+            _ => panic!("unsupported."),
         }
     }
 

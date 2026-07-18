@@ -35,6 +35,9 @@ pub fn check_storage_path(path: &str) -> Result<String, String> {
             if parsed.host_str().is_none() {
                 return Err(NO_BUCKET_NAME_SPECIFIED.to_string());
             }
+            if !check_s3_prefix(path) {
+                return Err(INVALID_PATH.to_string());
+            }
         }
         _ => {
             if !is_windows_absolute_path(path) {
@@ -146,6 +149,11 @@ fn parse_s3_path(path: &str) -> StoragePath {
     StoragePath::S3 { bucket, prefix }
 }
 
+fn check_s3_prefix(path: &str) -> bool {
+    let prefix = Url::parse(path).unwrap().path().to_string();
+    percent_decode_str(&prefix).decode_utf8().is_ok()
+}
+
 fn is_windows_absolute_path(path: &str) -> bool {
     if !cfg!(windows) {
         return false;
@@ -197,6 +205,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         assert!(check_storage_path("s3://arn:aws").is_err());
+        assert!(check_storage_path("s3://my-bucket/%FF").is_err());
     }
 
     #[test]

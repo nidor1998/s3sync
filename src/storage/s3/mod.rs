@@ -243,7 +243,12 @@ impl S3Storage {
         sender: &Sender<S3syncObject>,
         object_versions: &mut ObjectVersions,
     ) -> Result<()> {
-        object_versions.sort_by(|a, b| {
+        let mut indexed_object_versions = object_versions
+            .drain(..)
+            .enumerate()
+            .collect::<Vec<(usize, S3syncObject)>>();
+
+        indexed_object_versions.sort_by(|(a_index, a), (b_index, b)| {
             if a.is_latest() {
                 return Ordering::Greater;
             }
@@ -254,7 +259,17 @@ impl S3Storage {
             a.last_modified()
                 .as_nanos()
                 .cmp(&b.last_modified().as_nanos())
+                // ListObjectVersions returns versions for the same key in newest-first order.
+                // LastModified may only have second-level precision, so equal timestamps must
+                // be replayed by reversing the original listing order.
+                .then_with(|| b_index.cmp(a_index))
         });
+
+        object_versions.extend(
+            indexed_object_versions
+                .into_iter()
+                .map(|(_, object)| object),
+        );
 
         for object in object_versions {
             debug!(
@@ -1597,12 +1612,12 @@ impl StorageTrait for S3Storage {
         if version_id.is_some() {
             return format!(
                 "{}/{}?versionId={}",
-                &self.bucket,
+                self.bucket,
                 full_key,
                 version_id.unwrap()
             );
         }
-        format!("{}/{}", &self.bucket, full_key)
+        format!("{}/{}", self.bucket, full_key)
     }
 
     fn set_warning(&self) {
@@ -2048,6 +2063,76 @@ mod tests {
         assert_eq!(
             receive_version_ids(&receiver, 3).await,
             vec!["v-old", "v-mid", "v-latest"]
+        );
+    }
+
+    #[tokio::test]
+    async fn send_object_versions_with_sort_test_same_time() {
+        init_dummy_tracing_subscriber();
+
+        let (sender, receiver) = async_channel::unbounded::<S3syncObject>();
+
+        // The latest version is placed at the end of the input so that the
+        // comparator evaluates it as `a`(a.is_latest() => Ordering::Greater).
+        let mut object_versions = vec![
+            build_versioning_object("v-mid", false, 200),
+            build_versioning_object("v-old", false, 100),
+            build_versioning_object("v-latest", true, 300),
+        ];
+        S3Storage::send_object_versions_with_sort(&sender, &mut object_versions)
+            .await
+            .unwrap();
+        assert_eq!(
+            receive_version_ids(&receiver, 3).await,
+            vec!["v-old", "v-mid", "v-latest"]
+        );
+
+        // The latest version is placed at the beginning of the input so that the
+        // comparator evaluates it as `b`(b.is_latest() => Ordering::Less).
+        let mut object_versions = vec![
+            build_versioning_object("v-latest", true, 300),
+            build_versioning_object("v-mid", false, 200),
+            build_versioning_object("v-old", false, 100),
+        ];
+        S3Storage::send_object_versions_with_sort(&sender, &mut object_versions)
+            .await
+            .unwrap();
+        assert_eq!(
+            receive_version_ids(&receiver, 3).await,
+            vec!["v-old", "v-mid", "v-latest"]
+        );
+
+        // ListObjectVersions returns same-key versions in newest-first order.
+        // If LastModified timestamps are equal, replay order must reverse the
+        // original listing order so that older versions are sent first.
+        let mut object_versions = vec![
+            build_versioning_object("v-newer-same-second", false, 400),
+            build_versioning_object("v-older-same-second", false, 400),
+        ];
+        S3Storage::send_object_versions_with_sort(&sender, &mut object_versions)
+            .await
+            .unwrap();
+        assert_eq!(
+            receive_version_ids(&receiver, 2).await,
+            vec!["v-older-same-second", "v-newer-same-second"]
+        );
+
+        // Even when timestamps are equal, the latest version must still be sent last.
+        let mut object_versions = vec![
+            build_versioning_object("v-latest-same-second", true, 500),
+            build_versioning_object("v-newer-same-second", false, 500),
+            build_versioning_object("v-older-same-second", false, 500),
+        ];
+        S3Storage::send_object_versions_with_sort(&sender, &mut object_versions)
+            .await
+            .unwrap();
+        assert_eq!(
+            receive_version_ids(&receiver, 3).await,
+            vec![
+                "v-older-same-second",
+                "v-newer-same-second",
+                "v-latest-same-second"
+            ]
         );
     }
 
