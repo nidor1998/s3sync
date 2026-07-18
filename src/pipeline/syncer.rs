@@ -1643,19 +1643,14 @@ impl ObjectSyncer {
                 .context("pipeline::syncer::get_first_chunk_range() failed.");
 
             if head_object_result.is_err() {
-                error!(
-                    worker_index = self.worker_index,
-                    key = object.key(),
-                    "pipeline::syncer::get_first_chunk_range() failed."
-                );
+                let error = match head_object_result {
+                    Ok(_) => {
+                        unreachable!("successful head_object() result should have returned earlier")
+                    }
+                    Err(error) => error,
+                };
 
-                self.base
-                    .send_stats(SyncError {
-                        key: object.key().to_string(),
-                    })
-                    .await;
-
-                return Err(anyhow!("pipeline::syncer::get_first_chunk_range() failed."));
+                return Err(error);
             }
 
             return Ok(Some(format!(
