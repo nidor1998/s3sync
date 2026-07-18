@@ -336,11 +336,34 @@ impl UploadManager {
                 self.config.content_type.clone()
             },
             expires: if self.config.expires.is_none() {
-                get_object_output_first_chunk
-                    .expires_string()
-                    .and_then(|expires_string| {
-                        DateTime::from_str(expires_string, DateTimeFormat::HttpDate).ok()
+                let expires_string =
+                    get_object_output_first_chunk
+                        .expires_string()
+                        .and_then(|expires_string| {
+                            DateTime::from_str(expires_string, DateTimeFormat::HttpDate).ok()
+                        });
+
+                if expires_string.is_none() {
+                    self.send_stats(SyncWarning {
+                        key: key.to_string(),
                     })
+                    .await;
+                    self.has_warning.store(true, Ordering::SeqCst);
+
+                    let message = format!(
+                        "Invalid expires value {}, falling back to None",
+                        get_object_output_first_chunk
+                            .expires_string()
+                            .unwrap_or_default()
+                    );
+                    warn!(key = &key, message);
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(key.to_string());
+                    event_data.message = Some(message.to_string());
+                    self.config.event_manager.trigger_event(event_data).await;
+                }
+                expires_string
             } else {
                 Some(DateTime::from_str(
                     &self.config.expires.unwrap().to_rfc3339(),
@@ -1522,11 +1545,32 @@ impl UploadManager {
                 self.config.content_type.clone()
             },
             expires: if self.config.expires.is_none() {
-                get_object_output
-                    .expires_string()
-                    .and_then(|expires_string| {
-                        DateTime::from_str(expires_string, DateTimeFormat::HttpDate).ok()
+                let expires_string =
+                    get_object_output
+                        .expires_string()
+                        .and_then(|expires_string| {
+                            DateTime::from_str(expires_string, DateTimeFormat::HttpDate).ok()
+                        });
+
+                if expires_string.is_none() {
+                    self.send_stats(SyncWarning {
+                        key: key.to_string(),
                     })
+                    .await;
+                    self.has_warning.store(true, Ordering::SeqCst);
+
+                    let message = format!(
+                        "Invalid expires value {}, falling back to None",
+                        get_object_output.expires_string().unwrap_or_default()
+                    );
+                    warn!(key = &key, message);
+
+                    let mut event_data = EventData::new(EventType::SYNC_WARNING);
+                    event_data.key = Some(key.to_string());
+                    event_data.message = Some(message.to_string());
+                    self.config.event_manager.trigger_event(event_data).await;
+                }
+                expires_string
             } else {
                 Some(DateTime::from_str(
                     &self.config.expires.unwrap().to_rfc3339(),
