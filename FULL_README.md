@@ -404,23 +404,31 @@ CRC64NVME).
 ### Object Annotation support
 
 For S3-to-S3 transfers, s3sync can sync objects along with their object annotations.  
-Use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option to sync objects together with their annotations.  
-s3sync updates only the annotations that have changed.  
+Use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option to sync objects together with their
+annotations.  
+s3sync updates only the annotations that have changed.
 
-Note that copying annotations requires additional API calls.  
+Note that copying annotations requires additional API calls.
 
 Annotations can be synced in parallel (`--max-parallel-uploads`).  
 With the `--server-side-copy` option, Amazon S3 copies the annotations to the target bucket entirely within Amazon S3.  
-However, Amazon S3's `CopyPart` API (used by server-side copy) does not copy the annotations of objects that were multipart-uploaded.  
-So even when `--server-side-copy` is specified, use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option if you need to copy the annotations of multipart-uploaded objects.  
+However, Amazon S3's `CopyPart` API (used by server-side copy) does not copy the annotations of objects that were
+multipart-uploaded.  
+So even when `--server-side-copy` is specified, use the `--enable-sync-object-annotations`/
+`--sync-latest-object-annotations` option if you need to copy the annotations of multipart-uploaded objects.
 
-s3sync verifies an object's annotations against its ETag (MD5 or equivalent) where possible, or against an additional checksum obtained from the source bucket.
+s3sync verifies an object's annotations against its ETag (MD5 or equivalent) where possible, or against an additional
+checksum obtained from the source bucket.
 
-s3sync updates only the annotations that have changed. To detect changes, it compares objects by their ETag where possible; when the ETag cannot be used (for example, when SSE-KMS encryption is enabled), it falls back to the object's Last-Modified timestamp.
+s3sync updates only the annotations that have changed. To detect changes, it compares objects by their ETag where
+possible; when the ETag cannot be used (for example, when SSE-KMS encryption is enabled), it falls back to the object's
+Last-Modified timestamp.
 
-If s3sync fails to create, update, or delete an annotation, the object transfer is treated as a failure; the object itself, however, is not deleted.
+If s3sync fails to create, update, or delete an annotation, the object transfer is treated as a failure; the object
+itself, however, is not deleted.
 
-With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed by a tool other than s3sync.
+With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed
+by a tool other than s3sync.
 
 ### Versioning support
 
@@ -509,7 +517,8 @@ The following is an example of the report (the last two lines of the above comma
 
   </details>
 
-You can check the synchronization status of the object's tagging, metadata, annnotation with `--report-metadata-sync-status`,
+You can check the synchronization status of the object's tagging, metadata, annnotation with
+`--report-metadata-sync-status`,
 `--report-tagging-sync-status` and `--report-annotations-sync-status` option.
 
 Note: For reporting, s3sync uses a special process exit code. `0` If all objects are synchronized correctly. `3` If some
@@ -955,14 +964,17 @@ of
 the object.  
 Generally, you should use `--enable-versioning` when you transfer to a new bucket.
 
-s3sync tracks sync state using user-defined metadata. Other tools (such as aws s3 sync or rclone) do not write this metadata and therefore cannot recognize objects already synced by s3sync. As a result, synchronizing the same source and target with another tool may trigger unnecessary transfers, even when the objects are already in sync.
+s3sync tracks sync state using user-defined metadata. Other tools (such as aws s3 sync or rclone) do not write this
+metadata and therefore cannot recognize objects already synced by s3sync. As a result, synchronizing the same source and
+target with another tool may trigger unnecessary transfers, even when the objects are already in sync.
 
 With `--filter-mtime-before` and `--filter-mtime-after` options, you can get snapshots of the objects at a specific
 period.
 
 Intermediate delete markers are not synchronized. Latest version delete markers are synchronized.
 
-Note: in a versioning-enabled bucket, deleting an object means adding a delete marker. The object itself is never actually deleted, but the delete count still increases.
+Note: in a versioning-enabled bucket, deleting an object means adding a delete marker. The object itself is never
+actually deleted, but the delete count still increases.
 
 user-defined metadata: `s3sync_origin_version_id`, `s3sync_origin_last_modified`
 
@@ -1661,6 +1673,33 @@ assistance**. s3sync has many e2e tests and unit tests that run against Amazon S
 S3-compatible storage is not part of that test matrix and is no longer tested at release time. Because there is no
 official certification for S3-compatible storage and behavior varies across providers, comprehensive testing is not
 possible. Bug reports, questions, and assistance requests regarding S3-compatible storage will not be addressed.
+
+## Security assumption (Trust model)
+
+s3sync is built on a fundamental security assumption: **both the object storage system and the specific bucket you
+synchronize with must be trusted.**
+
+Within this trust model, s3sync implements the security measures you would reasonably expect of a synchronization tool:
+encrypted transport (TLS/HTTPS) for data in transit, end-to-end integrity verification (ETag, MD5, SHA256, and CRC
+checksums), support for server-side encryption, and secure handling of credentials through the standard AWS credential
+providers. These measures protect the confidentiality and integrity of your data against transport-level and accidental
+threats.
+
+However, s3sync assumes that the storage endpoint is honest and non-adversarial — that it correctly implements the S3
+API and returns the data, metadata, and checksum values it actually stores, without tampering. The integrity
+verification features are **not** a defense against a malicious or compromised storage backend that deliberately returns
+falsified data or forged checksums. Against such an adversarial endpoint, these guarantees do not hold.
+
+Crucially, trust must extend to the **bucket**, not just the storage provider. Even when the object storage system
+itself is fully trustworthy, a bucket can still be adversarial — for example, a bucket you do not control, a shared
+bucket writable by others, or one whose objects, metadata, or checksums were crafted by an attacker. If you synchronize
+*from* such a bucket, the data and metadata it serves are already untrusted at the source, and s3sync's guarantees no
+longer apply. A trusted storage provider hosting an untrusted bucket is, for the purposes of this security model, an
+untrusted source.
+
+Synchronizing with an untrusted, compromised, or non-conformant endpoint or bucket is outside s3sync's security model.
+Selecting a trustworthy storage provider, and ensuring that every bucket you synchronize with is one you control or
+trust — including its credentials, encryption, and access policies — remains your responsibility.
 
 ## Scope
 

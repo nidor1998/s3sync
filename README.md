@@ -10,13 +10,15 @@
 
 > **Note on issues:** This project continues to be maintained, and binaries will keep being released. However, to
 > consolidate discussion across
->　the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)
+>
+the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)
 > family, **please file new issues in the [s7cmd](https://github.com/nidor1998/s7cmd) repository** instead of
 > here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying
 > code,
 > so its behavior matches the standalone binaries and it can be used in their place. **Before opening an issue, please
 > read the Scope and Non-Goals sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each
-> project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))
+>
+project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))
 ** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue
 > to be handled as usual.
 
@@ -139,20 +141,29 @@ correctly.
 
 - Object Annotation support  
   For S3-to-S3 transfers, s3sync can sync objects along with their object annotations.  
-  Use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option to sync objects together with their annotations.  
+  Use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option to sync objects together with
+  their annotations.
 
-  s3sync updates only the annotations that have changed. To detect changes, it compares objects by their ETag where possible; when the ETag cannot be used (for example, when SSE-KMS encryption is enabled), it falls back to the object's Last-Modified timestamp.  
-  If s3sync fails to create, update, or delete an annotation, the object transfer is treated as a failure; the object itself, however, is not deleted.  
+  s3sync updates only the annotations that have changed. To detect changes, it compares objects by their ETag where
+  possible; when the ETag cannot be used (for example, when SSE-KMS encryption is enabled), it falls back to the
+  object's Last-Modified timestamp.  
+  If s3sync fails to create, update, or delete an annotation, the object transfer is treated as a failure; the object
+  itself, however, is not deleted.
 
-  Note that copying annotations requires additional API calls.  
+  Note that copying annotations requires additional API calls.
 
   Annotations can be synced in parallel (`--max-parallel-uploads`).  
-  With the `--server-side-copy` option, Amazon S3 copies the annotations to the target bucket entirely within Amazon S3.  
-  However, Amazon S3's `CopyPart` API (used by server-side copy) does not copy the annotations of objects that were multipart-uploaded.  
-  So even when `--server-side-copy` is specified, use the `--enable-sync-object-annotations`/`--sync-latest-object-annotations` option if you need to copy the annotations of multipart-uploaded objects.  
-  s3sync verifies an object's annotations against its ETag (MD5 or equivalent) where possible, or against an additional checksum obtained from the source bucket.
+  With the `--server-side-copy` option, Amazon S3 copies the annotations to the target bucket entirely within Amazon
+  S3.  
+  However, Amazon S3's `CopyPart` API (used by server-side copy) does not copy the annotations of objects that were
+  multipart-uploaded.  
+  So even when `--server-side-copy` is specified, use the `--enable-sync-object-annotations`/
+  `--sync-latest-object-annotations` option if you need to copy the annotations of multipart-uploaded objects.  
+  s3sync verifies an object's annotations against its ETag (MD5 or equivalent) where possible, or against an additional
+  checksum obtained from the source bucket.
 
-  With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed by a tool other than s3sync.
+  With `--report-annotations-sync-status`, annotation sync status can be reported even when synchronization is performed
+  by a tool other than s3sync.
 
 - Sync statistics report  
   s3sync can check and report the synchronization status at any time.  
@@ -217,7 +228,8 @@ correctly.
 
   </details>
 
-  You can check the synchronization status of the object's tagging, metadata, annnotation with `--report-metadata-sync-status`, 
+  You can check the synchronization status of the object's tagging, metadata, annnotation with
+  `--report-metadata-sync-status`,
   `--report-tagging-sync-status` and `--report-annotations-sync-status` option.
 
 - Robust retry logic  
@@ -272,6 +284,33 @@ assistance**. s3sync has many end-to-end and unit tests that run against Amazon 
 S3-compatible storage is not part of that test matrix and is no longer tested at release time. Because there is no
 official certification for S3-compatible storage and behavior varies across providers, comprehensive testing is not
 possible. Bug reports, questions, and assistance requests regarding S3-compatible storage will not be addressed.
+
+## Security assumption (Trust model)
+
+s3sync is built on a fundamental security assumption: **both the object storage system and the specific bucket you
+synchronize with must be trusted.**
+
+Within this trust model, s3sync implements the security measures you would reasonably expect of a synchronization tool:
+encrypted transport (TLS/HTTPS) for data in transit, end-to-end integrity verification (ETag, MD5, SHA256, and CRC
+checksums), support for server-side encryption, and secure handling of credentials through the standard AWS credential
+providers. These measures protect the confidentiality and integrity of your data against transport-level and accidental
+threats.
+
+However, s3sync assumes that the storage endpoint is honest and non-adversarial — that it correctly implements the S3
+API and returns the data, metadata, and checksum values it actually stores, without tampering. The integrity
+verification features are **not** a defense against a malicious or compromised storage backend that deliberately returns
+falsified data or forged checksums. Against such an adversarial endpoint, these guarantees do not hold.
+
+Crucially, trust must extend to the **bucket**, not just the storage provider. Even when the object storage system
+itself is fully trustworthy, a bucket can still be adversarial — for example, a bucket you do not control, a shared
+bucket writable by others, or one whose objects, metadata, or checksums were crafted by an attacker. If you synchronize
+*from* such a bucket, the data and metadata it serves are already untrusted at the source, and s3sync's guarantees no
+longer apply. A trusted storage provider hosting an untrusted bucket is, for the purposes of this security model, an
+untrusted source.
+
+Synchronizing with an untrusted, compromised, or non-conformant endpoint or bucket is outside s3sync's security model.
+Selecting a trustworthy storage provider, and ensuring that every bucket you synchronize with is one you control or
+trust — including its credentials, encryption, and access policies — remains your responsibility.
 
 ## More information
 
