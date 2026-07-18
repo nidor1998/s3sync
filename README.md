@@ -228,7 +228,7 @@ correctly.
 
   </details>
 
-  You can check the synchronization status of the object's tagging, metadata, annnotation with
+  You can check the synchronization status of the object's tagging, metadata, annotation with
   `--report-metadata-sync-status`,
   `--report-tagging-sync-status` and `--report-annotations-sync-status` option.
 

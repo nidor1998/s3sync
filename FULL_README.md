@@ -518,7 +518,7 @@ The following is an example of the report (the last two lines of the above comma
 
   </details>
 
-You can check the synchronization status of the object's tagging, metadata, annnotation with
+You can check the synchronization status of the object's tagging, metadata, annotation with
 `--report-metadata-sync-status`,
 `--report-tagging-sync-status` and `--report-annotations-sync-status` option.
 
