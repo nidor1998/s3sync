@@ -1597,12 +1597,12 @@ impl StorageTrait for S3Storage {
         if version_id.is_some() {
             return format!(
                 "{}/{}?versionId={}",
-                &self.bucket,
+                self.bucket,
                 full_key,
                 version_id.unwrap()
             );
         }
-        format!("{}/{}", &self.bucket, full_key)
+        format!("{}/{}", self.bucket, full_key)
     }
 
     fn set_warning(&self) {

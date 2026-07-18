@@ -823,7 +823,7 @@ impl UploadManager {
                             error!("get_object() returned no content range. This is unexpected.");
                             return Err(anyhow!(
                                 "get_object() returned no content range. This is unexpected. key={}.",
-                                &target_key
+                                target_key
                             ));
                         }
                         let (request_start, request_end) = parse_range_header_string(&range)
@@ -1195,7 +1195,7 @@ impl UploadManager {
                             );
                             return Err(anyhow!(
                                 "get_object() returned no content range. This is unexpected. key={}.",
-                                &target_key
+                                target_key
                             ));
                         }
                         let (request_start, request_end) = parse_range_header_string(&range)
