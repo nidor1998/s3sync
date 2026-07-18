@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Corrected `ONE-ZONE_IA` to `ONEZONE_IA` in `--storage-class`/`--annotation-storage-class` options and documentation.
+- Ensured stable object version sorting when multiple versions share the same last-modified second, by falling back to
+  the original `ListObjectVersions` (newest-first) order as a tie-breaker.
+- `--check-etag` with SSE-C now uses the source SSE-C parameters (instead of the target's) when retrieving the source
+  object's ETag.
+- `--force-retry-count` now applies to HeadObject failures.
+- A `DeleteMarker` now reports size `0` and no ETag, instead of panicking.
+- Prevented a panic when an object's `Expiration` contains an invalid `expiry-date`.
+- Stricter validation of S3 path prefixes during argument parsing, including a check for invalid percent-encoded
+  characters.
+- Stricter format validation of `--metadata` values (e.g. a leading comma is now rejected).
+
 ## [1.59.0] - 2026-07-04
 
 ### Added
