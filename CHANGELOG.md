@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stricter validation of S3 path prefixes during argument parsing, including a check for invalid percent-encoded
   characters.
 - Stricter format validation of `--metadata` values (e.g. a leading comma is now rejected).
+- A warning is now reported when a source object's `Expires` value cannot be parsed as an HTTP date; the value falls
+  back to `None` instead of being silently dropped.
+- When downloading to local storage, object verification now runs on the temporary file before it is persisted to the
+  final path, so an object that fails verification never becomes visible at the destination. This also resolves a
+  potential race condition around `set_last_modified`.
+- `--force-retry-count` now applies to object annotation API errors (`ListObjectAnnotations`, `GetObjectAnnotation`,
+  `PutObjectAnnotation`, `DeleteObjectAnnotation`).
 
 ## [1.59.0] - 2026-07-04
 
