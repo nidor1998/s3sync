@@ -285,7 +285,7 @@ S3-compatible storage is not part of that test matrix and is no longer tested at
 official certification for S3-compatible storage and behavior varies across providers, comprehensive testing is not
 possible. Bug reports, questions, and assistance requests regarding S3-compatible storage will not be addressed.
 
-## Security assumption (Trust model)
+## Security assumptions
 
 s3sync is built on a fundamental security assumption: **both the object storage system and the specific bucket you
 synchronize with must be trusted.**
