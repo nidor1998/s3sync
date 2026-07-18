@@ -1640,22 +1640,11 @@ impl ObjectSyncer {
                     self.base.config.source_sse_c_key_md5.clone(),
                 )
                 .await
-                .context("pipeline::syncer::get_first_chunk_range() failed.");
-
-            if head_object_result.is_err() {
-                let error = match head_object_result {
-                    Ok(_) => {
-                        unreachable!("successful head_object() result should have returned earlier")
-                    }
-                    Err(error) => error,
-                };
-
-                return Err(error);
-            }
+                .context("pipeline::syncer::get_first_chunk_range() failed.")?;
 
             return Ok(Some(format!(
                 "bytes=0-{}",
-                head_object_result?.content_length.unwrap() - 1
+                head_object_result.content_length.unwrap() - 1
             )));
         }
 
