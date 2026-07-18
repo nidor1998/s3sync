@@ -1331,7 +1331,7 @@ Target Options:
           Force path-style addressing for target endpoint [env: TARGET_FORCE_PATH_STYLE=]
       --storage-class <STORAGE_CLASS>
           Type of storage to use for the target object.
-          Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER |
+          Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER |
                          DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE [env: STORAGE_CLASS=]
 
 Filtering:

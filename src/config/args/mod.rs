@@ -345,7 +345,7 @@ It cannot work with between different object storages or regions."#)]
 
     #[arg(long, env, value_parser = storage_class::parse_storage_class, help_heading = "Target Options",
     long_help = r#"Type of storage to use for the target object.
-Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONE-ZONE_IA | INTELLIGENT_TIERING | GLACIER |
+Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELLIGENT_TIERING | GLACIER |
                DEEP_ARCHIVE | GLACIER_IR | EXPRESS_ONEZONE"#)]
     storage_class: Option<String>,
 
