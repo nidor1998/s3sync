@@ -336,6 +336,7 @@ impl UploadManager {
                 self.config.content_type.clone()
             },
             expires: if self.config.expires.is_none() {
+                let raw_expires_string = get_object_output_first_chunk.expires_string();
                 let expires_string =
                     get_object_output_first_chunk
                         .expires_string()
@@ -343,7 +344,7 @@ impl UploadManager {
                             DateTime::from_str(expires_string, DateTimeFormat::HttpDate).ok()
                         });
 
-                if expires_string.is_none() {
+                if raw_expires_string.is_some() && expires_string.is_none() {
                     self.send_stats(SyncWarning {
                         key: key.to_string(),
                     })
@@ -1545,6 +1546,7 @@ impl UploadManager {
                 self.config.content_type.clone()
             },
             expires: if self.config.expires.is_none() {
+                let raw_expires_string = get_object_output.expires_string();
                 let expires_string =
                     get_object_output
                         .expires_string()
@@ -1552,7 +1554,7 @@ impl UploadManager {
                             DateTime::from_str(expires_string, DateTimeFormat::HttpDate).ok()
                         });
 
-                if expires_string.is_none() {
+                if raw_expires_string.is_some() && expires_string.is_none() {
                     self.send_stats(SyncWarning {
                         key: key.to_string(),
                     })
