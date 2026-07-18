@@ -13,10 +13,6 @@ pub fn check_metadata(metadata: &str) -> Result<String, String> {
         return Err(INVALID_METADATA.to_string());
     }
 
-    if mat.unwrap().as_str() != metadata {
-        return Err(INVALID_METADATA.to_string());
-    }
-
     Ok(metadata.to_string())
 }
 
