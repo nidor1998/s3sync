@@ -2066,8 +2066,6 @@ mod tests {
         );
     }
 
-    // ... existing code ...
-
     #[tokio::test]
     async fn send_object_versions_with_sort_test_same_time() {
         init_dummy_tracing_subscriber();
