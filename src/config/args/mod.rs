@@ -655,7 +655,13 @@ Example: 2025-07-16T12:00:00Z"#
     source_sse_c_key: Option<String>,
 
     /// Source base64 encoded MD5 digest of source_sse_c_key
-    #[arg(long, env, hide_env_values = true, requires = "source_sse_c", help_heading = "Encryption")]
+    #[arg(
+        long,
+        env,
+        hide_env_values = true,
+        requires = "source_sse_c",
+        help_heading = "Encryption"
+    )]
     source_sse_c_key_md5: Option<String>,
 
     /// Target SSE-C algorithm. Valid choices: AES256
@@ -673,7 +679,13 @@ Example: 2025-07-16T12:00:00Z"#
     target_sse_c_key: Option<String>,
 
     /// Target base64 encoded MD5 digest of target-sse-c-key
-    #[arg(long, env, hide_env_values = true, requires = "target_sse_c", help_heading = "Encryption")]
+    #[arg(
+        long,
+        env,
+        hide_env_values = true,
+        requires = "target_sse_c",
+        help_heading = "Encryption"
+    )]
     target_sse_c_key_md5: Option<String>,
 
     /// Trace verbosity(-v: show info, -vv: show debug, -vvv show trace)
