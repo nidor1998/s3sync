@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Credential-related command line options (`--source-access-key`, `--source-secret-access-key`,
+  `--source-session-token`, `--target-access-key`, `--target-secret-access-key`, `--target-session-token`,
+  `--source-sse-c-key`, `--source-sse-c-key-md5`, `--target-sse-c-key`, `--target-sse-c-key-md5`) no longer
+  display their values in `--help` output when set via environment variables.
+
 ### Fixed
 
 - Corrected `ONE-ZONE_IA` to `ONEZONE_IA` in `--storage-class`/`--annotation-storage-class` options and documentation.
