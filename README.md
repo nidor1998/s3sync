@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/d/s3sync?label=downloads%20%28crates.io%29)](https://crates.io/crates/s3sync)
 [![GitHub](https://img.shields.io/github/downloads/nidor1998/s3sync/total?label=downloads%20%28GitHub%29)](https://github.com/nidor1998/s3sync/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![MSRV](https://img.shields.io/badge/msrv-1.91.1-red)
+![MSRV](https://img.shields.io/badge/msrv-1.94.1-red)
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 
@@ -341,7 +341,7 @@ ACLs, bucket policies, lifecycle, etc.) or compatibility with a specific tool's 
 The following are explicitly out of scope and will not be added, regardless of demand:
 
 - General S3 management operations: bucket creation/deletion, ACLs, bucket policies, lifecycle, replication, inventory,
-  presign, etc. s3sync is a transfer/sync tool; for those operations use the [AWS CLI](https://aws.amazon.com/cli/).
+  presign, etc. s3sync is a transfer/sync tool; for general S3 operations use the [s7cmd](https://github.com/nidor1998/s7cmd).
 - Support, testing, or guaranteed compatibility for any storage service other than Amazon S3. S3-compatible storage is
   provided strictly as-is, with no support or assistance — adding dedicated code paths, provider-specific workarounds,
   or backends for services such as MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS,

@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.60.0] - 2026-07-20
+
+Monthly update.
 
 ### Security
 
@@ -34,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   potential race condition around `set_last_modified`.
 - `--force-retry-count` now applies to object annotation API errors (`ListObjectAnnotations`, `GetObjectAnnotation`,
   `PutObjectAnnotation`, `DeleteObjectAnnotation`).
+
+### Changed
+
+- aws-sdk-s3 `v1.137.0 -> v1.138.1`
+- MSRV `1.91.1 -> 1.94.1`
+- Updated other dependencies
 
 ## [1.59.0] - 2026-07-04
 

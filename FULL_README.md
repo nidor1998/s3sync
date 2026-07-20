@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/d/s3sync?label=downloads%20%28crates.io%29)](https://crates.io/crates/s3sync)
 [![GitHub](https://img.shields.io/github/downloads/nidor1998/s3sync/total?label=downloads%20%28GitHub%29)](https://github.com/nidor1998/s3sync/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![MSRV](https://img.shields.io/badge/msrv-1.91.1-red)
+![MSRV](https://img.shields.io/badge/msrv-1.94.1-red)
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 
@@ -647,7 +647,7 @@ See [Install Rust](https://www.rust-lang.org/tools/install)
 
 ### Build
 
-s3sync requires Rust 1.91.1 or later.
+s3sync requires Rust 1.94.1 or later.
 
 ```bash
 cargo install s3sync
@@ -1303,21 +1303,21 @@ AWS Configuration:
       --source-profile <SOURCE_PROFILE>
           Source AWS CLI profile [env: SOURCE_PROFILE=]
       --source-access-key <SOURCE_ACCESS_KEY>
-          Source access key [env: SOURCE_ACCESS_KEY=]
+          Source access key [env: SOURCE_ACCESS_KEY]
       --source-secret-access-key <SOURCE_SECRET_ACCESS_KEY>
-          Source secret access key [env: SOURCE_SECRET_ACCESS_KEY=]
+          Source secret access key [env: SOURCE_SECRET_ACCESS_KEY]
       --source-session-token <SOURCE_SESSION_TOKEN>
-          Source session token [env: SOURCE_SESSION_TOKEN=]
+          Source session token [env: SOURCE_SESSION_TOKEN]
       --source-no-sign-request
           Do not sign requests for the source bucket (anonymous access for public buckets) [env: SOURCE_NO_SIGN_REQUEST=]
       --target-profile <TARGET_PROFILE>
           Target AWS CLI profile [env: TARGET_PROFILE=]
       --target-access-key <TARGET_ACCESS_KEY>
-          Target access key [env: TARGET_ACCESS_KEY=]
+          Target access key [env: TARGET_ACCESS_KEY]
       --target-secret-access-key <TARGET_SECRET_ACCESS_KEY>
-          Target secret access key [env: TARGET_SECRET_ACCESS_KEY=]
+          Target secret access key [env: TARGET_SECRET_ACCESS_KEY]
       --target-session-token <TARGET_SESSION_TOKEN>
-          Target session token [env: TARGET_SESSION_TOKEN=]
+          Target session token [env: TARGET_SESSION_TOKEN]
 
 Source Options:
       --source-region <SOURCE_REGION>
@@ -1532,15 +1532,15 @@ Encryption:
       --source-sse-c <SOURCE_SSE_C>
           Source SSE-C algorithm. Valid choices: AES256 [env: SOURCE_SSE_C=]
       --source-sse-c-key <SOURCE_SSE_C_KEY>
-          Source SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: SOURCE_SSE_C_KEY=]
+          Source SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: SOURCE_SSE_C_KEY]
       --source-sse-c-key-md5 <SOURCE_SSE_C_KEY_MD5>
-          Source base64 encoded MD5 digest of source_sse_c_key [env: SOURCE_SSE_C_KEY_MD5=]
+          Source base64 encoded MD5 digest of source_sse_c_key [env: SOURCE_SSE_C_KEY_MD5]
       --target-sse-c <TARGET_SSE_C>
           Target SSE-C algorithm. Valid choices: AES256 [env: TARGET_SSE_C=]
       --target-sse-c-key <TARGET_SSE_C_KEY>
-          Target SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: TARGET_SSE_C_KEY=]
+          Target SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: TARGET_SSE_C_KEY]
       --target-sse-c-key-md5 <TARGET_SSE_C_KEY_MD5>
-          Target base64 encoded MD5 digest of target-sse-c-key [env: TARGET_SSE_C_KEY_MD5=]
+          Target base64 encoded MD5 digest of target-sse-c-key [env: TARGET_SSE_C_KEY_MD5]
 
 Reporting:
       --report-sync-status              Report sync status to the target storage.
@@ -1727,7 +1727,7 @@ ACLs, bucket policies, lifecycle, etc.) or compatibility with a specific tool's 
 The following are explicitly out of scope and will not be added, regardless of demand:
 
 - General S3 management operations: bucket creation/deletion, ACLs, bucket policies, lifecycle, replication, inventory,
-  presign, etc. s3sync is a transfer/sync tool; for those operations use the [AWS CLI](https://aws.amazon.com/cli/).
+  presign, etc. s3sync is a transfer/sync tool; for general S3 operations use the [s7cmd](https://github.com/nidor1998/s7cmd).
 - Support, testing, or guaranteed compatibility for any storage service other than Amazon S3. S3-compatible storage is
   provided strictly as-is, with no support or assistance — adding dedicated code paths, provider-specific workarounds,
   or backends for services such as MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS,
