@@ -1303,21 +1303,21 @@ AWS Configuration:
       --source-profile <SOURCE_PROFILE>
           Source AWS CLI profile [env: SOURCE_PROFILE=]
       --source-access-key <SOURCE_ACCESS_KEY>
-          Source access key [env: SOURCE_ACCESS_KEY=]
+          Source access key [env: SOURCE_ACCESS_KEY]
       --source-secret-access-key <SOURCE_SECRET_ACCESS_KEY>
-          Source secret access key [env: SOURCE_SECRET_ACCESS_KEY=]
+          Source secret access key [env: SOURCE_SECRET_ACCESS_KEY]
       --source-session-token <SOURCE_SESSION_TOKEN>
-          Source session token [env: SOURCE_SESSION_TOKEN=]
+          Source session token [env: SOURCE_SESSION_TOKEN]
       --source-no-sign-request
           Do not sign requests for the source bucket (anonymous access for public buckets) [env: SOURCE_NO_SIGN_REQUEST=]
       --target-profile <TARGET_PROFILE>
           Target AWS CLI profile [env: TARGET_PROFILE=]
       --target-access-key <TARGET_ACCESS_KEY>
-          Target access key [env: TARGET_ACCESS_KEY=]
+          Target access key [env: TARGET_ACCESS_KEY]
       --target-secret-access-key <TARGET_SECRET_ACCESS_KEY>
-          Target secret access key [env: TARGET_SECRET_ACCESS_KEY=]
+          Target secret access key [env: TARGET_SECRET_ACCESS_KEY]
       --target-session-token <TARGET_SESSION_TOKEN>
-          Target session token [env: TARGET_SESSION_TOKEN=]
+          Target session token [env: TARGET_SESSION_TOKEN]
 
 Source Options:
       --source-region <SOURCE_REGION>
@@ -1532,15 +1532,15 @@ Encryption:
       --source-sse-c <SOURCE_SSE_C>
           Source SSE-C algorithm. Valid choices: AES256 [env: SOURCE_SSE_C=]
       --source-sse-c-key <SOURCE_SSE_C_KEY>
-          Source SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: SOURCE_SSE_C_KEY=]
+          Source SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: SOURCE_SSE_C_KEY]
       --source-sse-c-key-md5 <SOURCE_SSE_C_KEY_MD5>
-          Source base64 encoded MD5 digest of source_sse_c_key [env: SOURCE_SSE_C_KEY_MD5=]
+          Source base64 encoded MD5 digest of source_sse_c_key [env: SOURCE_SSE_C_KEY_MD5]
       --target-sse-c <TARGET_SSE_C>
           Target SSE-C algorithm. Valid choices: AES256 [env: TARGET_SSE_C=]
       --target-sse-c-key <TARGET_SSE_C_KEY>
-          Target SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: TARGET_SSE_C_KEY=]
+          Target SSE-C customer-provided encryption key(256bit key. must be base64 encoded) [env: TARGET_SSE_C_KEY]
       --target-sse-c-key-md5 <TARGET_SSE_C_KEY_MD5>
-          Target base64 encoded MD5 digest of target-sse-c-key [env: TARGET_SSE_C_KEY_MD5=]
+          Target base64 encoded MD5 digest of target-sse-c-key [env: TARGET_SSE_C_KEY_MD5]
 
 Reporting:
       --report-sync-status              Report sync status to the target storage.
