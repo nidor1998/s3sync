@@ -1280,8 +1280,8 @@ $ s3sync -h
 Usage: s3sync [OPTIONS] [SOURCE] [TARGET]
 
 Arguments:
-  [SOURCE]  s3://<BUCKET_NAME>[/prefix] or local path [env: SOURCE=]
-  [TARGET]  s3://<BUCKET_NAME>[/prefix] or local path [env: TARGET=]
+  [SOURCE]  s3://<BUCKET_NAME>[/prefix] or local path
+  [TARGET]  s3://<BUCKET_NAME>[/prefix] or local path
 
 Options:
   -v, --verbose...  Increase logging verbosity
