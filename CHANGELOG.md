@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The positional `source`/`target` arguments no longer read their values from the `SOURCE`/`TARGET` environment
+- [Breaking change] The positional `source`/`target` arguments no longer read their values from the `SOURCE`/`TARGET` environment
   variables. These generic variable names could unintentionally override the command line arguments.
 
 ## [1.60.0] - 2026-07-20
