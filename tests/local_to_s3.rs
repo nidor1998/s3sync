@@ -6,17 +6,26 @@ mod common;
 mod tests {
     use std::collections::HashSet;
     use std::convert::TryFrom;
+    use std::sync::Arc;
 
     use aws_sdk_s3::types::{ServerSideEncryption, StorageClass};
 
     use common::*;
+    use once_cell::sync::Lazy;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
     use s3sync::types::token::create_pipeline_cancellation_token;
+    use tokio::sync::Semaphore;
     use uuid::Uuid;
 
     use super::*;
+
+    /// The not found simulation tests toggle a global environment variable and share a single
+    /// test file that the simulation deletes, so they must run sequentially with respect to
+    /// each other.
+    static NOT_FOUND_SIM_SEMAPHORE: Lazy<Arc<Semaphore>> =
+        Lazy::new(|| Arc::new(Semaphore::new(1)));
 
     #[tokio::test]
     async fn local_to_s3_without_prefix() {
@@ -747,6 +756,11 @@ mod tests {
     #[tokio::test]
     async fn local_to_s3_with_not_found_error_warn() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = NOT_FOUND_SIM_SEMAPHORE
+            .clone()
+            .acquire_owned()
+            .await
+            .unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
@@ -786,6 +800,11 @@ mod tests {
     #[tokio::test]
     async fn local_to_s3_with_not_found_error() {
         TestHelper::init_dummy_tracing_subscriber();
+        let _semaphore = NOT_FOUND_SIM_SEMAPHORE
+            .clone()
+            .acquire_owned()
+            .await
+            .unwrap();
 
         let helper = TestHelper::new().await;
         let bucket = TestHelper::generate_bucket_name();
