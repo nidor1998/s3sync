@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.61.0"
+version = "1.61.1"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, flexible, and fast synchronization tool for S3."
@@ -17,18 +17,18 @@ categories = ["command-line-utilities", "filesystem", "asynchronous", "concurren
 anyhow = { version = "1.0.104" }
 async-trait = "0.1.91"
 async-channel = "2.5.0"
-aws-config = { version = "1.9.0", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio", "credentials-process", "sso"] }
-aws-runtime = "1.8.1"
-aws-sdk-s3 = { version = "1.138.1", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
-aws-smithy-runtime-api = "1.13.0"
+aws-config = { version = "1.10.1", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio", "credentials-process", "sso"] }
+aws-runtime = "1.9.1"
+aws-sdk-s3 = { version = "1.140.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
+aws-smithy-runtime-api = "1.14.0"
 aws-smithy-types = { version = "1.6.1" }
 aws-smithy-types-convert = { version = "0.61.1", features = ["convert-chrono"] }
-aws-types = "1.4.0"
+aws-types = "1.5.0"
 bitflags = "2.13.1"
-base64 = "0.22.1"
+base64 = "0.23.0"
 byte-unit = "5.2.5"
 cfg-if = "1.0.4"
-clap = { version = "4.6.2", features = ["derive", "env", "cargo", "string"] }
+clap = { version = "4.6.4", features = ["derive", "env", "cargo", "string"] }
 clap_complete = "4.6.7"
 clap-verbosity-flag = "3.0.4"
 chrono = "0.4.45"
@@ -45,7 +45,7 @@ md5 = "0.8.1"
 mime_guess = "2.0.5"
 hex = "0.4.3"
 http-body-util = "0.1.4"
-hyper = "1.10.1"
+hyper = "1.11.0"
 indicatif = "0.18.6"
 log = "0.4.33"
 pin-project = "1.1.13"
@@ -58,8 +58,8 @@ shadow-rs = { version = "2.0.0", optional = true }
 simple_moving_average = "1.0.2"
 tempfile = "3.27.0"
 thiserror = "2.0.19"
-tokio = { version = "1.53.0", features = ["full"] }
-tokio-util = "0.7.18"
+tokio = { version = "1.53.1", features = ["full"] }
+tokio-util = "0.7.19"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json", "local-time"] }
 url = "2.5.8"
