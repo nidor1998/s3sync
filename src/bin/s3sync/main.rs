@@ -1,5 +1,5 @@
 use ::tracing::trace;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 use rusty_fork::rusty_fork_test;
@@ -8,6 +8,7 @@ use s3sync::CLIArgs;
 use s3sync::Config;
 
 mod cli;
+mod pipe_safe;
 mod tracing;
 
 #[cfg_attr(coverage_nightly, coverage(off))]
@@ -16,14 +17,7 @@ async fn main() -> Result<()> {
     let config = load_config_exit_if_err();
 
     if let Some(shell) = config.auto_complete_shell {
-        generate(
-            shell,
-            &mut CLIArgs::command(),
-            "s3sync",
-            &mut std::io::stdout(),
-        );
-
-        return Ok(());
+        return print_completion_script(shell);
     }
 
     start_tracing_if_necessary(&config);
@@ -48,6 +42,20 @@ fn load_config_exit_if_err() -> Config {
     config
 }
 
+/// Render the shell-completion script for `shell` and print it pipe-safely.
+///
+/// clap_complete's generators panic on writer errors ("failed to write
+/// completion file"), so they never touch stdout directly: the script is
+/// rendered into an infallible in-memory buffer and written in one
+/// pipe-safe pass. A reader that exits early
+/// (`s3sync --auto-complete-shell bash | head 1`) yields exit 0; any other
+/// stdout write error fails the command.
+fn print_completion_script(shell: clap_complete::shells::Shell) -> Result<()> {
+    let mut script = Vec::new();
+    generate(shell, &mut CLIArgs::command(), "s3sync", &mut script);
+    pipe_safe::write_all_pipe_safe(&script).context("failed to write completion script")
+}
+
 fn start_tracing_if_necessary(config: &Config) -> bool {
     if config.tracing_config.is_none() {
         return false;
@@ -58,6 +66,14 @@ fn start_tracing_if_necessary(config: &Config) -> bool {
 }
 
 rusty_fork_test! {
+    // Runs in a forked child so the completion script written to the real
+    // stdout does not pollute the test harness output. The closed-pipe
+    // behavior itself is pinned process-level in tests/cli_broken_pipe.rs.
+    #[test]
+    fn print_completion_script_succeeds() {
+        print_completion_script(clap_complete::shells::Shell::Bash).unwrap();
+    }
+
     #[test]
     fn with_tracing() {
         let args = vec![

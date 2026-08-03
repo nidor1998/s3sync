@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.61.2] - 2026-08-03
+
+### Fixed
+
+- Generating a shell completion script into a closed pipe (e.g. `s3sync --auto-complete-shell bash | head 1` when the reader exits without consuming the script) no longer panics with `failed to write completion file: Broken pipe`.
+
+
 ## [1.61.1] - 2026-07-26
 
 ### Changed
