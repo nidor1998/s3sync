@@ -1,8 +1,16 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use tokio::task::JoinHandle;
 use tokio::{select, signal};
 use tracing::{debug, error, warn};
 
 use s3sync::types::token::PipelineCancellationToken;
+
+static CTRL_C_RECEIVED: AtomicBool = AtomicBool::new(false);
+
+pub fn is_ctrl_c_received() -> bool {
+    CTRL_C_RECEIVED.load(Ordering::SeqCst)
+}
 
 pub fn spawn_ctrl_c_handler(cancellation_token: PipelineCancellationToken) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -14,6 +22,7 @@ pub fn spawn_ctrl_c_handler(cancellation_token: PipelineCancellationToken) -> Jo
                 match result {
                     Ok(()) => {
                         warn!("ctrl-c received, shutting down.");
+                        CTRL_C_RECEIVED.store(true, Ordering::SeqCst);
                         cancellation_token.cancel();
                     }
                     Err(e) => {
