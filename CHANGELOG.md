@@ -2,15 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
+to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.62.0] - 2026-08-07
+
+### Fixed
+
+- [Breaking change] A syncing interrupted by Ctrl+C (SIGINT) now exits with code 130 (128 + SIGINT, the conventional
+  shell encoding for termination by signal) instead of 0. Previously an interrupted syncing was indistinguishable from a
+  successful one by its exit code.
 
 ## [1.61.2] - 2026-08-03
 
 ### Fixed
 
-- Generating a shell completion script into a closed pipe (e.g. `s3sync --auto-complete-shell bash | head 1` when the reader exits without consuming the script) no longer panics with `failed to write completion file: Broken pipe`.
-
+- Generating a shell completion script into a closed pipe (e.g. `s3sync --auto-complete-shell bash | head 1` when the
+  reader exits without consuming the script) no longer panics with `failed to write completion file: Broken pipe`.
 
 ## [1.61.1] - 2026-07-26
 
@@ -23,8 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- [Breaking change] The positional `source`/`target` arguments no longer read their values from the `SOURCE`/`TARGET` environment
-  variables. These generic variable names could unintentionally override the command line arguments.
+- [Breaking change] The positional `source`/`target` arguments no longer read their values from the `SOURCE`/`TARGET`
+  environment variables. These generic variable names could unintentionally override the command line arguments.
 
 ## [1.60.0] - 2026-07-20
 
@@ -34,8 +42,8 @@ Monthly update.
 
 - Credential-related command line options (`--source-access-key`, `--source-secret-access-key`,
   `--source-session-token`, `--target-access-key`, `--target-secret-access-key`, `--target-session-token`,
-  `--source-sse-c-key`, `--source-sse-c-key-md5`, `--target-sse-c-key`, `--target-sse-c-key-md5`) no longer
-  display their values in `--help` output when set via environment variables.
+  `--source-sse-c-key`, `--source-sse-c-key-md5`, `--target-sse-c-key`, `--target-sse-c-key-md5`) no longer display
+  their values in `--help` output when set via environment variables.
 
 ### Fixed
 
@@ -80,10 +88,9 @@ Monthly update.
 
 ### Security
 
-- Harden directory traversal check used when saving S3 objects to local
-  files: reject `.` and `..` path segments (previously only `../` and
-  `..\` were caught), and detect separators on both `/` and `\`. Does not
-  affect S3 access itself.
+- Harden directory traversal check used when saving S3 objects to local files: reject `.` and `..` path segments
+  (previously only `../` and
+  `..\` were caught), and detect separators on both `/` and `\`. Does not affect S3 access itself.
 
 ### Changed
 
@@ -148,8 +155,8 @@ Monthly update.
 
 ### Security
 
-- Disabled default features on `aws-config` and `aws-sdk-s3` to drop the legacy `rustls` alias that pulls rustls 0.21 (
-  vulnerable rustls-webpki 0.101.x, RUSTSEC-2026-0098). The modern `default-https-client` feature, which uses rustls
+- Disabled default features on `aws-config` and `aws-sdk-s3` to drop the legacy `rustls` alias that pulls rustls 0.21
+  (vulnerable rustls-webpki 0.101.x, RUSTSEC-2026-0098). The modern `default-https-client` feature, which uses rustls
   0.23 via `aws-smithy-http-client`, is re-enabled explicitly.
 
 ### Changed
@@ -163,8 +170,8 @@ Monthly update.
 
 ### Fixed
 
-- Stop panicking with "failed printing to stdout: Broken pipe" when output is piped to a consumer that closes early (
-  e.g. `s3sync ... | wc -l` followed by Ctrl-C). Tracing writes now swallow `BrokenPipe`, and the indicator's trailing
+- Stop panicking with "failed printing to stdout: Broken pipe" when output is piped to a consumer that closes early
+  (e.g. `s3sync ... | wc -l` followed by Ctrl-C). Tracing writes now swallow `BrokenPipe`, and the indicator's trailing
   newline no longer unwraps the write/flush result.
 
 ## [1.57.1] - 2026-03-28
@@ -178,8 +185,8 @@ Monthly update.
 
 ### Added
 
-- Added `--lua-callback-timeout-milliseconds` option to prevent runaway Lua scripts from blocking the sync pipeline (
-  default: 10000ms, 0 to disable)
+- Added `--lua-callback-timeout-milliseconds` option to prevent runaway Lua scripts from blocking the sync pipeline
+  (default: 10000ms, 0 to disable)
 
 ### Changed
 
@@ -283,7 +290,7 @@ Monthly update.
 
 - Refactored
 - Updated dependencies
-    - Migrated from deprecated crc64fast-nvme to crc-fast-rust(1.6.0)
+    - Migrated from deprecated crc64fast-nvme to crc-fast-rust (1.6.0)
 
 ## [1.53.0] - 2025-11-01
 
@@ -358,8 +365,8 @@ Monthly update.
 ### Changed
 
 - Added `--ignore-glacier-warnings` option  
-  Previously, when getting an object that needs to be restored from Glacier, s3sync fails with an error.
-  Now by default, s3sync shows a warning message and skips to transfer the object.  
+  Previously, when getting an object that needs to be restored from Glacier, s3sync fails with an error. Now by default,
+  s3sync shows a warning message and skips to transfer the object.  
   With this option, s3sync ignores the warning and skips to transfer the object.
 - Updated dependencies
 
@@ -510,10 +517,10 @@ Monthly update.
 - Added `--max-parallel-listing-max-depth` option  
   By default, s3sync lists objects in the source and target buckets/local files in parallel up to the second level of
   subdirectories or prefixes.  
-  And deeper levels are listed without parallelization.
-  This is because parallel listing at deeper levels may not improve performance.  
-  But in some cases, parallel listing at deeper levels may improve performance.
-  You can configure the maximum depth of parallel listing workers with `--max-parallel-listing-max-depth` option.
+  And deeper levels are listed without parallelization. This is because parallel listing at deeper levels may not
+  improve performance.  
+  But in some cases, parallel listing at deeper levels may improve performance. You can configure the maximum depth of
+  parallel listing workers with `--max-parallel-listing-max-depth` option.
 
 - Updated dependencies.
 
@@ -556,8 +563,8 @@ Monthly update.
   By default, s3sync lists objects in the source and target buckets/local in parallel (default 16 workers).  
   The parallel listing is enabled when the root has subdirectories or prefixes.  
   For example, if the source is `s3://bucket-name/prefix` and there are many objects under `prefix/dir1`,
-  `prefix/dir2`, ..., `prefix/dir16`, s3sync lists objects under these prefixes in parallel.
-  But If the source has only one subdirectory under `prefix/`, s3sync does not list objects in parallel.
+  `prefix/dir2`, ..., `prefix/dir16`, s3sync lists objects under these prefixes in parallel. But If the source has only
+  one subdirectory under `prefix/`, s3sync does not list objects in parallel.
 
   You can configure the number of parallel listing workers with `--max-parallel-listings` option.  
   If set to `1`, parallel listing is disabled.
@@ -641,7 +648,7 @@ Monthly update.
   Lua is generally recognized as a fast scripting language. Lua engine is embedded in s3sync, so you can use Lua script
   without any additional dependencies.  
   For example, you can use Lua script to implement custom preprocessing logic, such as dynamically modifying the object
-  attributes(e.g., metadata, tagging) before transferring it to S3.  
+  attributes (e.g., metadata, tagging) before transferring it to S3.  
   By default, Lua script run as safe mode, so it cannot use Lua os library functions.   
   If you want to allow more Lua libraries, you can use `--allow-lua-os-library`, `--allow-lua-unsafe-vm` option.  
   See [Lua script example](https://github.com/nidor1998/s3sync/tree/main/src/lua/script/)
@@ -679,7 +686,7 @@ Monthly update.
 ### Changed
 
 - Support a preprocess callback before uploading to S3 within the library  
-  We can use this to modify the object attributes(e.g. metadata, tagging) dynamically before uploading to s3.  
+  We can use this to modify the object attributes (e.g. metadata, tagging) dynamically before uploading to s3.  
   See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 - Updated dependencies.
 
@@ -724,7 +731,7 @@ Monthly update.
 ### Changed
 
 - Updated documentation.
-- MSRV = 1.86.0(From 1.25.0)
+- MSRV = 1.86.0 (From 1.25.0)
 
 ## [1.25.0] - 2025-07-18
 
@@ -868,7 +875,7 @@ Monthly update.
 
 ### Changed
 
-- Refactored. Removed unnecessary unwrap().
+- Refactored. Removed unnecessary unwrap ().
 - aws-sdk-s3 = "1.91.0"
 - updated dependencies.
 
@@ -1052,7 +1059,7 @@ Added `--disable-content-md5-header` option. It disables the ETag verification f
 
 ### Added
 
-- Added Additional checksum(SHA256/SHA1/CRC32/CRC32C) based incremental transfer `--check-additional-checksum` option.
+- Added Additional checksum (SHA256/SHA1/CRC32/CRC32C) based incremental transfer `--check-additional-checksum` option.
 - Added `get_errors_and_consume()` to `Pipeline` to get errors.
 
 ### Changed
@@ -1074,7 +1081,7 @@ Added `--disable-content-md5-header` option. It disables the ETag verification f
 
 ### Added
 
-- Added [Stalled-stream protection](https://github.com/awslabs/aws-sdk-rust/discussions/956) support(enabled by
+- Added [Stalled-stream protection](https://github.com/awslabs/aws-sdk-rust/discussions/956) support (enabled by
   default).
 - Added Express One Zone integration tests.
 
