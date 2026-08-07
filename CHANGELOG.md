@@ -9,7 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- [Breaking change] A syncing interrupted by Ctrl+C (SIGINT) now exits with code 130 (128 + SIGINT, the conventional
+- [Breaking change] An interrupted sync caused by Ctrl+C (SIGINT) now exits with code 130 (128 + SIGINT, the conventional
   shell encoding for termination by signal) instead of 0. Previously an interrupted syncing was indistinguishable from a
   successful one by its exit code.
 
