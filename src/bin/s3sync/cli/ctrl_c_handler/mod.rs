@@ -55,6 +55,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+        CTRL_C_RECEIVED.store(false, Ordering::SeqCst);
 
         let cancellation_token = token::create_pipeline_cancellation_token();
 
@@ -64,11 +65,16 @@ mod tests {
         ))
         .await;
 
+        assert!(!is_ctrl_c_received());
+
         kill_sigint_to_self();
 
         join_handle.await.unwrap();
 
         assert!(cancellation_token.is_cancelled());
+        assert!(is_ctrl_c_received());
+
+        CTRL_C_RECEIVED.store(false, Ordering::SeqCst);
     }
 
     #[tokio::test]
@@ -76,6 +82,7 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+        CTRL_C_RECEIVED.store(false, Ordering::SeqCst);
 
         let cancellation_token = token::create_pipeline_cancellation_token();
 
@@ -85,6 +92,22 @@ mod tests {
         join_handle.await.unwrap();
 
         assert!(cancellation_token.is_cancelled());
+        assert!(!is_ctrl_c_received());
+    }
+
+    #[tokio::test]
+    async fn is_ctrl_c_received_reflects_flag_state() {
+        init_dummy_tracing_subscriber();
+
+        let _semaphore = SEMAPHORE.clone().acquire_owned().await.unwrap();
+
+        CTRL_C_RECEIVED.store(false, Ordering::SeqCst);
+        assert!(!is_ctrl_c_received());
+
+        CTRL_C_RECEIVED.store(true, Ordering::SeqCst);
+        assert!(is_ctrl_c_received());
+
+        CTRL_C_RECEIVED.store(false, Ordering::SeqCst);
     }
 
     #[cfg(target_family = "unix")]
