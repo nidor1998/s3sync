@@ -106,7 +106,7 @@ pub async fn run(mut config: Config) -> Result<()> {
         let duration_sec = format!("{:.3}", start_time.elapsed().as_secs_f32());
 
         if ctrl_c_handler::is_ctrl_c_received() {
-            debug!(duration_sec = duration_sec, "deletion cancelled by user.");
+            debug!(duration_sec = duration_sec, "sync cancelled by user.");
             std::process::exit(SIGINT_EXIT_CODE);
         }
 
