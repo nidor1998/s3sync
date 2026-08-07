@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.62.0] - 2026-08-08
+
+### Changed
+
+- [Breaking change] The s3sync CLI now exits with code 130 (128 + SIGINT, the conventional shell encoding for
+  termination by signal) when a sync is interrupted by Ctrl+C (SIGINT). Previously an interrupted run exited with
+  code 0, 3 or 1 depending on when the interrupt arrived, so it could be indistinguishable from a successful run.
+  This change affects only the CLI binary; the library API is unchanged.
+
 ## [1.61.2] - 2026-08-03
 
 ### Fixed

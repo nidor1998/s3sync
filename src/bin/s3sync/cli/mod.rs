@@ -22,6 +22,7 @@ const EXIT_CODE_ERROR: i32 = 1;
 #[allow(dead_code)]
 const EXIT_CODE_INVALID_ARGS: i32 = 2;
 const EXIT_CODE_WARNING: i32 = 3;
+const SIGINT_EXIT_CODE: i32 = 130;
 
 pub async fn run(mut config: Config) -> Result<()> {
     #[allow(unused_assignments)]
@@ -103,6 +104,12 @@ pub async fn run(mut config: Config) -> Result<()> {
         indicator_join_handle.await?;
 
         let duration_sec = format!("{:.3}", start_time.elapsed().as_secs_f32());
+
+        if ctrl_c_handler::is_ctrl_c_received() {
+            debug!(duration_sec = duration_sec, "sync cancelled by user.");
+            std::process::exit(SIGINT_EXIT_CODE);
+        }
+
         if pipeline.has_error() {
             error!(duration_sec = duration_sec, "s3sync failed.");
 
