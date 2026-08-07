@@ -523,7 +523,8 @@ You can check the synchronization status of the object's tagging, metadata, anno
 `--report-tagging-sync-status` and `--report-annotations-sync-status` option.
 
 Note: For reporting, s3sync uses a special process exit code. `0` If all objects are synchronized correctly. `3` If some
-objects are not synchronized correctly.
+objects are not synchronized correctly. If reporting is interrupted by Ctrl-C, s3sync exits with code `130` and no
+summary is shown.
 
 Note: It needs additional API calls to get the metadata, checksum, and tags of each object.
 
@@ -1148,6 +1149,7 @@ For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#f
 - 1: Exit with error
 - 2: Invalid arguments
 - 3: Exit with warning
+- 130: Interrupted by Ctrl-C (SIGINT)
 - 101: Abnormal termination (Rust panic, it's a bug of s3sync)
 
 ## Advanced options
