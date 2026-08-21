@@ -535,6 +535,7 @@ impl ObjectSyncer {
     }
 
     #[allow(clippy::needless_bool)]
+    #[allow(clippy::needless_late_init)]
     async fn sync_or_delete_object(
         &self,
         object: S3syncObject,
