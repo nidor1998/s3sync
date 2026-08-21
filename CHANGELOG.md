@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.62.1] - 2026-08-21
+
+Monthly update.
+
+### Security
+
+- Updated `h2` to `v0.4.18` to address
+  [RUSTSEC-2026-0258](https://rustsec.org/advisories/RUSTSEC-2026-0258), in which empty HTTP/2 DATA frames were queued
+  without limit, allowing unbounded memory usage or a panic on a stream that is not actively drained.
+
+### Changed
+
+- aws-sdk-s3 `v1.140.0 -> v1.143.0`
+- Updated other dependencies
+
 ## [1.62.0] - 2026-08-08
 
 ### Changed
