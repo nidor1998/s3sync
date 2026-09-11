@@ -1,0 +1,11 @@
+# Nightly-only: min-publish-age is unstable on stable Cargo (<= 1.99),
+# which ignores this setting and emits a warning on every command.
+# Kept in a separate file so stable builds stay quiet.
+#
+# Usage (resolve dependencies with nightly):
+#   cargo +nightly --config .cargo/min-publish-age.toml update
+#
+# TODO: Move this into .cargo/config.toml once Rust 1.100 is stable
+# (min-publish-age is stabilized there; see rust-lang/cargo#17335).
+[registry]
+global-min-publish-age = "7 days"
