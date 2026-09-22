@@ -16,7 +16,7 @@ the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.c
 > here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying
 > code,
 > so its behavior matches the standalone binaries and it can be used in their place. **Before opening an issue, please
-> read the Scope and Non-Goals sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each
+> read the Scope sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each
 >
 project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))
 ** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue
@@ -277,13 +277,12 @@ See [docs.rs](https://docs.rs/s3sync/latest/s3sync/) for more information.
 
 ## About testing
 
-**Supported target: Amazon S3 only.**
+**Primary target: Amazon S3.**
 
-Support for S3-compatible storage is **deprecated** and provided strictly **as-is**, with **no support or
-assistance**. s3sync has many end-to-end and unit tests that run against Amazon S3 every time a new version is released;
-S3-compatible storage is not part of that test matrix and is no longer tested at release time. Because there is no
-official certification for S3-compatible storage and behavior varies across providers, comprehensive testing is not
-possible. Bug reports, questions, and assistance requests regarding S3-compatible storage will not be addressed.
+s3sync has many end-to-end and unit tests that run against Amazon S3 every time a new version is released.
+S3-compatible storage is not part of that test matrix and is not tested at release time: there is no official
+certification for S3-compatible storage and behavior varies across providers, so comprehensive testing is not possible.
+Such services are supported on a best-effort basis; see the [Scope](#scope) section for details.
 
 ## Security assumptions
 
@@ -318,15 +317,24 @@ For more information, please refer to the [full README](https://github.com/nidor
 
 ### Scope
 
-s3sync targets **Amazon S3** as its only supported platform. S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2,
-Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, and similar) is provided strictly **as-is**, with **absolutely no
-support or assistance**. Such services may work via `--target-endpoint-url` / `--source-endpoint-url` (and
-`--source-force-path-style` / `--target-force-path-style` when path-style addressing is required), but they are not part
-of the official test matrix and behavior may change between releases. This is a structural consequence of building on
-`aws-sdk-rust`, which is generated from AWS service models and assumes Amazon S3 semantics (checksum headers, endpoint
-resolution, signing variants, response schemas); features that depend on AWS-specific semantics, such as CRC64NVME
-checksums or newer S3 API additions, may not work against non-AWS endpoints. Bug reports, questions, and assistance
-requests regarding S3-compatible storage will not be addressed.
+s3sync targets **Amazon S3** as its primary platform and is optimized for Amazon S3 behavior and performance.
+
+S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, and similar)
+is supported on a **best-effort basis**. Such services are generally usable via `--source-endpoint-url` /
+`--target-endpoint-url` (and `--source-force-path-style` / `--target-force-path-style` when path-style addressing is
+required), but they are not part of the official test matrix, so behavior can differ between services and change
+between releases.
+
+This is a structural consequence of building on `aws-sdk-rust`, which is generated from AWS service models and assumes
+Amazon S3 semantics (checksum headers, endpoint resolution, signing variants, response schemas). Features that depend
+on AWS-specific semantics may be unavailable or behave differently against non-AWS endpoints — notably CRC64NVME and
+the other additional checksum algorithms, full-object checksums, ETag-based conditional write/delete, object
+annotation, versioning and point-in-time snapshots, and Amazon S3 Express One Zone support. Core synchronization with
+ETag (MD5 or equivalent) verification is the most likely to work as documented.
+
+Bug reports about S3-compatible storage are welcome and will be looked at on a best-effort basis, but they are lower
+priority than Amazon S3 issues, fixes are not guaranteed, and problems that originate in the storage service itself
+belong with that service's operator.
 
 s3sync is a synchronization tool with end-to-end integrity verification. It is **not** intended to be a drop-in
 replacement for, or behaviorally compatible with, any other S3 client — examples include the AWS CLI (`aws s3 sync`,
@@ -334,26 +342,26 @@ replacement for, or behaviorally compatible with, any other S3 client — exampl
 exit codes are designed around reliable transfers with verifiable checksums — not interoperability with another tool's
 interface. Output formats and flag names will not be adjusted to match any external tool, and scripts written against
 another S3 client should not be expected to work with s3sync unmodified. If you need general S3 management (presign,
-ACLs, bucket policies, lifecycle, etc.) or compatibility with a specific tool's flag set, use that tool.
+ACLs, bucket policies, lifecycle, etc.), use a more comprehensive tool such
+as [s7cmd](https://github.com/nidor1998/s7cmd) or the [AWS CLI](https://aws.amazon.com/cli/) (`aws s3api`); if you need
+compatibility with a specific tool's flag set, use that tool.
 
-### Non-Goals
+## Maintenance Model
 
-The following are explicitly out of scope and will not be added, regardless of demand:
+s3sync is maintained as a personal project. The project is considered functionally complete, and development going
+forward is limited to maintenance. New features are not actively solicited. If you need guaranteed enterprise support,
+this is not the tool for you.
 
-- General S3 management operations: bucket creation/deletion, ACLs, bucket policies, lifecycle, replication, inventory,
-  presign, etc. s3sync is a transfer/sync tool; for general S3 operations use the [s7cmd](https://github.com/nidor1998/s7cmd).
-- Support, testing, or guaranteed compatibility for any storage service other than Amazon S3. S3-compatible storage is
-  provided strictly as-is, with no support or assistance — adding dedicated code paths, provider-specific workarounds,
-  or backends for services such as MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS,
-  Tencent COS, Alibaba OSS, Azure Blob Storage, or Google Cloud Storage is out of scope.
-- A graphical interface. s3sync is a CLI/library; UI front-ends are out of scope for this repository.
-- Compatibility with other S3 clients — neither in flag names and behavior, nor in feature coverage. The presence of a
-  feature, flag, or output format in `aws s3`, `s5cmd`, `s3cmd`, `rclone`, `mc`, or any other S3 tool is not, by itself,
-  a reason to add or change it in s3sync. Each request is evaluated only against s3sync's own scope and design
-  principles. Use that other tool if you need its specific surface.
-- A plugin system beyond the existing Lua callbacks and user-defined Rust callbacks.
+**Dependency update policy**
 
-Issues and pull requests requesting any of the above will be closed.
+The AWS SDK for Rust and the other dependencies are updated on a regular, roughly monthly cadence, and sooner when a
+security advisory requires it.
+
+When an update introduces new S3 features, API additions, or client settings, they are evaluated and adopted as needed
+— that is, when they matter for correctness, safety, or the existing feature set. Not every new SDK capability will be
+surfaced as a s3sync option; additions that fall outside the [Scope](#scope) above are intentionally left out.
+
+Critical bug fixes are applied on a best-effort basis.
 
 ## Contributing
 
@@ -362,9 +370,6 @@ While this project began as a personal hobby, it has been built with careful att
 - Bug reports are welcome, but responses are not guaranteed.
 - Since this project is considered functionally complete, I will not accept any feature requests.
 - If you find this project useful, feel free to fork and modify it as you wish.
-
-🔒 I consider this project “complete” and will maintain it only minimally going forward.
-However, I intend to keep the AWS SDK for Rust and other dependencies up to date monthly.
 
 **Issue and PR lifecycle**
 
