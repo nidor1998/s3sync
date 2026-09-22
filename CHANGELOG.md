@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.62.3] - 2026-09-22
+
+Documentation update.
+
+### Changed
+
+- S3-compatible storage (MinIO, Cloudflare R2, Backblaze B2, Wasabi, Ceph RGW, DigitalOcean Spaces, IBM COS, and
+  similar) is now documented as **supported on a best-effort basis**, replacing the previous "deprecated / strictly
+  as-is, with no support or assistance" wording. Such services remain outside the official test matrix, and features
+  that depend on Amazon S3 semantics (CRC64NVME and the other additional checksum algorithms, full-object checksums,
+  ETag-based conditional write/delete, object annotations, versioning and point-in-time snapshots, S3 Express One Zone)
+  may be unavailable or behave differently against non-AWS endpoints. Bug reports about S3-compatible storage are now
+  welcome, at lower priority than Amazon S3 issues and with no guarantee of a fix. This is a documentation and support
+  policy change only; no behavior of s3sync itself has changed.
+- Replaced the `Non-Goals` section of the READMEs with a `Maintenance Model` section that describes the dependency
+  update policy (regular, roughly monthly updates, sooner when a security advisory requires it) and how new SDK/S3
+  features are evaluated for adoption.
+- Reworded the `Scope` and `About testing` sections: Amazon S3 is described as the **primary** target rather than the
+  only supported platform, and requests for general S3 management operations now point
+  at [s7cmd](https://github.com/nidor1998/s7cmd) or the AWS CLI (`aws s3api`).
+- Set `/STACK:2000000` via target-specific `rustflags` for `aarch64-pc-windows-msvc`, and dropped the
+  `lto = "thin"` / `codegen-units = 16` workaround from `.cargo/config.toml`.
+
 ## [1.62.2] - 2026-09-19
 
 Monthly update.
