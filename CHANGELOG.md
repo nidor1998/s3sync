@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.62.4] - 2026-10-17
+
+Monthly update.
+
+### Security
+
+- Updated `rustls` to `v0.23.46` to address
+  [RUSTSEC-2026-0349](https://rustsec.org/advisories/RUSTSEC-2026-0349), in which the client recorded the
+  server-selected key exchange group from an unauthenticated ServerHello, allowing a network attacker to downgrade
+  later connections to the same server name to classical-only key exchange. The impact is loss of post-quantum
+  confidentiality for affected connections; there is no key compromise or authentication bypass.
+
+### Changed
+
+- aws-sdk-s3 `v1.146.1 -> v1.152.0`
+- Updated other dependencies
+
 ## [1.62.3] - 2026-09-22
 
 Documentation update.
