@@ -8,10 +8,6 @@
 # All vulnerability/unsound/notice advisories are errors by default.
 # To ignore a specific advisory, add it here with a reason:
 ignore = [
-    # crypto-bigint 0.5.x timing variability; fixed only in >=0.7.6.
-    # Pulled in by aws-sigv4 (sigv4a feature), which still requires ^0.5.4
-    # as of 1.6.3. Remove once the AWS SDK moves to crypto-bigint 0.7.
-    { id = "RUSTSEC-2026-0387", reason = "no compatible fix; aws-sigv4 pins crypto-bigint ^0.5" },
 ]
 
 # ---- 2. Licenses ----
