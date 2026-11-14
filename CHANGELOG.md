@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.62.5] - 2026-11-14
+
+Monthly update.
+
+### Security
+
+- Updated `rustls-webpki` to `v0.103.16` to address
+  [RUSTSEC-2026-0382](https://rustsec.org/advisories/RUSTSEC-2026-0382), in which certificate verification could
+  accept certificate paths containing distrusted emSign intermediates whose private keys are now publicly known.
+- Updated `tokio` to `v1.54.1` to address
+  [RUSTSEC-2026-0386](https://rustsec.org/advisories/RUSTSEC-2026-0386), an I/O-safety soundness issue in the
+  `AsyncFd` constructors. s3sync does not use `AsyncFd`.
+- Updated `ctutils` to `v0.4.8` and `crypto-bigint` to `v0.7.10` (used by SigV4a signing) to address
+  [RUSTSEC-2026-0385](https://rustsec.org/advisories/RUSTSEC-2026-0385) and
+  [RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387), in which operations intended to be
+  constant-time could execute secret-dependent branches, potentially leaking secrets through timing side channels.
+- Updated `libz-sys` to `v1.1.32` to address
+  [RUSTSEC-2026-0418](https://rustsec.org/advisories/RUSTSEC-2026-0418), in which its build script printed the full
+  build environment, including any secrets, into the `target/` directory. This affects only building s3sync from
+  source with the `version` feature (enabled by default); the s3sync binary itself is not affected.
+- Removed the unmaintained `pin-utils` crate from the dependency tree
+  ([RUSTSEC-2026-0441](https://rustsec.org/advisories/RUSTSEC-2026-0441)).
+
+### Changed
+
+- aws-sdk-s3 `v1.152.0 -> v1.157.0`
+- Updated other dependencies
+
 ## [1.62.4] - 2026-10-17
 
 Monthly update.

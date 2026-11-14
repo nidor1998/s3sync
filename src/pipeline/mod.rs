@@ -234,11 +234,7 @@ impl Pipeline {
             return false;
         }
 
-        if source_versioning_enabled.unwrap() && target_versioning_enabled.unwrap() {
-            return true;
-        }
-
-        false
+        source_versioning_enabled.unwrap() && target_versioning_enabled.unwrap()
     }
 
     async fn is_source_bucket_versioning_enabled(&self) -> bool {

@@ -280,11 +280,7 @@ fn check_target_local_storage_allow_overwrite(
     remove_modified_filter: bool,
     head_each_target: bool,
 ) -> bool {
-    if local_storage && remove_modified_filter && !head_each_target {
-        return true;
-    }
-
-    false
+    local_storage && remove_modified_filter && !head_each_target
 }
 
 fn is_head_object_not_found_error(result: &anyhow::Error) -> bool {
