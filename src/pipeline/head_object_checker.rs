@@ -570,7 +570,7 @@ mod tests {
         let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         // point-in-time cannot be combined with a local source at the CLI level,
         // so it is set directly to reach the is_old_object() branch for a versioning object.
-        config.point_in_time = Some(chrono::Utc::now());
+        config.point_in_time = Some(time::OffsetDateTime::now_utc());
         let cancellation_token = create_pipeline_cancellation_token();
         let (stats_sender, _) = async_channel::unbounded();
 

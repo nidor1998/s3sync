@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ServerSideEncryption;
@@ -86,11 +87,11 @@ impl ETagDiffDetector {
             head_target_object_output.e_tag.clone().unwrap().to_string(),
         ));
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
             source_object.last_modified().to_millis()?,
         ))?
         .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_target_object_output
                 .last_modified()
                 .unwrap()
@@ -442,7 +443,7 @@ impl ETagDiffDetector {
             )
             .await?;
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_source_object_output
                 .last_modified()
                 .unwrap()
@@ -450,7 +451,7 @@ impl ETagDiffDetector {
                 .unwrap(),
         ))?
         .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_target_object_output
                 .last_modified()
                 .unwrap()
@@ -713,11 +714,11 @@ impl ETagDiffDetector {
             )
             .await?;
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
             source_object.last_modified().to_millis()?,
         ))?
         .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_target_object_output
                 .last_modified()
                 .unwrap()
@@ -1365,7 +1366,7 @@ mod tests {
             .last_modified(DateTime::from_secs(1))
             .e_tag("e_tag")
             .build();
-        // The last modified date is too far in the future to be converted to chrono.
+        // The last modified date is too far in the future to be converted to time::OffsetDateTime.
         let source_object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("6byte.dat")
@@ -1659,7 +1660,7 @@ mod tests {
             cancellation_token: create_pipeline_cancellation_token(),
         };
 
-        // The last modified date is too far in the future to be converted to chrono.
+        // The last modified date is too far in the future to be converted to time::OffsetDateTime.
         let source_object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("6byte.dat")

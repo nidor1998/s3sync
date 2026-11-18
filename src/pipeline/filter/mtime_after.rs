@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_smithy_types::DateTime;
@@ -36,7 +37,7 @@ impl ObjectFilter for MtimeAfterFilter<'_> {
 
 fn is_after_or_equal(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> bool {
     let last_modified = DateTime::from_millis(object.last_modified().to_millis().unwrap())
-        .to_chrono_utc()
+        .to_time()
         .unwrap();
 
     if last_modified < config.after_time.unwrap() {
@@ -65,7 +66,6 @@ fn is_after_or_equal(object: &S3syncObject, config: &FilterConfig, _: &ObjectKey
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::str::FromStr;
     use std::sync::Mutex;
 
     use super::*;
@@ -90,7 +90,9 @@ mod tests {
 
         let config = FilterConfig {
             before_time: None,
-            after_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            after_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
@@ -133,7 +135,9 @@ mod tests {
 
         let config = FilterConfig {
             before_time: None,
-            after_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            after_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
@@ -175,7 +179,9 @@ mod tests {
 
         let config = FilterConfig {
             before_time: None,
-            after_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            after_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,

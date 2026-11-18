@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ChecksumMode;
@@ -100,7 +101,7 @@ impl ChecksumDiffDetector {
 
         let key = key.to_string();
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_source_object_output
                 .last_modified()
                 .unwrap()
@@ -108,7 +109,7 @@ impl ChecksumDiffDetector {
                 .unwrap(),
         ))?
         .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_target_object_output
                 .last_modified()
                 .unwrap()
@@ -381,7 +382,7 @@ impl ChecksumDiffDetector {
             checksum_algorithm.clone(),
         );
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_source_object_output
                 .last_modified()
                 .unwrap()
@@ -389,7 +390,7 @@ impl ChecksumDiffDetector {
                 .unwrap(),
         ))?
         .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_target_object_output
                 .last_modified()
                 .unwrap()
@@ -678,14 +679,14 @@ impl ChecksumDiffDetector {
             checksum_algorithm.clone(),
         );
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_source_object_output
                 .last_modified()
                 .unwrap()
                 .to_millis()?,
         ))?
         .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
             head_target_object_output
                 .last_modified()
                 .unwrap()

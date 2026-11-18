@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
@@ -490,7 +491,7 @@ impl LocalStorage {
 
         let source_last_modified =
             DateTime::from_millis(get_object_output.last_modified.unwrap().to_millis()?)
-                .to_chrono_utc()?
+                .to_time()?
                 .to_rfc3339();
         let source_last_modified_raw = get_object_output.last_modified().copied();
 

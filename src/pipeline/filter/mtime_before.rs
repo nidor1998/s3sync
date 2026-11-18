@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_smithy_types::DateTime;
@@ -34,7 +35,7 @@ impl ObjectFilter for MtimeBeforeFilter<'_> {
 }
 
 fn is_before(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> bool {
-    let last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+    let last_modified = DateTime::to_time(&DateTime::from_millis(
         object.last_modified().to_millis().unwrap(),
     ))
     .unwrap();
@@ -65,7 +66,6 @@ fn is_before(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::str::FromStr;
     use std::sync::Mutex;
 
     use super::*;
@@ -88,7 +88,9 @@ mod tests {
         );
 
         let config = FilterConfig {
-            before_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            before_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             after_time: None,
             remove_modified_filter: false,
             check_size: false,
@@ -131,7 +133,9 @@ mod tests {
         );
 
         let config = FilterConfig {
-            before_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            before_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             after_time: None,
             remove_modified_filter: false,
             check_size: false,
@@ -174,7 +178,9 @@ mod tests {
         );
 
         let config = FilterConfig {
-            before_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            before_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             after_time: None,
             remove_modified_filter: false,
             check_size: false,

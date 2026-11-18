@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::config::args::*;
+    use crate::types::datetime::Rfc3339Ext;
 
     #[test]
     fn with_default_value() {

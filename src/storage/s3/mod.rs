@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
@@ -1079,7 +1080,7 @@ impl StorageTrait for S3Storage {
                 .unwrap()
                 .to_millis()?,
         )
-        .to_chrono_utc()?
+        .to_time()?
         .to_rfc3339();
 
         if self.config.dry_run {

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::{Context, Result};
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ObjectVersion;
@@ -68,7 +69,7 @@ impl VersioningInfoCollector {
                     let source_version_id = marker.version_id().unwrap();
                     let source_last_modified =
                         DateTime::from_millis(source_object.last_modified().to_millis()?)
-                            .to_chrono_utc()?
+                            .to_time()?
                             .to_rfc3339();
                     debug!(
                         worker_index = self.worker_index,
@@ -87,7 +88,7 @@ impl VersioningInfoCollector {
             } else {
                 let source_last_modified =
                     DateTime::from_millis(source_object.last_modified().to_millis()?)
-                        .to_chrono_utc()?
+                        .to_time()?
                         .to_rfc3339();
 
                 debug!(

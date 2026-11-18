@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::DateTime;
@@ -87,12 +88,12 @@ fn filter_last_modified(
     if !modified {
         let source_last_modified =
             DateTime::from_millis(source_last_modified_date.to_millis().unwrap())
-                .to_chrono_utc()
+                .to_time()
                 .unwrap()
                 .to_rfc3339();
         let target_last_modified =
             DateTime::from_millis(target_last_modified_date.to_millis().unwrap())
-                .to_chrono_utc()
+                .to_time()
                 .unwrap()
                 .to_rfc3339();
 
@@ -175,11 +176,11 @@ fn is_modified_from_e_tag(
 
         let source_last_modified =
             DateTime::from_millis(object.last_modified().to_millis().unwrap())
-                .to_chrono_utc()
+                .to_time()
                 .unwrap()
                 .to_rfc3339();
         let target_last_modified = DateTime::from_millis(entry.last_modified.to_millis().unwrap())
-            .to_chrono_utc()
+            .to_time()
             .unwrap()
             .to_rfc3339();
 

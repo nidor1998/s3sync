@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use aws_sdk_s3::Client;
@@ -14,7 +15,6 @@ use aws_sdk_s3::types::{
 };
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::{Engine as _, engine::general_purpose};
-use chrono::SecondsFormat;
 use futures::stream::{FuturesUnordered, StreamExt};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -202,9 +202,9 @@ impl UploadManager {
                 .to_millis()
                 .unwrap(),
         )
-        .to_chrono_utc()
+        .to_time()
         .unwrap()
-        .to_rfc3339_opts(SecondsFormat::Secs, false);
+        .to_rfc3339_secs();
 
         metadata.insert(
             S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY.to_string(),
@@ -243,9 +243,9 @@ impl UploadManager {
                 .to_millis()
                 .unwrap(),
         )
-        .to_chrono_utc()
+        .to_time()
         .unwrap()
-        .to_rfc3339_opts(SecondsFormat::Secs, false);
+        .to_rfc3339_secs();
 
         metadata.insert(
             S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY.to_string(),

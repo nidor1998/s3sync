@@ -7,10 +7,10 @@ use aws_sdk_s3::types::{
     StorageClass,
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation;
-use chrono::{DateTime, Utc};
 use fancy_regex::Regex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use time::OffsetDateTime;
 use tokio::sync::Semaphore;
 
 pub mod args;
@@ -38,7 +38,7 @@ pub struct Config {
     pub disable_etag_verify: bool,
     pub disable_additional_checksum_verify: bool,
     pub enable_versioning: bool,
-    pub point_in_time: Option<DateTime<Utc>>,
+    pub point_in_time: Option<OffsetDateTime>,
     pub storage_class: Option<StorageClass>,
     pub sse: Option<ServerSideEncryption>,
     pub sse_kms_key_id: SseKmsKeyId,
@@ -63,7 +63,7 @@ pub struct Config {
     pub content_encoding: Option<String>,
     pub content_language: Option<String>,
     pub content_type: Option<String>,
-    pub expires: Option<DateTime<Utc>>,
+    pub expires: Option<OffsetDateTime>,
     pub metadata: Option<HashMap<String, String>>,
     pub no_sync_system_metadata: bool,
     pub no_sync_user_defined_metadata: bool,
@@ -180,8 +180,8 @@ impl TransferConfig {
 
 #[derive(Debug, Clone, Default)]
 pub struct FilterConfig {
-    pub before_time: Option<DateTime<Utc>>,
-    pub after_time: Option<DateTime<Utc>>,
+    pub before_time: Option<OffsetDateTime>,
+    pub after_time: Option<OffsetDateTime>,
     pub remove_modified_filter: bool,
     pub check_size: bool,
     pub check_etag: bool,

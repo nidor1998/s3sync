@@ -4,14 +4,15 @@ mod common;
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
     use common::*;
     use s3sync::config::Config;
     use s3sync::config::args::parse_from_args;
     use s3sync::pipeline::Pipeline;
+    use s3sync::types::datetime::Rfc3339Ext;
     use s3sync::types::token::create_pipeline_cancellation_token;
     use std::convert::TryFrom;
     use std::time::Duration;
+    use time::OffsetDateTime;
     use uuid::Uuid;
 
     use super::*;
@@ -48,7 +49,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            step1_complete_time = Utc::now() + chrono::Duration::seconds(2);
+            step1_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 2);
@@ -120,7 +121,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            step1_complete_time = Utc::now() + chrono::Duration::seconds(2);
+            step1_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 2);
@@ -152,7 +153,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            step2_complete_time = Utc::now() + chrono::Duration::seconds(2);
+            step2_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
@@ -165,7 +166,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         helper.delete_all_objects(&bucket).await;
-        let delete_complete_time = Utc::now() + chrono::Duration::seconds(2);
+        let delete_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
         tokio::time::sleep(Duration::from_secs(3)).await;
 
@@ -189,7 +190,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            step3_complete_time = Utc::now() + chrono::Duration::seconds(2);
+            step3_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);
@@ -418,7 +419,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            step1_complete_time = Utc::now() + chrono::Duration::seconds(2);
+            step1_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 2);
@@ -450,7 +451,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            step2_complete_time = Utc::now() + chrono::Duration::seconds(2);
+            step2_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 5);
@@ -463,7 +464,7 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(3)).await;
 
         helper.delete_all_objects(&bucket1).await;
-        let delete_complete_time = Utc::now() + chrono::Duration::seconds(2);
+        let delete_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
         tokio::time::sleep(Duration::from_secs(3)).await;
 
@@ -487,7 +488,7 @@ mod tests {
             pipeline.run().await;
             assert!(!pipeline.has_error());
 
-            step3_complete_time = Utc::now() + chrono::Duration::seconds(2);
+            step3_complete_time = OffsetDateTime::now_utc() + time::Duration::seconds(2);
 
             let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
             assert_eq!(stats.sync_complete, 1);

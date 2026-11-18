@@ -1,3 +1,4 @@
+use crate::types::datetime::Rfc3339Ext;
 use anyhow::Result;
 use aws_smithy_types::DateTime;
 use aws_smithy_types_convert::date_time::DateTimeExt;
@@ -58,7 +59,7 @@ impl ObjectPointInTimePacker {
                                 object_versions.clear()
                             }
 
-                            let last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
+                            let last_modified = DateTime::to_time(&DateTime::from_millis(
                                 object.last_modified().to_millis()?,
                             ))?;
 
