@@ -18,9 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [Breaking change] `--filter-mtime-before`, `--filter-mtime-after`, `--point-in-time` and `--expires` (and their
   environment variables) now accept only strict RFC 3339 timestamps. Inputs that were previously accepted, such as an
-  offset without a colon (`2023-02-19T12:00:00+0900`), a ` UTC` suffix (`2023-02-19T12:00:00 UTC`), leading
-  whitespace, or a leap second (`2016-12-31T23:59:60Z`), are now rejected with an argument error. Standard RFC 3339
-  timestamps such as `2023-02-19T12:00:00Z` and `2023-02-19T12:00:00+09:00` work as before.
+  offset without a colon (`2023-02-19T12:00:00+0900`), a ` UTC` suffix (`2023-02-19T12:00:00 UTC`) or leading
+  whitespace, are now rejected with an argument error. A leap second (`:60`) is accepted only at 23:59 on the last
+  day of a month and is treated as `23:59:59.999999999`; elsewhere it is rejected. Standard RFC 3339 timestamps such
+  as `2023-02-19T12:00:00Z` and `2023-02-19T12:00:00+09:00` work as before.
 
 ## [1.62.5] - 2026-11-14
 

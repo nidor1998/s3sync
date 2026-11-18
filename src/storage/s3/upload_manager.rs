@@ -116,7 +116,7 @@ impl UploadManager {
         key: &str,
         mut get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<PutObjectOutput> {
-        get_object_output_first_chunk = self.modify_metadata(get_object_output_first_chunk);
+        get_object_output_first_chunk = self.modify_metadata(get_object_output_first_chunk)?;
 
         if self.is_auto_chunksize_enabled() {
             if is_multipart_upload_e_tag(
@@ -169,7 +169,7 @@ impl UploadManager {
         Ok(put_object_output)
     }
 
-    fn modify_metadata(&self, mut get_object_output: GetObjectOutput) -> GetObjectOutput {
+    fn modify_metadata(&self, mut get_object_output: GetObjectOutput) -> Result<GetObjectOutput> {
         if self.config.no_sync_system_metadata {
             get_object_output = Self::clear_system_meta_data(get_object_output);
         }
@@ -183,21 +183,22 @@ impl UploadManager {
         }
 
         if self.config.put_last_modified_metadata {
-            get_object_output = Self::modify_last_modified_metadata(get_object_output);
+            get_object_output = Self::modify_last_modified_metadata(get_object_output)?;
         }
 
         if self.config.enable_versioning {
-            get_object_output = Self::update_versioning_metadata(get_object_output);
+            get_object_output = Self::update_versioning_metadata(get_object_output)?;
         }
 
-        get_object_output
+        Ok(get_object_output)
     }
 
-    fn modify_last_modified_metadata(mut get_object_output: GetObjectOutput) -> GetObjectOutput {
+    fn modify_last_modified_metadata(
+        mut get_object_output: GetObjectOutput,
+    ) -> Result<GetObjectOutput> {
         let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
-        let last_modified = to_time_millis(get_object_output.last_modified().unwrap())
-            .unwrap()
-            .to_rfc3339_secs();
+        let last_modified =
+            to_time_millis(get_object_output.last_modified().unwrap())?.to_rfc3339_secs();
 
         metadata.insert(
             S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY.to_string(),
@@ -205,7 +206,7 @@ impl UploadManager {
         );
         get_object_output.metadata = Some(metadata);
 
-        get_object_output
+        Ok(get_object_output)
     }
 
     fn clear_system_meta_data(mut get_object_output: GetObjectOutput) -> GetObjectOutput {
@@ -220,18 +221,19 @@ impl UploadManager {
         get_object_output
     }
 
-    fn update_versioning_metadata(mut get_object_output: GetObjectOutput) -> GetObjectOutput {
+    fn update_versioning_metadata(
+        mut get_object_output: GetObjectOutput,
+    ) -> Result<GetObjectOutput> {
         if get_object_output.version_id().is_none() {
-            return get_object_output;
+            return Ok(get_object_output);
         }
 
         let source_version_id = get_object_output.version_id().unwrap();
 
         let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
 
-        let last_modified = to_time_millis(get_object_output.last_modified().unwrap())
-            .unwrap()
-            .to_rfc3339_secs();
+        let last_modified =
+            to_time_millis(get_object_output.last_modified().unwrap())?.to_rfc3339_secs();
 
         metadata.insert(
             S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY.to_string(),
@@ -244,7 +246,7 @@ impl UploadManager {
 
         get_object_output.metadata = Some(metadata);
 
-        get_object_output
+        Ok(get_object_output)
     }
 
     pub async fn upload_with_auto_chunksize(
@@ -2001,7 +2003,7 @@ mod tests {
             .version_id("version1")
             .build();
 
-        get_object_output = UploadManager::update_versioning_metadata(get_object_output);
+        get_object_output = UploadManager::update_versioning_metadata(get_object_output).unwrap();
         assert_eq!(
             get_object_output
                 .metadata()
@@ -2032,7 +2034,7 @@ mod tests {
             .metadata("mykey", "myvalue")
             .build();
 
-        get_object_output = UploadManager::update_versioning_metadata(get_object_output);
+        get_object_output = UploadManager::update_versioning_metadata(get_object_output).unwrap();
         assert_eq!(
             get_object_output
                 .metadata()
@@ -2071,7 +2073,7 @@ mod tests {
             .metadata("mykey", "myvalue")
             .build();
 
-        get_object_output = UploadManager::update_versioning_metadata(get_object_output);
+        get_object_output = UploadManager::update_versioning_metadata(get_object_output).unwrap();
         assert_eq!(get_object_output.metadata().as_ref().unwrap().len(), 1);
         assert_eq!(
             get_object_output.metadata().unwrap().get("mykey").unwrap(),
@@ -2086,7 +2088,8 @@ mod tests {
         let mut get_object_output = GetObjectOutput::builder()
             .last_modified(DateTime::from_secs(0))
             .build();
-        get_object_output = UploadManager::modify_last_modified_metadata(get_object_output);
+        get_object_output =
+            UploadManager::modify_last_modified_metadata(get_object_output).unwrap();
 
         assert_eq!(
             get_object_output
@@ -2106,7 +2109,8 @@ mod tests {
             .last_modified(DateTime::from_secs(0))
             .metadata("key1", "value1")
             .build();
-        get_object_output = UploadManager::modify_last_modified_metadata(get_object_output);
+        get_object_output =
+            UploadManager::modify_last_modified_metadata(get_object_output).unwrap();
 
         assert_eq!(
             get_object_output
@@ -2145,6 +2149,22 @@ mod tests {
             calculate_parts_count(8 * 1024 * 1024, 8 * 1024 * 1024, (16 * 1024 * 1024) + 1),
             3
         );
+    }
+
+    #[test]
+    fn last_modified_metadata_out_of_range_returns_error() {
+        init_dummy_tracing_subscriber();
+
+        let get_object_output = GetObjectOutput::builder()
+            .last_modified(DateTime::from_secs(40_000_000_000_000))
+            .build();
+        assert!(UploadManager::modify_last_modified_metadata(get_object_output).is_err());
+
+        let get_object_output = GetObjectOutput::builder()
+            .version_id("version1")
+            .last_modified(DateTime::from_secs(40_000_000_000_000))
+            .build();
+        assert!(UploadManager::update_versioning_metadata(get_object_output).is_err());
     }
 
     fn init_dummy_tracing_subscriber() {

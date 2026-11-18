@@ -13,9 +13,17 @@ use time::{OffsetDateTime, UtcOffset};
 
 /// Parses an RFC 3339 date-time (any offset) and normalizes it to UTC.
 ///
+/// The date/time separator must be `T`, `t`, or a space (as RFC 3339 allows);
+/// `time` itself accepts any byte there.
+///
 /// Returns an error (rather than panicking) if the value is out of range after
 /// conversion to UTC.
 pub fn parse_rfc3339_utc(value: &str) -> Result<OffsetDateTime, String> {
+    if !matches!(value.as_bytes().get(10), Some(b'T' | b't' | b' ')) {
+        return Err(format!(
+            "invalid RFC 3339 date-time (expected 'T' between date and time): {value}"
+        ));
+    }
     let dt = OffsetDateTime::parse(value, &Rfc3339).map_err(|e| e.to_string())?;
     dt.checked_to_offset(UtcOffset::UTC)
         .ok_or_else(|| format!("date-time out of range after conversion to UTC: {value}"))
@@ -49,6 +57,23 @@ pub fn to_time_millis(dt: &DateTime) -> anyhow::Result<OffsetDateTime> {
 /// See [`to_time_millis`] and [`Rfc3339Ext::to_rfc3339`].
 pub fn to_rfc3339_millis(dt: &DateTime) -> anyhow::Result<String> {
     Ok(to_time_millis(dt)?.to_rfc3339())
+}
+
+/// Like [`to_rfc3339_millis`], but never fails: a value that cannot be
+/// represented as an [`OffsetDateTime`] is formatted as seconds since the Unix
+/// epoch instead. Intended for log output.
+pub fn to_rfc3339_millis_lossy(dt: &DateTime) -> String {
+    to_rfc3339_millis(dt).unwrap_or_else(|_| format!("{}s since Unix epoch", dt.secs()))
+}
+
+/// Returns the instant as nanoseconds since the Unix epoch, truncated to
+/// millisecond precision (the same truncation as [`to_time_millis`]).
+///
+/// Unlike [`to_time_millis`], this never fails, so it can be used for
+/// comparisons on any [`DateTime`].
+pub fn unix_nanos_millis(dt: &DateTime) -> i128 {
+    let millis = i128::from(dt.secs()) * 1_000 + i128::from(dt.subsec_nanos() / 1_000_000);
+    millis * 1_000_000
 }
 
 /// RFC 3339 formatting helpers for [`OffsetDateTime`].
@@ -255,5 +280,63 @@ mod tests {
         // 10000-01-01T00:00:00Z: rejected by `time` without `large-dates`.
         let dt = DateTime::from_secs(253_402_300_800).to_time().unwrap();
         assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn parse_separator() {
+        assert!(parse_rfc3339_utc("2023-02-19t12:00:00Z").is_ok());
+        assert!(parse_rfc3339_utc("2023-02-19X12:00:00Z").is_err());
+        assert!(parse_rfc3339_utc("2023-02-19_12:00:00Z").is_err());
+        assert!(parse_rfc3339_utc("").is_err());
+    }
+
+    #[test]
+    fn parse_leap_second() {
+        // `time` accepts a leap second only at the end of a UTC month and
+        // clamps it to the last representable instant of that minute.
+        assert_eq!(
+            parse_rfc3339_utc("2016-12-31T23:59:60Z")
+                .unwrap()
+                .to_rfc3339(),
+            "2016-12-31T23:59:59.999999999+00:00"
+        );
+        assert!(parse_rfc3339_utc("2016-12-31T12:00:60Z").is_err());
+    }
+
+    #[test]
+    fn to_rfc3339_millis_lossy_formats() {
+        let dt = DateTime::from_secs_and_nanos(1_674_237_397, 552_123_456);
+        assert_eq!(
+            to_rfc3339_millis_lossy(&dt),
+            "2023-01-20T17:56:37.552+00:00"
+        );
+
+        let out_of_range = DateTime::from_secs(40_000_000_000_000);
+        assert!(to_time_millis(&out_of_range).is_err());
+        assert_eq!(
+            to_rfc3339_millis_lossy(&out_of_range),
+            "40000000000000s since Unix epoch"
+        );
+    }
+
+    #[test]
+    fn unix_nanos_millis_matches_to_time_millis() {
+        for dt in [
+            DateTime::from_secs_and_nanos(1_674_237_397, 552_123_456),
+            DateTime::from_secs_and_nanos(-1, 999_999_999),
+            DateTime::from_secs_and_nanos(-62_135_596_800, 1_500_000),
+            DateTime::from_secs(0),
+        ] {
+            assert_eq!(
+                unix_nanos_millis(&dt),
+                to_time_millis(&dt).unwrap().unix_timestamp_nanos()
+            );
+        }
+
+        // Out of range for `time`, but still comparable.
+        assert!(
+            unix_nanos_millis(&DateTime::from_secs(40_000_000_000_000))
+                > unix_nanos_millis(&DateTime::from_secs(0))
+        );
     }
 }
