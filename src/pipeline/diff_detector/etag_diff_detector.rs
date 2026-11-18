@@ -1366,12 +1366,12 @@ mod tests {
             .last_modified(DateTime::from_secs(1))
             .e_tag("e_tag")
             .build();
-        // The last modified date is too far in the future to be converted to time::OffsetDateTime.
+        // The last modified date (~year 1,270,000) is beyond time::OffsetDateTime's range (±999,999 with large-dates).
         let source_object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("6byte.dat")
                 .size(6)
-                .last_modified(DateTime::from_secs(20_000_000_000_000))
+                .last_modified(DateTime::from_secs(40_000_000_000_000))
                 .e_tag("e_tag")
                 .build(),
         );
@@ -1660,12 +1660,12 @@ mod tests {
             cancellation_token: create_pipeline_cancellation_token(),
         };
 
-        // The last modified date is too far in the future to be converted to time::OffsetDateTime.
+        // The last modified date (~year 1,270,000) is beyond time::OffsetDateTime's range (±999,999 with large-dates).
         let source_object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("6byte.dat")
                 .size(6)
-                .last_modified(DateTime::from_secs(20_000_000_000_000))
+                .last_modified(DateTime::from_secs(40_000_000_000_000))
                 .e_tag("e_tag")
                 .build(),
         );

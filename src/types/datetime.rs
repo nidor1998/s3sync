@@ -10,13 +10,20 @@ use time::format_description::well_known::Rfc3339;
 use time::{OffsetDateTime, UtcOffset};
 
 /// Parses an RFC 3339 date-time (any offset) and normalizes it to UTC.
+///
+/// Returns an error (rather than panicking) if the value is out of range after
+/// conversion to UTC.
 pub fn parse_rfc3339_utc(value: &str) -> Result<OffsetDateTime, String> {
-    OffsetDateTime::parse(value, &Rfc3339)
-        .map(|dt| dt.to_offset(UtcOffset::UTC))
-        .map_err(|e| e.to_string())
+    let dt = OffsetDateTime::parse(value, &Rfc3339).map_err(|e| e.to_string())?;
+    dt.checked_to_offset(UtcOffset::UTC)
+        .ok_or_else(|| format!("date-time out of range after conversion to UTC: {value}"))
 }
 
 /// RFC 3339 formatting helpers for [`OffsetDateTime`].
+///
+/// Years outside `0000..=9999` are written with an explicit sign and at least
+/// four digits (e.g. `-0001`, `+10000`), matching `chrono`. Such output is an
+/// extension of RFC 3339, which only allows four-digit non-negative years.
 pub trait Rfc3339Ext {
     /// Formats as RFC 3339 in UTC with `+00:00` and 0, 3, 6, or 9 fractional digits.
     /// e.g. `2023-01-20T17:56:37.552+00:00`
@@ -58,13 +65,14 @@ impl Rfc3339Ext for OffsetDateTime {
 fn format_date_time_secs(dt: &OffsetDateTime) -> String {
     let year = dt.year();
     let mut s = String::with_capacity(35);
-    if year < 0 {
-        s.push('-');
+    if (0..=9999).contains(&year) {
+        let _ = write!(s, "{year:04}");
+    } else {
+        let _ = write!(s, "{year:+05}");
     }
     let _ = write!(
         s,
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
-        year.unsigned_abs(),
+        "-{:02}-{:02}T{:02}:{:02}:{:02}",
         u8::from(dt.month()),
         dt.day(),
         dt.hour(),
@@ -136,5 +144,29 @@ mod tests {
     fn negative_year() {
         let dt = parse_rfc3339_utc("0000-01-01T00:00:00Z").unwrap() - time::Duration::days(1);
         assert_eq!(dt.to_rfc3339(), "-0001-12-31T00:00:00+00:00");
+    }
+
+    #[test]
+    fn large_year_has_plus_sign() {
+        let dt = parse_rfc3339_utc("9999-12-31T23:59:59Z").unwrap() + time::Duration::seconds(1);
+        assert_eq!(dt.year(), 10000);
+        assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:00:00+00:00");
+        assert_eq!(dt.to_rfc3339_secs(), "+10000-01-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn parse_max_date_with_negative_offset_does_not_panic() {
+        let dt = parse_rfc3339_utc("9999-12-31T23:59:59-01:00").unwrap();
+        assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:59:59+00:00");
+    }
+
+    #[test]
+    fn aws_date_time_beyond_year_9999_converts() {
+        use aws_smithy_types::DateTime;
+        use aws_smithy_types_convert::date_time::DateTimeExt;
+
+        // 10000-01-01T00:00:00Z: rejected by `time` without `large-dates`.
+        let dt = DateTime::from_secs(253_402_300_800).to_time().unwrap();
+        assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:00:00+00:00");
     }
 }
