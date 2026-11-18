@@ -1,9 +1,7 @@
-use crate::types::datetime::Rfc3339Ext;
+use crate::types::datetime::to_rfc3339_millis;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ServerSideEncryption;
-use aws_smithy_types::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, error, info, warn};
 
@@ -87,18 +85,9 @@ impl ETagDiffDetector {
             head_target_object_output.e_tag.clone().unwrap().to_string(),
         ));
 
-        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
-            source_object.last_modified().to_millis()?,
-        ))?
-        .to_rfc3339();
-        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
-            head_target_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
+        let source_last_modified = to_rfc3339_millis(source_object.last_modified())?;
+        let target_last_modified =
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
 
         if let Some(sse) = head_target_object_output.server_side_encryption() {
             if sse != &ServerSideEncryption::Aes256 {
@@ -443,22 +432,10 @@ impl ETagDiffDetector {
             )
             .await?;
 
-        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
-            head_source_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
-        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
-            head_target_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
+        let source_last_modified =
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap())?;
+        let target_last_modified =
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
 
         if let Some(sse) = head_target_object_output.server_side_encryption() {
             if sse != &ServerSideEncryption::Aes256 {
@@ -714,18 +691,9 @@ impl ETagDiffDetector {
             )
             .await?;
 
-        let source_last_modified = DateTime::to_time(&DateTime::from_millis(
-            source_object.last_modified().to_millis()?,
-        ))?
-        .to_rfc3339();
-        let target_last_modified = DateTime::to_time(&DateTime::from_millis(
-            head_target_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
+        let source_last_modified = to_rfc3339_millis(source_object.last_modified())?;
+        let target_last_modified =
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
 
         if source_e_tag == target_e_tag {
             if source_object.size() != head_target_object_output.content_length().unwrap() {

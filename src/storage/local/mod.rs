@@ -1,4 +1,4 @@
-use crate::types::datetime::Rfc3339Ext;
+use crate::types::datetime::to_rfc3339_millis;
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
@@ -25,7 +25,6 @@ use aws_smithy_runtime_api::client::result::SdkError;
 use aws_smithy_runtime_api::http::{Response, StatusCode};
 use aws_smithy_types::body::SdkBody;
 use aws_smithy_types::byte_stream::Length;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use leaky_bucket::RateLimiter;
@@ -489,10 +488,7 @@ impl LocalStorage {
         let source_storage_class = get_object_output.storage_class().cloned();
         let source_version_id = get_object_output.version_id().map(|v| v.to_string());
 
-        let source_last_modified =
-            DateTime::from_millis(get_object_output.last_modified.unwrap().to_millis()?)
-                .to_time()?
-                .to_rfc3339();
+        let source_last_modified = to_rfc3339_millis(&get_object_output.last_modified.unwrap())?;
         let source_last_modified_raw = get_object_output.last_modified().copied();
 
         if fs_util::check_directory_traversal(key) {

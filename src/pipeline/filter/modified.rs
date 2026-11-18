@@ -1,8 +1,7 @@
-use crate::types::datetime::Rfc3339Ext;
+use crate::types::datetime::to_rfc3339_millis;
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
 use crate::config::FilterConfig;
@@ -86,16 +85,8 @@ fn filter_last_modified(
     let modified =
         is_source_last_modified_date_newer(source_last_modified_date, target_last_modified_date);
     if !modified {
-        let source_last_modified =
-            DateTime::from_millis(source_last_modified_date.to_millis().unwrap())
-                .to_time()
-                .unwrap()
-                .to_rfc3339();
-        let target_last_modified =
-            DateTime::from_millis(target_last_modified_date.to_millis().unwrap())
-                .to_time()
-                .unwrap()
-                .to_rfc3339();
+        let source_last_modified = to_rfc3339_millis(source_last_modified_date).unwrap();
+        let target_last_modified = to_rfc3339_millis(target_last_modified_date).unwrap();
 
         debug!(
             name = FILTER_NAME,
@@ -174,15 +165,8 @@ fn is_modified_from_e_tag(
         let source_e_tag = normalize_e_tag(&Some(object.e_tag().unwrap().to_string()));
         let target_e_tag = normalize_e_tag(&Some(entry.e_tag.clone().unwrap()));
 
-        let source_last_modified =
-            DateTime::from_millis(object.last_modified().to_millis().unwrap())
-                .to_time()
-                .unwrap()
-                .to_rfc3339();
-        let target_last_modified = DateTime::from_millis(entry.last_modified.to_millis().unwrap())
-            .to_time()
-            .unwrap()
-            .to_rfc3339();
+        let source_last_modified = to_rfc3339_millis(object.last_modified()).unwrap();
+        let target_last_modified = to_rfc3339_millis(&entry.last_modified).unwrap();
 
         if source_e_tag == target_e_tag {
             debug!(

@@ -1,4 +1,4 @@
-use crate::types::datetime::Rfc3339Ext;
+use crate::types::datetime::to_rfc3339_millis;
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use async_trait::async_trait;
@@ -19,7 +19,6 @@ use aws_sdk_s3::types::{
     ObjectPart, ObjectVersion, RequestPayer, Tagging,
 };
 use aws_smithy_types::byte_stream::ByteStream;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use base64::Engine;
 use base64::engine::general_purpose;
 use leaky_bucket::RateLimiter;
@@ -1074,14 +1073,8 @@ impl StorageTrait for S3Storage {
         }
         let target_key = generate_full_key(&self.prefix, key);
         let source_key = key;
-        let source_last_modified = aws_smithy_types::DateTime::from_millis(
-            get_object_output_first_chunk
-                .last_modified()
-                .unwrap()
-                .to_millis()?,
-        )
-        .to_time()?
-        .to_rfc3339();
+        let source_last_modified =
+            to_rfc3339_millis(get_object_output_first_chunk.last_modified().unwrap())?;
 
         if self.config.dry_run {
             self.send_stats(SyncBytes(source_size)).await;

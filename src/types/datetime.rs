@@ -6,6 +6,8 @@
 
 use std::fmt::Write;
 
+use aws_smithy_types::DateTime;
+use aws_smithy_types_convert::date_time::DateTimeExt;
 use time::format_description::well_known::Rfc3339;
 use time::{OffsetDateTime, UtcOffset};
 
@@ -19,11 +21,44 @@ pub fn parse_rfc3339_utc(value: &str) -> Result<OffsetDateTime, String> {
         .ok_or_else(|| format!("date-time out of range after conversion to UTC: {value}"))
 }
 
+/// Parses an RFC 3339 date-time for the `Expires` header and normalizes it to UTC.
+///
+/// The value is sent as an HTTP date, which only supports years `0001..=9999`,
+/// so anything outside that range (after conversion to UTC) is rejected here
+/// instead of failing every upload later.
+pub fn parse_expires(value: &str) -> Result<OffsetDateTime, String> {
+    let dt = parse_rfc3339_utc(value)?;
+    if !(1..=9999).contains(&dt.year()) {
+        return Err(format!(
+            "expires must be between 0001-01-01T00:00:00Z and 9999-12-31T23:59:59Z: {value}"
+        ));
+    }
+    Ok(dt)
+}
+
+/// Converts an AWS [`DateTime`] to an [`OffsetDateTime`] truncated to
+/// millisecond precision.
+///
+/// The truncation is intentional: last-modified values are compared and
+/// formatted at millisecond precision throughout s3sync.
+pub fn to_time_millis(dt: &DateTime) -> anyhow::Result<OffsetDateTime> {
+    Ok(DateTime::from_millis(dt.to_millis()?).to_time()?)
+}
+
+/// Formats an AWS [`DateTime`] as RFC 3339 in UTC at millisecond precision.
+/// See [`to_time_millis`] and [`Rfc3339Ext::to_rfc3339`].
+pub fn to_rfc3339_millis(dt: &DateTime) -> anyhow::Result<String> {
+    Ok(to_time_millis(dt)?.to_rfc3339())
+}
+
 /// RFC 3339 formatting helpers for [`OffsetDateTime`].
 ///
 /// Years outside `0000..=9999` are written with an explicit sign and at least
 /// four digits (e.g. `-0001`, `+10000`), matching `chrono`. Such output is an
 /// extension of RFC 3339, which only allows four-digit non-negative years.
+///
+/// Values are converted to UTC. If that conversion would go out of range, the
+/// value is formatted in its own offset instead of panicking.
 pub trait Rfc3339Ext {
     /// Formats as RFC 3339 in UTC with `+00:00` and 0, 3, 6, or 9 fractional digits.
     /// e.g. `2023-01-20T17:56:37.552+00:00`
@@ -36,7 +71,7 @@ pub trait Rfc3339Ext {
 
 impl Rfc3339Ext for OffsetDateTime {
     fn to_rfc3339(&self) -> String {
-        let dt = self.to_offset(UtcOffset::UTC);
+        let dt = utc_or_self(self);
         let mut s = format_date_time_secs(&dt);
 
         let nanos = dt.nanosecond();
@@ -50,16 +85,31 @@ impl Rfc3339Ext for OffsetDateTime {
             }
         }
 
-        s.push_str("+00:00");
+        push_offset(&mut s, dt.offset());
         s
     }
 
     fn to_rfc3339_secs(&self) -> String {
-        let dt = self.to_offset(UtcOffset::UTC);
+        let dt = utc_or_self(self);
         let mut s = format_date_time_secs(&dt);
-        s.push_str("+00:00");
+        push_offset(&mut s, dt.offset());
         s
     }
+}
+
+fn utc_or_self(dt: &OffsetDateTime) -> OffsetDateTime {
+    dt.checked_to_offset(UtcOffset::UTC).unwrap_or(*dt)
+}
+
+fn push_offset(s: &mut String, offset: UtcOffset) {
+    let (hours, minutes, _) = offset.as_hms();
+    let sign = if offset.is_negative() { '-' } else { '+' };
+    let _ = write!(
+        s,
+        "{sign}{:02}:{:02}",
+        hours.unsigned_abs(),
+        minutes.unsigned_abs()
+    );
 }
 
 fn format_date_time_secs(dt: &OffsetDateTime) -> String {
@@ -158,6 +208,43 @@ mod tests {
     fn parse_max_date_with_negative_offset_does_not_panic() {
         let dt = parse_rfc3339_utc("9999-12-31T23:59:59-01:00").unwrap();
         assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:59:59+00:00");
+    }
+
+    #[test]
+    fn to_rfc3339_out_of_range_utc_does_not_panic() {
+        let max =
+            time::PrimitiveDateTime::MAX.assume_offset(UtcOffset::from_hms(-1, -30, 0).unwrap());
+        assert!(max.checked_to_offset(UtcOffset::UTC).is_none());
+        assert_eq!(max.to_rfc3339(), "+999999-12-31T23:59:59.999999999-01:30");
+        assert_eq!(max.to_rfc3339_secs(), "+999999-12-31T23:59:59-01:30");
+    }
+
+    #[test]
+    fn parse_expires_range() {
+        assert_eq!(
+            parse_expires("9999-12-31T23:59:59Z").unwrap().to_rfc3339(),
+            "9999-12-31T23:59:59+00:00"
+        );
+        assert_eq!(
+            parse_expires("0001-01-01T00:00:00Z").unwrap().to_rfc3339(),
+            "0001-01-01T00:00:00+00:00"
+        );
+        assert!(parse_expires("9999-12-31T23:59:59-01:00").is_err());
+        assert!(parse_expires("0000-12-31T23:59:59Z").is_err());
+        assert!(parse_expires("0001-01-01T00:00:00+01:00").is_err());
+        assert!(parse_expires("not a date").is_err());
+    }
+
+    #[test]
+    fn to_time_millis_truncates_sub_millis() {
+        let dt = DateTime::from_secs_and_nanos(1_674_237_397, 552_123_456);
+        let t = to_time_millis(&dt).unwrap();
+        assert_eq!(t.nanosecond(), 552_000_000);
+        assert_eq!(t.to_rfc3339(), "2023-01-20T17:56:37.552+00:00");
+        assert_eq!(
+            to_rfc3339_millis(&dt).unwrap(),
+            "2023-01-20T17:56:37.552+00:00"
+        );
     }
 
     #[test]

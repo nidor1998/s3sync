@@ -1,4 +1,4 @@
-use crate::types::datetime::Rfc3339Ext;
+use crate::types::datetime::{Rfc3339Ext, to_time_millis};
 use anyhow::{Context, Result, anyhow};
 use async_channel::Sender;
 use aws_sdk_s3::Client;
@@ -195,16 +195,9 @@ impl UploadManager {
 
     fn modify_last_modified_metadata(mut get_object_output: GetObjectOutput) -> GetObjectOutput {
         let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
-        let last_modified = DateTime::from_millis(
-            get_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        )
-        .to_time()
-        .unwrap()
-        .to_rfc3339_secs();
+        let last_modified = to_time_millis(get_object_output.last_modified().unwrap())
+            .unwrap()
+            .to_rfc3339_secs();
 
         metadata.insert(
             S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY.to_string(),
@@ -236,16 +229,9 @@ impl UploadManager {
 
         let mut metadata = get_object_output.metadata().cloned().unwrap_or_default();
 
-        let last_modified = DateTime::from_millis(
-            get_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        )
-        .to_time()
-        .unwrap()
-        .to_rfc3339_secs();
+        let last_modified = to_time_millis(get_object_output.last_modified().unwrap())
+            .unwrap()
+            .to_rfc3339_secs();
 
         metadata.insert(
             S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY.to_string(),
@@ -366,10 +352,7 @@ impl UploadManager {
                 }
                 expires_string
             } else {
-                Some(DateTime::from_str(
-                    &self.config.expires.unwrap().to_rfc3339(),
-                    DateTimeFormat::DateTimeWithOffset,
-                )?)
+                Some(DateTime::from_time(self.config.expires.unwrap()))
             },
             metadata: if self.config.metadata.is_none() {
                 get_object_output_first_chunk.metadata().cloned()
@@ -1574,10 +1557,7 @@ impl UploadManager {
                 }
                 expires_string
             } else {
-                Some(DateTime::from_str(
-                    &self.config.expires.unwrap().to_rfc3339(),
-                    DateTimeFormat::DateTimeWithOffset,
-                )?)
+                Some(DateTime::from_time(self.config.expires.unwrap()))
             },
             metadata: if self.config.metadata.is_none() {
                 get_object_output.metadata().cloned()

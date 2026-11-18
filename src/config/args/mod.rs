@@ -11,7 +11,7 @@ use crate::config::{
     CLITimeoutConfig, ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig,
     TransferConfig,
 };
-use crate::types::datetime::parse_rfc3339_utc;
+use crate::types::datetime::{parse_expires, parse_rfc3339_utc};
 #[allow(unused_imports)]
 use crate::types::event_callback::EventType;
 use crate::types::{
@@ -561,7 +561,7 @@ It takes extra HEAD requests(1 API call per part)."#)]
     #[arg(
         long,
         env,
-        value_parser = parse_rfc3339_utc,
+        value_parser = parse_expires,
         help_heading = "Metadata/Headers",
         long_help = r#"Expires HTTP header to set on the target object(RFC3339 datetime)
 Example: 2023-02-19T12:00:00Z"#

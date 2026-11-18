@@ -1,8 +1,6 @@
-use crate::types::datetime::Rfc3339Ext;
+use crate::types::datetime::{Rfc3339Ext, to_time_millis};
 use anyhow::Result;
 use async_trait::async_trait;
-use aws_smithy_types::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
 use crate::config::FilterConfig;
@@ -35,10 +33,7 @@ impl ObjectFilter for MtimeBeforeFilter<'_> {
 }
 
 fn is_before(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> bool {
-    let last_modified = DateTime::to_time(&DateTime::from_millis(
-        object.last_modified().to_millis().unwrap(),
-    ))
-    .unwrap();
+    let last_modified = to_time_millis(object.last_modified()).unwrap();
 
     if config.before_time.unwrap() <= last_modified {
         let key = object.key();

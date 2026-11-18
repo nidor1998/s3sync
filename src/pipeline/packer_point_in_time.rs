@@ -1,7 +1,5 @@
-use crate::types::datetime::Rfc3339Ext;
+use crate::types::datetime::{Rfc3339Ext, to_time_millis};
 use anyhow::Result;
-use aws_smithy_types::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::{debug, error};
 
 use crate::types;
@@ -59,9 +57,7 @@ impl ObjectPointInTimePacker {
                                 object_versions.clear()
                             }
 
-                            let last_modified = DateTime::to_time(&DateTime::from_millis(
-                                object.last_modified().to_millis()?,
-                            ))?;
+                            let last_modified = to_time_millis(object.last_modified())?;
 
                             let version_id = if !object.is_delete_marker() {
                                 object.version_id().unwrap().to_string()

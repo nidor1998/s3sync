@@ -65,6 +65,27 @@ mod tests {
         assert!(config.is_err());
     }
 
+    #[test]
+    fn with_out_of_range_value_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--expires",
+            "9999-12-31T23:59:59-01:00",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
+        ];
+
+        let config = build_config_from_args(args);
+
+        assert!(config.is_err());
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")
