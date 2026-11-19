@@ -1,4 +1,4 @@
-use crate::types::datetime::{Rfc3339Ext, to_rfc3339_millis_lossy, unix_nanos_millis};
+use crate::types::datetime::{Rfc3339Ext, to_rfc3339_millis, unix_nanos_millis};
 use anyhow::Result;
 use async_trait::async_trait;
 use tracing::debug;
@@ -42,7 +42,7 @@ fn is_after_or_equal(object: &S3syncObject, config: &FilterConfig, _: &ObjectKey
         let key = object.key();
         let delete_marker = object.is_delete_marker();
         let version_id = object.version_id();
-        let last_modified = to_rfc3339_millis_lossy(last_modified);
+        let last_modified = to_rfc3339_millis(last_modified);
         let config_time = config.after_time.unwrap().to_rfc3339();
 
         debug!(
@@ -50,7 +50,8 @@ fn is_after_or_equal(object: &S3syncObject, config: &FilterConfig, _: &ObjectKey
             key = key,
             delete_marker = delete_marker,
             version_id = version_id,
-            last_modified = last_modified,
+            last_modified = last_modified.as_deref().ok(),
+            last_modified_error = last_modified.as_ref().err().map(|e| e.to_string()),
             config_time = config_time,
             "object filtered."
         );

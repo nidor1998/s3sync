@@ -59,13 +59,6 @@ pub fn to_rfc3339_millis(dt: &DateTime) -> anyhow::Result<String> {
     Ok(to_time_millis(dt)?.to_rfc3339())
 }
 
-/// Like [`to_rfc3339_millis`], but never fails: a value that cannot be
-/// represented as an [`OffsetDateTime`] is formatted as seconds since the Unix
-/// epoch instead. Intended for log output.
-pub fn to_rfc3339_millis_lossy(dt: &DateTime) -> String {
-    to_rfc3339_millis(dt).unwrap_or_else(|_| format!("{}s since Unix epoch", dt.secs()))
-}
-
 /// Returns the instant as nanoseconds since the Unix epoch, truncated to
 /// millisecond precision (the same truncation as [`to_time_millis`]).
 ///
@@ -301,22 +294,6 @@ mod tests {
             "2016-12-31T23:59:59.999999999+00:00"
         );
         assert!(parse_rfc3339_utc("2016-12-31T12:00:60Z").is_err());
-    }
-
-    #[test]
-    fn to_rfc3339_millis_lossy_formats() {
-        let dt = DateTime::from_secs_and_nanos(1_674_237_397, 552_123_456);
-        assert_eq!(
-            to_rfc3339_millis_lossy(&dt),
-            "2023-01-20T17:56:37.552+00:00"
-        );
-
-        let out_of_range = DateTime::from_secs(40_000_000_000_000);
-        assert!(to_time_millis(&out_of_range).is_err());
-        assert_eq!(
-            to_rfc3339_millis_lossy(&out_of_range),
-            "40000000000000s since Unix epoch"
-        );
     }
 
     #[test]
