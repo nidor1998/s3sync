@@ -11,6 +11,7 @@ use crate::config::{
     CLITimeoutConfig, ClientConfig, FilterConfig, ForceRetryConfig, RetryConfig, TracingConfig,
     TransferConfig,
 };
+use crate::types::datetime::{parse_expires, parse_rfc3339_utc};
 #[allow(unused_imports)]
 use crate::types::event_callback::EventType;
 use crate::types::{
@@ -22,7 +23,6 @@ use aws_sdk_s3::types::{
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation;
 use cfg_if::cfg_if;
-use chrono::{DateTime, Utc};
 use clap::Parser;
 use clap::builder::{ArgPredicate, NonEmptyStringValueParser};
 use clap_verbosity_flag::{Verbosity, WarnLevel};
@@ -33,6 +33,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use time::OffsetDateTime;
 use tokio::sync::Semaphore;
 
 mod tests;
@@ -352,20 +353,22 @@ Valid choices: STANDARD | REDUCED_REDUNDANCY | STANDARD_IA | ONEZONE_IA | INTELL
     #[arg(
         long,
         env,
+        value_parser = parse_rfc3339_utc,
         help_heading = "Filtering",
         long_help = r#"Sync only objects older than given time (RFC3339 datetime).
 Example: 2023-02-19T12:00:00Z"#
     )]
-    filter_mtime_before: Option<DateTime<Utc>>,
+    filter_mtime_before: Option<OffsetDateTime>,
 
     #[arg(
         long,
         env,
+        value_parser = parse_rfc3339_utc,
         help_heading = "Filtering",
         long_help = r#"Sync only objects newer than OR EQUAL TO given time (RFC3339 datetime).
 Example: 2023-02-19T12:00:00Z"#
     )]
-    filter_mtime_after: Option<DateTime<Utc>>,
+    filter_mtime_after: Option<OffsetDateTime>,
 
     #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects smaller than given size.
 Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
@@ -558,11 +561,12 @@ It takes extra HEAD requests(1 API call per part)."#)]
     #[arg(
         long,
         env,
+        value_parser = parse_expires,
         help_heading = "Metadata/Headers",
         long_help = r#"Expires HTTP header to set on the target object(RFC3339 datetime)
 Example: 2023-02-19T12:00:00Z"#
     )]
-    expires: Option<DateTime<Utc>>,
+    expires: Option<OffsetDateTime>,
 
     #[arg(long, env, value_parser = metadata::check_metadata, help_heading = "Metadata/Headers", long_help=r#"Metadata to set on the target object
 Example: key1=value1,key2=value2"#)]
@@ -622,6 +626,7 @@ If this option is enabled, the --remove-modified-filter and
     #[arg(
         long,
         env,
+        value_parser = parse_rfc3339_utc,
         conflicts_with_all = ["delete", "head_each_target", "enable_versioning", "check_etag", "check_mtime_and_etag", "check_size", "check_mtime_and_additional_checksum"],
         help_heading = "Versioning",
         long_help = r#"Sync only objects at a specific point in time (RFC3339 datetime).
@@ -630,7 +635,7 @@ By default, the target storage's objects will always be overwritten with the sou
 
 Example: 2025-07-16T12:00:00Z"#
     )]
-    point_in_time: Option<DateTime<Utc>>,
+    point_in_time: Option<OffsetDateTime>,
 
     /// Server-side encryption. Valid choices: AES256 | aws:kms | aws:kms:dsse
     #[arg(long, env, value_parser = sse::parse_sse, help_heading = "Encryption")]
@@ -1582,7 +1587,7 @@ impl CLIArgs {
             }
         }
 
-        if Utc::now() < self.point_in_time.unwrap() {
+        if OffsetDateTime::now_utc() < self.point_in_time.unwrap() {
             return Err(POINT_IN_TIME_VALUE_INVALID.to_string());
         }
 

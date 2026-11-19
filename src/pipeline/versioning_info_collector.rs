@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
+use crate::types::datetime::to_rfc3339_millis;
 use anyhow::{Context, Result};
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ObjectVersion;
-use aws_smithy_types::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
 use crate::storage::Storage;
@@ -66,10 +65,7 @@ impl VersioningInfoCollector {
                     object_versions_to_sync.push(source_object);
                 } else {
                     let source_version_id = marker.version_id().unwrap();
-                    let source_last_modified =
-                        DateTime::from_millis(source_object.last_modified().to_millis()?)
-                            .to_chrono_utc()?
-                            .to_rfc3339();
+                    let source_last_modified = to_rfc3339_millis(source_object.last_modified());
                     debug!(
                         worker_index = self.worker_index,
                         key = key,
@@ -85,10 +81,7 @@ impl VersioningInfoCollector {
             if does_not_contain_version_id(&target_head_object_output_map, source_version_id) {
                 object_versions_to_sync.push(source_object);
             } else {
-                let source_last_modified =
-                    DateTime::from_millis(source_object.last_modified().to_millis()?)
-                        .to_chrono_utc()?
-                        .to_rfc3339();
+                let source_last_modified = to_rfc3339_millis(source_object.last_modified());
 
                 debug!(
                     worker_index = self.worker_index,

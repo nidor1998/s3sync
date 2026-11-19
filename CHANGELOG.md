@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- Replaced the unmaintained `chrono` crate with `time`
+  ([RUSTSEC-2026-0543](https://rustsec.org/advisories/RUSTSEC-2026-0543)).
+- Updated `libz-sys` to `v1.1.33` to address
+  [RUSTSEC-2026-0544](https://rustsec.org/advisories/RUSTSEC-2026-0544).
+
+### Changed
+
+- [Breaking change] `--filter-mtime-before`, `--filter-mtime-after`, `--point-in-time` and `--expires` (and their
+  environment variables) now accept only strict RFC 3339 timestamps. Inputs that were previously accepted, such as an
+  offset without a colon (`2023-02-19T12:00:00+0900`), a ` UTC` suffix (`2023-02-19T12:00:00 UTC`) or leading
+  whitespace, are now rejected with an argument error. A leap second (`:60`) is accepted only at 23:59 on the last
+  day of a month and is treated as `23:59:59.999999999`; elsewhere it is rejected. Standard RFC 3339 timestamps such
+  as `2023-02-19T12:00:00Z` and `2023-02-19T12:00:00+09:00` work as before.
+
 ## [1.62.5] - 2026-11-14
 
 Monthly update.

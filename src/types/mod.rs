@@ -16,6 +16,7 @@ use tracing::debug;
 use zeroize_derive::{Zeroize, ZeroizeOnDrop};
 
 pub mod async_callback;
+pub mod datetime;
 pub mod error;
 pub mod event_callback;
 

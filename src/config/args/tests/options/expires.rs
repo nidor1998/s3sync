@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::config::args::*;
+    use crate::types::datetime::Rfc3339Ext;
 
     #[test]
     fn with_default_value() {
@@ -57,6 +58,27 @@ mod tests {
             "2023-01-20T17:56:37.552+00:00",
             "s3://source-bucket/source_key",
             "./test_data/source/",
+        ];
+
+        let config = build_config_from_args(args);
+
+        assert!(config.is_err());
+    }
+
+    #[test]
+    fn with_out_of_range_value_error() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--source-profile",
+            "source_profile",
+            "--target-profile",
+            "target_profile",
+            "--expires",
+            "9999-12-31T23:59:59-01:00",
+            "s3://source-bucket/source_key",
+            "s3://target-bucket/target_key",
         ];
 
         let config = build_config_from_args(args);

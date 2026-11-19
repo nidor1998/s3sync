@@ -1,9 +1,8 @@
+use crate::types::datetime::to_rfc3339_millis;
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
 use aws_sdk_s3::types::ChecksumMode;
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
-use aws_smithy_types::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn};
 
@@ -100,22 +99,10 @@ impl ChecksumDiffDetector {
 
         let key = key.to_string();
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            head_source_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            head_target_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
+        let source_last_modified =
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap());
+        let target_last_modified =
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         let checksum_algorithm = if self.config.filter_config.check_checksum_algorithm.is_some() {
             self.config.filter_config.check_checksum_algorithm.clone()
@@ -381,22 +368,10 @@ impl ChecksumDiffDetector {
             checksum_algorithm.clone(),
         );
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            head_source_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            head_target_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
+        let source_last_modified =
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap());
+        let target_last_modified =
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         if target_checksum.is_none() {
             self.target
@@ -678,21 +653,10 @@ impl ChecksumDiffDetector {
             checksum_algorithm.clone(),
         );
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            head_source_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()?,
-        ))?
-        .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            head_target_object_output
-                .last_modified()
-                .unwrap()
-                .to_millis()
-                .unwrap(),
-        ))?
-        .to_rfc3339();
+        let source_last_modified =
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap());
+        let target_last_modified =
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         if source_checksum.is_none() {
             let mut event_data = EventData::new(EventType::SYNC_WARNING);

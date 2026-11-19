@@ -1,7 +1,6 @@
+use crate::types::datetime::{Rfc3339Ext, to_rfc3339_millis, unix_nanos_millis};
 use anyhow::Result;
 use async_trait::async_trait;
-use aws_smithy_types::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
 use crate::config::FilterConfig;
@@ -35,15 +34,15 @@ impl ObjectFilter for MtimeAfterFilter<'_> {
 }
 
 fn is_after_or_equal(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> bool {
-    let last_modified = DateTime::from_millis(object.last_modified().to_millis().unwrap())
-        .to_chrono_utc()
-        .unwrap();
+    // Compare as epoch nanoseconds so that a last-modified value outside the
+    // range of `OffsetDateTime` cannot panic.
+    let last_modified = object.last_modified();
 
-    if last_modified < config.after_time.unwrap() {
+    if unix_nanos_millis(last_modified) < config.after_time.unwrap().unix_timestamp_nanos() {
         let key = object.key();
         let delete_marker = object.is_delete_marker();
         let version_id = object.version_id();
-        let last_modified = last_modified.to_rfc3339();
+        let last_modified = to_rfc3339_millis(last_modified);
         let config_time = config.after_time.unwrap().to_rfc3339();
 
         debug!(
@@ -65,7 +64,6 @@ fn is_after_or_equal(object: &S3syncObject, config: &FilterConfig, _: &ObjectKey
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::str::FromStr;
     use std::sync::Mutex;
 
     use super::*;
@@ -90,7 +88,9 @@ mod tests {
 
         let config = FilterConfig {
             before_time: None,
-            after_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            after_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
@@ -133,7 +133,9 @@ mod tests {
 
         let config = FilterConfig {
             before_time: None,
-            after_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            after_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
@@ -175,7 +177,9 @@ mod tests {
 
         let config = FilterConfig {
             before_time: None,
-            after_time: Some(chrono::DateTime::from_str("2023-01-20T00:00:00.001Z").unwrap()),
+            after_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
             remove_modified_filter: false,
             check_size: false,
             check_etag: false,
@@ -200,6 +204,53 @@ mod tests {
             &config,
             &ObjectKeyMap::new(Mutex::new(HashMap::new()))
         ));
+    }
+
+    #[tokio::test]
+    async fn out_of_range_last_modified_does_not_panic() {
+        init_dummy_tracing_subscriber();
+
+        // Outside the range of `OffsetDateTime` (beyond year 999,999).
+        let far_future = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .last_modified(DateTime::from_secs(40_000_000_000_000))
+                .build(),
+        );
+        let far_past = S3syncObject::NotVersioning(
+            Object::builder()
+                .key("test")
+                .last_modified(DateTime::from_secs(-40_000_000_000_000))
+                .build(),
+        );
+
+        let config = FilterConfig {
+            before_time: None,
+            after_time: Some(
+                crate::types::datetime::parse_rfc3339_utc("2023-01-20T00:00:00.001Z").unwrap(),
+            ),
+            remove_modified_filter: false,
+            check_size: false,
+            check_etag: false,
+            check_mtime_and_etag: false,
+            check_checksum_algorithm: None,
+            check_mtime_and_additional_checksum: None,
+            include_regex: None,
+            exclude_regex: None,
+            include_content_type_regex: None,
+            exclude_content_type_regex: None,
+            include_metadata_regex: None,
+            exclude_metadata_regex: None,
+            include_tag_regex: None,
+            exclude_tag_regex: None,
+            larger_size: None,
+            smaller_size: None,
+            filter_manager: FilterManager::new(),
+        };
+        let key_map = ObjectKeyMap::new(Mutex::new(HashMap::new()));
+
+        assert!(is_after_or_equal(&far_future, &config, &key_map));
+        assert!(!is_after_or_equal(&far_past, &config, &key_map));
     }
 
     fn init_dummy_tracing_subscriber() {

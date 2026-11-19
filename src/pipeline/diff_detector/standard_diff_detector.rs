@@ -1,11 +1,10 @@
 use crate::Config;
 use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
 use crate::types::S3syncObject;
+use crate::types::datetime::to_rfc3339_millis;
 use crate::types::event_callback::{EventData, EventType};
 use async_trait::async_trait;
 use aws_sdk_s3::operation::head_object::HeadObjectOutput;
-use aws_smithy_types::DateTime;
-use aws_smithy_types_convert::date_time::DateTimeExt;
 use tracing::debug;
 
 pub struct StandardDiffDetector {
@@ -42,14 +41,8 @@ impl DiffDetectionStrategy for StandardDiffDetector {
             return Ok(true);
         }
 
-        let source_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            source_object.last_modified().to_millis().unwrap(),
-        ))?
-        .to_rfc3339();
-        let target_last_modified = DateTime::to_chrono_utc(&DateTime::from_millis(
-            target_object.last_modified().unwrap().to_millis().unwrap(),
-        ))?
-        .to_rfc3339();
+        let source_last_modified = to_rfc3339_millis(source_object.last_modified());
+        let target_last_modified = to_rfc3339_millis(target_object.last_modified().unwrap());
         let key = source_object.key();
 
         let mut event_data = EventData::new(EventType::SYNC_FILTERED);
