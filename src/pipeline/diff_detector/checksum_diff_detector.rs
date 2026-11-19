@@ -100,9 +100,9 @@ impl ChecksumDiffDetector {
         let key = key.to_string();
 
         let source_last_modified =
-            to_rfc3339_millis(head_source_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap());
         let target_last_modified =
-            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         let checksum_algorithm = if self.config.filter_config.check_checksum_algorithm.is_some() {
             self.config.filter_config.check_checksum_algorithm.clone()
@@ -369,9 +369,9 @@ impl ChecksumDiffDetector {
         );
 
         let source_last_modified =
-            to_rfc3339_millis(head_source_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap());
         let target_last_modified =
-            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         if target_checksum.is_none() {
             self.target
@@ -654,9 +654,9 @@ impl ChecksumDiffDetector {
         );
 
         let source_last_modified =
-            to_rfc3339_millis(head_source_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap());
         let target_last_modified =
-            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         if source_checksum.is_none() {
             let mut event_data = EventData::new(EventType::SYNC_WARNING);

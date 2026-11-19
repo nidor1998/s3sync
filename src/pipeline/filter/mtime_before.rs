@@ -49,8 +49,7 @@ fn is_before(object: &S3syncObject, config: &FilterConfig, _: &ObjectKeyMap) -> 
             key = key,
             delete_marker = delete_marker,
             version_id = version_id,
-            last_modified = last_modified.as_deref().ok(),
-            last_modified_error = last_modified.as_ref().err().map(|e| e.to_string()),
+            last_modified = last_modified,
             config_time = config_time,
             "object filtered."
         );

@@ -90,10 +90,8 @@ fn filter_last_modified(
 
         debug!(
             name = FILTER_NAME,
-            source_last_modified = source_last_modified.as_deref().ok(),
-            source_last_modified_error = source_last_modified.as_ref().err().map(|e| e.to_string()),
-            target_last_modified = target_last_modified.as_deref().ok(),
-            target_last_modified_error = target_last_modified.as_ref().err().map(|e| e.to_string()),
+            source_last_modified = source_last_modified,
+            target_last_modified = target_last_modified,
             key = key,
             "object filtered."
         );
@@ -175,12 +173,8 @@ fn is_modified_from_e_tag(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
-                source_last_modified = source_last_modified.as_deref().ok(),
-                source_last_modified_error =
-                    source_last_modified.as_ref().err().map(|e| e.to_string()),
-                target_last_modified = target_last_modified.as_deref().ok(),
-                target_last_modified_error =
-                    target_last_modified.as_ref().err().map(|e| e.to_string()),
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
                 source_size = object.size(),
                 target_size = entry.content_length,
                 key = key,
@@ -192,12 +186,8 @@ fn is_modified_from_e_tag(
                 name = FILTER_NAME,
                 source_e_tag = source_e_tag,
                 target_e_tag = target_e_tag,
-                source_last_modified = source_last_modified.as_deref().ok(),
-                source_last_modified_error =
-                    source_last_modified.as_ref().err().map(|e| e.to_string()),
-                target_last_modified = target_last_modified.as_deref().ok(),
-                target_last_modified_error =
-                    target_last_modified.as_ref().err().map(|e| e.to_string()),
+                source_last_modified = source_last_modified,
+                target_last_modified = target_last_modified,
                 source_size = object.size(),
                 target_size = entry.content_length,
                 key = key,

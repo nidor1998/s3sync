@@ -65,7 +65,7 @@ impl VersioningInfoCollector {
                     object_versions_to_sync.push(source_object);
                 } else {
                     let source_version_id = marker.version_id().unwrap();
-                    let source_last_modified = to_rfc3339_millis(source_object.last_modified())?;
+                    let source_last_modified = to_rfc3339_millis(source_object.last_modified());
                     debug!(
                         worker_index = self.worker_index,
                         key = key,
@@ -81,7 +81,7 @@ impl VersioningInfoCollector {
             if does_not_contain_version_id(&target_head_object_output_map, source_version_id) {
                 object_versions_to_sync.push(source_object);
             } else {
-                let source_last_modified = to_rfc3339_millis(source_object.last_modified())?;
+                let source_last_modified = to_rfc3339_millis(source_object.last_modified());
 
                 debug!(
                     worker_index = self.worker_index,

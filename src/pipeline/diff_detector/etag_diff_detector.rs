@@ -85,9 +85,9 @@ impl ETagDiffDetector {
             head_target_object_output.e_tag.clone().unwrap().to_string(),
         ));
 
-        let source_last_modified = to_rfc3339_millis(source_object.last_modified())?;
+        let source_last_modified = to_rfc3339_millis(source_object.last_modified());
         let target_last_modified =
-            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         if let Some(sse) = head_target_object_output.server_side_encryption() {
             if sse != &ServerSideEncryption::Aes256 {
@@ -433,9 +433,9 @@ impl ETagDiffDetector {
             .await?;
 
         let source_last_modified =
-            to_rfc3339_millis(head_source_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_source_object_output.last_modified().unwrap());
         let target_last_modified =
-            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         if let Some(sse) = head_target_object_output.server_side_encryption() {
             if sse != &ServerSideEncryption::Aes256 {
@@ -691,9 +691,9 @@ impl ETagDiffDetector {
             )
             .await?;
 
-        let source_last_modified = to_rfc3339_millis(source_object.last_modified())?;
+        let source_last_modified = to_rfc3339_millis(source_object.last_modified());
         let target_last_modified =
-            to_rfc3339_millis(head_target_object_output.last_modified().unwrap())?;
+            to_rfc3339_millis(head_target_object_output.last_modified().unwrap());
 
         if source_e_tag == target_e_tag {
             if source_object.size() != head_target_object_output.content_length().unwrap() {
@@ -1301,7 +1301,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn check_both_s3_last_modified_conversion_error() {
+    async fn check_both_s3_last_modified_out_of_range_does_not_fail() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -1334,7 +1334,7 @@ mod tests {
             .last_modified(DateTime::from_secs(1))
             .e_tag("e_tag")
             .build();
-        // The last modified date (~year 1,270,000) is beyond time::OffsetDateTime's range (±999,999 with large-dates).
+        // The last modified date (~year 1,270,000) is beyond time::OffsetDateTime's range (years -9999..=9999).
         let source_object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("6byte.dat")
@@ -1347,7 +1347,7 @@ mod tests {
             diff_detector
                 .is_different(&source_object, &head_object_output)
                 .await
-                .is_err()
+                .is_ok()
         );
     }
 
@@ -1599,7 +1599,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn is_target_local_e_tag_last_modified_conversion_error() {
+    async fn is_target_local_e_tag_last_modified_out_of_range_does_not_fail() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -1628,7 +1628,7 @@ mod tests {
             cancellation_token: create_pipeline_cancellation_token(),
         };
 
-        // The last modified date (~year 1,270,000) is beyond time::OffsetDateTime's range (±999,999 with large-dates).
+        // The last modified date (~year 1,270,000) is beyond time::OffsetDateTime's range (years -9999..=9999).
         let source_object = S3syncObject::NotVersioning(
             Object::builder()
                 .key("6byte.dat")
@@ -1641,7 +1641,7 @@ mod tests {
             diff_detector
                 .is_target_local_e_tag_different_from_source_s3("6byte.dat", &source_object)
                 .await
-                .is_err()
+                .is_ok()
         );
     }
 

@@ -488,7 +488,7 @@ impl LocalStorage {
         let source_storage_class = get_object_output.storage_class().cloned();
         let source_version_id = get_object_output.version_id().map(|v| v.to_string());
 
-        let source_last_modified = to_rfc3339_millis(&get_object_output.last_modified.unwrap())?;
+        let source_last_modified = to_rfc3339_millis(&get_object_output.last_modified.unwrap());
         let source_last_modified_raw = get_object_output.last_modified().copied();
 
         if fs_util::check_directory_traversal(key) {

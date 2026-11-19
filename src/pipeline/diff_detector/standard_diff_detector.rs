@@ -41,8 +41,8 @@ impl DiffDetectionStrategy for StandardDiffDetector {
             return Ok(true);
         }
 
-        let source_last_modified = to_rfc3339_millis(source_object.last_modified())?;
-        let target_last_modified = to_rfc3339_millis(target_object.last_modified().unwrap())?;
+        let source_last_modified = to_rfc3339_millis(source_object.last_modified());
+        let target_last_modified = to_rfc3339_millis(target_object.last_modified().unwrap());
         let key = source_object.key();
 
         let mut event_data = EventData::new(EventType::SYNC_FILTERED);

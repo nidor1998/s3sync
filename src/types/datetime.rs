@@ -53,10 +53,15 @@ pub fn to_time_millis(dt: &DateTime) -> anyhow::Result<OffsetDateTime> {
     Ok(DateTime::from_millis(dt.to_millis()?).to_time()?)
 }
 
-/// Formats an AWS [`DateTime`] as RFC 3339 in UTC at millisecond precision.
-/// See [`to_time_millis`] and [`Rfc3339Ext::to_rfc3339`].
-pub fn to_rfc3339_millis(dt: &DateTime) -> anyhow::Result<String> {
-    Ok(to_time_millis(dt)?.to_rfc3339())
+/// Formats an AWS [`DateTime`] as RFC 3339 in UTC at millisecond precision,
+/// for logging. See [`to_time_millis`] and [`Rfc3339Ext::to_rfc3339`].
+///
+/// This never fails: if the value is outside the range of [`OffsetDateTime`],
+/// it falls back to [`DateTime`]'s own `Display` (epoch seconds when out of range).
+pub fn to_rfc3339_millis(dt: &DateTime) -> String {
+    to_time_millis(dt)
+        .map(|t| t.to_rfc3339())
+        .unwrap_or_else(|_| dt.to_string())
 }
 
 /// Returns the instant as nanoseconds since the Unix epoch, truncated to
@@ -71,8 +76,8 @@ pub fn unix_nanos_millis(dt: &DateTime) -> i128 {
 
 /// RFC 3339 formatting helpers for [`OffsetDateTime`].
 ///
-/// Years outside `0000..=9999` are written with an explicit sign and at least
-/// four digits (e.g. `-0001`, `+10000`), matching `chrono`. Such output is an
+/// Negative years are written with an explicit sign and at least four digits
+/// (e.g. `-0001`), matching `chrono`. Such output is an
 /// extension of RFC 3339, which only allows four-digit non-negative years.
 ///
 /// Values are converted to UTC. If that conversion would go out of range, the
@@ -215,17 +220,9 @@ mod tests {
     }
 
     #[test]
-    fn large_year_has_plus_sign() {
-        let dt = parse_rfc3339_utc("9999-12-31T23:59:59Z").unwrap() + time::Duration::seconds(1);
-        assert_eq!(dt.year(), 10000);
-        assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:00:00+00:00");
-        assert_eq!(dt.to_rfc3339_secs(), "+10000-01-01T00:00:00+00:00");
-    }
-
-    #[test]
     fn parse_max_date_with_negative_offset_does_not_panic() {
-        let dt = parse_rfc3339_utc("9999-12-31T23:59:59-01:00").unwrap();
-        assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:59:59+00:00");
+        // Out of range once converted to UTC (year 10000).
+        assert!(parse_rfc3339_utc("9999-12-31T23:59:59-01:00").is_err());
     }
 
     #[test]
@@ -233,8 +230,8 @@ mod tests {
         let max =
             time::PrimitiveDateTime::MAX.assume_offset(UtcOffset::from_hms(-1, -30, 0).unwrap());
         assert!(max.checked_to_offset(UtcOffset::UTC).is_none());
-        assert_eq!(max.to_rfc3339(), "+999999-12-31T23:59:59.999999999-01:30");
-        assert_eq!(max.to_rfc3339_secs(), "+999999-12-31T23:59:59-01:30");
+        assert_eq!(max.to_rfc3339(), "9999-12-31T23:59:59.999999999-01:30");
+        assert_eq!(max.to_rfc3339_secs(), "9999-12-31T23:59:59-01:30");
     }
 
     #[test]
@@ -259,20 +256,31 @@ mod tests {
         let t = to_time_millis(&dt).unwrap();
         assert_eq!(t.nanosecond(), 552_000_000);
         assert_eq!(t.to_rfc3339(), "2023-01-20T17:56:37.552+00:00");
-        assert_eq!(
-            to_rfc3339_millis(&dt).unwrap(),
-            "2023-01-20T17:56:37.552+00:00"
-        );
+        assert_eq!(to_rfc3339_millis(&dt), "2023-01-20T17:56:37.552+00:00");
     }
 
     #[test]
-    fn aws_date_time_beyond_year_9999_converts() {
-        use aws_smithy_types::DateTime;
-        use aws_smithy_types_convert::date_time::DateTimeExt;
+    fn to_rfc3339_millis_out_of_range_falls_back() {
+        // 10000-01-01T00:00:00Z is beyond `OffsetDateTime`'s range.
+        let dt = DateTime::from_secs(253_402_300_800);
+        assert!(to_time_millis(&dt).is_err());
+        assert_eq!(to_rfc3339_millis(&dt), dt.to_string());
+        assert!(!to_rfc3339_millis(&DateTime::from_secs(40_000_000_000_000)).is_empty());
+    }
 
-        // 10000-01-01T00:00:00Z: rejected by `time` without `large-dates`.
-        let dt = DateTime::from_secs(253_402_300_800).to_time().unwrap();
-        assert_eq!(dt.to_rfc3339(), "+10000-01-01T00:00:00+00:00");
+    #[test]
+    fn http_date_rejects_year_10000() {
+        // Guards against enabling `time`'s `large-dates` feature: Cargo feature
+        // unification would turn it on inside aws-smithy-types too, and its
+        // HTTP-date formatter (used for `Expires`) relies on years >= 10000
+        // being rejected. With the feature on, this formats a malformed date
+        // (release) or panics (debug).
+        use aws_smithy_types::date_time::Format;
+        assert!(
+            DateTime::from_secs(253_402_300_800)
+                .fmt(Format::HttpDate)
+                .is_err()
+        );
     }
 
     #[test]

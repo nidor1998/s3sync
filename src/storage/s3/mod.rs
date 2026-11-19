@@ -1074,7 +1074,7 @@ impl StorageTrait for S3Storage {
         let target_key = generate_full_key(&self.prefix, key);
         let source_key = key;
         let source_last_modified =
-            to_rfc3339_millis(get_object_output_first_chunk.last_modified().unwrap())?;
+            to_rfc3339_millis(get_object_output_first_chunk.last_modified().unwrap());
 
         if self.config.dry_run {
             self.send_stats(SyncBytes(source_size)).await;
