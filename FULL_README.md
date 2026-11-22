@@ -1119,8 +1119,8 @@ total synchronization operations.
 ### Lua VM security
 
 By default, a Lua script runs in a safe mode.
-Lua's [Operating System facilities](https://www.lua.org/manual/5.5/manual.html#6.9)
-and [Input and Output Facilities](https://www.lua.org/manual/5.5/manual.html#6.8) are disabled by default.  
+Lua's [Operating System facilities](https://www.lua.org/manual/5.5/manual.html#6.10)
+and [Input and Output Facilities](https://www.lua.org/manual/5.5/manual.html#6.9) are disabled by default.  
 This is because these facilities can be used to execute arbitrary commands, which can be a security risk. (especially
 set-uid/set-gid/fs-capability programs)  
 Also, Lua VM is not allowed to load unsafe standard libraries or C modules.
