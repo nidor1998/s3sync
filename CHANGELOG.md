@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.63.0] - 2026-11-22
+
+Update for the end of life (EOL) of the `chrono` crate.
 
 ### Security
 
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whitespace, are now rejected with an argument error. A leap second (`:60`) is accepted only at 23:59 on the last
   day of a month and is treated as `23:59:59.999999999`; elsewhere it is rejected. Standard RFC 3339 timestamps such
   as `2023-02-19T12:00:00Z` and `2023-02-19T12:00:00+09:00` work as before.
+- aws-sdk-s3 `v1.157.0 -> v1.159.0`
+- Updated other dependencies
 
 ## [1.62.5] - 2026-11-14
 
