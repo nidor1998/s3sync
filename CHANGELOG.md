@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.63.0] - 2026-11-22
+
+Update for the end of life (EOL) of the `chrono` crate and Lua 5.4.
 
 ### Security
 
@@ -13,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([RUSTSEC-2026-0543](https://rustsec.org/advisories/RUSTSEC-2026-0543)).
 - Updated `libz-sys` to `v1.1.33` to address
   [RUSTSEC-2026-0544](https://rustsec.org/advisories/RUSTSEC-2026-0544).
+- Shortened the minimum publish age for dependency resolution (`.cargo/min-publish-age.toml`) from 7 days to 3 days
+  so that security fixes in dependencies can be adopted sooner.
 
 ### Changed
 
@@ -22,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whitespace, are now rejected with an argument error. A leap second (`:60`) is accepted only at 23:59 on the last
   day of a month and is treated as `23:59:59.999999999`; elsewhere it is rejected. Standard RFC 3339 timestamps such
   as `2023-02-19T12:00:00Z` and `2023-02-19T12:00:00+09:00` work as before.
+- [Breaking change] The embedded Lua engine is now Lua 5.5 (previously Lua 5.4). Lua 5.5 is not fully compatible
+  with Lua 5.4 (for example, `for` loop control variables are now read-only, and `global` is now a reserved word), so
+  existing Lua scripts may need to be updated. See
+  [Incompatibilities with the Previous Version](https://www.lua.org/manual/5.5/manual.html#8) in the Lua 5.5 manual.
+- aws-sdk-s3 `v1.157.0 -> v1.161.0`
+- MSRV `1.94.1 -> 1.99.0`
+- Replaced the `filetime` crate with `std::fs::set_times` for setting the modification time of local files.
+- Updated other dependencies
 
 ## [1.62.5] - 2026-11-14
 

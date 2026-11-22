@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/d/s3sync?label=downloads%20%28crates.io%29)](https://crates.io/crates/s3sync)
 [![GitHub](https://img.shields.io/github/downloads/nidor1998/s3sync/total?label=downloads%20%28GitHub%29)](https://github.com/nidor1998/s3sync/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![MSRV](https://img.shields.io/badge/msrv-1.94.1-red)
+![MSRV](https://img.shields.io/badge/msrv-1.99.0-red)
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 
@@ -561,7 +561,7 @@ Note: few S3-compatible storage supports conditional requests.
 
 ### Lua scripting support
 
-You can use a [Lua](https://www.lua.org) (5.4) script to implement custom filtering, event handling, preprocessing
+You can use a [Lua](https://www.lua.org) (5.5) script to implement custom filtering, event handling, preprocessing
 before transferring objects
 to S3.  
 `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available
@@ -648,7 +648,7 @@ See [Install Rust](https://www.rust-lang.org/tools/install)
 
 ### Build
 
-s3sync requires Rust 1.94.1 or later.
+s3sync requires Rust 1.99.0 or later.
 
 ```bash
 cargo install s3sync
@@ -1119,8 +1119,8 @@ total synchronization operations.
 ### Lua VM security
 
 By default, a Lua script runs in a safe mode.
-Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.9)
-and [Input and Output Facilities](https://www.lua.org/manual/5.4/manual.html#6.8) are disabled by default.  
+Lua's [Operating System facilities](https://www.lua.org/manual/5.5/manual.html#6.10)
+and [Input and Output Facilities](https://www.lua.org/manual/5.5/manual.html#6.9) are disabled by default.  
 This is because these facilities can be used to execute arbitrary commands, which can be a security risk. (especially
 set-uid/set-gid/fs-capability programs)  
 Also, Lua VM is not allowed to load unsafe standard libraries or C modules.
@@ -1137,8 +1137,8 @@ But an event callback Lua script does not stop the operation, just shows the war
 
 ### Lua version
 
-s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.4.  
-If you want to use `LuaJIT`, `luau-jit`, `Lua 5.5` etc, you can modify the `Cargo.toml` file and set the `mlua`
+s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.5.  
+If you want to use `LuaJIT`, `luau-jit`, `Lua 5.4` etc, you can modify the `Cargo.toml` file and set the `mlua`
 feature.  
 For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
 

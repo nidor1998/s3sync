@@ -21,7 +21,6 @@ use aws_sdk_s3::types::{
 };
 use aws_smithy_types::checksum_config::RequestChecksumCalculation::WhenRequired;
 use aws_types::SdkConfig;
-use filetime::{FileTime, set_file_mtime};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs::File;
@@ -228,8 +227,11 @@ impl TestHelper {
     pub fn update_large_file_mtime_in(dir: &str) {
         let file_path = PathBuf::from(dir).join("large_file");
         std::thread::sleep(time::Duration::from_secs(2));
-        let now = FileTime::now();
-        set_file_mtime(&file_path, now).unwrap();
+        std::fs::set_times(
+            &file_path,
+            std::fs::FileTimes::new().set_modified(SystemTime::now()),
+        )
+        .unwrap();
     }
 
     pub async fn create_client() -> Client {
@@ -2063,8 +2065,11 @@ impl TestHelper {
 
         std::thread::sleep(time::Duration::from_secs(2));
 
-        let now = FileTime::now();
-        set_file_mtime(path, now).unwrap();
+        std::fs::set_times(
+            path,
+            std::fs::FileTimes::new().set_modified(SystemTime::now()),
+        )
+        .unwrap();
     }
 
     pub fn create_not_found_test_file() {
@@ -2101,18 +2106,17 @@ impl TestHelper {
     }
 
     pub fn touch_file(path: &str, add_sec: i64) {
-        set_file_mtime(
-            path,
-            FileTime::from_unix_time(
-                SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs() as i64
-                    + add_sec,
-                0,
-            ),
-        )
-        .unwrap();
+        let now_secs = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let base = SystemTime::UNIX_EPOCH + time::Duration::from_secs(now_secs);
+        let mtime = if add_sec >= 0 {
+            base + time::Duration::from_secs(add_sec.unsigned_abs())
+        } else {
+            base - time::Duration::from_secs(add_sec.unsigned_abs())
+        };
+        std::fs::set_times(path, std::fs::FileTimes::new().set_modified(mtime)).unwrap();
     }
 
     pub fn create_random_test_data_file(size_mb: usize, extra: i32) -> Result<()> {
