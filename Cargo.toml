@@ -76,7 +76,7 @@ zeroize_derive = "1.5.0"
 mlua = { version = "0.12.2", features = ["lua55", "async", "send", "vendored"], optional = true }
 
 [dev-dependencies]
-nix = { version = "0.31.4", features = ["user", "process", "signal"] }
+nix = { version = "0.32.0", features = ["user", "process", "signal"] }
 once_cell = "1.21.4"
 uuid = { version = "1.29.3", features = ["v4"] }
 
