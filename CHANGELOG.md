@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.63.0] - 2026-11-22
 
-Update for the end of life (EOL) of the `chrono` crate.
+Update for the end of life (EOL) of the `chrono` crate and Lua 5.4.
 
 ### Security
 
@@ -26,7 +26,7 @@ Update for the end of life (EOL) of the `chrono` crate.
   as `2023-02-19T12:00:00Z` and `2023-02-19T12:00:00+09:00` work as before.
 - [Breaking change] The embedded Lua engine is now Lua 5.5 (previously Lua 5.4). Lua 5.5 is not fully compatible
   with Lua 5.4 (for example, `for` loop control variables are now read-only), so existing Lua scripts may need to be
-  updated. Lua 5.4 can still be used by building with the `mlua` `lua54` feature.
+  updated.
 - aws-sdk-s3 `v1.157.0 -> v1.159.0`
 - Updated other dependencies
 
