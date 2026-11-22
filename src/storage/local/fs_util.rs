@@ -1,8 +1,9 @@
+use std::fs::FileTimes;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
 use anyhow::{Context, Result};
 use aws_sdk_s3::primitives::DateTime;
-use filetime::{FileTime, set_file_mtime};
 use regex::Regex;
 use tempfile::NamedTempFile;
 use tokio::fs::File;
@@ -36,10 +37,29 @@ pub fn set_last_modified(
     seconds: i64,
     nanos: u32,
 ) -> std::io::Result<()> {
-    set_file_mtime(
+    let mtime = unix_time_to_system_time(seconds, nanos)?;
+    std::fs::set_times(
         key_to_file_path(path, key),
-        FileTime::from_unix_time(seconds, nanos),
+        FileTimes::new().set_modified(mtime),
     )
+}
+
+/// Converts a Unix timestamp (`seconds` may be negative, `nanos` is always added forward) to `SystemTime`.
+fn unix_time_to_system_time(seconds: i64, nanos: u32) -> std::io::Result<SystemTime> {
+    let whole_seconds = if seconds >= 0 {
+        SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(seconds.unsigned_abs()))
+    } else {
+        SystemTime::UNIX_EPOCH.checked_sub(Duration::from_secs(seconds.unsigned_abs()))
+    };
+
+    whole_seconds
+        .and_then(|time| time.checked_add(Duration::from_nanos(u64::from(nanos))))
+        .ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("last modified time is out of range: seconds={seconds}, nanos={nanos}"),
+            )
+        })
 }
 
 pub fn is_key_a_directory(key: &str) -> bool {
@@ -807,6 +827,36 @@ mod tests {
             .unwrap();
         assert_eq!(mtime.secs(), 777);
         assert_eq!(mtime.subsec_nanos(), 999);
+    }
+
+    #[test]
+    fn unix_time_to_system_time_converts_positive_and_negative_seconds() {
+        init_dummy_tracing_subscriber();
+
+        assert_eq!(
+            unix_time_to_system_time(0, 0).unwrap(),
+            SystemTime::UNIX_EPOCH
+        );
+        assert_eq!(
+            unix_time_to_system_time(777, 999).unwrap(),
+            SystemTime::UNIX_EPOCH + Duration::new(777, 999)
+        );
+        assert_eq!(
+            unix_time_to_system_time(-2, 500_000_000).unwrap(),
+            SystemTime::UNIX_EPOCH - Duration::from_millis(1_500)
+        );
+    }
+
+    #[test]
+    fn unix_time_to_system_time_rejects_out_of_range_seconds() {
+        init_dummy_tracing_subscriber();
+
+        assert_eq!(
+            unix_time_to_system_time(i64::MAX, 1_999_999_999)
+                .unwrap_err()
+                .kind(),
+            std::io::ErrorKind::InvalidInput
+        );
     }
 
     #[tokio::test]

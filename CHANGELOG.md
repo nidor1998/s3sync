@@ -27,7 +27,8 @@ Update for the end of life (EOL) of the `chrono` crate and Lua 5.4.
 - [Breaking change] The embedded Lua engine is now Lua 5.5 (previously Lua 5.4). Lua 5.5 is not fully compatible
   with Lua 5.4 (for example, `for` loop control variables are now read-only), so existing Lua scripts may need to be
   updated.
-- aws-sdk-s3 `v1.157.0 -> v1.159.0`
+- aws-sdk-s3 `v1.157.0 -> v1.161.0`
+- MSRV `1.94.1 -> 1.99.0`
 - Updated other dependencies
 
 ## [1.62.5] - 2026-11-14
