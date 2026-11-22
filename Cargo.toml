@@ -67,7 +67,7 @@ zeroize = "1.9.2"
 zeroize_derive = "1.5.0"
 
 ## The following dependencies are only required for lua support.
-## If you want to luagit, you can specify the `luajit` feature.
+## If you want to use LuaJIT, you can specify the `luajit` feature.
 ## mlua = { version = "0.12", features = ["luajit", "async", "send", "vendored"], optional = true }
 ## If you want to use lua5.4, you can specify the `lua54` feature.
 ## mlua = { version = "0.12", features = ["lua54", "async", "send", "vendored"], optional = true }

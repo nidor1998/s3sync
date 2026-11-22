@@ -45,7 +45,16 @@ pub fn set_last_modified(
 }
 
 /// Converts a Unix timestamp (`seconds` may be negative, `nanos` is always added forward) to `SystemTime`.
+///
+/// `nanos` must be less than 1,000,000,000; otherwise `InvalidInput` is returned (as `utimensat` does).
 fn unix_time_to_system_time(seconds: i64, nanos: u32) -> std::io::Result<SystemTime> {
+    if nanos >= 1_000_000_000 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("last modified time nanoseconds are out of range: nanos={nanos}"),
+        ));
+    }
+
     let whole_seconds = if seconds >= 0 {
         SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(seconds.unsigned_abs()))
     } else {
@@ -847,15 +856,32 @@ mod tests {
         );
     }
 
+    // On Unix, `SystemTime` can represent every `i64` second value, so only Windows
+    // (100ns intervals since 1601) can overflow from `seconds` alone.
+    #[cfg(windows)]
     #[test]
     fn unix_time_to_system_time_rejects_out_of_range_seconds() {
         init_dummy_tracing_subscriber();
 
         assert_eq!(
-            unix_time_to_system_time(i64::MAX, 1_999_999_999)
+            unix_time_to_system_time(i64::MAX, 0).unwrap_err().kind(),
+            std::io::ErrorKind::InvalidInput
+        );
+    }
+
+    #[test]
+    fn unix_time_to_system_time_rejects_out_of_range_nanos() {
+        init_dummy_tracing_subscriber();
+
+        assert_eq!(
+            unix_time_to_system_time(10, 1_000_000_000)
                 .unwrap_err()
                 .kind(),
             std::io::ErrorKind::InvalidInput
+        );
+        assert_eq!(
+            unix_time_to_system_time(10, 999_999_999).unwrap(),
+            SystemTime::UNIX_EPOCH + Duration::new(10, 999_999_999)
         );
     }
 
