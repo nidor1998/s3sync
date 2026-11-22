@@ -2269,6 +2269,15 @@ mod tests {
     async fn list_storage_special_files_warn_as_error() {
         init_dummy_tracing_subscriber();
 
+        // A Unix domain socket can never be opened with open(2) (ENXIO on Linux,
+        // EOPNOTSUPP on macOS), even as root, so the listing deterministically
+        // hits an access error. Listing /dev/fd instead depends on which file
+        // descriptors happen to be open in the test process and is flaky.
+        let temp_dir = tempfile::tempdir().unwrap();
+        let _listener =
+            std::os::unix::net::UnixListener::bind(temp_dir.path().join("special.sock")).unwrap();
+        let target_path = temp_dir.path().to_str().unwrap();
+
         let args = vec![
             "s3sync",
             "--source-access-key",
@@ -2276,7 +2285,7 @@ mod tests {
             "--source-secret-access-key",
             "dummy_secret_access_key",
             "s3://dummy-bucket",
-            "/dev/fd",
+            target_path,
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let (stats_sender, _) = async_channel::unbounded();
