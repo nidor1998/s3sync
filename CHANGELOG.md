@@ -24,6 +24,9 @@ Update for the end of life (EOL) of the `chrono` crate.
   whitespace, are now rejected with an argument error. A leap second (`:60`) is accepted only at 23:59 on the last
   day of a month and is treated as `23:59:59.999999999`; elsewhere it is rejected. Standard RFC 3339 timestamps such
   as `2023-02-19T12:00:00Z` and `2023-02-19T12:00:00+09:00` work as before.
+- [Breaking change] The embedded Lua engine is now Lua 5.5 (previously Lua 5.4). Lua 5.5 is not fully compatible
+  with Lua 5.4 (for example, `for` loop control variables are now read-only), so existing Lua scripts may need to be
+  updated. Lua 5.4 can still be used by building with the `mlua` `lua54` feature.
 - aws-sdk-s3 `v1.157.0 -> v1.159.0`
 - Updated other dependencies
 

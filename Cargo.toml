@@ -69,12 +69,12 @@ zeroize_derive = "1.5.0"
 
 ## The following dependencies are only required for lua support.
 ## If you want to luagit, you can specify the `luajit` feature.
-## mlua = { version = "0.11", features = ["luajit", "async", "send", "vendored"], optional = true }
-## If you want to lua5.5, you can specify the `luajit` feature.
-## mlua = { version = "0.11", features = ["lua55", "async", "send", "vendored"], optional = true }
+## mlua = { version = "0.12", features = ["luajit", "async", "send", "vendored"], optional = true }
+## If you want to use lua5.4, you can specify the `lua54` feature.
+## mlua = { version = "0.12", features = ["lua54", "async", "send", "vendored"], optional = true }
 ## If you have trouble with third-party Lua libraries, remove `vendored` feature(static linking). This will use the system Lua engine.
 ## But you need to install Lua engine according to your OS.
-mlua = { version = "0.12.2", features = ["lua54", "async", "send", "vendored"], optional = true }
+mlua = { version = "0.12.2", features = ["lua55", "async", "send", "vendored"], optional = true }
 
 [dev-dependencies]
 nix = { version = "0.31.3", features = ["user", "process", "signal"] }

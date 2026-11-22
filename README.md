@@ -115,7 +115,7 @@ correctly.
   With a versioning-enabled S3 bucket, you can transfer objects at a specific point in time.
 
 - Lua scripting support   
-  You can use a [Lua](https://www.lua.org) (5.4) script to implement custom filtering, event handling, preprocessing
+  You can use a [Lua](https://www.lua.org) (5.5) script to implement custom filtering, event handling, preprocessing
   before transferring objects to S3.  
   `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are
   available

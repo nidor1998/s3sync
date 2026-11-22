@@ -561,7 +561,7 @@ Note: few S3-compatible storage supports conditional requests.
 
 ### Lua scripting support
 
-You can use a [Lua](https://www.lua.org) (5.4) script to implement custom filtering, event handling, preprocessing
+You can use a [Lua](https://www.lua.org) (5.5) script to implement custom filtering, event handling, preprocessing
 before transferring objects
 to S3.  
 `--preprocess-callback-lua-script`, `--event-callback-lua-script`, `--filter-callback-lua-script` options are available
@@ -1119,8 +1119,8 @@ total synchronization operations.
 ### Lua VM security
 
 By default, a Lua script runs in a safe mode.
-Lua's [Operating System facilities](https://www.lua.org/manual/5.4/manual.html#6.9)
-and [Input and Output Facilities](https://www.lua.org/manual/5.4/manual.html#6.8) are disabled by default.  
+Lua's [Operating System facilities](https://www.lua.org/manual/5.5/manual.html#6.9)
+and [Input and Output Facilities](https://www.lua.org/manual/5.5/manual.html#6.8) are disabled by default.  
 This is because these facilities can be used to execute arbitrary commands, which can be a security risk. (especially
 set-uid/set-gid/fs-capability programs)  
 Also, Lua VM is not allowed to load unsafe standard libraries or C modules.
@@ -1137,8 +1137,8 @@ But an event callback Lua script does not stop the operation, just shows the war
 
 ### Lua version
 
-s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.4.  
-If you want to use `LuaJIT`, `luau-jit`, `Lua 5.5` etc, you can modify the `Cargo.toml` file and set the `mlua`
+s3sync uses [mlua](https://docs.rs/mlua/latest/mlua/) for Lua scripting support. By default, s3sync uses Lua 5.5.  
+If you want to use `LuaJIT`, `luau-jit`, `Lua 5.4` etc, you can modify the `Cargo.toml` file and set the `mlua`
 feature.  
 For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
 
