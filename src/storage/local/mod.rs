@@ -1967,6 +1967,7 @@ fn convert_windows_directory_char_to_slash(path: &str) -> String {
 mod tests {
     use super::*;
     use crate::config::args::parse_from_args;
+    use crate::storage::checksum::AdditionalChecksum;
     use crate::storage::local::remove_local_path_prefix;
     use crate::types::token::create_pipeline_cancellation_token;
     use tokio::io::AsyncReadExt;
@@ -3102,6 +3103,117 @@ mod tests {
         assert!(get_object_result.checksum_xxhash128.is_none());
         assert!(get_object_result.checksum_xxhash3.is_none());
         assert!(get_object_result.checksum_xxhash64.is_none());
+    }
+
+    // Only the checksum field of the configured algorithm is set, and it holds the checksum of the file.
+    #[tokio::test]
+    async fn get_object_with_checksum_all_algorithms() {
+        init_dummy_tracing_subscriber();
+
+        let data = tokio::fs::read("./test_data/source/data1").await.unwrap();
+
+        for algorithm in [
+            ChecksumAlgorithm::Crc32,
+            ChecksumAlgorithm::Crc32C,
+            ChecksumAlgorithm::Crc64Nvme,
+            ChecksumAlgorithm::Sha1,
+            ChecksumAlgorithm::Sha256,
+            ChecksumAlgorithm::Sha512,
+            ChecksumAlgorithm::Md5,
+            ChecksumAlgorithm::Xxhash128,
+            ChecksumAlgorithm::Xxhash3,
+            ChecksumAlgorithm::Xxhash64,
+        ] {
+            let args = vec![
+                "s3sync",
+                "--target-access-key",
+                "dummy_access_key",
+                "--target-secret-access-key",
+                "dummy_secret_access_key",
+                "--additional-checksum-algorithm",
+                algorithm.as_str(),
+                "./test_data/",
+                "s3://dummy-bucket",
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let (stats_sender, _) = async_channel::unbounded();
+
+            let storage = LocalStorageFactory::create(
+                config.clone(),
+                config.source.clone(),
+                create_pipeline_cancellation_token(),
+                stats_sender,
+                config.source_client_config.clone(),
+                None,
+                None,
+                None,
+                Arc::new(AtomicBool::new(false)),
+                None,
+            )
+            .await;
+
+            let get_object_result = storage
+                .get_object(
+                    "source/data1",
+                    None,
+                    None,
+                    Some("bytes=0-4".to_string()),
+                    None,
+                    SseCustomerKey { key: None },
+                    None,
+                )
+                .await
+                .unwrap();
+
+            let mut hasher = AdditionalChecksum::new(algorithm.clone(), false);
+            hasher.update(data.as_slice());
+            let expected = hasher.finalize();
+
+            let all_checksums = [
+                (ChecksumAlgorithm::Crc32, &get_object_result.checksum_crc32),
+                (
+                    ChecksumAlgorithm::Crc32C,
+                    &get_object_result.checksum_crc32_c,
+                ),
+                (
+                    ChecksumAlgorithm::Crc64Nvme,
+                    &get_object_result.checksum_crc64_nvme,
+                ),
+                (ChecksumAlgorithm::Sha1, &get_object_result.checksum_sha1),
+                (
+                    ChecksumAlgorithm::Sha256,
+                    &get_object_result.checksum_sha256,
+                ),
+                (
+                    ChecksumAlgorithm::Sha512,
+                    &get_object_result.checksum_sha512,
+                ),
+                (ChecksumAlgorithm::Md5, &get_object_result.checksum_md5),
+                (
+                    ChecksumAlgorithm::Xxhash128,
+                    &get_object_result.checksum_xxhash128,
+                ),
+                (
+                    ChecksumAlgorithm::Xxhash3,
+                    &get_object_result.checksum_xxhash3,
+                ),
+                (
+                    ChecksumAlgorithm::Xxhash64,
+                    &get_object_result.checksum_xxhash64,
+                ),
+            ];
+
+            for (field_algorithm, value) in all_checksums {
+                if field_algorithm == algorithm {
+                    assert_eq!(value.as_deref(), Some(expected.as_str()), "{algorithm}");
+                } else {
+                    assert!(
+                        value.is_none(),
+                        "{algorithm}: {field_algorithm} must be None"
+                    );
+                }
+            }
+        }
     }
 
     #[tokio::test]

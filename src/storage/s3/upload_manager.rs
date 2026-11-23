@@ -2451,6 +2451,131 @@ mod tests {
     use aws_sdk_s3::primitives::DateTime;
     use tracing_subscriber::EnvFilter;
 
+    // Every checksum field has a distinct value, so reading a wrong field is detected.
+    const ALL_ADDITIONAL_CHECKSUMS: [(ChecksumAlgorithm, &str); 10] = [
+        (ChecksumAlgorithm::Crc32, "crc32"),
+        (ChecksumAlgorithm::Crc32C, "crc32c"),
+        (ChecksumAlgorithm::Crc64Nvme, "crc64nvme"),
+        (ChecksumAlgorithm::Sha1, "sha1"),
+        (ChecksumAlgorithm::Sha256, "sha256"),
+        (ChecksumAlgorithm::Sha512, "sha512"),
+        (ChecksumAlgorithm::Md5, "md5"),
+        (ChecksumAlgorithm::Xxhash128, "xxhash128"),
+        (ChecksumAlgorithm::Xxhash3, "xxhash3"),
+        (ChecksumAlgorithm::Xxhash64, "xxhash64"),
+    ];
+
+    #[test]
+    fn get_additional_checksum_from_put_object_result_all_algorithms_test() {
+        init_dummy_tracing_subscriber();
+
+        let put_object_output = PutObjectOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .build();
+
+        for (algorithm, expected) in ALL_ADDITIONAL_CHECKSUMS {
+            assert_eq!(
+                get_additional_checksum_from_put_object_result(
+                    &put_object_output,
+                    Some(algorithm.clone())
+                ),
+                Some(expected.to_string()),
+                "{algorithm}"
+            );
+        }
+
+        assert!(get_additional_checksum_from_put_object_result(&put_object_output, None).is_none());
+
+        let empty = PutObjectOutput::builder().build();
+        for (algorithm, _) in ALL_ADDITIONAL_CHECKSUMS {
+            assert!(
+                get_additional_checksum_from_put_object_result(&empty, Some(algorithm.clone()))
+                    .is_none(),
+                "{algorithm}"
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown algorithm")]
+    fn get_additional_checksum_from_put_object_result_unknown_algorithm_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = get_additional_checksum_from_put_object_result(
+            &PutObjectOutput::builder().build(),
+            Some(ChecksumAlgorithm::from("UNKNOWN")),
+        );
+    }
+
+    #[test]
+    fn get_additional_checksum_from_multipart_upload_result_all_algorithms_test() {
+        init_dummy_tracing_subscriber();
+
+        let complete_multipart_upload_output = CompleteMultipartUploadOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .build();
+
+        for (algorithm, expected) in ALL_ADDITIONAL_CHECKSUMS {
+            assert_eq!(
+                get_additional_checksum_from_multipart_upload_result(
+                    &complete_multipart_upload_output,
+                    Some(algorithm.clone())
+                ),
+                Some(expected.to_string()),
+                "{algorithm}"
+            );
+        }
+
+        assert!(
+            get_additional_checksum_from_multipart_upload_result(
+                &complete_multipart_upload_output,
+                None
+            )
+            .is_none()
+        );
+
+        let empty = CompleteMultipartUploadOutput::builder().build();
+        for (algorithm, _) in ALL_ADDITIONAL_CHECKSUMS {
+            assert!(
+                get_additional_checksum_from_multipart_upload_result(
+                    &empty,
+                    Some(algorithm.clone())
+                )
+                .is_none(),
+                "{algorithm}"
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown algorithm")]
+    fn get_additional_checksum_from_multipart_upload_result_unknown_algorithm_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = get_additional_checksum_from_multipart_upload_result(
+            &CompleteMultipartUploadOutput::builder().build(),
+            Some(ChecksumAlgorithm::from("UNKNOWN")),
+        );
+    }
+
     #[test]
     fn need_md5_digest_test() {
         init_dummy_tracing_subscriber();

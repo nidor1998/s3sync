@@ -782,6 +782,123 @@ mod tests {
         );
     }
 
+    // Every checksum field has a distinct value, so copying from a wrong field is detected.
+    #[test]
+    fn convert_head_to_get_object_output_checksums_test() {
+        init_dummy_tracing_subscriber();
+
+        let head_object_output = HeadObjectOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .checksum_type(aws_sdk_s3::types::ChecksumType::FullObject)
+            .build();
+
+        let output = convert_head_to_get_object_output(head_object_output);
+
+        assert_eq!(output.checksum_crc32(), Some("crc32"));
+        assert_eq!(output.checksum_crc32_c(), Some("crc32c"));
+        assert_eq!(output.checksum_crc64_nvme(), Some("crc64nvme"));
+        assert_eq!(output.checksum_sha1(), Some("sha1"));
+        assert_eq!(output.checksum_sha256(), Some("sha256"));
+        assert_eq!(output.checksum_sha512(), Some("sha512"));
+        assert_eq!(output.checksum_md5(), Some("md5"));
+        assert_eq!(output.checksum_xxhash128(), Some("xxhash128"));
+        assert_eq!(output.checksum_xxhash3(), Some("xxhash3"));
+        assert_eq!(output.checksum_xxhash64(), Some("xxhash64"));
+        assert_eq!(
+            output.checksum_type(),
+            Some(&aws_sdk_s3::types::ChecksumType::FullObject)
+        );
+    }
+
+    #[test]
+    fn convert_copy_to_put_object_output_checksums_test() {
+        init_dummy_tracing_subscriber();
+
+        let copy_object_output = CopyObjectOutput::builder()
+            .copy_object_result(
+                aws_sdk_s3::types::CopyObjectResult::builder()
+                    .e_tag("etag")
+                    .checksum_crc32("crc32")
+                    .checksum_crc32_c("crc32c")
+                    .checksum_crc64_nvme("crc64nvme")
+                    .checksum_sha1("sha1")
+                    .checksum_sha256("sha256")
+                    .checksum_sha512("sha512")
+                    .checksum_md5("md5")
+                    .checksum_xxhash128("xxhash128")
+                    .checksum_xxhash3("xxhash3")
+                    .checksum_xxhash64("xxhash64")
+                    .checksum_type(aws_sdk_s3::types::ChecksumType::Composite)
+                    .build(),
+            )
+            .build();
+
+        let output = convert_copy_to_put_object_output(copy_object_output, 1234);
+
+        assert_eq!(output.e_tag(), Some("etag"));
+        assert_eq!(output.size(), Some(1234));
+        assert_eq!(output.checksum_crc32(), Some("crc32"));
+        assert_eq!(output.checksum_crc32_c(), Some("crc32c"));
+        assert_eq!(output.checksum_crc64_nvme(), Some("crc64nvme"));
+        assert_eq!(output.checksum_sha1(), Some("sha1"));
+        assert_eq!(output.checksum_sha256(), Some("sha256"));
+        assert_eq!(output.checksum_sha512(), Some("sha512"));
+        assert_eq!(output.checksum_md5(), Some("md5"));
+        assert_eq!(output.checksum_xxhash128(), Some("xxhash128"));
+        assert_eq!(output.checksum_xxhash3(), Some("xxhash3"));
+        assert_eq!(output.checksum_xxhash64(), Some("xxhash64"));
+        assert_eq!(
+            output.checksum_type(),
+            Some(&aws_sdk_s3::types::ChecksumType::Composite)
+        );
+    }
+
+    #[test]
+    fn convert_copy_to_upload_part_output_checksums_test() {
+        init_dummy_tracing_subscriber();
+
+        let upload_part_copy_output = UploadPartCopyOutput::builder()
+            .copy_part_result(
+                aws_sdk_s3::types::CopyPartResult::builder()
+                    .e_tag("etag")
+                    .checksum_crc32("crc32")
+                    .checksum_crc32_c("crc32c")
+                    .checksum_crc64_nvme("crc64nvme")
+                    .checksum_sha1("sha1")
+                    .checksum_sha256("sha256")
+                    .checksum_sha512("sha512")
+                    .checksum_md5("md5")
+                    .checksum_xxhash128("xxhash128")
+                    .checksum_xxhash3("xxhash3")
+                    .checksum_xxhash64("xxhash64")
+                    .build(),
+            )
+            .build();
+
+        let output = convert_copy_to_upload_part_output(upload_part_copy_output);
+
+        assert_eq!(output.e_tag(), Some("etag"));
+        assert_eq!(output.checksum_crc32(), Some("crc32"));
+        assert_eq!(output.checksum_crc32_c(), Some("crc32c"));
+        assert_eq!(output.checksum_crc64_nvme(), Some("crc64nvme"));
+        assert_eq!(output.checksum_sha1(), Some("sha1"));
+        assert_eq!(output.checksum_sha256(), Some("sha256"));
+        assert_eq!(output.checksum_sha512(), Some("sha512"));
+        assert_eq!(output.checksum_md5(), Some("md5"));
+        assert_eq!(output.checksum_xxhash128(), Some("xxhash128"));
+        assert_eq!(output.checksum_xxhash3(), Some("xxhash3"));
+        assert_eq!(output.checksum_xxhash64(), Some("xxhash64"));
+    }
+
     #[test]
     fn test_parse_range_header_string_without_hyphen() {
         init_dummy_tracing_subscriber();
