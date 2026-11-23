@@ -16,6 +16,35 @@ mod tests {
 
     #[tokio::test]
     async fn local_to_s3_sync_report() {
+        local_to_s3_sync_report_with_checksum("SHA256").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_sync_report_sha512() {
+        local_to_s3_sync_report_with_checksum("SHA512").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_sync_report_md5() {
+        local_to_s3_sync_report_with_checksum("MD5").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_sync_report_xxhash128() {
+        local_to_s3_sync_report_with_checksum("XXHASH128").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_sync_report_xxhash3() {
+        local_to_s3_sync_report_with_checksum("XXHASH3").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_sync_report_xxhash64() {
+        local_to_s3_sync_report_with_checksum("XXHASH64").await;
+    }
+
+    async fn local_to_s3_sync_report_with_checksum(checksum_algorithm: &str) {
         TestHelper::init_tracing_subscriber_for_report();
 
         let helper = TestHelper::new().await;
@@ -34,7 +63,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--metadata",
                 "key2=value2,key1=value1",
                 "--tagging",
@@ -65,7 +94,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "./test_data/point_in_time/step1",
                 &target_bucket_url,
@@ -101,7 +130,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "./test_data/point_in_time/step2",
                 &target_bucket_url,
@@ -242,7 +271,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--sse",
                 "aws:kms",
                 "--metadata",
@@ -275,7 +304,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "./test_data/point_in_time/step1",
                 &target_bucket_url,
@@ -377,7 +406,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "./test_data/point_in_time/step1",
                 &target_bucket_url,
@@ -411,6 +440,35 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_local_sync_report() {
+        s3_to_local_sync_report_with_checksum("SHA256").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_local_sync_report_sha512() {
+        s3_to_local_sync_report_with_checksum("SHA512").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_local_sync_report_md5() {
+        s3_to_local_sync_report_with_checksum("MD5").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_local_sync_report_xxhash128() {
+        s3_to_local_sync_report_with_checksum("XXHASH128").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_local_sync_report_xxhash3() {
+        s3_to_local_sync_report_with_checksum("XXHASH3").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_local_sync_report_xxhash64() {
+        s3_to_local_sync_report_with_checksum("XXHASH64").await;
+    }
+
+    async fn s3_to_local_sync_report_with_checksum(checksum_algorithm: &str) {
         TestHelper::init_tracing_subscriber_for_report();
 
         let helper = TestHelper::new().await;
@@ -429,7 +487,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--metadata",
                 "key2=value2,key1=value1",
                 "--tagging",
@@ -461,7 +519,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 &source_bucket_url,
                 &download_dir,
             ];
@@ -488,7 +546,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 &source_bucket_url,
                 &download_dir,
@@ -524,7 +582,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 &source_bucket_url,
                 &download_dir,
@@ -631,7 +689,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--sse",
                 "aws:kms",
                 "--metadata",
@@ -698,7 +756,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 &source_bucket_url,
                 &download_dir,
@@ -766,7 +824,7 @@ mod tests {
                 "--source-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 &source_bucket_url,
                 &download_dir,
@@ -848,6 +906,35 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_s3_sync_report() {
+        s3_to_s3_sync_report_with_checksum("SHA256").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_report_sha512() {
+        s3_to_s3_sync_report_with_checksum("SHA512").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_report_md5() {
+        s3_to_s3_sync_report_with_checksum("MD5").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_report_xxhash128() {
+        s3_to_s3_sync_report_with_checksum("XXHASH128").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_report_xxhash3() {
+        s3_to_s3_sync_report_with_checksum("XXHASH3").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_report_xxhash64() {
+        s3_to_s3_sync_report_with_checksum("XXHASH64").await;
+    }
+
+    async fn s3_to_s3_sync_report_with_checksum(checksum_algorithm: &str) {
         TestHelper::init_tracing_subscriber_for_report();
 
         let helper = TestHelper::new().await;
@@ -868,7 +955,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--metadata",
                 "key2=value2,key1=value1",
                 "--tagging",
@@ -902,7 +989,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 &source_bucket_url,
                 &target_bucket_url,
@@ -933,7 +1020,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 "--report-tagging-sync-status",
@@ -974,7 +1061,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 "--report-tagging-sync-status",
@@ -1093,7 +1180,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--sse",
                 "aws:kms",
                 "--metadata",
@@ -1129,7 +1216,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--sse",
                 "aws:kms",
                 "--enable-additional-checksum",
@@ -1201,7 +1288,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 "--report-tagging-sync-status",
@@ -1275,7 +1362,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 &source_bucket_url,
                 &target_bucket_url,
             ];
@@ -1305,7 +1392,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 "--report-tagging-sync-status",
@@ -1349,7 +1436,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--sse",
                 "aws:kms",
                 "--metadata",
@@ -1385,7 +1472,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 &source_bucket_url,
                 &target_bucket_url,
@@ -1456,7 +1543,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--metadata",
                 "key2=value2,key1=value1",
                 "--tagging",
@@ -1518,7 +1605,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 "--report-tagging-sync-status",
@@ -1555,6 +1642,35 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_s3_sync_metadata_report() {
+        s3_to_s3_sync_metadata_report_with_checksum("SHA256").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_metadata_report_sha512() {
+        s3_to_s3_sync_metadata_report_with_checksum("SHA512").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_metadata_report_md5() {
+        s3_to_s3_sync_metadata_report_with_checksum("MD5").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_metadata_report_xxhash128() {
+        s3_to_s3_sync_metadata_report_with_checksum("XXHASH128").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_metadata_report_xxhash3() {
+        s3_to_s3_sync_metadata_report_with_checksum("XXHASH3").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_metadata_report_xxhash64() {
+        s3_to_s3_sync_metadata_report_with_checksum("XXHASH64").await;
+    }
+
+    async fn s3_to_s3_sync_metadata_report_with_checksum(checksum_algorithm: &str) {
         TestHelper::init_tracing_subscriber_for_report();
 
         let helper = TestHelper::new().await;
@@ -1575,7 +1691,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--content-disposition",
                 TEST_CONTENT_DISPOSITION,
                 "--content-encoding",
@@ -1623,7 +1739,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 &source_bucket_url,
                 &target_bucket_url,
@@ -1654,7 +1770,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 &source_bucket_url,
@@ -1697,7 +1813,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 "--no-sync-system-metadata",
                 "--no-sync-user-defined-metadata",
@@ -1730,7 +1846,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 &source_bucket_url,
@@ -1775,7 +1891,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 "--content-disposition",
                 TEST_CONTENT_DISPOSITION2,
@@ -1824,7 +1940,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-metadata-sync-status",
                 &source_bucket_url,
@@ -1862,6 +1978,35 @@ mod tests {
 
     #[tokio::test]
     async fn s3_to_s3_sync_tagging_report() {
+        s3_to_s3_sync_tagging_report_with_checksum("SHA256").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_tagging_report_sha512() {
+        s3_to_s3_sync_tagging_report_with_checksum("SHA512").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_tagging_report_md5() {
+        s3_to_s3_sync_tagging_report_with_checksum("MD5").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_tagging_report_xxhash128() {
+        s3_to_s3_sync_tagging_report_with_checksum("XXHASH128").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_tagging_report_xxhash3() {
+        s3_to_s3_sync_tagging_report_with_checksum("XXHASH3").await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_sync_tagging_report_xxhash64() {
+        s3_to_s3_sync_tagging_report_with_checksum("XXHASH64").await;
+    }
+
+    async fn s3_to_s3_sync_tagging_report_with_checksum(checksum_algorithm: &str) {
         TestHelper::init_tracing_subscriber_for_report();
 
         let helper = TestHelper::new().await;
@@ -1882,7 +2027,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--tagging",
                 TEST_TAGGING,
                 "./test_data/point_in_time",
@@ -1914,7 +2059,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 &source_bucket_url,
                 &target_bucket_url,
@@ -1945,7 +2090,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-tagging-sync-status",
                 &source_bucket_url,
@@ -1988,7 +2133,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 "--disable-tagging",
                 &source_bucket_url,
@@ -2020,7 +2165,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-tagging-sync-status",
                 &source_bucket_url,
@@ -2065,7 +2210,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
-                "SHA256",
+                checksum_algorithm,
                 "--enable-additional-checksum",
                 "--tagging",
                 TEST_TAGGING2,
@@ -2098,7 +2243,7 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-additional-checksum",
-                "SHA256",
+                checksum_algorithm,
                 "--report-sync-status",
                 "--report-tagging-sync-status",
                 &source_bucket_url,

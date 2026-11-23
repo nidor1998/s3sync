@@ -9830,6 +9830,42 @@ mod tests {
 
     #[tokio::test]
     async fn local_to_s3_with_mtime_checksum_check() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("CRC64NVME").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_sha256() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("SHA256").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_sha512() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("SHA512").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_md5() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("MD5").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_xxhash128() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("XXHASH128").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_xxhash3() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("XXHASH3").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_xxhash64() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("XXHASH64").await;
+    }
+
+    // The object is uploaded with 5MiB parts, but the checking runs use the default chunksize.
+    // For composite checksums, the local checksum must be calculated with the part sizes of the target object.
+    async fn local_to_s3_with_mtime_checksum_check_with_checksum(checksum_algorithm: &str) {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
@@ -9849,9 +9885,9 @@ mod tests {
                 "--multipart-chunksize",
                 "5MiB",
                 "--check-mtime-and-additional-checksum",
-                "CRC64NVME",
+                checksum_algorithm,
                 "--additional-checksum-algorithm",
-                "CRC64NVME",
+                checksum_algorithm,
                 &test_dir,
                 &target_bucket_url,
             ];
@@ -9880,9 +9916,9 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-mtime-and-additional-checksum",
-                "CRC64NVME",
+                checksum_algorithm,
                 "--additional-checksum-algorithm",
-                "CRC64NVME",
+                checksum_algorithm,
                 &test_dir,
                 &target_bucket_url,
             ];
@@ -9911,9 +9947,9 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-mtime-and-additional-checksum",
-                "CRC64NVME",
+                checksum_algorithm,
                 "--additional-checksum-algorithm",
-                "CRC64NVME",
+                checksum_algorithm,
                 &test_dir,
                 &target_bucket_url,
             ];
