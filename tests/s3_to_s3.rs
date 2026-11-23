@@ -13888,9 +13888,6 @@ mod tests {
 
         {
             helper
-                .put_test_object(&bucket1, "test_object", "test_object_content")
-                .await;
-            helper
                 .put_object_annotation(
                     &bucket1,
                     "test_object",
