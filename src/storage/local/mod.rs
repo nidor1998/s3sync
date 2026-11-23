@@ -1563,6 +1563,61 @@ impl StorageTrait for LocalStorage {
             None
         };
 
+        let checksum_md5 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Md5
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_sha512 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Sha512
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_xxhash128 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Xxhash128
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_xxhash3 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Xxhash3
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_xxhash64 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Xxhash64
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
         Ok(GetObjectOutputBuilder::default()
             .set_content_length(Some(content_length))
             .set_content_type(content_type)
@@ -1574,6 +1629,11 @@ impl StorageTrait for LocalStorage {
             .set_checksum_crc32(checksum_crc32)
             .set_checksum_crc32_c(checksum_crc32_c)
             .set_checksum_crc64_nvme(checksum_crc64_nvme)
+            .set_checksum_md5(checksum_md5)
+            .set_checksum_sha512(checksum_sha512)
+            .set_checksum_xxhash128(checksum_xxhash128)
+            .set_checksum_xxhash3(checksum_xxhash3)
+            .set_checksum_xxhash64(checksum_xxhash64)
             .build())
     }
 

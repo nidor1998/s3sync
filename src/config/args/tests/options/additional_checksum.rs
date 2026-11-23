@@ -67,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_md5() {
+    fn with_custom_value_with_supported_algorithm_md5() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -84,11 +84,11 @@ mod tests {
 
         let config = build_config_from_args(args);
 
-        assert!(config.is_err());
+        assert!(config.is_ok());
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxhash128() {
+    fn with_custom_value_with_supported_algorithm_xxhash128() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -105,11 +105,11 @@ mod tests {
 
         let config = build_config_from_args(args);
 
-        assert!(config.is_err());
+        assert!(config.is_ok());
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxhash3() {
+    fn with_custom_value_with_supported_algorithm_xxhash3() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -126,11 +126,11 @@ mod tests {
 
         let config = build_config_from_args(args);
 
-        assert!(config.is_err());
+        assert!(config.is_ok());
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxhash64() {
+    fn with_custom_value_with_supported_algorithm_xxhash64() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -147,10 +147,10 @@ mod tests {
 
         let config = build_config_from_args(args);
 
-        assert!(config.is_err());
+        assert!(config.is_ok());
     }
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_sha12() {
+    fn with_custom_value_with_supported_algorithm_sha12() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -167,7 +167,7 @@ mod tests {
 
         let config = build_config_from_args(args);
 
-        assert!(config.is_err());
+        assert!(config.is_ok());
     }
 
     #[test]

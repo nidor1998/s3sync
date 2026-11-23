@@ -471,7 +471,7 @@ If the source modification date is newer, check the additional checksum.
     additional_checksum_algorithm: Option<String>,
 
     #[arg(long, env, default_value_t = DEFAULT_FULL_OBJECT_CHECKSUM, help_heading = "Verification", long_help=r#"Use full object checksum for verification. CRC64NVME automatically use full object checksum.
-This option cannot be used with SHA1/SHA256 additional checksum."#)]
+This option cannot be used with SHA1/SHA256/SHA512/MD5/XXHASH128/XXHASH3/XXHASH64 additional checksum."#)]
     full_object_checksum: bool,
 
     /// Enable additional checksum for download
@@ -1449,7 +1449,9 @@ impl CLIArgs {
         }
 
         if let Some(additional_checksum_algorithm) = &self.additional_checksum_algorithm {
-            if additional_checksum_algorithm == "SHA1" || additional_checksum_algorithm == "SHA256"
+            if additional_checksum_algorithm != "CRC32"
+                && additional_checksum_algorithm != "CRC32C"
+                && additional_checksum_algorithm != "CRC64NVME"
             {
                 return Err(FULL_OBJECT_CHECKSUM_NOT_SUPPORTED.to_string());
             }
