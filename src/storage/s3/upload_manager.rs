@@ -897,6 +897,11 @@ impl UploadManager {
                     } else {
                         None
                     };
+                let content_md5 = if disable_content_md5_header || express_onezone_storage {
+                    None
+                } else {
+                    md5_digest_base64.clone()
+                };
 
                 let checksum_crc32_base64 =
                     if additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc32) {
@@ -1004,7 +1009,7 @@ impl UploadManager {
                         .key(&target_key)
                         .upload_id(target_upload_id.clone())
                         .part_number(part_number)
-                        .set_content_md5(md5_digest_base64)
+                        .set_content_md5(content_md5)
                         .set_checksum_md5(md5_digest_for_additional_checksum)
                         .set_checksum_crc32(checksum_crc32_base64)
                         .set_checksum_crc32_c(checksum_crc32c_base64)
@@ -1412,6 +1417,12 @@ impl UploadManager {
                         None
                     };
 
+                let content_md5 = if disable_content_md5_header || express_onezone_storage {
+                    None
+                } else {
+                    md5_digest_base64.clone()
+                };
+
                 let checksum_crc32_base64 =
                     if additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc32) {
                         let mut hasher =
@@ -1518,7 +1529,7 @@ impl UploadManager {
                         .key(&target_key)
                         .upload_id(target_upload_id.clone())
                         .part_number(part_number)
-                        .set_content_md5(md5_digest_base64)
+                        .set_content_md5(content_md5)
                         .set_checksum_md5(md5_digest_for_additional_checksum)
                         .set_checksum_crc32(checksum_crc32_base64)
                         .set_checksum_crc32_c(checksum_crc32c_base64)
@@ -1775,6 +1786,12 @@ impl UploadManager {
             } else {
                 None
             };
+        let content_md5 = if self.config.disable_content_md5_header || self.express_onezone_storage
+        {
+            None
+        } else {
+            md5_digest_base64.clone()
+        };
 
         let checksum_crc32_base64 =
             if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc32) {
@@ -2030,7 +2047,7 @@ impl UploadManager {
                 .set_metadata(upload_metadata.metadata)
                 .set_tagging(upload_metadata.tagging)
                 .set_website_redirect_location(upload_metadata.website_redirect_location)
-                .set_content_md5(md5_digest_base64)
+                .set_content_md5(content_md5)
                 .set_checksum_md5(md5_digest_for_additional_checksum)
                 .set_checksum_crc32(checksum_crc32_base64)
                 .set_checksum_crc32_c(checksum_crc32c_base64)
