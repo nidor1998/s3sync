@@ -8,6 +8,7 @@ mod tests {
     use std::convert::TryFrom;
     use std::sync::Arc;
 
+    use aws_sdk_s3::operation::head_object::HeadObjectOutput;
     use aws_sdk_s3::types::{ServerSideEncryption, StorageClass};
 
     use common::*;
@@ -1483,6 +1484,24 @@ mod tests {
             assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_sha512.unwrap(),
+                    TestHelper::get_sha512_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -1521,6 +1540,24 @@ mod tests {
             assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_md5.unwrap(),
+                    TestHelper::get_md5_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -1559,6 +1596,24 @@ mod tests {
             assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash128.unwrap(),
+                    TestHelper::get_xxhash128_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -1597,6 +1652,24 @@ mod tests {
             assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash3.unwrap(),
+                    TestHelper::get_xxhash3_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -1635,6 +1708,24 @@ mod tests {
             assert_eq!(stats.e_tag_verified, 5);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash64.unwrap(),
+                    TestHelper::get_xxhash64_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -9321,6 +9412,19 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The warnings are caused by the missing SHA512 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_sha512.is_none());
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -9364,6 +9468,19 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The warnings are caused by the missing MD5 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_md5.is_none());
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -9407,6 +9524,19 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The warnings are caused by the missing XXHASH128 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_xxhash128.is_none());
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -9450,6 +9580,19 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The warnings are caused by the missing XXHASH3 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_xxhash3.is_none());
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -9493,6 +9636,19 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The warnings are caused by the missing XXHASH64 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_xxhash64.is_none());
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -10210,5 +10366,195 @@ mod tests {
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    // A checksum without the "-N" suffix means that the object was uploaded in a single part.
+    // Even if the local file is not smaller than the multipart threshold of the checking run,
+    // --check-additional-checksum must digest the whole file instead of a composite checksum.
+    async fn check_single_part_object_over_threshold(
+        algorithm: &str,
+        expected_checksum: String,
+        get_checksum: fn(HeadObjectOutput) -> Option<String>,
+    ) {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+        let target_bucket_url = format!("s3://{}", bucket);
+        let modified_dir = format!(
+            "./playground/single_part_over_threshold_{}/",
+            Uuid::new_v4()
+        );
+        helper.create_bucket(&bucket, REGION).await;
+
+        TestHelper::create_8mib_file();
+
+        {
+            // The 8MiB file is smaller than the 9MiB threshold, so it is uploaded in a single part.
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-threshold",
+                "9MiB",
+                "--additional-checksum-algorithm",
+                algorithm,
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+
+            let object = helper.head_object(&bucket, TEST_8MIB_FILE_KEY, None).await;
+            let checksum = get_checksum(object).unwrap();
+            assert!(!checksum.contains('-'));
+            assert_eq!(checksum, expected_checksum);
+        }
+
+        {
+            // The 8MiB file is not smaller than the 8MiB threshold of this run,
+            // but the checksums must match and the object must be skipped.
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-threshold",
+                "8MiB",
+                "--multipart-chunksize",
+                "8MiB",
+                "--check-additional-checksum",
+                algorithm,
+                "--additional-checksum-algorithm",
+                algorithm,
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_skip, 1);
+            assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            // The object has not been uploaded again.
+            let object = helper.head_object(&bucket, TEST_8MIB_FILE_KEY, None).await;
+            assert_eq!(get_checksum(object).unwrap(), expected_checksum);
+        }
+
+        {
+            // A file with different content must still be detected and uploaded.
+            std::fs::create_dir_all(&modified_dir).unwrap();
+            std::fs::write(
+                format!("{}{}", modified_dir, TEST_8MIB_FILE_KEY),
+                vec![1_u8; TEST_FILE_SIZE_8MIB],
+            )
+            .unwrap();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-threshold",
+                "8MiB",
+                "--multipart-chunksize",
+                "8MiB",
+                "--check-additional-checksum",
+                algorithm,
+                "--additional-checksum-algorithm",
+                algorithm,
+                &modified_dir,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.sync_skip, 0);
+
+            let object = helper.head_object(&bucket, TEST_8MIB_FILE_KEY, None).await;
+            assert_ne!(get_checksum(object).unwrap(), expected_checksum);
+        }
+
+        TestHelper::delete_all_files(&modified_dir);
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_sha256() {
+        check_single_part_object_over_threshold(
+            "SHA256",
+            TestHelper::get_sha256_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_sha256,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_sha512() {
+        check_single_part_object_over_threshold(
+            "SHA512",
+            TestHelper::get_sha512_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_sha512,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_md5() {
+        check_single_part_object_over_threshold(
+            "MD5",
+            TestHelper::get_md5_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_md5,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_xxhash128() {
+        check_single_part_object_over_threshold(
+            "XXHASH128",
+            TestHelper::get_xxhash128_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_xxhash128,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_xxhash3() {
+        check_single_part_object_over_threshold(
+            "XXHASH3",
+            TestHelper::get_xxhash3_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_xxhash3,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_xxhash64() {
+        check_single_part_object_over_threshold(
+            "XXHASH64",
+            TestHelper::get_xxhash64_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_xxhash64,
+        )
+        .await;
     }
 }

@@ -1582,6 +1582,15 @@ mod tests {
             assert_eq!(stats.sync_complete, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The checksums really differ (6 parts of 5MiB vs 4 parts of 8MiB).
+            let source_object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            let target_object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            let source_checksum = source_object.checksum_sha512.unwrap();
+            let target_checksum = target_object.checksum_sha512.unwrap();
+            assert!(source_checksum.ends_with("-6"));
+            assert_eq!(target_checksum, LARGE_FILE_SHA512_8M_CHUNK);
+            assert_ne!(source_checksum, target_checksum);
         }
 
         TestHelper::delete_all_files(&test_dir);
@@ -1658,6 +1667,15 @@ mod tests {
             assert_eq!(stats.sync_complete, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The checksums really differ (6 parts of 5MiB vs 4 parts of 8MiB).
+            let source_object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            let target_object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            let source_checksum = source_object.checksum_md5.unwrap();
+            let target_checksum = target_object.checksum_md5.unwrap();
+            assert!(source_checksum.ends_with("-6"));
+            assert_eq!(target_checksum, LARGE_FILE_MD5_8M_CHUNK);
+            assert_ne!(source_checksum, target_checksum);
         }
 
         TestHelper::delete_all_files(&test_dir);
@@ -1734,6 +1752,15 @@ mod tests {
             assert_eq!(stats.sync_complete, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The checksums really differ (6 parts of 5MiB vs 4 parts of 8MiB).
+            let source_object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            let target_object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            let source_checksum = source_object.checksum_xxhash128.unwrap();
+            let target_checksum = target_object.checksum_xxhash128.unwrap();
+            assert!(source_checksum.ends_with("-6"));
+            assert_eq!(target_checksum, LARGE_FILE_XXHASH128_8M_CHUNK);
+            assert_ne!(source_checksum, target_checksum);
         }
 
         TestHelper::delete_all_files(&test_dir);
@@ -1810,6 +1837,15 @@ mod tests {
             assert_eq!(stats.sync_complete, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The checksums really differ (6 parts of 5MiB vs 4 parts of 8MiB).
+            let source_object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            let target_object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            let source_checksum = source_object.checksum_xxhash3.unwrap();
+            let target_checksum = target_object.checksum_xxhash3.unwrap();
+            assert!(source_checksum.ends_with("-6"));
+            assert_eq!(target_checksum, LARGE_FILE_XXHASH3_8M_CHUNK);
+            assert_ne!(source_checksum, target_checksum);
         }
 
         TestHelper::delete_all_files(&test_dir);
@@ -1886,6 +1922,15 @@ mod tests {
             assert_eq!(stats.sync_complete, 1);
             assert_eq!(stats.checksum_verified, 0);
             assert_eq!(stats.sync_warning, 0);
+
+            // The checksums really differ (6 parts of 5MiB vs 4 parts of 8MiB).
+            let source_object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            let target_object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            let source_checksum = source_object.checksum_xxhash64.unwrap();
+            let target_checksum = target_object.checksum_xxhash64.unwrap();
+            assert!(source_checksum.ends_with("-6"));
+            assert_eq!(target_checksum, LARGE_FILE_XXHASH64_8M_CHUNK);
+            assert_ne!(source_checksum, target_checksum);
         }
 
         TestHelper::delete_all_files(&test_dir);
@@ -5550,6 +5595,10 @@ mod tests {
             helper
                 .sync_large_test_data_with_sha512(&target_bucket_url)
                 .await;
+
+            // The source object must have the SHA512 composite checksum.
+            let object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.checksum_sha512.unwrap(), LARGE_FILE_SHA512_8M_CHUNK);
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -5691,6 +5740,10 @@ mod tests {
             helper
                 .sync_large_test_data_with_md5(&target_bucket_url)
                 .await;
+
+            // The source object must have the MD5 composite checksum.
+            let object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.checksum_md5.unwrap(), LARGE_FILE_MD5_8M_CHUNK);
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -5832,6 +5885,13 @@ mod tests {
             helper
                 .sync_large_test_data_with_xxhash128(&target_bucket_url)
                 .await;
+
+            // The source object must have the XXHASH128 composite checksum.
+            let object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            assert_eq!(
+                object.checksum_xxhash128.unwrap(),
+                LARGE_FILE_XXHASH128_8M_CHUNK
+            );
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -5973,6 +6033,13 @@ mod tests {
             helper
                 .sync_large_test_data_with_xxhash3(&target_bucket_url)
                 .await;
+
+            // The source object must have the XXHASH3 composite checksum.
+            let object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            assert_eq!(
+                object.checksum_xxhash3.unwrap(),
+                LARGE_FILE_XXHASH3_8M_CHUNK
+            );
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -6114,6 +6181,13 @@ mod tests {
             helper
                 .sync_large_test_data_with_xxhash64(&target_bucket_url)
                 .await;
+
+            // The source object must have the XXHASH64 composite checksum.
+            let object = helper.head_object(&bucket1, LARGE_FILE_KEY, None).await;
+            assert_eq!(
+                object.checksum_xxhash64.unwrap(),
+                LARGE_FILE_XXHASH64_8M_CHUNK
+            );
         }
 
         let source_bucket_url = format!("s3://{}", bucket1);
@@ -9864,6 +9938,24 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_sha512.unwrap(),
+                    TestHelper::get_sha512_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         {
@@ -9961,6 +10053,24 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_md5.unwrap(),
+                    TestHelper::get_md5_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         {
@@ -10058,6 +10168,24 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash128.unwrap(),
+                    TestHelper::get_xxhash128_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         {
@@ -10155,6 +10283,24 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash3.unwrap(),
+                    TestHelper::get_xxhash3_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         {
@@ -10252,6 +10398,24 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash64.unwrap(),
+                    TestHelper::get_xxhash64_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
         }
 
         {

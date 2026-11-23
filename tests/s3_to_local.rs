@@ -1748,6 +1748,10 @@ mod tests {
             helper
                 .sync_large_test_data_with_sha512(&target_bucket_url)
                 .await;
+
+            // The source object must have the SHA512 composite checksum.
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.checksum_sha512.unwrap(), LARGE_FILE_SHA512_8M_CHUNK);
         }
 
         {
@@ -1794,6 +1798,10 @@ mod tests {
             helper
                 .sync_large_test_data_with_md5(&target_bucket_url)
                 .await;
+
+            // The source object must have the MD5 composite checksum.
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.checksum_md5.unwrap(), LARGE_FILE_MD5_8M_CHUNK);
         }
 
         {
@@ -1840,6 +1848,13 @@ mod tests {
             helper
                 .sync_large_test_data_with_xxhash128(&target_bucket_url)
                 .await;
+
+            // The source object must have the XXHASH128 composite checksum.
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(
+                object.checksum_xxhash128.unwrap(),
+                LARGE_FILE_XXHASH128_8M_CHUNK
+            );
         }
 
         {
@@ -1886,6 +1901,13 @@ mod tests {
             helper
                 .sync_large_test_data_with_xxhash3(&target_bucket_url)
                 .await;
+
+            // The source object must have the XXHASH3 composite checksum.
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(
+                object.checksum_xxhash3.unwrap(),
+                LARGE_FILE_XXHASH3_8M_CHUNK
+            );
         }
 
         {
@@ -1932,6 +1954,13 @@ mod tests {
             helper
                 .sync_large_test_data_with_xxhash64(&target_bucket_url)
                 .await;
+
+            // The source object must have the XXHASH64 composite checksum.
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(
+                object.checksum_xxhash64.unwrap(),
+                LARGE_FILE_XXHASH64_8M_CHUNK
+            );
         }
 
         {

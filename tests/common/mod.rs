@@ -2711,6 +2711,11 @@ impl TestHelper {
         Ok(())
     }
 
+    pub fn get_sha256_base64_from_file(file_path: &str) -> String {
+        let data = std::fs::read(file_path).unwrap();
+        base64::engine::general_purpose::STANDARD.encode(Sha256::digest(&data))
+    }
+
     pub fn get_sha512_base64_from_file(file_path: &str) -> String {
         let data = std::fs::read(file_path).unwrap();
         base64::engine::general_purpose::STANDARD.encode(Sha512::digest(&data))
