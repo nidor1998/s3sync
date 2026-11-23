@@ -361,7 +361,7 @@ to calculate ETag.
 
 ### Additional checksum-based incremental transfer
 
-If you use Amazon S3 with additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME), you can use
+If you use Amazon S3 with additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME/MD5/SHA512/XXHASH128/XXHASH3/XXHASH64), you can use
 `--check-additional-checksum` option.  
 This option compares the checksum of both source and target objects and transfers only modified objects. It costs
 extra API calls per object.  
@@ -796,7 +796,7 @@ s3sync --delete s3://bucket-name1/prefix s3://bucket-name2/prefix
 ### Object integrity check detail
 
 s3sync calculates ETag(MD5) for a source object and compares them with the checksums in the target.  
-Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
+Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME/MD5/SHA512/XXHASH128/XXHASH3/XXHASH64) for each
 object.
 
 ETag is not always MD5. If the object is uploaded with multipart upload, ETag is not MD5 digest but the MD5 digest of
@@ -1429,7 +1429,7 @@ Verification:
           Additional checksum algorithm for upload [env: ADDITIONAL_CHECKSUM_ALGORITHM=]
       --full-object-checksum
           Use full object checksum for verification. CRC64NVME automatically use full object checksum.
-          This option cannot be used with SHA1/SHA256 additional checksum. [env: FULL_OBJECT_CHECKSUM=]
+          This option cannot be used with SHA1/SHA256/SHA512/MD5/XXHASH128/XXHASH3/XXHASH64 additional checksum. [env: FULL_OBJECT_CHECKSUM=]
       --enable-additional-checksum
           Enable additional checksum for download [env: ENABLE_ADDITIONAL_CHECKSUM=]
       --disable-multipart-verify

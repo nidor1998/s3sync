@@ -149,8 +149,9 @@ mod tests {
 
         assert!(config.is_ok());
     }
+
     #[test]
-    fn with_custom_value_with_supported_algorithm_sha12() {
+    fn with_custom_value_with_supported_algorithm_sha512() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
