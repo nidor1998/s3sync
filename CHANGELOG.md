@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.64.0] - 2026-11-24
+
+Added support for the MD5, SHA512, XXHASH128, XXHASH3 and XXHASH64 additional checksum algorithms.
+
+### Added
+
+- Added `MD5`, `SHA512`, `XXHASH128`, `XXHASH3` and `XXHASH64` as additional checksum algorithms, alongside the
+  existing `CRC32`, `CRC32C`, `CRC64NVME`, `SHA1` and `SHA256`. They are accepted by the following options.
+    - `--additional-checksum-algorithm`
+    - `--check-additional-checksum`
+    - `--check-mtime-and-additional-checksum`
+
+### Fixed
+
+- Fixed a false checksum mismatch with `--check-additional-checksum` when an object had been uploaded in a single
+  part but the local file was not smaller than the multipart threshold of the checking run. A checksum without the
+  `-N` suffix means that the object was uploaded in a single part, so hash-based algorithms (such as `SHA1` and
+  `SHA256`) now digest the whole local file instead of calculating a composite checksum. Previously, such objects
+  were treated as modified and uploaded again.
+
+### Changed
+
+- MSRV `1.99.0 -> 1.100.0`
+- Added the `twox-hash` crate for the XXHash checksums.
+- Moved the minimum publish age for dependency resolution from `.cargo/min-publish-age.toml` to `.cargo/config.toml`.
+- Updated other dependencies
+
 ## [1.63.0] - 2026-11-22
 
 Update for the end of life (EOL) of the `chrono` crate and Lua 5.4.
