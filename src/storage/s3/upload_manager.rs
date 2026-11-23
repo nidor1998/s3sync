@@ -879,11 +879,12 @@ impl UploadManager {
                 }
 
                 let md5_digest;
-                let md5_digest_base64 = if (!express_onezone_storage
-                    && !disable_content_md5_header
-                    && !server_side_copy)
-                    || additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5)
-                {
+                let md5_digest_base64 = if need_md5_digest(
+                    server_side_copy,
+                    express_onezone_storage,
+                    disable_content_md5_header,
+                    &additional_checksum_algorithm,
+                ) {
                     let md5_digest_raw = md5::compute(&buffer);
                     md5_digest = Some(md5_digest_raw);
                     Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
@@ -1398,11 +1399,12 @@ impl UploadManager {
                 }
 
                 let md5_digest;
-                let md5_digest_base64 = if (!express_onezone_storage
-                    && !disable_content_md5_header
-                    && !server_side_copy)
-                    || additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5)
-                {
+                let md5_digest_base64 = if need_md5_digest(
+                    server_side_copy,
+                    express_onezone_storage,
+                    disable_content_md5_header,
+                    &additional_checksum_algorithm,
+                ) {
                     let md5_digest_raw = md5::compute(&buffer);
                     md5_digest = Some(md5_digest_raw);
                     Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
@@ -1768,11 +1770,12 @@ impl UploadManager {
             Vec::new() // For server-side copy, we do not need to read the body.
         };
 
-        let md5_digest_base64 = if (!self.express_onezone_storage
-            && !self.config.disable_content_md5_header
-            && !self.config.server_side_copy)
-            || self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5)
-        {
+        let md5_digest_base64 = if need_md5_digest(
+            self.config.server_side_copy,
+            self.express_onezone_storage,
+            self.config.disable_content_md5_header,
+            &self.config.additional_checksum_algorithm,
+        ) {
             let md5_digest = md5::compute(&buffer);
             self.concatnated_md5_hash
                 .append(&mut md5_digest.as_slice().to_vec());
@@ -2324,6 +2327,22 @@ impl UploadManager {
     }
 }
 
+// The MD5 digest is used for the Content-MD5 header, the ETag verification and the MD5 additional checksum.
+// Server-side copy does not read the body, so there is nothing to digest.
+fn need_md5_digest(
+    server_side_copy: bool,
+    express_onezone_storage: bool,
+    disable_content_md5_header: bool,
+    additional_checksum_algorithm: &Option<ChecksumAlgorithm>,
+) -> bool {
+    if server_side_copy {
+        return false;
+    }
+
+    (!express_onezone_storage && !disable_content_md5_header)
+        || *additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5)
+}
+
 fn calculate_parts_count(
     multipart_threshold: i64,
     multipart_chunksize: i64,
@@ -2431,6 +2450,30 @@ mod tests {
     use super::*;
     use aws_sdk_s3::primitives::DateTime;
     use tracing_subscriber::EnvFilter;
+
+    #[test]
+    fn need_md5_digest_test() {
+        init_dummy_tracing_subscriber();
+
+        let md5 = Some(ChecksumAlgorithm::Md5);
+        let sha256 = Some(ChecksumAlgorithm::Sha256);
+
+        // Content-MD5 header.
+        assert!(need_md5_digest(false, false, false, &None));
+        assert!(need_md5_digest(false, false, false, &sha256));
+        assert!(!need_md5_digest(false, true, false, &None));
+        assert!(!need_md5_digest(false, false, true, &sha256));
+
+        // MD5 additional checksum is needed even if Content-MD5 is not sent.
+        assert!(need_md5_digest(false, true, false, &md5));
+        assert!(need_md5_digest(false, false, true, &md5));
+        assert!(need_md5_digest(false, true, true, &md5));
+
+        // Server-side copy never reads the body, so there is nothing to digest.
+        assert!(!need_md5_digest(true, false, false, &None));
+        assert!(!need_md5_digest(true, false, false, &md5));
+        assert!(!need_md5_digest(true, true, true, &md5));
+    }
 
     #[test]
     fn update_versioning_metadata_with_new() {

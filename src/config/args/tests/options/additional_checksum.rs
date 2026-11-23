@@ -82,9 +82,12 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_ok());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Md5
+        );
     }
 
     #[test]
@@ -103,9 +106,12 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_ok());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Xxhash128
+        );
     }
 
     #[test]
@@ -124,9 +130,12 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_ok());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Xxhash3
+        );
     }
 
     #[test]
@@ -145,9 +154,12 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_ok());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Xxhash64
+        );
     }
 
     #[test]
@@ -166,9 +178,12 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_ok());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Sha512
+        );
     }
 
     #[test]
