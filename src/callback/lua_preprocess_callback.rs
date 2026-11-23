@@ -87,6 +87,14 @@ impl LuaPreprocessCallback {
         )?;
         source_object_lua.set("checksum_sha1", source_object.checksum_sha1.clone())?;
         source_object_lua.set("checksum_sha256", source_object.checksum_sha256.clone())?;
+        source_object_lua.set("checksum_md5", source_object.checksum_md5.clone())?;
+        source_object_lua.set("checksum_sha512", source_object.checksum_sha512.clone())?;
+        source_object_lua.set(
+            "checksum_xxhash128",
+            source_object.checksum_xxhash128.clone(),
+        )?;
+        source_object_lua.set("checksum_xxhash3", source_object.checksum_xxhash3.clone())?;
+        source_object_lua.set("checksum_xxhash64", source_object.checksum_xxhash64.clone())?;
         source_object_lua.set(
             "checksum_type",
             source_object
@@ -408,6 +416,11 @@ mod tests {
             .checksum_crc64_nvme("crc64")
             .checksum_sha1("sha1")
             .checksum_sha256("sha256")
+            .checksum_md5("md5")
+            .checksum_sha512("sha512")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
             .checksum_type(ChecksumType::FullObject)
             .content_disposition("attachment")
             .content_encoding("deflate")

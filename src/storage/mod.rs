@@ -282,6 +282,19 @@ pub fn convert_head_to_get_object_output(head_object_output: HeadObjectOutput) -
         )
         .set_checksum_sha1(head_object_output.checksum_sha1().map(|s| s.to_string()))
         .set_checksum_sha256(head_object_output.checksum_sha256().map(|s| s.to_string()))
+        .set_checksum_md5(head_object_output.checksum_md5().map(|s| s.to_string()))
+        .set_checksum_sha512(head_object_output.checksum_sha512().map(|s| s.to_string()))
+        .set_checksum_xxhash128(
+            head_object_output
+                .checksum_xxhash128()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash3(head_object_output.checksum_xxhash3().map(|s| s.to_string()))
+        .set_checksum_xxhash64(
+            head_object_output
+                .checksum_xxhash64()
+                .map(|s| s.to_string()),
+        )
         .set_checksum_type(head_object_output.checksum_type().cloned())
         .set_content_disposition(
             head_object_output
@@ -375,6 +388,41 @@ pub fn convert_copy_to_put_object_output(
                 .checksum_sha256()
                 .map(|s| s.to_string()),
         )
+        .set_checksum_md5(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_md5()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha512(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_sha512()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash128(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_xxhash128()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash3(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_xxhash3()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash64(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_xxhash64()
+                .map(|s| s.to_string()),
+        )
         .set_checksum_type(
             copy_object_output
                 .copy_object_result()
@@ -463,6 +511,41 @@ pub fn convert_copy_to_upload_part_output(
                 .copy_part_result()
                 .unwrap()
                 .checksum_sha256()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_md5(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_md5()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha512(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_sha512()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash128(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_xxhash128()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash3(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_xxhash3()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash64(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_xxhash64()
                 .map(|s| s.to_string()),
         )
         .set_sse_customer_algorithm(

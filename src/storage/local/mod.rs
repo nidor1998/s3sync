@@ -2911,6 +2911,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
 
         let get_object_result = storage
             .get_object(
@@ -2930,6 +2935,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
     }
 
     #[tokio::test]
@@ -2982,6 +2992,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
 
         let get_object_result = storage
             .get_object(
@@ -3001,6 +3016,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
     }
 
     #[tokio::test]
@@ -3053,6 +3073,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_some());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
 
         let get_object_result = storage
             .get_object(
@@ -3072,6 +3097,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
     }
 
     #[tokio::test]

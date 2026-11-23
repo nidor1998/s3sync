@@ -9,7 +9,7 @@ It supports multipart uploads, versioning, metadata, and tagging.
   s3sync calculates ETag(MD5 or equivalent) for each object and compares them with the ETag in the target.
   An object on the local disk is read from the disk and compared with the checksum in the source or target.
   In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.
-  Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each object.
+  Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME/MD5/SHA512/XXHASH128/XXHASH3/XXHASH64) for each object.
   s3sync always shows the integrity check result, so you can verify that the synchronization was successful.
 
 - Fast:
@@ -28,7 +28,7 @@ It supports multipart uploads, versioning, metadata, and tagging.
     - Modified time based(default)
     - Size-based
     - ETag(MD5 or equivalent) based
-    - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) based
+    - Additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME/MD5/SHA512/XXHASH128/XXHASH3/XXHASH64) based
 
 - Flexible filtering
     - Key, `ContentType`, user-defined metadata, and tagging by regular expression.
