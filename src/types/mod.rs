@@ -498,6 +498,21 @@ pub fn get_additional_checksum(
         ChecksumAlgorithm::Crc64Nvme => get_object_output
             .checksum_crc64_nvme()
             .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha512 => get_object_output
+            .checksum_sha512()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash3 => get_object_output
+            .checksum_xxhash3()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash64 => get_object_output
+            .checksum_xxhash64()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash128 => get_object_output
+            .checksum_xxhash128()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Md5 => get_object_output
+            .checksum_md5()
+            .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
         }
@@ -525,6 +540,21 @@ pub fn get_additional_checksum_with_head_object(
             .map(|checksum| checksum.to_string()),
         ChecksumAlgorithm::Crc64Nvme => head_object_output
             .checksum_crc64_nvme()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha512 => head_object_output
+            .checksum_sha512()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash3 => head_object_output
+            .checksum_xxhash3()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash64 => head_object_output
+            .checksum_xxhash64()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash128 => head_object_output
+            .checksum_xxhash128()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Md5 => head_object_output
+            .checksum_md5()
             .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
@@ -1204,7 +1234,8 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let get_object_output = GetObjectOutput::builder().build();
-        let _ = get_additional_checksum(&get_object_output, Some(ChecksumAlgorithm::Md5));
+        let _ =
+            get_additional_checksum(&get_object_output, Some(ChecksumAlgorithm::from("UNKNOWN")));
     }
 
     #[test]
@@ -1215,7 +1246,7 @@ mod tests {
         let head_object_output = HeadObjectOutput::builder().build();
         let _ = get_additional_checksum_with_head_object(
             &head_object_output,
-            Some(ChecksumAlgorithm::Md5),
+            Some(ChecksumAlgorithm::from("UNKNOWN")),
         );
     }
 
