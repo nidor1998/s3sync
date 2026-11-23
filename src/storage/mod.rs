@@ -840,12 +840,27 @@ mod tests {
                     .checksum_type(aws_sdk_s3::types::ChecksumType::Composite)
                     .build(),
             )
+            .expiration("expiry-date=\"Fri, 23 Dec 2012 00:00:00 GMT\"")
+            .sse_customer_algorithm("AES256")
+            .sse_customer_key_md5("key_md5")
+            .ssekms_encryption_context("context")
+            .ssekms_key_id("kms_key")
+            .version_id("version1")
             .build();
 
         let output = convert_copy_to_put_object_output(copy_object_output, 1234);
 
         assert_eq!(output.e_tag(), Some("etag"));
         assert_eq!(output.size(), Some(1234));
+        assert_eq!(
+            output.expiration(),
+            Some("expiry-date=\"Fri, 23 Dec 2012 00:00:00 GMT\"")
+        );
+        assert_eq!(output.sse_customer_algorithm(), Some("AES256"));
+        assert_eq!(output.sse_customer_key_md5(), Some("key_md5"));
+        assert_eq!(output.ssekms_encryption_context(), Some("context"));
+        assert_eq!(output.ssekms_key_id(), Some("kms_key"));
+        assert_eq!(output.version_id(), Some("version1"));
         assert_eq!(output.checksum_crc32(), Some("crc32"));
         assert_eq!(output.checksum_crc32_c(), Some("crc32c"));
         assert_eq!(output.checksum_crc64_nvme(), Some("crc64nvme"));

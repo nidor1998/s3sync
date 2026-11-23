@@ -1081,6 +1081,23 @@ mod tests {
     }
 
     #[test]
+    fn size_and_e_tag_delete_marker_test() {
+        init_dummy_tracing_subscriber();
+
+        let delete_marker = S3syncObject::DeleteMarker(
+            DeleteMarkerEntry::builder()
+                .key("key1")
+                .version_id("version1")
+                .build(),
+        );
+
+        // A delete marker has no content, so it has neither size nor ETag.
+        assert_eq!(delete_marker.size(), 0);
+        assert!(delete_marker.e_tag().is_none());
+        assert_eq!(delete_marker.version_id(), Some("version1"));
+    }
+
+    #[test]
     fn is_latest_test() {
         init_dummy_tracing_subscriber();
 

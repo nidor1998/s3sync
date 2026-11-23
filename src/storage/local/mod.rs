@@ -4449,6 +4449,135 @@ mod tests {
         assert!(e.to_string().contains("Invalid first chunk data size"));
     }
 
+    // A body that returns some data and then fails, like a dropped connection while downloading.
+    fn build_failing_body() -> ByteStream {
+        let frames: Vec<
+            std::result::Result<hyper::body::Frame<hyper::body::Bytes>, std::io::Error>,
+        > = vec![
+            Ok(hyper::body::Frame::data(hyper::body::Bytes::from_static(
+                b"abc",
+            ))),
+            Err(std::io::Error::other("injected read error")),
+        ];
+        ByteStream::new(SdkBody::from_body_1_x(http_body_util::StreamBody::new(
+            futures_util::stream::iter(frames),
+        )))
+    }
+
+    #[tokio::test]
+    async fn put_object_single_part_body_read_error_is_force_retryable() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(&[], source_path.as_str(), target_path.as_str());
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const SOURCE_SIZE: usize = 1024;
+        let e = storage
+            .put_object(
+                "data1",
+                source_storage,
+                SOURCE_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(SOURCE_SIZE as i64)
+                    .body(build_failing_body())
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::DownloadForceRetryableError
+        );
+        assert!(!target_dir.path().join("data1").exists());
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_first_chunk_body_read_error_is_force_retryable() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(
+            &["--multipart-chunksize", "5MiB"],
+            source_path.as_str(),
+            target_path.as_str(),
+        );
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const CHUNK_SIZE: usize = 5 * 1024 * 1024;
+        const SOURCE_SIZE: usize = 10 * 1024 * 1024;
+        let e = storage
+            .put_object(
+                "large.dat",
+                source_storage,
+                SOURCE_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(CHUNK_SIZE as i64)
+                    .set_content_range(Some(format!("bytes 0-{}/{}", CHUNK_SIZE - 1, SOURCE_SIZE)))
+                    .body(build_failing_body())
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::DownloadForceRetryableError
+        );
+        assert!(!target_dir.path().join("large.dat").exists());
+    }
+
     #[tokio::test]
     async fn put_object_multipart_first_chunk_cancelled() {
         init_dummy_tracing_subscriber();
