@@ -220,7 +220,12 @@ pub async fn generate_checksum_from_path_with_chunksize(
         buffer.resize_with(real_chunksize, Default::default);
         file.read_exact(buffer.as_mut_slice()).await?;
         checksum.update(buffer.as_slice());
-        let _ = checksum.finalize();
+        // A full object checksum covers the whole object, so the file must not be split into parts.
+        // Hash algorithms (SHA, MD5, XXHASH) ignore the full object flag and would otherwise produce
+        // a composite "xxx-N" checksum. In that case, the object was uploaded in a single part.
+        if !full_object_checksum {
+            let _ = checksum.finalize();
+        }
 
         if cancellation_token.is_cancelled() {
             debug!(
@@ -233,7 +238,11 @@ pub async fn generate_checksum_from_path_with_chunksize(
         remaining_bytes -= real_chunksize as u64;
     }
 
-    let final_checksum = Ok(checksum.finalize_all());
+    let final_checksum = if full_object_checksum {
+        Ok(checksum.finalize())
+    } else {
+        Ok(checksum.finalize_all())
+    };
     debug!(
         path = path.to_str().unwrap(),
         duration_ms = checksum_generate_start_time.elapsed().as_millis(),
@@ -251,6 +260,7 @@ mod tests {
         UNKNOWN_CHECKSUM_VALUE, generate_checksum_from_path, generate_checksum_from_path_for_check,
         generate_checksum_from_path_with_chunksize, is_multipart_upload_checksum,
     };
+    use crate::storage::checksum::AdditionalChecksum;
     use crate::storage::test_helpers::create_large_file;
     use crate::types::token::create_pipeline_cancellation_token;
     use aws_sdk_s3::types::ChecksumAlgorithm;
@@ -270,6 +280,14 @@ mod tests {
     const LARGE_FILE_CRC32_FULL_OBJECT_BASE64_DIGEST: &str = "YyFLrQ==";
     const LARGE_FILE_CRC32C_FULL_OBJECT_BASE64_DIGEST: &str = "Gs/MBw==";
     const LARGE_FILE_CRC64NVME_FULL_OBJECT_BASE64_DIGEST: &str = "1q6/IYHP8XY=";
+
+    // Digests of the whole 9MiB file as a single part (e.g. `openssl dgst -sha256 -binary | base64`).
+    const LARGE_FILE_SHA256_SINGLE_PART_BASE64_DIGEST: &str =
+        "0u5HA82WmJRcp7n+FonqMJVZfqwaCv2NugDKx4lP3EM=";
+    const LARGE_FILE_SHA1_SINGLE_PART_BASE64_DIGEST: &str = "j3ZZsPo5lPzOK+Biu+oNGD6bxE4=";
+    const LARGE_FILE_SHA512_SINGLE_PART_BASE64_DIGEST: &str =
+        "CBSQPS16xHGAnhdRo54040XWfiCzG/W8BE8ZC+pES/4ccMj8TSnl1cIMZX1611g8uh2BzXcH94/xVENxEwuTgQ==";
+    const LARGE_FILE_MD5_SINGLE_PART_BASE64_DIGEST: &str = "uCtKuH5El2Akq8FKFnDawA==";
 
     const TEST_CRC32_BASE64_DIGEST: &str = "y/U6HA==";
 
@@ -531,6 +549,110 @@ mod tests {
             checksum,
             LARGE_FILE_CRC32_FULL_OBJECT_BASE64_DIGEST.to_string()
         );
+    }
+
+    // A checksum without the "-N" suffix means the object was uploaded in a single part.
+    // Even if the local file is larger than the multipart threshold, hash algorithms must digest
+    // the whole file at once instead of producing a composite "xxx-N" checksum.
+    #[tokio::test]
+    async fn generate_checksum_from_path_chunksize_single_part_hash_over_threshold_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
+
+        for (algorithm, expected) in [
+            (
+                ChecksumAlgorithm::Sha256,
+                LARGE_FILE_SHA256_SINGLE_PART_BASE64_DIGEST,
+            ),
+            (
+                ChecksumAlgorithm::Sha1,
+                LARGE_FILE_SHA1_SINGLE_PART_BASE64_DIGEST,
+            ),
+            (
+                ChecksumAlgorithm::Sha512,
+                LARGE_FILE_SHA512_SINGLE_PART_BASE64_DIGEST,
+            ),
+            (
+                ChecksumAlgorithm::Md5,
+                LARGE_FILE_MD5_SINGLE_PART_BASE64_DIGEST,
+            ),
+        ] {
+            let checksum = generate_checksum_from_path_with_chunksize(
+                PathBuf::from(LARGE_FILE_PATH).as_path(),
+                algorithm.clone(),
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                true,
+                create_pipeline_cancellation_token(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(checksum, expected.to_string(), "{algorithm}");
+        }
+
+        // XXHASH algorithms: compare against a single digest of the whole file.
+        let data = tokio::fs::read(LARGE_FILE_PATH).await.unwrap();
+        for algorithm in [
+            ChecksumAlgorithm::Xxhash128,
+            ChecksumAlgorithm::Xxhash3,
+            ChecksumAlgorithm::Xxhash64,
+        ] {
+            let mut single_part = AdditionalChecksum::new(algorithm.clone(), false);
+            single_part.update(data.as_slice());
+            let expected = single_part.finalize();
+
+            let checksum = generate_checksum_from_path_with_chunksize(
+                PathBuf::from(LARGE_FILE_PATH).as_path(),
+                algorithm.clone(),
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                true,
+                create_pipeline_cancellation_token(),
+            )
+            .await
+            .unwrap();
+
+            assert!(!checksum.contains('-'), "{algorithm}: {checksum}");
+            assert_eq!(checksum, expected, "{algorithm}");
+        }
+    }
+
+    // CRC full object checksums must stay the same when the file is larger than the threshold.
+    #[tokio::test]
+    async fn generate_checksum_from_path_chunksize_crc_full_object_over_threshold_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
+
+        for (algorithm, expected) in [
+            (
+                ChecksumAlgorithm::Crc32,
+                LARGE_FILE_CRC32_FULL_OBJECT_BASE64_DIGEST,
+            ),
+            (
+                ChecksumAlgorithm::Crc32C,
+                LARGE_FILE_CRC32C_FULL_OBJECT_BASE64_DIGEST,
+            ),
+            (
+                ChecksumAlgorithm::Crc64Nvme,
+                LARGE_FILE_CRC64NVME_FULL_OBJECT_BASE64_DIGEST,
+            ),
+        ] {
+            let checksum = generate_checksum_from_path_with_chunksize(
+                PathBuf::from(LARGE_FILE_PATH).as_path(),
+                algorithm.clone(),
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                true,
+                create_pipeline_cancellation_token(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(checksum, expected.to_string(), "{algorithm}");
+        }
     }
 
     #[tokio::test]

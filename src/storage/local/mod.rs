@@ -1563,6 +1563,61 @@ impl StorageTrait for LocalStorage {
             None
         };
 
+        let checksum_md5 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Md5
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_sha512 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Sha512
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_xxhash128 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Xxhash128
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_xxhash3 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Xxhash3
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
+        let checksum_xxhash64 = if self.config.additional_checksum_algorithm.is_some()
+            && need_checksum
+            && matches!(
+                self.config.additional_checksum_algorithm.as_ref().unwrap(),
+                ChecksumAlgorithm::Xxhash64
+            ) {
+            checksum.clone()
+        } else {
+            None
+        };
+
         Ok(GetObjectOutputBuilder::default()
             .set_content_length(Some(content_length))
             .set_content_type(content_type)
@@ -1574,6 +1629,11 @@ impl StorageTrait for LocalStorage {
             .set_checksum_crc32(checksum_crc32)
             .set_checksum_crc32_c(checksum_crc32_c)
             .set_checksum_crc64_nvme(checksum_crc64_nvme)
+            .set_checksum_md5(checksum_md5)
+            .set_checksum_sha512(checksum_sha512)
+            .set_checksum_xxhash128(checksum_xxhash128)
+            .set_checksum_xxhash3(checksum_xxhash3)
+            .set_checksum_xxhash64(checksum_xxhash64)
             .build())
     }
 
@@ -1907,6 +1967,7 @@ fn convert_windows_directory_char_to_slash(path: &str) -> String {
 mod tests {
     use super::*;
     use crate::config::args::parse_from_args;
+    use crate::storage::checksum::AdditionalChecksum;
     use crate::storage::local::remove_local_path_prefix;
     use crate::types::token::create_pipeline_cancellation_token;
     use tokio::io::AsyncReadExt;
@@ -2851,6 +2912,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
 
         let get_object_result = storage
             .get_object(
@@ -2870,6 +2936,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
     }
 
     #[tokio::test]
@@ -2922,6 +2993,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
 
         let get_object_result = storage
             .get_object(
@@ -2941,6 +3017,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
     }
 
     #[tokio::test]
@@ -2993,6 +3074,11 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_some());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
 
         let get_object_result = storage
             .get_object(
@@ -3012,6 +3098,122 @@ mod tests {
         assert!(get_object_result.checksum_crc32.is_none());
         assert!(get_object_result.checksum_crc32_c.is_none());
         assert!(get_object_result.checksum_crc64_nvme.is_none());
+        assert!(get_object_result.checksum_md5.is_none());
+        assert!(get_object_result.checksum_sha512.is_none());
+        assert!(get_object_result.checksum_xxhash128.is_none());
+        assert!(get_object_result.checksum_xxhash3.is_none());
+        assert!(get_object_result.checksum_xxhash64.is_none());
+    }
+
+    // Only the checksum field of the configured algorithm is set, and it holds the checksum of the file.
+    #[tokio::test]
+    async fn get_object_with_checksum_all_algorithms() {
+        init_dummy_tracing_subscriber();
+
+        let data = tokio::fs::read("./test_data/source/data1").await.unwrap();
+
+        for algorithm in [
+            ChecksumAlgorithm::Crc32,
+            ChecksumAlgorithm::Crc32C,
+            ChecksumAlgorithm::Crc64Nvme,
+            ChecksumAlgorithm::Sha1,
+            ChecksumAlgorithm::Sha256,
+            ChecksumAlgorithm::Sha512,
+            ChecksumAlgorithm::Md5,
+            ChecksumAlgorithm::Xxhash128,
+            ChecksumAlgorithm::Xxhash3,
+            ChecksumAlgorithm::Xxhash64,
+        ] {
+            let args = vec![
+                "s3sync",
+                "--target-access-key",
+                "dummy_access_key",
+                "--target-secret-access-key",
+                "dummy_secret_access_key",
+                "--additional-checksum-algorithm",
+                algorithm.as_str(),
+                "./test_data/",
+                "s3://dummy-bucket",
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let (stats_sender, _) = async_channel::unbounded();
+
+            let storage = LocalStorageFactory::create(
+                config.clone(),
+                config.source.clone(),
+                create_pipeline_cancellation_token(),
+                stats_sender,
+                config.source_client_config.clone(),
+                None,
+                None,
+                None,
+                Arc::new(AtomicBool::new(false)),
+                None,
+            )
+            .await;
+
+            let get_object_result = storage
+                .get_object(
+                    "source/data1",
+                    None,
+                    None,
+                    Some("bytes=0-4".to_string()),
+                    None,
+                    SseCustomerKey { key: None },
+                    None,
+                )
+                .await
+                .unwrap();
+
+            let mut hasher = AdditionalChecksum::new(algorithm.clone(), false);
+            hasher.update(data.as_slice());
+            let expected = hasher.finalize();
+
+            let all_checksums = [
+                (ChecksumAlgorithm::Crc32, &get_object_result.checksum_crc32),
+                (
+                    ChecksumAlgorithm::Crc32C,
+                    &get_object_result.checksum_crc32_c,
+                ),
+                (
+                    ChecksumAlgorithm::Crc64Nvme,
+                    &get_object_result.checksum_crc64_nvme,
+                ),
+                (ChecksumAlgorithm::Sha1, &get_object_result.checksum_sha1),
+                (
+                    ChecksumAlgorithm::Sha256,
+                    &get_object_result.checksum_sha256,
+                ),
+                (
+                    ChecksumAlgorithm::Sha512,
+                    &get_object_result.checksum_sha512,
+                ),
+                (ChecksumAlgorithm::Md5, &get_object_result.checksum_md5),
+                (
+                    ChecksumAlgorithm::Xxhash128,
+                    &get_object_result.checksum_xxhash128,
+                ),
+                (
+                    ChecksumAlgorithm::Xxhash3,
+                    &get_object_result.checksum_xxhash3,
+                ),
+                (
+                    ChecksumAlgorithm::Xxhash64,
+                    &get_object_result.checksum_xxhash64,
+                ),
+            ];
+
+            for (field_algorithm, value) in all_checksums {
+                if field_algorithm == algorithm {
+                    assert_eq!(value.as_deref(), Some(expected.as_str()), "{algorithm}");
+                } else {
+                    assert!(
+                        value.is_none(),
+                        "{algorithm}: {field_algorithm} must be None"
+                    );
+                }
+            }
+        }
     }
 
     #[tokio::test]
@@ -4245,6 +4447,135 @@ mod tests {
             .unwrap();
 
         assert!(e.to_string().contains("Invalid first chunk data size"));
+    }
+
+    // A body that returns some data and then fails, like a dropped connection while downloading.
+    fn build_failing_body() -> ByteStream {
+        let frames: Vec<
+            std::result::Result<hyper::body::Frame<hyper::body::Bytes>, std::io::Error>,
+        > = vec![
+            Ok(hyper::body::Frame::data(hyper::body::Bytes::from_static(
+                b"abc",
+            ))),
+            Err(std::io::Error::other("injected read error")),
+        ];
+        ByteStream::new(SdkBody::from_body_1_x(http_body_util::StreamBody::new(
+            futures_util::stream::iter(frames),
+        )))
+    }
+
+    #[tokio::test]
+    async fn put_object_single_part_body_read_error_is_force_retryable() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(&[], source_path.as_str(), target_path.as_str());
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const SOURCE_SIZE: usize = 1024;
+        let e = storage
+            .put_object(
+                "data1",
+                source_storage,
+                SOURCE_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(SOURCE_SIZE as i64)
+                    .body(build_failing_body())
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::DownloadForceRetryableError
+        );
+        assert!(!target_dir.path().join("data1").exists());
+    }
+
+    #[tokio::test]
+    async fn put_object_multipart_first_chunk_body_read_error_is_force_retryable() {
+        init_dummy_tracing_subscriber();
+
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(
+            &["--multipart-chunksize", "5MiB"],
+            source_path.as_str(),
+            target_path.as_str(),
+        );
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const CHUNK_SIZE: usize = 5 * 1024 * 1024;
+        const SOURCE_SIZE: usize = 10 * 1024 * 1024;
+        let e = storage
+            .put_object(
+                "large.dat",
+                source_storage,
+                SOURCE_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(CHUNK_SIZE as i64)
+                    .set_content_range(Some(format!("bytes 0-{}/{}", CHUNK_SIZE - 1, SOURCE_SIZE)))
+                    .body(build_failing_body())
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::DownloadForceRetryableError
+        );
+        assert!(!target_dir.path().join("large.dat").exists());
     }
 
     #[tokio::test]

@@ -148,6 +148,31 @@ mod tests {
 
         assert!(config.is_err());
     }
+
+    #[test]
+    fn with_custom_value_with_non_crc_algorithm_conflict() {
+        init_dummy_tracing_subscriber();
+
+        for algorithm in ["SHA512", "MD5", "XXHASH128", "XXHASH3", "XXHASH64"] {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "source_profile",
+                "--target-profile",
+                "target_profile",
+                "--additional-checksum-algorithm",
+                algorithm,
+                "--full-object-checksum",
+                "s3://source-bucket/source_key",
+                "s3://target-bucket/target_key",
+            ];
+
+            let config = build_config_from_args(args);
+
+            assert!(config.is_err(), "{algorithm} must be rejected");
+        }
+    }
+
     fn init_dummy_tracing_subscriber() {
         let _ = tracing_subscriber::fmt()
             .with_env_filter("dummy=trace")

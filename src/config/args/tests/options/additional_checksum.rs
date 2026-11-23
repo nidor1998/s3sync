@@ -67,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_md5() {
+    fn with_custom_value_with_supported_algorithm_md5() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -82,13 +82,16 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_err());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Md5
+        );
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxhash128() {
+    fn with_custom_value_with_supported_algorithm_xxhash128() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -103,13 +106,16 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_err());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Xxhash128
+        );
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxhash3() {
+    fn with_custom_value_with_supported_algorithm_xxhash3() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -124,13 +130,16 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_err());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Xxhash3
+        );
     }
 
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_xxhash64() {
+    fn with_custom_value_with_supported_algorithm_xxhash64() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -145,12 +154,16 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_err());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Xxhash64
+        );
     }
+
     #[test]
-    fn with_custom_value_with_unsupported_algorithm_sha12() {
+    fn with_custom_value_with_supported_algorithm_sha512() {
         init_dummy_tracing_subscriber();
 
         let args = vec![
@@ -165,9 +178,12 @@ mod tests {
             "s3://target-bucket/target_key",
         ];
 
-        let config = build_config_from_args(args);
+        let config = build_config_from_args(args).unwrap();
 
-        assert!(config.is_err());
+        assert_eq!(
+            config.additional_checksum_algorithm.unwrap(),
+            ChecksumAlgorithm::Sha512
+        );
     }
 
     #[test]

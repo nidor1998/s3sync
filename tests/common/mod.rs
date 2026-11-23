@@ -36,12 +36,13 @@ use uuid::Uuid;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
 
+use base64::Engine;
 use s3sync::Config;
 use s3sync::config::args::parse_from_args;
 use s3sync::pipeline::Pipeline;
 use s3sync::types::token::create_pipeline_cancellation_token;
 use s3sync::types::{AnnotationMap, SyncStatistics};
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256, Sha512};
 use tokio::io::AsyncReadExt;
 
 pub const REGION: &str = "ap-northeast-1";
@@ -71,6 +72,12 @@ pub const TEST_8MIB_FILE_PATH: &str = "./playground/large_data_e2e_8mib_test/8mi
 pub const LARGE_FILE_SIZE: usize = 30 * 1024 * 1024;
 pub const LARGE_FILE_KEY: &str = "large_file";
 pub const LARGE_FILE_S3_ETAG: &str = "\"9be3303e9a8d67a0f1e609fb7a29030a-4\"";
+pub const LARGE_FILE_SHA512_8M_CHUNK: &str =
+    "Ba5KUeDufD7rT49uQZlv+gPl2yHnjVItz3h9OWxbseUuO4fmCxjOoSKT4vnBlog42wAGZcTxMeNFkAUj2+Lv/A==-4";
+pub const LARGE_FILE_MD5_8M_CHUNK: &str = "m+MwPpqNZ6Dx5gn7eikDCg==-4";
+pub const LARGE_FILE_XXHASH128_8M_CHUNK: &str = "zo+4x4hDp/CuzVbdxFOwFw==-4";
+pub const LARGE_FILE_XXHASH3_8M_CHUNK: &str = "Gdk9MkznSYs=-4";
+pub const LARGE_FILE_XXHASH64_8M_CHUNK: &str = "LXqsCfONNy8=-4";
 pub const TEST_FILE_SIZE_8MIB: usize = 8 * 1024 * 1024;
 pub const TEST_8MIB_FILE_KEY: &str = "8mib_file";
 
@@ -1354,6 +1361,131 @@ impl TestHelper {
         assert_eq!(object_list.len(), 5);
     }
 
+    pub async fn sync_test_data_with_sha512(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "SHA512",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
+    pub async fn sync_test_data_with_md5(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "MD5",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
+    pub async fn sync_test_data_with_xxhash128(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH128",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
+    pub async fn sync_test_data_with_xxhash3(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH3",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
+    pub async fn sync_test_data_with_xxhash64(&self, target_bucket_url: &str) {
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH64",
+            "./test_data/e2e_test/case1/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+        let bucket = target_bucket_url
+            .trim_start_matches("s3://")
+            .split('/')
+            .next()
+            .unwrap();
+        let object_list = self.list_objects(bucket, "").await;
+        assert_eq!(object_list.len(), 5);
+    }
+
     pub async fn sync_test_data_with_sha1(&self, target_bucket_url: &str) {
         let args = vec![
             "s3sync",
@@ -1566,6 +1698,136 @@ impl TestHelper {
         assert!(!pipeline.has_error());
     }
 
+    pub async fn sync_large_test_data_with_custom_chunksize_sha512(
+        &self,
+        target_bucket_url: &str,
+        chunksize: &str,
+    ) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            "--additional-checksum-algorithm",
+            "SHA512",
+            "--multipart-chunksize",
+            chunksize,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_custom_chunksize_md5(
+        &self,
+        target_bucket_url: &str,
+        chunksize: &str,
+    ) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            "--additional-checksum-algorithm",
+            "MD5",
+            "--multipart-chunksize",
+            chunksize,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_custom_chunksize_xxhash128(
+        &self,
+        target_bucket_url: &str,
+        chunksize: &str,
+    ) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            "--additional-checksum-algorithm",
+            "XXHASH128",
+            "--multipart-chunksize",
+            chunksize,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_custom_chunksize_xxhash3(
+        &self,
+        target_bucket_url: &str,
+        chunksize: &str,
+    ) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            "--additional-checksum-algorithm",
+            "XXHASH3",
+            "--multipart-chunksize",
+            chunksize,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_custom_chunksize_xxhash64(
+        &self,
+        target_bucket_url: &str,
+        chunksize: &str,
+    ) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            LARGE_FILE_DIR,
+            "--additional-checksum-algorithm",
+            "XXHASH64",
+            "--multipart-chunksize",
+            chunksize,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
     pub async fn sync_large_test_data_with_custom_chunksize_sha1(
         &self,
         target_bucket_url: &str,
@@ -1726,6 +1988,106 @@ impl TestHelper {
         assert!(!pipeline.has_error());
     }
 
+    pub async fn sync_large_test_data_with_sha512(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "SHA512",
+            LARGE_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_md5(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "MD5",
+            LARGE_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_xxhash128(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH128",
+            LARGE_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_xxhash3(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH3",
+            LARGE_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_large_test_data_with_xxhash64(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH64",
+            LARGE_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
     pub async fn sync_8mib_test_data_with_sha256(&self, target_bucket_url: &str) {
         Self::create_8mib_file();
 
@@ -1735,6 +2097,106 @@ impl TestHelper {
             "s3sync-e2e-test",
             "--additional-checksum-algorithm",
             "SHA256",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_sha512(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "SHA512",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_md5(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "MD5",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_xxhash128(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH128",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_xxhash3(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH3",
+            TEST_8MIB_FILE_DIR,
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_8mib_test_data_with_xxhash64(&self, target_bucket_url: &str) {
+        Self::create_8mib_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH64",
             TEST_8MIB_FILE_DIR,
             target_bucket_url,
         ];
@@ -1817,6 +2279,106 @@ impl TestHelper {
             "s3sync-e2e-test",
             "--additional-checksum-algorithm",
             "SHA256",
+            "./test_data/e2e_test/case4/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_empty_data_with_sha512(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "SHA512",
+            "./test_data/e2e_test/case4/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_empty_data_with_md5(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "MD5",
+            "./test_data/e2e_test/case4/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_empty_data_with_xxhash128(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH128",
+            "./test_data/e2e_test/case4/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_empty_data_with_xxhash3(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH3",
+            "./test_data/e2e_test/case4/",
+            target_bucket_url,
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+        pipeline.run().await;
+        assert!(!pipeline.has_error());
+    }
+
+    pub async fn sync_empty_data_with_xxhash64(&self, target_bucket_url: &str) {
+        Self::create_large_file();
+
+        let args = vec![
+            "s3sync",
+            "--target-profile",
+            "s3sync-e2e-test",
+            "--additional-checksum-algorithm",
+            "XXHASH64",
             "./test_data/e2e_test/case4/",
             target_bucket_url,
         ];
@@ -2147,6 +2709,39 @@ impl TestHelper {
         output_file.flush()?;
 
         Ok(())
+    }
+
+    pub fn get_sha256_base64_from_file(file_path: &str) -> String {
+        let data = std::fs::read(file_path).unwrap();
+        base64::engine::general_purpose::STANDARD.encode(Sha256::digest(&data))
+    }
+
+    pub fn get_sha512_base64_from_file(file_path: &str) -> String {
+        let data = std::fs::read(file_path).unwrap();
+        base64::engine::general_purpose::STANDARD.encode(Sha512::digest(&data))
+    }
+
+    pub fn get_md5_base64_from_file(file_path: &str) -> String {
+        let data = std::fs::read(file_path).unwrap();
+        base64::engine::general_purpose::STANDARD.encode(md5::compute(&data).0)
+    }
+
+    pub fn get_xxhash128_base64_from_file(file_path: &str) -> String {
+        let data = std::fs::read(file_path).unwrap();
+        base64::engine::general_purpose::STANDARD
+            .encode(twox_hash::XxHash3_128::oneshot(&data).to_be_bytes())
+    }
+
+    pub fn get_xxhash3_base64_from_file(file_path: &str) -> String {
+        let data = std::fs::read(file_path).unwrap();
+        base64::engine::general_purpose::STANDARD
+            .encode(twox_hash::XxHash3_64::oneshot(&data).to_be_bytes())
+    }
+
+    pub fn get_xxhash64_base64_from_file(file_path: &str) -> String {
+        let data = std::fs::read(file_path).unwrap();
+        base64::engine::general_purpose::STANDARD
+            .encode(twox_hash::XxHash64::oneshot(0, &data).to_be_bytes())
     }
 
     pub fn get_sha256_from_file(file_path: &str) -> String {

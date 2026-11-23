@@ -3036,6 +3036,109 @@ mod tests {
         )));
     }
 
+    async fn create_object_syncer_for_put_object_error_test(
+        warn_as_error: bool,
+    ) -> (ObjectSyncer, Arc<AtomicBool>) {
+        let mut args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        if warn_as_error {
+            args.insert(1, "--warn-as-error");
+        }
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, _stats_receiver) = async_channel::unbounded();
+        let has_warning = Arc::new(AtomicBool::new(false));
+
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            has_warning.clone(),
+        )
+        .await;
+
+        let syncer = ObjectSyncer::new(
+            Stage::new(
+                config.clone(),
+                Some(dyn_clone::clone_box(&*source)),
+                Some(dyn_clone::clone_box(&*target)),
+                None,
+                None,
+                cancellation_token,
+                has_warning.clone(),
+            ),
+            0,
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
+        );
+
+        (syncer, has_warning)
+    }
+
+    #[tokio::test]
+    async fn handle_put_object_error_directory_traversal_is_warning() {
+        init_dummy_tracing_subscriber();
+
+        let (syncer, has_warning) = create_object_syncer_for_put_object_error_test(false).await;
+
+        let result = syncer
+            .handle_put_object_error("../key", anyhow!(S3syncError::DirectoryTraversalError))
+            .await;
+
+        assert!(result.is_ok());
+        assert!(has_warning.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn handle_put_object_error_directory_traversal_with_warn_as_error() {
+        init_dummy_tracing_subscriber();
+
+        let (syncer, has_warning) = create_object_syncer_for_put_object_error_test(true).await;
+
+        let e = syncer
+            .handle_put_object_error("../key", anyhow!(S3syncError::DirectoryTraversalError))
+            .await
+            .unwrap_err();
+
+        assert_eq!(
+            *e.downcast_ref::<S3syncError>().unwrap(),
+            S3syncError::DirectoryTraversalError
+        );
+        assert!(has_warning.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn handle_put_object_error_cancelled_is_not_error() {
+        init_dummy_tracing_subscriber();
+
+        // Cancellation is never an error, even with --warn-as-error.
+        let (syncer, _) = create_object_syncer_for_put_object_error_test(true).await;
+
+        let result = syncer
+            .handle_put_object_error("key", anyhow!(S3syncError::Cancelled))
+            .await;
+
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn handle_put_object_error_other_error_is_returned() {
+        init_dummy_tracing_subscriber();
+
+        let (syncer, _) = create_object_syncer_for_put_object_error_test(false).await;
+
+        let e = syncer
+            .handle_put_object_error("key", anyhow!("unexpected error"))
+            .await
+            .unwrap_err();
+
+        assert_eq!(e.to_string(), "unexpected error");
+    }
+
     #[tokio::test]
     async fn sync_object_skip() {
         init_dummy_tracing_subscriber();

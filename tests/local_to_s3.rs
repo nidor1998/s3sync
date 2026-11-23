@@ -8,6 +8,7 @@ mod tests {
     use std::convert::TryFrom;
     use std::sync::Arc;
 
+    use aws_sdk_s3::operation::head_object::HeadObjectOutput;
     use aws_sdk_s3::types::{ServerSideEncryption, StorageClass};
 
     use common::*;
@@ -1228,6 +1229,191 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "./test_data/e2e_test/case3/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, "img.png", None).await;
+            assert_eq!(
+                object.checksum_sha512.unwrap(),
+                TestHelper::get_sha512_base64_from_file("./test_data/e2e_test/case3/img.png")
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "./test_data/e2e_test/case3/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, "img.png", None).await;
+            assert_eq!(
+                object.checksum_md5.unwrap(),
+                TestHelper::get_md5_base64_from_file("./test_data/e2e_test/case3/img.png")
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "./test_data/e2e_test/case3/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, "img.png", None).await;
+            assert_eq!(
+                object.checksum_xxhash128.unwrap(),
+                TestHelper::get_xxhash128_base64_from_file("./test_data/e2e_test/case3/img.png")
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "./test_data/e2e_test/case3/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, "img.png", None).await;
+            assert_eq!(
+                object.checksum_xxhash3.unwrap(),
+                TestHelper::get_xxhash3_base64_from_file("./test_data/e2e_test/case3/img.png")
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "./test_data/e2e_test/case3/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, "img.png", None).await;
+            assert_eq!(
+                object.checksum_xxhash64.unwrap(),
+                TestHelper::get_xxhash64_base64_from_file("./test_data/e2e_test/case3/img.png")
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
     async fn local_to_s3_with_additional_checksum_disable_verify() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -1266,6 +1452,286 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_disable_verify_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--disable-additional-checksum-verify",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_sha512.unwrap(),
+                    TestHelper::get_sha512_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_disable_verify_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--disable-additional-checksum-verify",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_md5.unwrap(),
+                    TestHelper::get_md5_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_disable_verify_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--disable-additional-checksum-verify",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash128.unwrap(),
+                    TestHelper::get_xxhash128_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_disable_verify_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--disable-additional-checksum-verify",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash3.unwrap(),
+                    TestHelper::get_xxhash3_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_disable_verify_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--disable-additional-checksum-verify",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            // The additional checksum must be stored in the target object.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash64.unwrap(),
+                    TestHelper::get_xxhash64_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
     async fn local_to_s3_with_additional_checksum_multipart_upload() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -1293,6 +1759,200 @@ mod tests {
 
             pipeline.run().await;
             assert!(!pipeline.has_error());
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_multipart_upload_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_large_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(object.checksum_sha512.unwrap(), LARGE_FILE_SHA512_8M_CHUNK);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_multipart_upload_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_large_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(object.checksum_md5.unwrap(), LARGE_FILE_MD5_8M_CHUNK);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_multipart_upload_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_large_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(
+                object.checksum_xxhash128.unwrap(),
+                LARGE_FILE_XXHASH128_8M_CHUNK
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_multipart_upload_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_large_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(
+                object.checksum_xxhash3.unwrap(),
+                LARGE_FILE_XXHASH3_8M_CHUNK
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_additional_checksum_multipart_upload_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_large_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(
+                object.checksum_xxhash64.unwrap(),
+                LARGE_FILE_XXHASH64_8M_CHUNK
+            );
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -1418,6 +2078,201 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA256",
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_8mib_composite_checksum_test_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_8mib_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_8mib_composite_checksum_test_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_8mib_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_8mib_composite_checksum_test_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_8mib_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_8mib_composite_checksum_test_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_8mib_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_8mib_composite_checksum_test_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            TestHelper::create_8mib_file();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
                 TEST_8MIB_FILE_DIR,
                 &target_bucket_url,
             ];
@@ -1713,6 +2568,186 @@ mod tests {
                 "s3sync-e2e-test",
                 "--additional-checksum-algorithm",
                 "SHA256",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 5);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
                 "./test_data/e2e_test/case1/",
                 &target_bucket_url,
             ];
@@ -2354,6 +3389,706 @@ mod tests {
 
         helper.delete_bucket_with_cascade(&bucket).await;
     }
+
+    #[tokio::test]
+    async fn local_to_s3_with_e_tag_check_auto_chunksize_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_sha512(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--multipart-threshold",
+                "5MiB",
+                "--multipart-chunksize",
+                "5243236",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_e_tag_check_auto_chunksize_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_md5(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--multipart-threshold",
+                "5MiB",
+                "--multipart-chunksize",
+                "5243236",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_e_tag_check_auto_chunksize_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash128(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--multipart-threshold",
+                "5MiB",
+                "--multipart-chunksize",
+                "5243236",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_e_tag_check_auto_chunksize_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash3(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--multipart-threshold",
+                "5MiB",
+                "--multipart-chunksize",
+                "5243236",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_e_tag_check_auto_chunksize_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash64(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--multipart-threshold",
+                "5MiB",
+                "--multipart-chunksize",
+                "5243236",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--check-etag",
+                "--auto-chunksize",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
     #[tokio::test]
     async fn local_to_s3_with_e_tag_check_warn() {
         TestHelper::init_dummy_tracing_subscriber();
@@ -2510,6 +4245,565 @@ mod tests {
                 "SHA256",
                 "--additional-checksum-algorithm",
                 "SHA256",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_sha512_check() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data_with_sha512(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_md5_check() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data_with_md5(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash128_check() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_test_data_with_xxhash128(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash3_check() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data_with_xxhash3(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash64_check() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_test_data_with_xxhash64(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
                 "./test_data/e2e_test/case1/",
                 &target_bucket_url,
             ];
@@ -3315,6 +5609,591 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn local_to_s3_with_sha512_check_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_sha512(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_md5_check_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_md5(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash128_check_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash128(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash3_check_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash3(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash64_check_auto_chunksize() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash64(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
     async fn local_to_s3_with_sha256_check_if_match() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -3413,6 +6292,596 @@ mod tests {
                 "SHA256",
                 "--additional-checksum-algorithm",
                 "SHA256",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_sha512_check_if_match() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_sha512(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--if-match",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_md5_check_if_match() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_md5(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--if-match",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash128_check_if_match() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash128(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--if-match",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash3_check_if_match() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash3(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--if-match",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_xxhash64_check_if_match() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_large_test_data_with_xxhash64(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 1);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            TestHelper::create_large_file_case2();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                LARGE_FILE_DIR_CASE2,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--head-each-target",
+                "--if-match",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
                 LARGE_FILE_DIR,
                 &target_bucket_url,
             ];
@@ -4262,6 +7731,605 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn local_to_s3_with_checksum_check_kms_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data_with_sha512(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_kms_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data_with_md5(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_kms_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_test_data_with_xxhash128(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_kms_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data_with_xxhash3(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_kms_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper
+                .sync_test_data_with_xxhash64(&target_bucket_url)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--sse",
+                "aws:kms",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
     async fn local_to_s3_with_checksum_check_sse_c() {
         //TestHelper::init_dummy_tracing_subscriber();
 
@@ -4429,6 +8497,841 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn local_to_s3_with_checksum_check_sse_c_sha512() {
+        //TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket, REGION)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_sse_c_md5() {
+        //TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket, REGION)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_sse_c_xxhash128() {
+        //TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket, REGION)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_sse_c_xxhash3() {
+        //TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket, REGION)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_sse_c_xxhash64() {
+        //TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            helper
+                .create_bucket_with_sse_c_encryption(&bucket, REGION)
+                .await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 5);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--remove-modified-filter",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1_2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.e_tag_verified, 0);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "--target-sse-c",
+                "AES256",
+                "--target-sse-c-key",
+                TEST_SSE_C_KEY_1,
+                "--target-sse-c-key-md5",
+                TEST_SSE_C_KEY_1_MD5,
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(TestHelper::get_skip_count(pipeline.get_stats_receiver()), 5);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
     async fn local_to_s3_with_checksum_check_warn() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -4466,6 +9369,286 @@ mod tests {
                 TestHelper::get_warning_count(pipeline.get_stats_receiver()),
                 5
             );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_warn_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "SHA512",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                5
+            );
+
+            // The warnings are caused by the missing SHA512 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_sha512.is_none());
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_warn_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "MD5",
+                "--additional-checksum-algorithm",
+                "MD5",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                5
+            );
+
+            // The warnings are caused by the missing MD5 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_md5.is_none());
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_warn_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH128",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                5
+            );
+
+            // The warnings are caused by the missing XXHASH128 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_xxhash128.is_none());
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_warn_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH3",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                5
+            );
+
+            // The warnings are caused by the missing XXHASH3 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_xxhash3.is_none());
+            }
+        }
+
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_warn_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+            helper.create_bucket(&bucket, REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket);
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--check-additional-checksum",
+                "XXHASH64",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                "./test_data/e2e_test/case1/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            assert_eq!(
+                TestHelper::get_warning_count(pipeline.get_stats_receiver()),
+                5
+            );
+
+            // The warnings are caused by the missing XXHASH64 checksum, and the filtered objects
+            // must not be uploaded again.
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket, key, None).await;
+                assert!(object.checksum_xxhash64.is_none());
+            }
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
@@ -4647,6 +9830,42 @@ mod tests {
 
     #[tokio::test]
     async fn local_to_s3_with_mtime_checksum_check() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("CRC64NVME").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_sha256() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("SHA256").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_sha512() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("SHA512").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_md5() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("MD5").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_xxhash128() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("XXHASH128").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_xxhash3() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("XXHASH3").await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_mtime_checksum_check_xxhash64() {
+        local_to_s3_with_mtime_checksum_check_with_checksum("XXHASH64").await;
+    }
+
+    // The object is uploaded with 5MiB parts, but the checking runs use the default chunksize.
+    // For composite checksums, the local checksum must be calculated with the part sizes of the target object.
+    async fn local_to_s3_with_mtime_checksum_check_with_checksum(checksum_algorithm: &str) {
         TestHelper::init_dummy_tracing_subscriber();
 
         let helper = TestHelper::new().await;
@@ -4666,9 +9885,9 @@ mod tests {
                 "--multipart-chunksize",
                 "5MiB",
                 "--check-mtime-and-additional-checksum",
-                "CRC64NVME",
+                checksum_algorithm,
                 "--additional-checksum-algorithm",
-                "CRC64NVME",
+                checksum_algorithm,
                 &test_dir,
                 &target_bucket_url,
             ];
@@ -4697,9 +9916,9 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-mtime-and-additional-checksum",
-                "CRC64NVME",
+                checksum_algorithm,
                 "--additional-checksum-algorithm",
-                "CRC64NVME",
+                checksum_algorithm,
                 &test_dir,
                 &target_bucket_url,
             ];
@@ -4728,9 +9947,9 @@ mod tests {
                 "--target-profile",
                 "s3sync-e2e-test",
                 "--check-mtime-and-additional-checksum",
-                "CRC64NVME",
+                checksum_algorithm,
                 "--additional-checksum-algorithm",
-                "CRC64NVME",
+                checksum_algorithm,
                 &test_dir,
                 &target_bucket_url,
             ];
@@ -5183,5 +10402,195 @@ mod tests {
         }
 
         helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    // A checksum without the "-N" suffix means that the object was uploaded in a single part.
+    // Even if the local file is not smaller than the multipart threshold of the checking run,
+    // --check-additional-checksum must digest the whole file instead of a composite checksum.
+    async fn check_single_part_object_over_threshold(
+        algorithm: &str,
+        expected_checksum: String,
+        get_checksum: fn(HeadObjectOutput) -> Option<String>,
+    ) {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket = TestHelper::generate_bucket_name();
+        let target_bucket_url = format!("s3://{}", bucket);
+        let modified_dir = format!(
+            "./playground/single_part_over_threshold_{}/",
+            Uuid::new_v4()
+        );
+        helper.create_bucket(&bucket, REGION).await;
+
+        TestHelper::create_8mib_file();
+
+        {
+            // The 8MiB file is smaller than the 9MiB threshold, so it is uploaded in a single part.
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-threshold",
+                "9MiB",
+                "--additional-checksum-algorithm",
+                algorithm,
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.checksum_verified, 1);
+            assert_eq!(stats.sync_warning, 0);
+
+            let object = helper.head_object(&bucket, TEST_8MIB_FILE_KEY, None).await;
+            let checksum = get_checksum(object).unwrap();
+            assert!(!checksum.contains('-'));
+            assert_eq!(checksum, expected_checksum);
+        }
+
+        {
+            // The 8MiB file is not smaller than the 8MiB threshold of this run,
+            // but the checksums must match and the object must be skipped.
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-threshold",
+                "8MiB",
+                "--multipart-chunksize",
+                "8MiB",
+                "--check-additional-checksum",
+                algorithm,
+                "--additional-checksum-algorithm",
+                algorithm,
+                TEST_8MIB_FILE_DIR,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_skip, 1);
+            assert_eq!(stats.sync_complete, 0);
+            assert_eq!(stats.sync_warning, 0);
+
+            // The object has not been uploaded again.
+            let object = helper.head_object(&bucket, TEST_8MIB_FILE_KEY, None).await;
+            assert_eq!(get_checksum(object).unwrap(), expected_checksum);
+        }
+
+        {
+            // A file with different content must still be detected and uploaded.
+            std::fs::create_dir_all(&modified_dir).unwrap();
+            std::fs::write(
+                format!("{}{}", modified_dir, TEST_8MIB_FILE_KEY),
+                vec![1_u8; TEST_FILE_SIZE_8MIB],
+            )
+            .unwrap();
+
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--multipart-threshold",
+                "8MiB",
+                "--multipart-chunksize",
+                "8MiB",
+                "--check-additional-checksum",
+                algorithm,
+                "--additional-checksum-algorithm",
+                algorithm,
+                &modified_dir,
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 1);
+            assert_eq!(stats.sync_skip, 0);
+
+            let object = helper.head_object(&bucket, TEST_8MIB_FILE_KEY, None).await;
+            assert_ne!(get_checksum(object).unwrap(), expected_checksum);
+        }
+
+        TestHelper::delete_all_files(&modified_dir);
+        helper.delete_bucket_with_cascade(&bucket).await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_sha256() {
+        check_single_part_object_over_threshold(
+            "SHA256",
+            TestHelper::get_sha256_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_sha256,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_sha512() {
+        check_single_part_object_over_threshold(
+            "SHA512",
+            TestHelper::get_sha512_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_sha512,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_md5() {
+        check_single_part_object_over_threshold(
+            "MD5",
+            TestHelper::get_md5_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_md5,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_xxhash128() {
+        check_single_part_object_over_threshold(
+            "XXHASH128",
+            TestHelper::get_xxhash128_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_xxhash128,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_xxhash3() {
+        check_single_part_object_over_threshold(
+            "XXHASH3",
+            TestHelper::get_xxhash3_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_xxhash3,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn local_to_s3_with_checksum_check_single_part_over_threshold_xxhash64() {
+        check_single_part_object_over_threshold(
+            "XXHASH64",
+            TestHelper::get_xxhash64_base64_from_file(TEST_8MIB_FILE_PATH),
+            |object| object.checksum_xxhash64,
+        )
+        .await;
     }
 }

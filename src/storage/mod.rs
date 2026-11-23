@@ -47,7 +47,12 @@ pub mod s3;
 #[cfg(test)]
 pub(crate) mod test_helpers {
     use std::path::PathBuf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
+    static TEMP_FILE_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    // Tests sharing the same file run in parallel. To make sure that no test reads a partially
+    // written file, write to a unique temporary file first and then rename it into place.
     #[cfg_attr(coverage_nightly, coverage(off))]
     pub(crate) async fn create_large_file(path: &str, dir: &str, size: usize) {
         if PathBuf::from(path).try_exists().unwrap() {
@@ -56,8 +61,22 @@ pub(crate) mod test_helpers {
 
         tokio::fs::create_dir_all(dir).await.unwrap();
 
+        let temp_path = format!(
+            "{path}.tmp.{}.{}",
+            std::process::id(),
+            TEMP_FILE_COUNTER.fetch_add(1, Ordering::Relaxed)
+        );
         let data = vec![0_u8; size];
-        tokio::fs::write(path, data.as_slice()).await.unwrap();
+        tokio::fs::write(&temp_path, data.as_slice()).await.unwrap();
+
+        if let Err(e) = tokio::fs::rename(&temp_path, path).await {
+            // On Windows, replacing a file that another test has opened may fail.
+            // The file has already been created by another test in that case.
+            let _ = tokio::fs::remove_file(&temp_path).await;
+            if !PathBuf::from(path).try_exists().unwrap() {
+                panic!("failed to rename {temp_path} to {path}: {e}");
+            }
+        }
     }
 }
 
@@ -282,6 +301,19 @@ pub fn convert_head_to_get_object_output(head_object_output: HeadObjectOutput) -
         )
         .set_checksum_sha1(head_object_output.checksum_sha1().map(|s| s.to_string()))
         .set_checksum_sha256(head_object_output.checksum_sha256().map(|s| s.to_string()))
+        .set_checksum_md5(head_object_output.checksum_md5().map(|s| s.to_string()))
+        .set_checksum_sha512(head_object_output.checksum_sha512().map(|s| s.to_string()))
+        .set_checksum_xxhash128(
+            head_object_output
+                .checksum_xxhash128()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash3(head_object_output.checksum_xxhash3().map(|s| s.to_string()))
+        .set_checksum_xxhash64(
+            head_object_output
+                .checksum_xxhash64()
+                .map(|s| s.to_string()),
+        )
         .set_checksum_type(head_object_output.checksum_type().cloned())
         .set_content_disposition(
             head_object_output
@@ -375,6 +407,41 @@ pub fn convert_copy_to_put_object_output(
                 .checksum_sha256()
                 .map(|s| s.to_string()),
         )
+        .set_checksum_md5(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_md5()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha512(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_sha512()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash128(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_xxhash128()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash3(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_xxhash3()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash64(
+            copy_object_output
+                .copy_object_result()
+                .unwrap()
+                .checksum_xxhash64()
+                .map(|s| s.to_string()),
+        )
         .set_checksum_type(
             copy_object_output
                 .copy_object_result()
@@ -463,6 +530,41 @@ pub fn convert_copy_to_upload_part_output(
                 .copy_part_result()
                 .unwrap()
                 .checksum_sha256()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_md5(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_md5()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_sha512(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_sha512()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash128(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_xxhash128()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash3(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_xxhash3()
+                .map(|s| s.to_string()),
+        )
+        .set_checksum_xxhash64(
+            upload_part_copy_output
+                .copy_part_result()
+                .unwrap()
+                .checksum_xxhash64()
                 .map(|s| s.to_string()),
         )
         .set_sse_customer_algorithm(
@@ -680,6 +782,138 @@ mod tests {
         );
     }
 
+    // Every checksum field has a distinct value, so copying from a wrong field is detected.
+    #[test]
+    fn convert_head_to_get_object_output_checksums_test() {
+        init_dummy_tracing_subscriber();
+
+        let head_object_output = HeadObjectOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .checksum_type(aws_sdk_s3::types::ChecksumType::FullObject)
+            .build();
+
+        let output = convert_head_to_get_object_output(head_object_output);
+
+        assert_eq!(output.checksum_crc32(), Some("crc32"));
+        assert_eq!(output.checksum_crc32_c(), Some("crc32c"));
+        assert_eq!(output.checksum_crc64_nvme(), Some("crc64nvme"));
+        assert_eq!(output.checksum_sha1(), Some("sha1"));
+        assert_eq!(output.checksum_sha256(), Some("sha256"));
+        assert_eq!(output.checksum_sha512(), Some("sha512"));
+        assert_eq!(output.checksum_md5(), Some("md5"));
+        assert_eq!(output.checksum_xxhash128(), Some("xxhash128"));
+        assert_eq!(output.checksum_xxhash3(), Some("xxhash3"));
+        assert_eq!(output.checksum_xxhash64(), Some("xxhash64"));
+        assert_eq!(
+            output.checksum_type(),
+            Some(&aws_sdk_s3::types::ChecksumType::FullObject)
+        );
+    }
+
+    #[test]
+    fn convert_copy_to_put_object_output_checksums_test() {
+        init_dummy_tracing_subscriber();
+
+        let copy_object_output = CopyObjectOutput::builder()
+            .copy_object_result(
+                aws_sdk_s3::types::CopyObjectResult::builder()
+                    .e_tag("etag")
+                    .checksum_crc32("crc32")
+                    .checksum_crc32_c("crc32c")
+                    .checksum_crc64_nvme("crc64nvme")
+                    .checksum_sha1("sha1")
+                    .checksum_sha256("sha256")
+                    .checksum_sha512("sha512")
+                    .checksum_md5("md5")
+                    .checksum_xxhash128("xxhash128")
+                    .checksum_xxhash3("xxhash3")
+                    .checksum_xxhash64("xxhash64")
+                    .checksum_type(aws_sdk_s3::types::ChecksumType::Composite)
+                    .build(),
+            )
+            .expiration("expiry-date=\"Fri, 23 Dec 2012 00:00:00 GMT\"")
+            .sse_customer_algorithm("AES256")
+            .sse_customer_key_md5("key_md5")
+            .ssekms_encryption_context("context")
+            .ssekms_key_id("kms_key")
+            .version_id("version1")
+            .build();
+
+        let output = convert_copy_to_put_object_output(copy_object_output, 1234);
+
+        assert_eq!(output.e_tag(), Some("etag"));
+        assert_eq!(output.size(), Some(1234));
+        assert_eq!(
+            output.expiration(),
+            Some("expiry-date=\"Fri, 23 Dec 2012 00:00:00 GMT\"")
+        );
+        assert_eq!(output.sse_customer_algorithm(), Some("AES256"));
+        assert_eq!(output.sse_customer_key_md5(), Some("key_md5"));
+        assert_eq!(output.ssekms_encryption_context(), Some("context"));
+        assert_eq!(output.ssekms_key_id(), Some("kms_key"));
+        assert_eq!(output.version_id(), Some("version1"));
+        assert_eq!(output.checksum_crc32(), Some("crc32"));
+        assert_eq!(output.checksum_crc32_c(), Some("crc32c"));
+        assert_eq!(output.checksum_crc64_nvme(), Some("crc64nvme"));
+        assert_eq!(output.checksum_sha1(), Some("sha1"));
+        assert_eq!(output.checksum_sha256(), Some("sha256"));
+        assert_eq!(output.checksum_sha512(), Some("sha512"));
+        assert_eq!(output.checksum_md5(), Some("md5"));
+        assert_eq!(output.checksum_xxhash128(), Some("xxhash128"));
+        assert_eq!(output.checksum_xxhash3(), Some("xxhash3"));
+        assert_eq!(output.checksum_xxhash64(), Some("xxhash64"));
+        assert_eq!(
+            output.checksum_type(),
+            Some(&aws_sdk_s3::types::ChecksumType::Composite)
+        );
+    }
+
+    #[test]
+    fn convert_copy_to_upload_part_output_checksums_test() {
+        init_dummy_tracing_subscriber();
+
+        let upload_part_copy_output = UploadPartCopyOutput::builder()
+            .copy_part_result(
+                aws_sdk_s3::types::CopyPartResult::builder()
+                    .e_tag("etag")
+                    .checksum_crc32("crc32")
+                    .checksum_crc32_c("crc32c")
+                    .checksum_crc64_nvme("crc64nvme")
+                    .checksum_sha1("sha1")
+                    .checksum_sha256("sha256")
+                    .checksum_sha512("sha512")
+                    .checksum_md5("md5")
+                    .checksum_xxhash128("xxhash128")
+                    .checksum_xxhash3("xxhash3")
+                    .checksum_xxhash64("xxhash64")
+                    .build(),
+            )
+            .build();
+
+        let output = convert_copy_to_upload_part_output(upload_part_copy_output);
+
+        assert_eq!(output.e_tag(), Some("etag"));
+        assert_eq!(output.checksum_crc32(), Some("crc32"));
+        assert_eq!(output.checksum_crc32_c(), Some("crc32c"));
+        assert_eq!(output.checksum_crc64_nvme(), Some("crc64nvme"));
+        assert_eq!(output.checksum_sha1(), Some("sha1"));
+        assert_eq!(output.checksum_sha256(), Some("sha256"));
+        assert_eq!(output.checksum_sha512(), Some("sha512"));
+        assert_eq!(output.checksum_md5(), Some("md5"));
+        assert_eq!(output.checksum_xxhash128(), Some("xxhash128"));
+        assert_eq!(output.checksum_xxhash3(), Some("xxhash3"));
+        assert_eq!(output.checksum_xxhash64(), Some("xxhash64"));
+    }
+
     #[test]
     fn test_parse_range_header_string_without_hyphen() {
         init_dummy_tracing_subscriber();
@@ -705,6 +939,40 @@ mod tests {
         // The second call returns early because the file already exists.
         test_helpers::create_large_file(path_str, dir_str, 2048).await;
         assert_eq!(tokio::fs::metadata(&path).await.unwrap().len(), 1024);
+    }
+
+    // Tests share large files and run in parallel, so a caller must never see a partially written file.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+    async fn create_large_file_test_helper_concurrent() {
+        init_dummy_tracing_subscriber();
+
+        const SIZE: usize = 16 * 1024 * 1024;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let dir = temp_dir.path().join("large_data");
+        let path = dir.join("16MiB.dat");
+
+        let mut handles = Vec::new();
+        for _ in 0..16 {
+            let path = path.to_str().unwrap().to_string();
+            let dir = dir.to_str().unwrap().to_string();
+            handles.push(tokio::spawn(async move {
+                test_helpers::create_large_file(&path, &dir, SIZE).await;
+                tokio::fs::metadata(&path).await.unwrap().len()
+            }));
+        }
+
+        for handle in handles {
+            assert_eq!(handle.await.unwrap(), SIZE as u64);
+        }
+
+        // No temporary files are left behind.
+        let mut entries = tokio::fs::read_dir(&dir).await.unwrap();
+        let mut count = 0;
+        while entries.next_entry().await.unwrap().is_some() {
+            count += 1;
+        }
+        assert_eq!(count, 1);
     }
 
     fn init_dummy_tracing_subscriber() {

@@ -1651,6 +1651,755 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_with_checksum_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data_with_sha512(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_sha512.unwrap(),
+                    TestHelper::get_sha512_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        {
+            helper.delete_all_objects(&bucket1).await;
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--delete",
+                "./test_data/e2e_test/case2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 9);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 4);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_checksum_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data_with_md5(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "MD5",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_md5.unwrap(),
+                    TestHelper::get_md5_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        {
+            helper.delete_all_objects(&bucket1).await;
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "MD5",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--delete",
+                "./test_data/e2e_test/case2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "MD5",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 9);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 4);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_checksum_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper
+                .sync_test_data_with_xxhash128(&target_bucket_url)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash128.unwrap(),
+                    TestHelper::get_xxhash128_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        {
+            helper.delete_all_objects(&bucket1).await;
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--delete",
+                "./test_data/e2e_test/case2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 9);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 4);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_checksum_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data_with_xxhash3(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash3.unwrap(),
+                    TestHelper::get_xxhash3_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        {
+            helper.delete_all_objects(&bucket1).await;
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--delete",
+                "./test_data/e2e_test/case2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 9);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 4);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_checksum_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper
+                .sync_test_data_with_xxhash64(&target_bucket_url)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            for key in [
+                "data1",
+                "dir1/data1",
+                "dir2/data2",
+                "dir21/data1",
+                "dir5/data3",
+            ] {
+                let object = helper.head_object(&bucket2, key, None).await;
+                assert_eq!(
+                    object.checksum_xxhash64.unwrap(),
+                    TestHelper::get_xxhash64_base64_from_file(&format!(
+                        "./test_data/e2e_test/case1/{}",
+                        key
+                    ))
+                );
+            }
+        }
+
+        {
+            helper.delete_all_objects(&bucket1).await;
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 0);
+        }
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+            let args = vec![
+                "s3sync",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--delete",
+                "./test_data/e2e_test/case2/",
+                &target_bucket_url,
+            ];
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+        }
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 9);
+
+            let object_list = helper.list_objects(&bucket2, "").await;
+            assert_eq!(object_list.len(), 4);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_with_multipart_upload_checksum() {
         TestHelper::init_dummy_tracing_subscriber();
 
@@ -1699,6 +2448,310 @@ mod tests {
 
             pipeline.run().await;
             assert!(!pipeline.has_error());
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_multipart_upload_checksum_sha512() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+
+            helper.delete_all_objects(&bucket1).await;
+
+            helper
+                .sync_large_test_data_with_sha512(&target_bucket_url)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "SHA512",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(object.checksum_sha512.unwrap(), LARGE_FILE_SHA512_8M_CHUNK);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_multipart_upload_checksum_md5() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+
+            helper.delete_all_objects(&bucket1).await;
+
+            helper
+                .sync_large_test_data_with_md5(&target_bucket_url)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "MD5",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(object.checksum_md5.unwrap(), LARGE_FILE_MD5_8M_CHUNK);
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_multipart_upload_checksum_xxhash128() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+
+            helper.delete_all_objects(&bucket1).await;
+
+            helper
+                .sync_large_test_data_with_xxhash128(&target_bucket_url)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH128",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(
+                object.checksum_xxhash128.unwrap(),
+                LARGE_FILE_XXHASH128_8M_CHUNK
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_multipart_upload_checksum_xxhash3() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+
+            helper.delete_all_objects(&bucket1).await;
+
+            helper
+                .sync_large_test_data_with_xxhash3(&target_bucket_url)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH3",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(
+                object.checksum_xxhash3.unwrap(),
+                LARGE_FILE_XXHASH3_8M_CHUNK
+            );
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
+    async fn s3_to_s3_with_multipart_upload_checksum_xxhash64() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+
+            helper.delete_all_objects(&bucket1).await;
+
+            helper
+                .sync_large_test_data_with_xxhash64(&target_bucket_url)
+                .await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--enable-additional-checksum",
+                "--additional-checksum-algorithm",
+                "XXHASH64",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+
+            let object = helper.head_object(&bucket2, LARGE_FILE_KEY, None).await;
+            assert_eq!(object.e_tag.unwrap(), LARGE_FILE_S3_ETAG);
+            assert_eq!(
+                object.checksum_xxhash64.unwrap(),
+                LARGE_FILE_XXHASH64_8M_CHUNK
+            );
         }
 
         helper.delete_bucket_with_cascade(&bucket1).await;

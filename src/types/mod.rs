@@ -498,6 +498,21 @@ pub fn get_additional_checksum(
         ChecksumAlgorithm::Crc64Nvme => get_object_output
             .checksum_crc64_nvme()
             .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha512 => get_object_output
+            .checksum_sha512()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash3 => get_object_output
+            .checksum_xxhash3()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash64 => get_object_output
+            .checksum_xxhash64()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash128 => get_object_output
+            .checksum_xxhash128()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Md5 => get_object_output
+            .checksum_md5()
+            .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
         }
@@ -525,6 +540,21 @@ pub fn get_additional_checksum_with_head_object(
             .map(|checksum| checksum.to_string()),
         ChecksumAlgorithm::Crc64Nvme => head_object_output
             .checksum_crc64_nvme()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha512 => head_object_output
+            .checksum_sha512()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash3 => head_object_output
+            .checksum_xxhash3()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash64 => head_object_output
+            .checksum_xxhash64()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash128 => head_object_output
+            .checksum_xxhash128()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Md5 => head_object_output
+            .checksum_md5()
             .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
@@ -1051,6 +1081,23 @@ mod tests {
     }
 
     #[test]
+    fn size_and_e_tag_delete_marker_test() {
+        init_dummy_tracing_subscriber();
+
+        let delete_marker = S3syncObject::DeleteMarker(
+            DeleteMarkerEntry::builder()
+                .key("key1")
+                .version_id("version1")
+                .build(),
+        );
+
+        // A delete marker has no content, so it has neither size nor ETag.
+        assert_eq!(delete_marker.size(), 0);
+        assert!(delete_marker.e_tag().is_none());
+        assert_eq!(delete_marker.version_id(), Some("version1"));
+    }
+
+    #[test]
     fn is_latest_test() {
         init_dummy_tracing_subscriber();
 
@@ -1204,7 +1251,8 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         let get_object_output = GetObjectOutput::builder().build();
-        let _ = get_additional_checksum(&get_object_output, Some(ChecksumAlgorithm::Md5));
+        let _ =
+            get_additional_checksum(&get_object_output, Some(ChecksumAlgorithm::from("UNKNOWN")));
     }
 
     #[test]
@@ -1215,8 +1263,97 @@ mod tests {
         let head_object_output = HeadObjectOutput::builder().build();
         let _ = get_additional_checksum_with_head_object(
             &head_object_output,
-            Some(ChecksumAlgorithm::Md5),
+            Some(ChecksumAlgorithm::from("UNKNOWN")),
         );
+    }
+
+    // Every checksum field has a distinct value, so reading a wrong field is detected.
+    const ALL_ADDITIONAL_CHECKSUMS: [(ChecksumAlgorithm, &str); 10] = [
+        (ChecksumAlgorithm::Crc32, "crc32"),
+        (ChecksumAlgorithm::Crc32C, "crc32c"),
+        (ChecksumAlgorithm::Crc64Nvme, "crc64nvme"),
+        (ChecksumAlgorithm::Sha1, "sha1"),
+        (ChecksumAlgorithm::Sha256, "sha256"),
+        (ChecksumAlgorithm::Sha512, "sha512"),
+        (ChecksumAlgorithm::Md5, "md5"),
+        (ChecksumAlgorithm::Xxhash128, "xxhash128"),
+        (ChecksumAlgorithm::Xxhash3, "xxhash3"),
+        (ChecksumAlgorithm::Xxhash64, "xxhash64"),
+    ];
+
+    #[test]
+    fn get_additional_checksum_all_algorithms_test() {
+        init_dummy_tracing_subscriber();
+
+        let get_object_output = GetObjectOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .build();
+
+        for (algorithm, expected) in ALL_ADDITIONAL_CHECKSUMS {
+            assert_eq!(
+                get_additional_checksum(&get_object_output, Some(algorithm.clone())),
+                Some(expected.to_string()),
+                "{algorithm}"
+            );
+        }
+
+        assert!(get_additional_checksum(&get_object_output, None).is_none());
+
+        let empty = GetObjectOutput::builder().build();
+        for (algorithm, _) in ALL_ADDITIONAL_CHECKSUMS {
+            assert!(
+                get_additional_checksum(&empty, Some(algorithm.clone())).is_none(),
+                "{algorithm}"
+            );
+        }
+    }
+
+    #[test]
+    fn get_additional_checksum_with_head_object_all_algorithms_test() {
+        init_dummy_tracing_subscriber();
+
+        let head_object_output = HeadObjectOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .build();
+
+        for (algorithm, expected) in ALL_ADDITIONAL_CHECKSUMS {
+            assert_eq!(
+                get_additional_checksum_with_head_object(
+                    &head_object_output,
+                    Some(algorithm.clone())
+                ),
+                Some(expected.to_string()),
+                "{algorithm}"
+            );
+        }
+
+        assert!(get_additional_checksum_with_head_object(&head_object_output, None).is_none());
+
+        let empty = HeadObjectOutput::builder().build();
+        for (algorithm, _) in ALL_ADDITIONAL_CHECKSUMS {
+            assert!(
+                get_additional_checksum_with_head_object(&empty, Some(algorithm.clone())).is_none(),
+                "{algorithm}"
+            );
+        }
     }
 
     fn init_dummy_tracing_subscriber() {

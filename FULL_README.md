@@ -4,22 +4,19 @@
 [![Crates.io](https://img.shields.io/crates/d/s3sync?label=downloads%20%28crates.io%29)](https://crates.io/crates/s3sync)
 [![GitHub](https://img.shields.io/github/downloads/nidor1998/s3sync/total?label=downloads%20%28GitHub%29)](https://github.com/nidor1998/s3sync/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![MSRV](https://img.shields.io/badge/msrv-1.99.0-red)
+![MSRV](https://img.shields.io/badge/msrv-1.100.0-red)
 ![CI](https://github.com/nidor1998/s3sync/actions/workflows/ci.yml/badge.svg?branch=main)
 [![codecov](https://codecov.io/gh/nidor1998/s3sync/branch/main/graph/badge.svg?token=GO3DGS2BR4)](https://codecov.io/gh/nidor1998/s3sync)
 
 > **Note on issues:** This project continues to be maintained, and binaries will keep being released. However, to
 > consolidate discussion across
->
-the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)
+> the [s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)
 > family, **please file new issues in the [s7cmd](https://github.com/nidor1998/s7cmd) repository** instead of
 > here. [s7cmd](https://github.com/nidor1998/s7cmd) bundles these tools as subcommands built on the same underlying
 > code,
 > so its behavior matches the standalone binaries and it can be used in their place. **Before opening an issue, please
 > read the Scope sections in the READMEs of [s7cmd](https://github.com/nidor1998/s7cmd) and each
->
-project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs))
-** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue
+>project ([s3sync](https://github.com/nidor1998/s3sync) / [s3util-rs](https://github.com/nidor1998/s3util-rs) / [s3rm-rs](https://github.com/nidor1998/s3rm-rs) / [s3ls-rs](https://github.com/nidor1998/s3ls-rs)) ** — requests outside the documented scope will generally be declined. Existing issues in this repository will continue
 > to be handled as usual.
 
 ## Table of contents
@@ -159,7 +156,7 @@ the entire object.
 With `--auto-chunksize` option, s3sync automatically calculates the correct chunk size for multipart upload (But it will
 need more API calls and time).  
 In the case of S3 to S3, s3sync simply compares ETags that are calculated by S3.  
-Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
+Optionally, s3sync can also calculate and compare additional checksum (SHA256/SHA1/CRC32/CRC32C/CRC64NVME/MD5/SHA512/XXHASH128/XXHASH3/XXHASH64) for each
 object.  
 If you want to obtain evidence of the integrity check, you can use `-vv` option to output the verification information.
 
@@ -361,7 +358,7 @@ to calculate ETag.
 
 ### Additional checksum-based incremental transfer
 
-If you use Amazon S3 with additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME), you can use
+If you use Amazon S3 with additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME/MD5/SHA512/XXHASH128/XXHASH3/XXHASH64), you can use
 `--check-additional-checksum` option.  
 This option compares the checksum of both source and target objects and transfers only modified objects. It costs
 extra API calls per object.  
@@ -648,7 +645,7 @@ See [Install Rust](https://www.rust-lang.org/tools/install)
 
 ### Build
 
-s3sync requires Rust 1.99.0 or later.
+s3sync requires Rust 1.100.0 or later.
 
 ```bash
 cargo install s3sync
@@ -796,7 +793,7 @@ s3sync --delete s3://bucket-name1/prefix s3://bucket-name2/prefix
 ### Object integrity check detail
 
 s3sync calculates ETag(MD5) for a source object and compares them with the checksums in the target.  
-Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME) for each
+Optionally, s3sync can also calculate and compare additional checksum(SHA256/SHA1/CRC32/CRC32C/CRC64NVME/MD5/SHA512/XXHASH128/XXHASH3/XXHASH64) for each
 object.
 
 ETag is not always MD5. If the object is uploaded with multipart upload, ETag is not MD5 digest but the MD5 digest of
@@ -1429,7 +1426,7 @@ Verification:
           Additional checksum algorithm for upload [env: ADDITIONAL_CHECKSUM_ALGORITHM=]
       --full-object-checksum
           Use full object checksum for verification. CRC64NVME automatically use full object checksum.
-          This option cannot be used with SHA1/SHA256 additional checksum. [env: FULL_OBJECT_CHECKSUM=]
+          This option cannot be used with SHA1/SHA256/SHA512/MD5/XXHASH128/XXHASH3/XXHASH64 additional checksum. [env: FULL_OBJECT_CHECKSUM=]
       --enable-additional-checksum
           Enable additional checksum for download [env: ENABLE_ADDITIONAL_CHECKSUM=]
       --disable-multipart-verify

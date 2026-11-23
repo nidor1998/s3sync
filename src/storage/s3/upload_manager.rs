@@ -25,6 +25,7 @@ use tracing::{debug, error, trace, warn};
 
 use crate::config::Config;
 use crate::storage;
+use crate::storage::checksum::AdditionalChecksum;
 use crate::storage::e_tag_verify::{generate_e_tag_hash, is_multipart_upload_e_tag};
 use crate::storage::{
     Storage, convert_copy_to_put_object_output, convert_copy_to_upload_part_output,
@@ -715,6 +716,7 @@ impl UploadManager {
         let source_version_id = get_object_output_first_chunk
             .version_id()
             .map(|v| v.to_string());
+        let full_object_checksum = self.config.full_object_checksum;
 
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
@@ -877,16 +879,127 @@ impl UploadManager {
                 }
 
                 let md5_digest;
-                let md5_digest_base64 =
-                    if !express_onezone_storage && !disable_content_md5_header && !server_side_copy
-                    {
-                        let md5_digest_raw = md5::compute(&buffer);
-                        md5_digest = Some(md5_digest_raw);
-                        Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                let md5_digest_base64 = if need_md5_digest(
+                    server_side_copy,
+                    express_onezone_storage,
+                    disable_content_md5_header,
+                    &additional_checksum_algorithm,
+                ) {
+                    let md5_digest_raw = md5::compute(&buffer);
+                    md5_digest = Some(md5_digest_raw);
+                    Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                } else {
+                    md5_digest = None;
+                    None
+                };
+                let md5_digest_for_additional_checksum =
+                    if additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5) {
+                        md5_digest_base64.clone()
                     } else {
-                        md5_digest = None;
                         None
                     };
+                let content_md5 = if disable_content_md5_header || express_onezone_storage {
+                    None
+                } else {
+                    md5_digest_base64.clone()
+                };
+
+                let checksum_crc32_base64 =
+                    if additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc32) {
+                        let mut hasher =
+                            AdditionalChecksum::new(ChecksumAlgorithm::Crc32, full_object_checksum);
+                        hasher.update(buffer.as_slice());
+                        Some(hasher.finalize())
+                    } else {
+                        None
+                    };
+
+                let checksum_crc32c_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Crc32C)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Crc32C, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_crc64nvme_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Crc64Nvme)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_sha1_base64 =
+                    if additional_checksum_algorithm == Some(ChecksumAlgorithm::Sha1) {
+                        let mut hasher =
+                            AdditionalChecksum::new(ChecksumAlgorithm::Sha1, full_object_checksum);
+                        hasher.update(buffer.as_slice());
+                        Some(hasher.finalize())
+                    } else {
+                        None
+                    };
+
+                let checksum_sha256_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Sha256)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Sha256, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_xxhash128_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Xxhash128)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Xxhash128, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_xxhash3_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Xxhash3)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Xxhash3, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_xxhash64_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Xxhash64)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Xxhash64, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_sha512_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Sha512)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Sha512, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
 
                 let upload_part_output;
                 if !server_side_copy {
@@ -897,7 +1010,17 @@ impl UploadManager {
                         .key(&target_key)
                         .upload_id(target_upload_id.clone())
                         .part_number(part_number)
-                        .set_content_md5(md5_digest_base64)
+                        .set_content_md5(content_md5)
+                        .set_checksum_md5(md5_digest_for_additional_checksum)
+                        .set_checksum_crc32(checksum_crc32_base64)
+                        .set_checksum_crc32_c(checksum_crc32c_base64)
+                        .set_checksum_crc64_nvme(checksum_crc64nvme_base64)
+                        .set_checksum_sha1(checksum_sha1_base64)
+                        .set_checksum_sha256(checksum_sha256_base64)
+                        .set_checksum_sha512(checksum_sha512_base64)
+                        .set_checksum_xxhash128(checksum_xxhash128_base64)
+                        .set_checksum_xxhash3(checksum_xxhash3_base64)
+                        .set_checksum_xxhash64(checksum_xxhash64_base64)
                         .content_length(chunksize as i64)
                         .set_checksum_algorithm(additional_checksum_algorithm)
                         .set_sse_customer_algorithm(target_sse_c)
@@ -1013,6 +1136,31 @@ impl UploadManager {
                                 .checksum_crc64_nvme()
                                 .map(|digest| digest.to_string()),
                         )
+                        .set_checksum_md5(
+                            upload_part_output
+                                .checksum_md5()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_sha512(
+                            upload_part_output
+                                .checksum_sha512()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_xxhash128(
+                            upload_part_output
+                                .checksum_xxhash128()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_xxhash3(
+                            upload_part_output
+                                .checksum_xxhash3()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_xxhash64(
+                            upload_part_output
+                                .checksum_xxhash64()
+                                .map(|digest| digest.to_string()),
+                        )
                         .part_number(part_number)
                         .build(),
                 );
@@ -1087,6 +1235,8 @@ impl UploadManager {
         let mut upload_parts_join_handles = FuturesUnordered::new();
         let mut part_number = 1;
         let mut offset = 0;
+
+        let full_object_checksum = self.config.full_object_checksum;
 
         while part_number <= self.object_parts.as_ref().unwrap().len() as i32 {
             if self.cancellation_token.is_cancelled() {
@@ -1249,16 +1399,128 @@ impl UploadManager {
                 }
 
                 let md5_digest;
-                let md5_digest_base64 =
-                    if !express_onezone_storage && !disable_content_md5_header && !server_side_copy
-                    {
-                        let md5_digest_raw = md5::compute(&buffer);
-                        md5_digest = Some(md5_digest_raw);
-                        Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                let md5_digest_base64 = if need_md5_digest(
+                    server_side_copy,
+                    express_onezone_storage,
+                    disable_content_md5_header,
+                    &additional_checksum_algorithm,
+                ) {
+                    let md5_digest_raw = md5::compute(&buffer);
+                    md5_digest = Some(md5_digest_raw);
+                    Some(general_purpose::STANDARD.encode(md5_digest_raw.as_slice()))
+                } else {
+                    md5_digest = None;
+                    None
+                };
+                let md5_digest_for_additional_checksum =
+                    if additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5) {
+                        md5_digest_base64.clone()
                     } else {
-                        md5_digest = None;
                         None
                     };
+
+                let content_md5 = if disable_content_md5_header || express_onezone_storage {
+                    None
+                } else {
+                    md5_digest_base64.clone()
+                };
+
+                let checksum_crc32_base64 =
+                    if additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc32) {
+                        let mut hasher =
+                            AdditionalChecksum::new(ChecksumAlgorithm::Crc32, full_object_checksum);
+                        hasher.update(buffer.as_slice());
+                        Some(hasher.finalize())
+                    } else {
+                        None
+                    };
+
+                let checksum_crc32c_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Crc32C)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Crc32C, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_crc64nvme_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Crc64Nvme)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_sha1_base64 =
+                    if additional_checksum_algorithm == Some(ChecksumAlgorithm::Sha1) {
+                        let mut hasher =
+                            AdditionalChecksum::new(ChecksumAlgorithm::Sha1, full_object_checksum);
+                        hasher.update(buffer.as_slice());
+                        Some(hasher.finalize())
+                    } else {
+                        None
+                    };
+
+                let checksum_sha256_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Sha256)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Sha256, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_xxhash128_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Xxhash128)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Xxhash128, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_xxhash3_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Xxhash3)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Xxhash3, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_xxhash64_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Xxhash64)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Xxhash64, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
+
+                let checksum_sha512_base64 = if additional_checksum_algorithm
+                    == Some(ChecksumAlgorithm::Sha512)
+                {
+                    let mut hasher =
+                        AdditionalChecksum::new(ChecksumAlgorithm::Sha512, full_object_checksum);
+                    hasher.update(buffer.as_slice());
+                    Some(hasher.finalize())
+                } else {
+                    None
+                };
 
                 let upload_part_output;
                 if !server_side_copy {
@@ -1269,7 +1531,17 @@ impl UploadManager {
                         .key(&target_key)
                         .upload_id(target_upload_id.clone())
                         .part_number(part_number)
-                        .set_content_md5(md5_digest_base64)
+                        .set_content_md5(content_md5)
+                        .set_checksum_md5(md5_digest_for_additional_checksum)
+                        .set_checksum_crc32(checksum_crc32_base64)
+                        .set_checksum_crc32_c(checksum_crc32c_base64)
+                        .set_checksum_crc64_nvme(checksum_crc64nvme_base64)
+                        .set_checksum_sha1(checksum_sha1_base64)
+                        .set_checksum_sha256(checksum_sha256_base64)
+                        .set_checksum_sha512(checksum_sha512_base64)
+                        .set_checksum_xxhash128(checksum_xxhash128_base64)
+                        .set_checksum_xxhash3(checksum_xxhash3_base64)
+                        .set_checksum_xxhash64(checksum_xxhash64_base64)
                         .content_length(object_part_chunksize)
                         .set_checksum_algorithm(additional_checksum_algorithm)
                         .set_sse_customer_algorithm(target_sse_c)
@@ -1382,6 +1654,31 @@ impl UploadManager {
                                 .checksum_crc64_nvme()
                                 .map(|digest| digest.to_string()),
                         )
+                        .set_checksum_md5(
+                            upload_part_output
+                                .checksum_md5()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_sha512(
+                            upload_part_output
+                                .checksum_sha512()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_xxhash128(
+                            upload_part_output
+                                .checksum_xxhash128()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_xxhash3(
+                            upload_part_output
+                                .checksum_xxhash3()
+                                .map(|digest| digest.to_string()),
+                        )
+                        .set_checksum_xxhash64(
+                            upload_part_output
+                                .checksum_xxhash64()
+                                .map(|digest| digest.to_string()),
+                        )
                         .part_number(part_number)
                         .build(),
                 );
@@ -1453,6 +1750,8 @@ impl UploadManager {
         let source_version_id = get_object_output.version_id().map(|v| v.to_string());
         let source_last_modified = get_object_output.last_modified().copied();
 
+        let full_object_checksum = self.config.full_object_checksum;
+
         let buffer = if !self.config.server_side_copy {
             let mut body = get_object_output.body.into_async_read();
             get_object_output.body = ByteStream::from_static(b"");
@@ -1471,19 +1770,121 @@ impl UploadManager {
             Vec::new() // For server-side copy, we do not need to read the body.
         };
 
-        let md5_digest_base64 = if !self.express_onezone_storage
-            && !self.config.disable_content_md5_header
-            && !self.config.server_side_copy
-        {
+        let md5_digest_base64 = if need_md5_digest(
+            self.config.server_side_copy,
+            self.express_onezone_storage,
+            self.config.disable_content_md5_header,
+            &self.config.additional_checksum_algorithm,
+        ) {
             let md5_digest = md5::compute(&buffer);
-
             self.concatnated_md5_hash
                 .append(&mut md5_digest.as_slice().to_vec());
-
             Some(general_purpose::STANDARD.encode(md5_digest.as_slice()))
         } else {
             None
         };
+        let md5_digest_for_additional_checksum =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5) {
+                md5_digest_base64.clone()
+            } else {
+                None
+            };
+        let content_md5 = if self.config.disable_content_md5_header || self.express_onezone_storage
+        {
+            None
+        } else {
+            md5_digest_base64.clone()
+        };
+
+        let checksum_crc32_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc32) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Crc32, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
+
+        let checksum_crc32c_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc32C) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Crc32C, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
+
+        let checksum_crc64nvme_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Crc64Nvme) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Crc64Nvme, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
+
+        let checksum_sha1_base64 = if self.config.additional_checksum_algorithm
+            == Some(ChecksumAlgorithm::Sha1)
+        {
+            let mut hasher = AdditionalChecksum::new(ChecksumAlgorithm::Sha1, full_object_checksum);
+            hasher.update(buffer.as_slice());
+            Some(hasher.finalize())
+        } else {
+            None
+        };
+
+        let checksum_sha256_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Sha256) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Sha256, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
+
+        let checksum_xxhash128_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Xxhash128) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Xxhash128, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
+
+        let checksum_xxhash3_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Xxhash3) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Xxhash3, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
+
+        let checksum_xxhash64_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Xxhash64) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Xxhash64, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
+
+        let checksum_sha512_base64 =
+            if self.config.additional_checksum_algorithm == Some(ChecksumAlgorithm::Sha512) {
+                let mut hasher =
+                    AdditionalChecksum::new(ChecksumAlgorithm::Sha512, full_object_checksum);
+                hasher.update(buffer.as_slice());
+                Some(hasher.finalize())
+            } else {
+                None
+            };
 
         let buffer_stream = ByteStream::from(buffer);
 
@@ -1649,7 +2050,17 @@ impl UploadManager {
                 .set_metadata(upload_metadata.metadata)
                 .set_tagging(upload_metadata.tagging)
                 .set_website_redirect_location(upload_metadata.website_redirect_location)
-                .set_content_md5(md5_digest_base64)
+                .set_content_md5(content_md5)
+                .set_checksum_md5(md5_digest_for_additional_checksum)
+                .set_checksum_crc32(checksum_crc32_base64)
+                .set_checksum_crc32_c(checksum_crc32c_base64)
+                .set_checksum_crc64_nvme(checksum_crc64nvme_base64)
+                .set_checksum_sha1(checksum_sha1_base64)
+                .set_checksum_sha256(checksum_sha256_base64)
+                .set_checksum_sha512(checksum_sha512_base64)
+                .set_checksum_xxhash128(checksum_xxhash128_base64)
+                .set_checksum_xxhash3(checksum_xxhash3_base64)
+                .set_checksum_xxhash64(checksum_xxhash64_base64)
                 .set_content_type(upload_metadata.content_type)
                 .set_content_encoding(upload_metadata.content_encoding)
                 .set_cache_control(upload_metadata.cache_control)
@@ -1916,6 +2327,22 @@ impl UploadManager {
     }
 }
 
+// The MD5 digest is used for the Content-MD5 header, the ETag verification and the MD5 additional checksum.
+// Server-side copy does not read the body, so there is nothing to digest.
+fn need_md5_digest(
+    server_side_copy: bool,
+    express_onezone_storage: bool,
+    disable_content_md5_header: bool,
+    additional_checksum_algorithm: &Option<ChecksumAlgorithm>,
+) -> bool {
+    if server_side_copy {
+        return false;
+    }
+
+    (!express_onezone_storage && !disable_content_md5_header)
+        || *additional_checksum_algorithm == Some(ChecksumAlgorithm::Md5)
+}
+
 fn calculate_parts_count(
     multipart_threshold: i64,
     multipart_chunksize: i64,
@@ -1954,6 +2381,21 @@ pub fn get_additional_checksum_from_put_object_result(
         ChecksumAlgorithm::Crc64Nvme => put_object_output
             .checksum_crc64_nvme()
             .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Md5 => put_object_output
+            .checksum_md5()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha512 => put_object_output
+            .checksum_sha512()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash128 => put_object_output
+            .checksum_xxhash128()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash3 => put_object_output
+            .checksum_xxhash3()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash64 => put_object_output
+            .checksum_xxhash64()
+            .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
         }
@@ -1982,6 +2424,21 @@ pub fn get_additional_checksum_from_multipart_upload_result(
         ChecksumAlgorithm::Crc64Nvme => complete_multipart_upload_result
             .checksum_crc64_nvme()
             .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Md5 => complete_multipart_upload_result
+            .checksum_md5()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Sha512 => complete_multipart_upload_result
+            .checksum_sha512()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash128 => complete_multipart_upload_result
+            .checksum_xxhash128()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash3 => complete_multipart_upload_result
+            .checksum_xxhash3()
+            .map(|checksum| checksum.to_string()),
+        ChecksumAlgorithm::Xxhash64 => complete_multipart_upload_result
+            .checksum_xxhash64()
+            .map(|checksum| checksum.to_string()),
         _ => {
             panic!("unknown algorithm")
         }
@@ -1993,6 +2450,155 @@ mod tests {
     use super::*;
     use aws_sdk_s3::primitives::DateTime;
     use tracing_subscriber::EnvFilter;
+
+    // Every checksum field has a distinct value, so reading a wrong field is detected.
+    const ALL_ADDITIONAL_CHECKSUMS: [(ChecksumAlgorithm, &str); 10] = [
+        (ChecksumAlgorithm::Crc32, "crc32"),
+        (ChecksumAlgorithm::Crc32C, "crc32c"),
+        (ChecksumAlgorithm::Crc64Nvme, "crc64nvme"),
+        (ChecksumAlgorithm::Sha1, "sha1"),
+        (ChecksumAlgorithm::Sha256, "sha256"),
+        (ChecksumAlgorithm::Sha512, "sha512"),
+        (ChecksumAlgorithm::Md5, "md5"),
+        (ChecksumAlgorithm::Xxhash128, "xxhash128"),
+        (ChecksumAlgorithm::Xxhash3, "xxhash3"),
+        (ChecksumAlgorithm::Xxhash64, "xxhash64"),
+    ];
+
+    #[test]
+    fn get_additional_checksum_from_put_object_result_all_algorithms_test() {
+        init_dummy_tracing_subscriber();
+
+        let put_object_output = PutObjectOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .build();
+
+        for (algorithm, expected) in ALL_ADDITIONAL_CHECKSUMS {
+            assert_eq!(
+                get_additional_checksum_from_put_object_result(
+                    &put_object_output,
+                    Some(algorithm.clone())
+                ),
+                Some(expected.to_string()),
+                "{algorithm}"
+            );
+        }
+
+        assert!(get_additional_checksum_from_put_object_result(&put_object_output, None).is_none());
+
+        let empty = PutObjectOutput::builder().build();
+        for (algorithm, _) in ALL_ADDITIONAL_CHECKSUMS {
+            assert!(
+                get_additional_checksum_from_put_object_result(&empty, Some(algorithm.clone()))
+                    .is_none(),
+                "{algorithm}"
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown algorithm")]
+    fn get_additional_checksum_from_put_object_result_unknown_algorithm_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = get_additional_checksum_from_put_object_result(
+            &PutObjectOutput::builder().build(),
+            Some(ChecksumAlgorithm::from("UNKNOWN")),
+        );
+    }
+
+    #[test]
+    fn get_additional_checksum_from_multipart_upload_result_all_algorithms_test() {
+        init_dummy_tracing_subscriber();
+
+        let complete_multipart_upload_output = CompleteMultipartUploadOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_sha512("sha512")
+            .checksum_md5("md5")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .build();
+
+        for (algorithm, expected) in ALL_ADDITIONAL_CHECKSUMS {
+            assert_eq!(
+                get_additional_checksum_from_multipart_upload_result(
+                    &complete_multipart_upload_output,
+                    Some(algorithm.clone())
+                ),
+                Some(expected.to_string()),
+                "{algorithm}"
+            );
+        }
+
+        assert!(
+            get_additional_checksum_from_multipart_upload_result(
+                &complete_multipart_upload_output,
+                None
+            )
+            .is_none()
+        );
+
+        let empty = CompleteMultipartUploadOutput::builder().build();
+        for (algorithm, _) in ALL_ADDITIONAL_CHECKSUMS {
+            assert!(
+                get_additional_checksum_from_multipart_upload_result(
+                    &empty,
+                    Some(algorithm.clone())
+                )
+                .is_none(),
+                "{algorithm}"
+            );
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown algorithm")]
+    fn get_additional_checksum_from_multipart_upload_result_unknown_algorithm_panic_test() {
+        init_dummy_tracing_subscriber();
+
+        let _ = get_additional_checksum_from_multipart_upload_result(
+            &CompleteMultipartUploadOutput::builder().build(),
+            Some(ChecksumAlgorithm::from("UNKNOWN")),
+        );
+    }
+
+    #[test]
+    fn need_md5_digest_test() {
+        init_dummy_tracing_subscriber();
+
+        let md5 = Some(ChecksumAlgorithm::Md5);
+        let sha256 = Some(ChecksumAlgorithm::Sha256);
+
+        // Content-MD5 header.
+        assert!(need_md5_digest(false, false, false, &None));
+        assert!(need_md5_digest(false, false, false, &sha256));
+        assert!(!need_md5_digest(false, true, false, &None));
+        assert!(!need_md5_digest(false, false, true, &sha256));
+
+        // MD5 additional checksum is needed even if Content-MD5 is not sent.
+        assert!(need_md5_digest(false, true, false, &md5));
+        assert!(need_md5_digest(false, false, true, &md5));
+        assert!(need_md5_digest(false, true, true, &md5));
+
+        // Server-side copy never reads the body, so there is nothing to digest.
+        assert!(!need_md5_digest(true, false, false, &None));
+        assert!(!need_md5_digest(true, false, false, &md5));
+        assert!(!need_md5_digest(true, true, true, &md5));
+    }
 
     #[test]
     fn update_versioning_metadata_with_new() {

@@ -87,6 +87,14 @@ impl LuaPreprocessCallback {
         )?;
         source_object_lua.set("checksum_sha1", source_object.checksum_sha1.clone())?;
         source_object_lua.set("checksum_sha256", source_object.checksum_sha256.clone())?;
+        source_object_lua.set("checksum_md5", source_object.checksum_md5.clone())?;
+        source_object_lua.set("checksum_sha512", source_object.checksum_sha512.clone())?;
+        source_object_lua.set(
+            "checksum_xxhash128",
+            source_object.checksum_xxhash128.clone(),
+        )?;
+        source_object_lua.set("checksum_xxhash3", source_object.checksum_xxhash3.clone())?;
+        source_object_lua.set("checksum_xxhash64", source_object.checksum_xxhash64.clone())?;
         source_object_lua.set(
             "checksum_type",
             source_object
@@ -408,6 +416,11 @@ mod tests {
             .checksum_crc64_nvme("crc64")
             .checksum_sha1("sha1")
             .checksum_sha256("sha256")
+            .checksum_md5("md5")
+            .checksum_sha512("sha512")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
             .checksum_type(ChecksumType::FullObject)
             .content_disposition("attachment")
             .content_encoding("deflate")
@@ -464,5 +477,65 @@ mod tests {
         // The lua script updates the metadata fields.
         assert_eq!(metadata.cache_control.unwrap(), "s-maxage=1604800");
         assert_eq!(metadata.content_type.unwrap(), "application/vnd.ms-excel");
+    }
+
+    // The script copies each checksum field into the user-defined metadata,
+    // so a field passed to Lua under a wrong name or with a wrong value is detected.
+    #[tokio::test]
+    async fn preprocess_before_upload_checksum_fields_visible_from_lua() {
+        let mut callback = LuaPreprocessCallback::new(8 * 1024 * 1024, false, false, 5000);
+        callback
+            .load_and_compile("./test_data/script/preprocess_callback_checksums.lua")
+            .unwrap();
+
+        let source_object = GetObjectOutput::builder()
+            .checksum_crc32("crc32")
+            .checksum_crc32_c("crc32c")
+            .checksum_crc64_nvme("crc64nvme")
+            .checksum_sha1("sha1")
+            .checksum_sha256("sha256")
+            .checksum_md5("md5")
+            .checksum_sha512("sha512")
+            .checksum_xxhash128("xxhash128")
+            .checksum_xxhash3("xxhash3")
+            .checksum_xxhash64("xxhash64")
+            .checksum_type(ChecksumType::FullObject)
+            .build();
+
+        let mut metadata = UploadMetadata {
+            acl: None,
+            cache_control: None,
+            content_disposition: None,
+            content_encoding: None,
+            content_language: None,
+            content_type: None,
+            expires: None,
+            metadata: None,
+            request_payer: None,
+            storage_class: None,
+            website_redirect_location: None,
+            tagging: None,
+        };
+
+        callback
+            .preprocess_before_upload("key1", &source_object, &mut metadata)
+            .await
+            .unwrap();
+
+        let metadata = metadata.metadata.unwrap();
+        let expected = HashMap::from([
+            ("checksum_crc32".to_string(), "crc32".to_string()),
+            ("checksum_crc32_c".to_string(), "crc32c".to_string()),
+            ("checksum_crc64_nvme".to_string(), "crc64nvme".to_string()),
+            ("checksum_sha1".to_string(), "sha1".to_string()),
+            ("checksum_sha256".to_string(), "sha256".to_string()),
+            ("checksum_md5".to_string(), "md5".to_string()),
+            ("checksum_sha512".to_string(), "sha512".to_string()),
+            ("checksum_xxhash128".to_string(), "xxhash128".to_string()),
+            ("checksum_xxhash3".to_string(), "xxhash3".to_string()),
+            ("checksum_xxhash64".to_string(), "xxhash64".to_string()),
+            ("checksum_type".to_string(), "FULL_OBJECT".to_string()),
+        ]);
+        assert_eq!(metadata, expected);
     }
 }
