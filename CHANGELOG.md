@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed S3 prefix parsing so that the prefix of an S3 path (`s3://bucket/prefix`) is used exactly as given, because
+  any UTF-8 string is a valid S3 key. Previously, the path was parsed as a URL, so a different key could be
+  addressed silently.
+    - `?` and `#` are now part of the prefix. Previously, the prefix was truncated at these characters (e.g.
+      `s3://bucket/data#old/` was treated as `data`).
+    - Percent escapes are no longer decoded (e.g. `%20` stays `%20` instead of becoming a space), and a prefix such
+      as `%FF` is no longer rejected.
+    - `.` and `..` segments are no longer collapsed (e.g. `a/../b` stays `a/../b` instead of becoming `b`).
+    - `?` or `#` directly after the bucket name (e.g. `s3://bucket?x`) is rejected with an argument error.
+- Fixed a panic when a sync warning (a force retryable error, object not found, access denied, a failed
+  precondition, or a Glacier `InvalidObjectState`) occurred with `--enable-versioning`. The warning event for an
+  object with several versions now has no source version ID.
+- Fixed a panic when a ranged `GetObject` for the second or later part failed while downloading an object from S3
+  to local storage in multiple parts. The error is now returned and handled like any other download error.
+- Fixed a panic in the Lua filter callback when a delete marker reached it with `--enable-versioning` or
+  `--point-in-time`. A delete marker has no checksum, so its checksum fields are now `nil`.
+- Fixed `--metadata` discarding the s3sync origin metadata added by `--enable-versioning` and
+  `--put-last-modified-metadata`. With `--enable-versioning`, the missing origin version ID caused the same
+  versions to be synced again on every run.
+- Fixed force retry (`--force-retry-count`) not being applied to timeouts and connection errors in
+  `CreateMultipartUpload`, `UploadPart`, `UploadPartCopy`, `CompleteMultipartUpload` and `CopyObject`. Previously,
+  these errors failed the sync immediately.
+- Fixed a false ETag mismatch with `--check-etag` and `--auto-chunksize` when an object had been uploaded in a
+  single part but the local file was not smaller than the multipart threshold of the checking run. An ETag without
+  the `-N` suffix is the MD5 digest of the whole object, so the whole local file is now digested instead of
+  calculating a multipart ETag. Previously, such objects were treated as modified.
+- Fixed parallel listing of local directories (`--max-parallel-listings`) listing subdirectories one at a time.
+  Subdirectories are now listed concurrently.
+
+### Changed
+
+- Removed the `percent-encoding` crate.
+
 ## [1.64.0] - 2026-11-24
 
 Added support for the MD5, SHA512, XXHASH128, XXHASH3 and XXHASH64 additional checksum algorithms.
