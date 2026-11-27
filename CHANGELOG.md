@@ -37,6 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   calculating a multipart ETag. Previously, such objects were treated as modified.
 - Fixed parallel listing of local directories (`--max-parallel-listings`) listing subdirectories one at a time.
   Subdirectories are now listed concurrently.
+- Fixed `--delete` deleting target objects that still existed in the local source. A local directory or file that
+  could not be read (e.g. permission denied) was skipped with a warning, so the objects under it were treated as
+  removed from the source and deleted from the target. With `--delete`, such a failure is now an error and
+  nothing is deleted.
+    - This also applies to a local target, so a target directory or file that cannot be read now fails the sync
+      instead of being skipped with a warning.
+    - A file that is removed while the local storage is being listed is now skipped without a warning.
+      Previously, it was reported as a warning (an error with `--warn-as-error`).
 
 ### Changed
 
