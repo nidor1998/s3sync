@@ -362,7 +362,10 @@ impl S3syncObject {
                     Some(object.checksum_algorithm())
                 }
             }
-            _ => panic!("doesn't have checksum_algorithm."),
+            Self::DeleteMarker(_) => None,
+            Self::PackedVersions(_) => {
+                panic!("PackedVersions doesn't have checksum_algorithm.")
+            }
         }
     }
 
@@ -370,7 +373,7 @@ impl S3syncObject {
         match &self {
             Self::Versioning(object) => object.checksum_type(),
             Self::NotVersioning(object) => object.checksum_type(),
-            Self::DeleteMarker(_) => panic!("DeleteMarker doesn't have checksum_type."),
+            Self::DeleteMarker(_) => None,
             Self::PackedVersions(_) => {
                 panic!("PackedVersions doesn't have checksum_type.")
             }
@@ -1072,15 +1075,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn checksum_type_delete_marker_test_should_panic() {
-        init_dummy_tracing_subscriber();
-
-        let delete_marker = S3syncObject::DeleteMarker(DeleteMarkerEntry::builder().build());
-        let _ = delete_marker.checksum_type();
-    }
-
-    #[test]
     fn size_and_e_tag_delete_marker_test() {
         init_dummy_tracing_subscriber();
 
@@ -1091,9 +1085,11 @@ mod tests {
                 .build(),
         );
 
-        // A delete marker has no content, so it has neither size nor ETag.
+        // A delete marker has no content, so it has neither size, ETag nor checksum.
         assert_eq!(delete_marker.size(), 0);
         assert!(delete_marker.e_tag().is_none());
+        assert!(delete_marker.checksum_algorithm().is_none());
+        assert!(delete_marker.checksum_type().is_none());
         assert_eq!(delete_marker.version_id(), Some("version1"));
     }
 
