@@ -21,7 +21,7 @@ aws-runtime = "1.10.4"
 aws-sdk-s3 = { version = "1.161.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 aws-smithy-runtime-api = "1.22.0"
 aws-smithy-types = { version = "1.9.4" }
-aws-smithy-types-convert = { version = "0.61.1", features = ["convert-time"] }
+aws-smithy-types-convert = { version = "0.62.0", features = ["convert-time"] }
 aws-types = "1.7.0"
 bitflags = "2.13.2"
 base64 = "0.23.1"
