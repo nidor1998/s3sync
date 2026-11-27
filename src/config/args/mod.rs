@@ -371,11 +371,13 @@ Example: 2023-02-19T12:00:00Z"#
     filter_mtime_after: Option<OffsetDateTime>,
 
     #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects smaller than given size.
-Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
+Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB
+A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB)."#)]
     filter_smaller_size: Option<String>,
 
     #[arg(long, env, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Filtering", long_help=r#"Sync only objects larger than OR EQUAL TO given size.
-Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB"#)]
+Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB
+A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB)."#)]
     filter_larger_size: Option<String>,
 
     /// Sync only objects that match a given regular expression.
@@ -517,19 +519,22 @@ It may include multipart upload in progress objects in the listing result."#)]
     #[arg(long, env,  value_parser = clap::value_parser!(u32).range(10..), help_heading = "Performance")]
     rate_limit_objects: Option<u32>,
 
-    /// Rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB
-    #[arg(long, env, value_parser = human_bytes::check_human_bandwidth, help_heading = "Performance")]
+    #[arg(long, env, value_parser = human_bytes::check_human_bandwidth, help_heading = "Performance",
+    long_help=r#"Rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB
+A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB)."#)]
     rate_limit_bandwidth: Option<String>,
 
     #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_THRESHOLD, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings",
     long_help=r#"Object size threshold that s3sync uses for multipart upload
 Allow suffixes: MB, MiB, GB, GiB.
+A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
 The larger the size, the larger the memory usage."#)]
     multipart_threshold: String,
 
     #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_CHUNKSIZE, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings",
     long_help=r#"Chunk size that s3sync uses for multipart upload of individual files
 Allow suffixes: MB, MiB, GB, GiB.
+A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
 The larger the size, the larger the memory usage."#)]
     multipart_chunksize: String,
 
@@ -942,6 +947,7 @@ This is for like an optimistic lock."#)]
     #[cfg(feature = "lua_support")]
     #[arg(long, env, default_value = DEFAULT_LUA_VM_MEMORY_LIMIT, value_parser = human_bytes::check_human_bytes_without_limit, help_heading = "Lua scripting support",
     long_help=r#"Memory limit for the Lua VM. Allow suffixes: KB, KiB, MB, MiB, GB, GiB.
+A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
 Zero means no limit.
 If the memory limit is exceeded, the whole process will be terminated."#)]
     lua_vm_memory_limit: String,

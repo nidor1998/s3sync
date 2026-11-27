@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Removed the `percent-encoding` crate.
+- Documented that size suffixes are case-sensitive in the help text of `--filter-smaller-size`,
+  `--filter-larger-size`, `--rate-limit-bandwidth`, `--multipart-threshold`, `--multipart-chunksize`, and
+  `--lua-vm-memory-limit`, and in a new `Size suffixes` section of `FULL_README.md`. A suffix ending in a lowercase
+  `b` means bits, not bytes (e.g. `8mb` is 1MB). The behavior is unchanged.
 
 ## [1.64.0] - 2026-11-24
 

@@ -98,6 +98,7 @@
     * [Lua VM security](#Lua-VM-security)
     * [Lua script error](#Lua-script-error)
     * [Lua version](#Lua-version)
+    * [Size suffixes](#Size-suffixes)
     * [CLI process exit codes](#CLI-process-exit-codes)
 
 - [Advanced options](#Advanced-options)
@@ -1139,6 +1140,28 @@ If you want to use `LuaJIT`, `luau-jit`, `Lua 5.4` etc, you can modify the `Carg
 feature.  
 For more information, see [mlua feature flags](https://github.com/mlua-rs/mlua#feature-flags).
 
+### Size suffixes
+
+Options that take a size (`--filter-smaller-size`, `--filter-larger-size`, `--rate-limit-bandwidth`,
+`--multipart-threshold`, `--multipart-chunksize`, and `--lua-vm-memory-limit`) accept a plain number of bytes or a number
+with a suffix such as `KB`, `KiB`, `MB`, `MiB`, `GB`, `GiB`.
+
+The last letter of the suffix is case-sensitive: an uppercase `B` means bytes, and a lowercase `b` means bits.  
+A value written with a lowercase `b` is accepted without an error, but it is one eighth of the value written with an
+uppercase `B`.
+
+| Value  | Meaning     | Bytes         |
+|--------|-------------|---------------|
+| `8MiB` | 8 mebibytes | 8,388,608     |
+| `8MB`  | 8 megabytes | 8,000,000     |
+| `8Mib` | 8 mebibits  | 1,048,576     |
+| `8mb`  | 8 megabits  | 1,000,000     |
+| `5GiB` | 5 gibibytes | 5,368,709,120 |
+| `5gib` | 5 gibibits  | 671,088,640   |
+
+For example, `--rate-limit-bandwidth 100mb` limits the bandwidth to 12.5MB/sec, not 100MB/sec.  
+Always write the suffix with an uppercase `B` (`MB`, `MiB`, `GB`, `GiB`) unless you intend bits.
+
 ### CLI process exit codes
 
 - 0: Exit without error
@@ -1354,10 +1377,12 @@ Filtering:
           Example: 2023-02-19T12:00:00Z [env: FILTER_MTIME_AFTER=]
       --filter-smaller-size <FILTER_SMALLER_SIZE>
           Sync only objects smaller than given size.
-          Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_SMALLER_SIZE=]
+          Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB). [env: FILTER_SMALLER_SIZE=]
       --filter-larger-size <FILTER_LARGER_SIZE>
           Sync only objects larger than OR EQUAL TO given size.
-          Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB [env: FILTER_LARGER_SIZE=]
+          Allow suffixes: KB, KiB, MB, MiB, GB, GiB, TB, TiB
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB). [env: FILTER_LARGER_SIZE=]
       --filter-include-regex <FILTER_INCLUDE_REGEX>
           Sync only objects that match a given regular expression [env: FILTER_INCLUDE_REGEX=]
       --filter-exclude-regex <FILTER_EXCLUDE_REGEX>
@@ -1454,16 +1479,19 @@ Performance:
       --rate-limit-objects <RATE_LIMIT_OBJECTS>
           Rate limit objects per second [env: RATE_LIMIT_OBJECTS=]
       --rate-limit-bandwidth <RATE_LIMIT_BANDWIDTH>
-          Rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB [env: RATE_LIMIT_BANDWIDTH=]
+          Rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB). [env: RATE_LIMIT_BANDWIDTH=]
 
 Multipart Settings:
       --multipart-threshold <MULTIPART_THRESHOLD>
           Object size threshold that s3sync uses for multipart upload
           Allow suffixes: MB, MiB, GB, GiB.
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
           The larger the size, the larger the memory usage. [env: MULTIPART_THRESHOLD=] [default: 8MiB]
       --multipart-chunksize <MULTIPART_CHUNKSIZE>
           Chunk size that s3sync uses for multipart upload of individual files
           Allow suffixes: MB, MiB, GB, GiB.
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
           The larger the size, the larger the memory usage. [env: MULTIPART_CHUNKSIZE=] [default: 8MiB]
       --auto-chunksize
           Automatically adjusts a chunk size to match the source or target.
@@ -1644,6 +1672,7 @@ Lua scripting support:
           Allow Lua OS and I/O library functions in the Lua script. [env: ALLOW_LUA_OS_LIBRARY=]
       --lua-vm-memory-limit <LUA_VM_MEMORY_LIMIT>
           Memory limit for the Lua VM. Allow suffixes: KB, KiB, MB, MiB, GB, GiB.
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
           Zero means no limit.
           If the memory limit is exceeded, the whole process will be terminated. [env: LUA_VM_MEMORY_LIMIT=] [default: 64MiB]
       --lua-callback-timeout-milliseconds <LUA_CALLBACK_TIMEOUT_MILLISECONDS>
