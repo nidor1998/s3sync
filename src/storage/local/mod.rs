@@ -175,7 +175,7 @@ impl LocalStorage {
 
             warn!(path = path, error = error, source = source, message);
 
-            if warn_as_error {
+            if warn_as_error || self.config.sync_with_delete {
                 return Err(anyhow!("failed to is_regular_file(): {:?}.", e));
             }
 
@@ -4183,6 +4183,64 @@ mod tests {
         fs::set_permissions(&sub_dir, permissions).unwrap();
 
         assert!(!warning_result.unwrap());
+        assert!(error_result.is_err());
+        assert!(has_warning.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn check_dir_entry_is_regular_file_error_sync_delete() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let sub_dir = temp_dir.path().join("sub");
+        fs::create_dir(&sub_dir).unwrap();
+        let file_path = sub_dir.join("file.dat");
+        fs::write(&file_path, b"data").unwrap();
+
+        let entry = WalkDir::new(&file_path)
+            .into_iter()
+            .next()
+            .unwrap()
+            .unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "--delete",
+            "s3://dummy-bucket",
+            target_path.as_str(),
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let has_warning = Arc::new(AtomicBool::new(false));
+        let storage = build_local_storage_struct(
+            &config,
+            create_pipeline_cancellation_token(),
+            has_warning.clone(),
+        );
+
+        let mut permissions = fs::metadata(&sub_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&sub_dir, permissions.clone()).unwrap();
+
+        let error_result = storage.check_dir_entry(&entry, false).await;
+
+        permissions.set_mode(0o755);
+        fs::set_permissions(&sub_dir, permissions).unwrap();
+
         assert!(error_result.is_err());
         assert!(has_warning.load(Ordering::SeqCst));
     }
