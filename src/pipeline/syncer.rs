@@ -26,6 +26,7 @@ use crate::types::{
 use anyhow::{Context, Error, Result, anyhow};
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadError;
 use aws_sdk_s3::operation::copy_object::CopyObjectError;
+use aws_sdk_s3::operation::create_multipart_upload::CreateMultipartUploadError;
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
 use aws_sdk_s3::operation::delete_object_annotation::DeleteObjectAnnotationError;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingError;
@@ -39,6 +40,7 @@ use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_annotation::PutObjectAnnotationError;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
+use aws_sdk_s3::operation::upload_part::UploadPartError;
 use aws_sdk_s3::operation::upload_part_copy::UploadPartCopyError;
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
@@ -2706,6 +2708,29 @@ fn is_force_retryable_error(e: &Error) -> bool {
         return is_force_sdk_retryable_error(error);
     }
 
+    if let Some(error) = e.downcast_ref::<SdkError<CreateMultipartUploadError, Response<SdkBody>>>()
+    {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<UploadPartError, Response<SdkBody>>>() {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<UploadPartCopyError, Response<SdkBody>>>() {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) =
+        e.downcast_ref::<SdkError<CompleteMultipartUploadError, Response<SdkBody>>>()
+    {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<CopyObjectError, Response<SdkBody>>>() {
+        return is_force_sdk_retryable_error(error);
+    }
+
     let s3sync_error = e.downcast_ref::<S3syncError>();
     if s3sync_error.is_some() {
         return matches!(
@@ -3017,6 +3042,42 @@ mod tests {
         )));
         assert!(is_force_retryable_error(&anyhow!(
             build_delete_object_annotation_timeout_error()
+        )));
+
+        assert!(is_force_retryable_error(&anyhow!(
+            build_create_multipart_upload_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_upload_part_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_upload_part_copy_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_complete_multipart_upload_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_copy_object_timeout_error()
+        )));
+
+        // upload_manager wraps SDK errors in several context layers.
+        assert!(is_force_retryable_error(
+            &anyhow!(build_upload_part_timeout_error())
+                .context("aws_sdk_s3::client::Client upload_part() failed.")
+                .context("upload_parts() failed.")
+        ));
+
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_copy_object_precondition_failed_error()
+        )));
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_upload_part_copy_precondition_failed_error()
+        )));
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_complete_multipart_upload_precondition_failed_error()
+        )));
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_copy_object_access_denied_error()
         )));
 
         assert!(!is_force_retryable_error(&anyhow!("error")));
@@ -4005,6 +4066,28 @@ mod tests {
     }
 
     fn build_put_object_timeout_error() -> SdkError<PutObjectError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_create_multipart_upload_timeout_error()
+    -> SdkError<CreateMultipartUploadError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_upload_part_timeout_error() -> SdkError<UploadPartError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_upload_part_copy_timeout_error() -> SdkError<UploadPartCopyError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_complete_multipart_upload_timeout_error()
+    -> SdkError<CompleteMultipartUploadError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_copy_object_timeout_error() -> SdkError<CopyObjectError, Response<SdkBody>> {
         SdkError::timeout_error("timeout_error")
     }
 
