@@ -185,8 +185,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -224,8 +223,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -259,8 +257,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -294,8 +291,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -323,8 +319,7 @@ impl ObjectSyncer {
 
                         let mut event_data = EventData::new(EventType::SYNC_WARNING);
                         event_data.key = Some(object.key().to_string());
-                        event_data.source_version_id =
-                            object.version_id().map(|version_id| version_id.to_string());
+                        event_data.source_version_id = event_source_version_id(&object);
                         event_data.message = Some(message.to_string());
                         self.base
                             .config
@@ -2647,6 +2642,14 @@ impl ObjectSyncer {
     }
 }
 
+// PackedVersions holds several versions, so there is no single source version id.
+fn event_source_version_id(object: &S3syncObject) -> Option<String> {
+    match object {
+        S3syncObject::PackedVersions(_) => None,
+        _ => object.version_id().map(|version_id| version_id.to_string()),
+    }
+}
+
 fn is_force_retryable_error(e: &Error) -> bool {
     if let Some(error) = e.downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
@@ -4260,6 +4263,47 @@ mod tests {
                 .build(),
         );
         let _ = syncer.sync_or_delete_object(object, None).await;
+    }
+
+    #[test]
+    fn event_source_version_id_packed_versions_is_none() {
+        let version = S3syncObject::Versioning(
+            aws_sdk_s3::types::ObjectVersion::builder()
+                .key("key1")
+                .version_id("version1")
+                .build(),
+        );
+        let packed = crate::types::pack_object_versions("key1", &vec![version]);
+
+        assert_eq!(event_source_version_id(&packed), None);
+    }
+
+    #[test]
+    fn event_source_version_id_unpacked_objects() {
+        let version = S3syncObject::Versioning(
+            aws_sdk_s3::types::ObjectVersion::builder()
+                .key("key1")
+                .version_id("version1")
+                .build(),
+        );
+        assert_eq!(
+            event_source_version_id(&version),
+            Some("version1".to_string())
+        );
+
+        let delete_marker = S3syncObject::DeleteMarker(
+            aws_sdk_s3::types::DeleteMarkerEntry::builder()
+                .key("key1")
+                .version_id("version2")
+                .build(),
+        );
+        assert_eq!(
+            event_source_version_id(&delete_marker),
+            Some("version2".to_string())
+        );
+
+        let not_versioning = S3syncObject::NotVersioning(Object::builder().key("key1").build());
+        assert_eq!(event_source_version_id(&not_versioning), None);
     }
 
     fn init_dummy_tracing_subscriber() {
