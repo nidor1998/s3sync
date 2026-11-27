@@ -157,6 +157,16 @@ impl LocalStorage {
         let regular_file_check_result = fs_util::is_regular_file(&entry.path().to_path_buf()).await;
         if let Err(e) = regular_file_check_result {
             let path = entry.path().to_str().unwrap();
+
+            // The file has been removed after it was listed, so it is not a listing failure.
+            if e.downcast_ref::<io::Error>()
+                .is_some_and(|io_error| io_error.kind() == io::ErrorKind::NotFound)
+            {
+                debug!(path = path, "skip vanished file.");
+
+                return Ok(false);
+            }
+
             let error = e.to_string();
 
             let message = "failed to access file.";
@@ -4243,6 +4253,55 @@ mod tests {
 
         assert!(error_result.is_err());
         assert!(has_warning.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn check_dir_entry_vanished_file() {
+        init_dummy_tracing_subscriber();
+        let _guard = set_scoped_s3sync_tracing_subscriber();
+
+        use std::fs;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let sub_dir = temp_dir.path().join("sub");
+        fs::create_dir(&sub_dir).unwrap();
+        let file_path = sub_dir.join("file.dat");
+        fs::write(&file_path, b"data").unwrap();
+
+        let entry = WalkDir::new(&file_path)
+            .into_iter()
+            .next()
+            .unwrap()
+            .unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "--delete",
+            "s3://dummy-bucket",
+            target_path.as_str(),
+        ];
+        let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        let has_warning = Arc::new(AtomicBool::new(false));
+        let storage = build_local_storage_struct(
+            &config,
+            create_pipeline_cancellation_token(),
+            has_warning.clone(),
+        );
+
+        // The file is removed after it was listed.
+        fs::remove_file(&file_path).unwrap();
+
+        let result = storage.check_dir_entry(&entry, false).await;
+        let warn_as_error_result = storage.check_dir_entry(&entry, true).await;
+
+        assert!(!result.unwrap());
+        assert!(!warn_as_error_result.unwrap());
+        assert!(!has_warning.load(Ordering::SeqCst));
     }
 
     #[tokio::test]
