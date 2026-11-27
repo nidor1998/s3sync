@@ -9,8 +9,7 @@ use crate::Config;
 use crate::pipeline::diff_detector::{DiffDetectionStrategy, DiffDetector};
 use crate::storage::Storage;
 use crate::storage::e_tag_verify::{
-    generate_e_tag_hash_from_path, generate_e_tag_hash_from_path_with_auto_chunksize,
-    normalize_e_tag,
+    generate_e_tag_hash_from_path, generate_e_tag_hash_from_path_for_check, normalize_e_tag,
 };
 use crate::storage::local::fs_util;
 use crate::types::SyncStatistics::SyncWarning;
@@ -377,25 +376,18 @@ impl ETagDiffDetector {
                     .await
                 {
                     Ok(object_parts) => {
-                        if object_parts.is_empty() {
-                            generate_e_tag_hash_from_path(
-                                &local_path,
-                                self.config.transfer_config.multipart_chunksize as usize,
-                                self.config.transfer_config.multipart_threshold as usize,
-                                self.cancellation_token.clone(),
-                            )
-                            .await?
-                        } else {
-                            generate_e_tag_hash_from_path_with_auto_chunksize(
-                                &local_path,
-                                object_parts
-                                    .iter()
-                                    .map(|part| part.size().unwrap())
-                                    .collect(),
-                                self.cancellation_token.clone(),
-                            )
-                            .await?
-                        }
+                        generate_e_tag_hash_from_path_for_check(
+                            &local_path,
+                            &head_target_object_output.e_tag().map(|e| e.to_string()),
+                            object_parts
+                                .iter()
+                                .map(|part| part.size().unwrap())
+                                .collect(),
+                            self.config.transfer_config.multipart_chunksize as usize,
+                            self.config.transfer_config.multipart_threshold as usize,
+                            self.cancellation_token.clone(),
+                        )
+                        .await?
                     }
                     Err(error) => {
                         return Err(error);
@@ -638,25 +630,18 @@ impl ETagDiffDetector {
                     .await
                 {
                     Ok(object_parts) => {
-                        if object_parts.is_empty() {
-                            generate_e_tag_hash_from_path(
-                                &local_path,
-                                self.config.transfer_config.multipart_chunksize as usize,
-                                self.config.transfer_config.multipart_threshold as usize,
-                                self.cancellation_token.clone(),
-                            )
-                            .await?
-                        } else {
-                            generate_e_tag_hash_from_path_with_auto_chunksize(
-                                &local_path,
-                                object_parts
-                                    .iter()
-                                    .map(|part| part.size().unwrap())
-                                    .collect(),
-                                self.cancellation_token.clone(),
-                            )
-                            .await?
-                        }
+                        generate_e_tag_hash_from_path_for_check(
+                            &local_path,
+                            &source_e_tag.map(|e| e.to_string()),
+                            object_parts
+                                .iter()
+                                .map(|part| part.size().unwrap())
+                                .collect(),
+                            self.config.transfer_config.multipart_chunksize as usize,
+                            self.config.transfer_config.multipart_threshold as usize,
+                            self.cancellation_token.clone(),
+                        )
+                        .await?
                     }
                     Err(error) => {
                         return Err(error);

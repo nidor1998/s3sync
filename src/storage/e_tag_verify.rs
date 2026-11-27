@@ -200,6 +200,51 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
 
     hash
 }
+
+/// Generates the ETag of a local file for comparison with an S3 object when `--auto-chunksize` is enabled.
+///
+/// `object_parts` are the part sizes of the S3 object. If it is empty, the S3 object has no parts
+/// information, so the S3 ETag decides how the local file is hashed.
+pub async fn generate_e_tag_hash_from_path_for_check(
+    path: &Path,
+    s3_e_tag: &Option<String>,
+    object_parts: Vec<i64>,
+    multipart_chunksize: usize,
+    multipart_threshold: usize,
+    cancellation_token: PipelineCancellationToken,
+) -> Result<String> {
+    if !object_parts.is_empty() {
+        return generate_e_tag_hash_from_path_with_auto_chunksize(
+            path,
+            object_parts,
+            cancellation_token,
+        )
+        .await;
+    }
+
+    if !is_multipart_upload_e_tag(s3_e_tag) {
+        // The S3 object is a single-part object, and its ETag is the MD5 digest of the whole object
+        // regardless of the size. So we need to calculate the ETag from the whole file.
+        let file_size = tokio::fs::metadata(path).await?.len() as usize;
+        return generate_e_tag_hash_from_path(
+            path,
+            file_size + 1,
+            file_size + 1,
+            cancellation_token,
+        )
+        .await;
+    }
+
+    // The S3 object is a multipart upload, but the parts information is not available.
+    generate_e_tag_hash_from_path(
+        path,
+        multipart_chunksize,
+        multipart_threshold,
+        cancellation_token,
+    )
+    .await
+}
+
 pub fn normalize_e_tag(e_tag: &Option<String>) -> Option<String> {
     if e_tag.is_none() {
         return e_tag.clone();
@@ -755,6 +800,85 @@ mod tests {
             .await
             .unwrap(),
             UNKNOWN_E_TAG_VALUE
+        );
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_for_check_single_part_over_threshold_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
+
+        // A single-part S3 object has no parts and a plain MD5 ETag, even if it is larger than the threshold.
+        assert_eq!(
+            generate_e_tag_hash_from_path_for_check(
+                &PathBuf::from(LARGE_FILE_PATH),
+                &Some(LARGE_FILE_MD5_DIGEST.to_string()),
+                vec![],
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
+            )
+            .await
+            .unwrap(),
+            LARGE_FILE_MD5_DIGEST.to_string()
+        );
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_for_check(
+                &PathBuf::from(LARGE_FILE_PATH),
+                &None,
+                vec![],
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
+            )
+            .await
+            .unwrap(),
+            LARGE_FILE_MD5_DIGEST.to_string()
+        );
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_for_check_multipart_e_tag_without_parts_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
+
+        // No parts information but a multipart ETag: fall back to the configured chunksize.
+        assert_eq!(
+            generate_e_tag_hash_from_path_for_check(
+                &PathBuf::from(LARGE_FILE_PATH),
+                &Some(LARGE_FILE_S3_MULTIPART_ETAG.to_string()),
+                vec![],
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
+            )
+            .await
+            .unwrap(),
+            LARGE_FILE_S3_MULTIPART_ETAG.to_string()
+        );
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_for_check_with_parts_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
+
+        assert_eq!(
+            generate_e_tag_hash_from_path_for_check(
+                &PathBuf::from(LARGE_FILE_PATH),
+                &Some(LARGE_FILE_S3_AUTO_CHUNKSIZE_ETAG.to_string()),
+                vec![17179870, 17179870, 17179870, 889190],
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
+            )
+            .await
+            .unwrap(),
+            LARGE_FILE_S3_AUTO_CHUNKSIZE_ETAG
         );
     }
 
