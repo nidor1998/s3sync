@@ -834,14 +834,11 @@ impl LocalStorage {
                             source_sse_c_key,
                             source_sse_c_key_md5,
                         )
-                        .await;
-                    let chunk_content_length =
-                        get_object_output.as_ref().unwrap().content_length.unwrap() as usize;
+                        .await
+                        .context("get_object() failed.")?;
+                    let chunk_content_length = get_object_output.content_length.unwrap() as usize;
                     let body = convert_to_buf_byte_stream_with_callback(
-                        get_object_output
-                            .context("get_object() failed.")?
-                            .body
-                            .into_async_read(),
+                        get_object_output.body.into_async_read(),
                         cloned_source.get_stats_sender().clone(),
                         cloned_source.get_rate_limit_bandwidth(),
                         None,
@@ -4575,6 +4572,76 @@ mod tests {
             *e.downcast_ref::<S3syncError>().unwrap(),
             S3syncError::DownloadForceRetryableError
         );
+        assert!(!target_dir.path().join("large.dat").exists());
+    }
+
+    // A failed ranged get_object() for the second or later part must be returned as an error, not a panic.
+    #[tokio::test]
+    async fn put_object_multipart_ranged_get_object_error_is_propagated() {
+        init_dummy_tracing_subscriber();
+
+        // The source directory is empty, so the ranged get_object() for part 2 fails.
+        let source_dir = tempfile::tempdir().unwrap();
+        let target_dir = tempfile::tempdir().unwrap();
+        let source_path = format!("{}/", source_dir.path().to_str().unwrap());
+        let target_path = format!("{}/", target_dir.path().to_str().unwrap());
+        let config = build_local_to_local_config(
+            &["--multipart-chunksize", "5MiB"],
+            source_path.as_str(),
+            target_path.as_str(),
+        );
+
+        let storage = create_boxed_storage(
+            &config,
+            config.target.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let source_storage = create_boxed_storage(
+            &config,
+            config.source.clone(),
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+
+        const CHUNK_SIZE: usize = 5 * 1024 * 1024;
+        const SOURCE_SIZE: usize = 10 * 1024 * 1024;
+        let e = storage
+            .put_object(
+                "large.dat",
+                source_storage,
+                SOURCE_SIZE as u64,
+                None,
+                GetObjectOutputBuilder::default()
+                    .last_modified(DateTime::from_secs(1))
+                    .content_length(CHUNK_SIZE as i64)
+                    .set_content_range(Some(format!("bytes 0-{}/{}", CHUNK_SIZE - 1, SOURCE_SIZE)))
+                    .body(ByteStream::from(vec![0u8; CHUNK_SIZE]))
+                    .build(),
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await
+            .err()
+            .unwrap();
+
+        assert!(
+            e.downcast_ref::<tokio::task::JoinError>().is_none(),
+            "the part task panicked: {e:?}"
+        );
+        assert!(
+            e.downcast_ref::<SdkError<
+                aws_sdk_s3::operation::get_object::GetObjectError,
+                aws_smithy_runtime_api::http::Response<SdkBody>,
+            >>()
+            .is_some()
+        );
+        assert!(e.to_string().contains("get_object() failed."));
         assert!(!target_dir.path().join("large.dat").exists());
     }
 
