@@ -1132,21 +1132,10 @@ impl LocalStorage {
                     });
                 }
 
-                while let Some(join_result) = join_set.join_next().await {
-                    if let Err(join_error) = join_result {
-                        error!("Failed to join in local child directory: {}", join_error);
-                        self.cancellation_token.cancel();
-                        return Err(anyhow!(join_error));
-                    }
-
-                    if let Err(task_error) = join_result.unwrap() {
-                        error!(
-                            "Failed to list local objects in child directory: {}",
-                            task_error
-                        );
-                        self.cancellation_token.cancel();
-                        return Err(anyhow!(task_error));
-                    }
+                // Reap finished child directories without waiting, so that a failure is reported
+                // promptly while the other child directories are listed concurrently.
+                while let Some(join_result) = join_set.try_join_next() {
+                    self.check_child_listing_result(join_result)?;
                 }
 
                 if !self
@@ -1222,12 +1211,39 @@ impl LocalStorage {
                 }
             }
 
+            // Waiting here, not inside the loop above, is what lets child directories run in parallel.
+            while let Some(join_result) = join_set.join_next().await {
+                self.check_child_listing_result(join_result)?;
+            }
+
             if let Some(permit) = current_permit {
                 drop(permit);
             }
 
             Ok(())
         })
+    }
+
+    fn check_child_listing_result(
+        &self,
+        join_result: std::result::Result<Result<()>, tokio::task::JoinError>,
+    ) -> Result<()> {
+        match join_result {
+            Err(join_error) => {
+                error!("Failed to join in local child directory: {}", join_error);
+                self.cancellation_token.cancel();
+                Err(anyhow!(join_error))
+            }
+            Ok(Err(task_error)) => {
+                error!(
+                    "Failed to list local objects in child directory: {}",
+                    task_error
+                );
+                self.cancellation_token.cancel();
+                Err(anyhow!(task_error))
+            }
+            Ok(Ok(())) => Ok(()),
+        }
     }
 
     fn do_cancel_simulation(&self, cancellation_point: &str) -> bool {
@@ -4180,6 +4196,171 @@ mod tests {
         assert!(result.is_ok());
         assert!(has_warning.load(Ordering::SeqCst));
         assert_eq!(receiver.len(), 1);
+    }
+
+    fn build_parallel_listing_test_config(
+        target_path: &str,
+        max_parallel_listings: &str,
+    ) -> Config {
+        let args = vec![
+            "s3sync",
+            "--source-access-key",
+            "dummy_access_key",
+            "--source-secret-access-key",
+            "dummy_secret_access_key",
+            "--max-parallel-listings",
+            max_parallel_listings,
+            "s3://dummy-bucket",
+            target_path,
+        ];
+        Config::try_from(parse_from_args(args).unwrap()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn list_storage_parallel_lists_subdirectories_concurrently() {
+        init_dummy_tracing_subscriber();
+
+        use std::fs;
+
+        const SUB_DIR_COUNT: usize = 4;
+        const MAX_PARALLEL_LISTINGS: usize = 16;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        for dir_index in 0..SUB_DIR_COUNT {
+            let sub_dir = temp_dir.path().join(format!("dir{dir_index}"));
+            fs::create_dir(&sub_dir).unwrap();
+            fs::write(sub_dir.join("a.dat"), b"data").unwrap();
+            fs::write(sub_dir.join("b.dat"), b"data").unwrap();
+        }
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let config = build_parallel_listing_test_config(&target_path, "16");
+        let storage = build_local_storage_struct(
+            &config,
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let semaphore = storage.listing_worker_semaphore.clone();
+
+        // Nobody receives yet, so every subdirectory task blocks on send() while holding its permit.
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1);
+        let listing_task =
+            tokio::spawn(async move { storage.list_objects(&sender, 1000, false).await });
+
+        let all_subdirectories_listing =
+            tokio::time::timeout(std::time::Duration::from_secs(10), async {
+                while semaphore.available_permits() != MAX_PARALLEL_LISTINGS - SUB_DIR_COUNT {
+                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                }
+            })
+            .await;
+        assert!(
+            all_subdirectories_listing.is_ok(),
+            "subdirectories are not listed concurrently. available permits: {}",
+            semaphore.available_permits()
+        );
+
+        let mut object_count = 0;
+        while receiver.recv().await.is_ok() {
+            object_count += 1;
+        }
+
+        assert!(listing_task.await.unwrap().is_ok());
+        assert_eq!(object_count, SUB_DIR_COUNT * 2);
+        assert_eq!(semaphore.available_permits(), MAX_PARALLEL_LISTINGS);
+    }
+
+    #[tokio::test]
+    async fn list_storage_parallel_lists_same_objects_as_sequential() {
+        init_dummy_tracing_subscriber();
+
+        use std::collections::BTreeSet;
+        use std::fs;
+
+        // Deeper than the default --max-parallel-listing-max-depth.
+        let temp_dir = tempfile::tempdir().unwrap();
+        fs::write(temp_dir.path().join("root.dat"), b"data").unwrap();
+        for dir_index in 0..5 {
+            let mut dir = temp_dir.path().join(format!("dir{dir_index}"));
+            for depth in 0..4 {
+                fs::create_dir(&dir).unwrap();
+                fs::write(dir.join("a.dat"), b"data").unwrap();
+                fs::write(dir.join("b.dat"), b"data").unwrap();
+                dir = dir.join(format!("depth{depth}"));
+            }
+        }
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let mut listed_keys = Vec::new();
+        for max_parallel_listings in ["1", "16"] {
+            let config = build_parallel_listing_test_config(&target_path, max_parallel_listings);
+            let storage = build_local_storage_struct(
+                &config,
+                create_pipeline_cancellation_token(),
+                Arc::new(AtomicBool::new(false)),
+            );
+
+            let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+            storage.list_objects(&sender, 1000, false).await.unwrap();
+            drop(sender);
+
+            let mut keys = BTreeSet::new();
+            let mut object_count = 0;
+            while let Ok(object) = receiver.recv().await {
+                keys.insert(object.key().to_string());
+                object_count += 1;
+            }
+            // No object is listed twice.
+            assert_eq!(object_count, keys.len());
+            listed_keys.push(keys);
+        }
+
+        assert_eq!(listed_keys[0].len(), 1 + 5 * 4 * 2);
+        assert_eq!(listed_keys[0], listed_keys[1]);
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn list_storage_parallel_permission_denied_dir_warn_as_error() {
+        init_dummy_tracing_subscriber();
+
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let accessible_dir = temp_dir.path().join("accessible");
+        fs::create_dir(&accessible_dir).unwrap();
+        fs::write(accessible_dir.join("a.dat"), b"data").unwrap();
+        let denied_dir = temp_dir.path().join("denied");
+        fs::create_dir(&denied_dir).unwrap();
+        fs::write(denied_dir.join("b.dat"), b"data").unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let config = build_parallel_listing_test_config(&target_path, "16");
+        let cancellation_token = create_pipeline_cancellation_token();
+        let storage = build_local_storage_struct(
+            &config,
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+
+        let mut permissions = fs::metadata(&denied_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&denied_dir, permissions.clone()).unwrap();
+
+        let (sender, _receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let result = storage.list_objects(&sender, 1000, true).await;
+
+        permissions.set_mode(0o755);
+        fs::set_permissions(&denied_dir, permissions).unwrap();
+
+        assert!(result.is_err());
+        assert!(cancellation_token.is_cancelled());
     }
 
     #[tokio::test]
