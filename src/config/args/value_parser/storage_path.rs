@@ -1,4 +1,3 @@
-use percent_encoding::percent_decode_str;
 use regex::Regex;
 use url::{ParseError, Url};
 
@@ -134,24 +133,31 @@ fn parse_local_path(path: &str) -> StoragePath {
 
 fn parse_s3_path(path: &str) -> StoragePath {
     let bucket = Url::parse(path).unwrap().host_str().unwrap().to_string();
-    let mut prefix = Url::parse(path).unwrap().path().to_string();
+    let mut prefix = raw_s3_prefix(path).unwrap().to_string();
 
     // remove first '/'
     if !prefix.is_empty() {
         prefix.remove(0);
     }
 
-    prefix = percent_decode_str(&prefix)
-        .decode_utf8()
-        .unwrap()
-        .to_string();
-
     StoragePath::S3 { bucket, prefix }
 }
 
+// Any UTF-8 string is a valid S3 key, so the prefix is taken from the path as it was given.
+// Url would treat '?' and '#' as query/fragment delimiters, collapse "." and ".." segments,
+// and percent-encode some characters, all of which would silently address a different key.
+// The returned prefix starts with the character that terminated the bucket name.
+fn raw_s3_prefix(path: &str) -> Option<&str> {
+    let after_scheme = &path[path.find("://")? + 3..];
+    match after_scheme.find(['/', '?', '#']) {
+        Some(idx) => Some(&after_scheme[idx..]),
+        None => Some(""),
+    }
+}
+
 fn check_s3_prefix(path: &str) -> bool {
-    let prefix = Url::parse(path).unwrap().path().to_string();
-    percent_decode_str(&prefix).decode_utf8().is_ok()
+    // e.g. "s3://bucket?x": '?' or '#' directly after the bucket name is not a prefix.
+    raw_s3_prefix(path).is_some_and(|prefix| prefix.is_empty() || prefix.starts_with('/'))
 }
 
 fn is_windows_absolute_path(path: &str) -> bool {
@@ -205,7 +211,6 @@ mod tests {
         init_dummy_tracing_subscriber();
 
         assert!(check_storage_path("s3://arn:aws").is_err());
-        assert!(check_storage_path("s3://my-bucket/%FF").is_err());
     }
 
     #[test]
@@ -399,6 +404,84 @@ mod tests {
             // skipcq: RS-W1021
             assert!(false, "s3 url not found");
         }
+    }
+
+    #[test]
+    fn parse_s3_url_with_question_mark_and_hash() {
+        init_dummy_tracing_subscriber();
+
+        // '?' and '#' are valid in S3 keys and must not be treated as URL query/fragment delimiters.
+        let cases = [
+            ("s3://test-bucket/data#old/", "data#old/"),
+            ("s3://test-bucket/data?old/", "data?old/"),
+            ("s3://test-bucket/data#", "data#"),
+            ("s3://test-bucket/data?", "data?"),
+            ("s3://test-bucket/a?b#c?d#e/", "a?b#c?d#e/"),
+            ("s3://test-bucket/a#b?c/", "a#b?c/"),
+            ("s3://test-bucket/#top", "#top"),
+            ("s3://test-bucket/?top", "?top"),
+            (
+                "s3://test-bucket/dir/こんにちは#☃?x y/",
+                "dir/こんにちは#☃?x y/",
+            ),
+        ];
+
+        for (s3_url, expected_prefix) in cases {
+            check_storage_path(s3_url).unwrap();
+            if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+                assert_eq!(bucket, "test-bucket", "url: {s3_url}");
+                assert_eq!(prefix, expected_prefix, "url: {s3_url}");
+            } else {
+                // skipcq: RS-W1021
+                assert!(false, "s3 url not found");
+            }
+        }
+    }
+
+    #[test]
+    fn parse_s3_url_prefix_is_literal() {
+        init_dummy_tracing_subscriber();
+
+        // The prefix is used as given: no percent-decoding and no "." / ".." normalization.
+        let cases = [
+            ("s3://test-bucket/a%23b%3Fc#d", "a%23b%3Fc#d"),
+            ("s3://test-bucket/%FF", "%FF"),
+            ("s3://test-bucket/100%", "100%"),
+            ("s3://test-bucket/a%20b c", "a%20b c"),
+            ("s3://test-bucket/a/../b", "a/../b"),
+            ("s3://test-bucket/./a/./b/", "./a/./b/"),
+            ("s3://test-bucket/a?x/../y#%2e%2e/z", "a?x/../y#%2e%2e/z"),
+            ("s3://test-bucket/dir\\file", "dir\\file"),
+            ("s3://test-bucket//", "/"),
+            ("s3://test-bucket/", ""),
+            ("s3://test-bucket", ""),
+        ];
+
+        for (s3_url, expected_prefix) in cases {
+            check_storage_path(s3_url).unwrap();
+            if let StoragePath::S3 { bucket, prefix } = parse_storage_path(s3_url) {
+                assert_eq!(bucket, "test-bucket", "url: {s3_url}");
+                assert_eq!(prefix, expected_prefix, "url: {s3_url}");
+            } else {
+                // skipcq: RS-W1021
+                assert!(false, "s3 url not found");
+            }
+        }
+    }
+
+    #[test]
+    fn check_s3_url_with_query_or_fragment_error() {
+        init_dummy_tracing_subscriber();
+
+        // Without '/' after the bucket name, there is no prefix to attach '?' or '#' to.
+        assert_eq!(
+            check_storage_path("s3://my-bucket?old").unwrap_err(),
+            INVALID_PATH
+        );
+        assert_eq!(
+            check_storage_path("s3://my-bucket#old").unwrap_err(),
+            INVALID_PATH
+        );
     }
 
     #[test]
