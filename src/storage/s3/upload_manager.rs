@@ -117,7 +117,8 @@ impl UploadManager {
         key: &str,
         mut get_object_output_first_chunk: GetObjectOutput,
     ) -> Result<PutObjectOutput> {
-        get_object_output_first_chunk = self.modify_metadata(get_object_output_first_chunk)?;
+        get_object_output_first_chunk =
+            Self::modify_metadata(&self.config, get_object_output_first_chunk)?;
 
         if self.is_auto_chunksize_enabled() {
             if is_multipart_upload_e_tag(
@@ -170,24 +171,27 @@ impl UploadManager {
         Ok(put_object_output)
     }
 
-    fn modify_metadata(&self, mut get_object_output: GetObjectOutput) -> Result<GetObjectOutput> {
-        if self.config.no_sync_system_metadata {
+    fn modify_metadata(
+        config: &Config,
+        mut get_object_output: GetObjectOutput,
+    ) -> Result<GetObjectOutput> {
+        if config.no_sync_system_metadata {
             get_object_output = Self::clear_system_meta_data(get_object_output);
         }
 
-        if self.config.no_sync_user_defined_metadata {
+        if config.no_sync_user_defined_metadata {
             get_object_output.metadata = None
         }
 
-        if self.config.metadata.is_some() {
-            get_object_output.metadata = Some(self.config.metadata.as_ref().unwrap().clone());
+        if config.metadata.is_some() {
+            get_object_output.metadata = Some(config.metadata.as_ref().unwrap().clone());
         }
 
-        if self.config.put_last_modified_metadata {
+        if config.put_last_modified_metadata {
             get_object_output = Self::modify_last_modified_metadata(get_object_output)?;
         }
 
-        if self.config.enable_versioning {
+        if config.enable_versioning {
             get_object_output = Self::update_versioning_metadata(get_object_output)?;
         }
 
@@ -357,11 +361,8 @@ impl UploadManager {
             } else {
                 Some(DateTime::from_time(self.config.expires.unwrap()))
             },
-            metadata: if self.config.metadata.is_none() {
-                get_object_output_first_chunk.metadata().cloned()
-            } else {
-                self.config.metadata.clone()
-            },
+            // --metadata is already applied by modify_metadata(), which also adds the s3sync origin metadata.
+            metadata: get_object_output_first_chunk.metadata().cloned(),
             request_payer: self.request_payer.clone(),
             storage_class: storage_class.clone(),
             website_redirect_location: if self.config.website_redirect.is_none() {
@@ -1962,11 +1963,8 @@ impl UploadManager {
             } else {
                 Some(DateTime::from_time(self.config.expires.unwrap()))
             },
-            metadata: if self.config.metadata.is_none() {
-                get_object_output.metadata().cloned()
-            } else {
-                self.config.metadata.clone()
-            },
+            // --metadata is already applied by modify_metadata(), which also adds the s3sync origin metadata.
+            metadata: get_object_output.metadata().cloned(),
             request_payer: self.request_payer.clone(),
             storage_class: storage_class.clone(),
             website_redirect_location: if self.config.website_redirect.is_none() {
@@ -2730,6 +2728,82 @@ mod tests {
             get_object_output.metadata().unwrap().get("key1").unwrap(),
             "value1"
         );
+    }
+
+    fn build_config(extra_args: &[&str]) -> Config {
+        let mut args = vec!["s3sync"];
+        args.extend_from_slice(extra_args);
+        args.extend_from_slice(&["s3://source-bucket", "s3://target-bucket"]);
+        Config::try_from(crate::config::args::parse_from_args(args).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn modify_metadata_with_metadata_option_and_versioning() {
+        init_dummy_tracing_subscriber();
+
+        let config = build_config(&["--metadata", "key1=value1", "--enable-versioning"]);
+        let get_object_output = GetObjectOutput::builder()
+            .last_modified(DateTime::from_secs(0))
+            .version_id("version1")
+            .metadata("source_key", "source_value")
+            .build();
+
+        let get_object_output = UploadManager::modify_metadata(&config, get_object_output).unwrap();
+        let metadata = get_object_output.metadata().unwrap();
+
+        assert_eq!(metadata.len(), 3);
+        assert_eq!(metadata.get("key1").unwrap(), "value1");
+        assert_eq!(
+            metadata.get(S3SYNC_ORIGIN_VERSION_ID_METADATA_KEY).unwrap(),
+            "version1"
+        );
+        assert_eq!(
+            metadata
+                .get(S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY)
+                .unwrap(),
+            "1970-01-01T00:00:00+00:00"
+        );
+    }
+
+    #[test]
+    fn modify_metadata_with_metadata_option_and_put_last_modified_metadata() {
+        init_dummy_tracing_subscriber();
+
+        let config = build_config(&["--metadata", "key1=value1", "--put-last-modified-metadata"]);
+        let get_object_output = GetObjectOutput::builder()
+            .last_modified(DateTime::from_secs(0))
+            .metadata("source_key", "source_value")
+            .build();
+
+        let get_object_output = UploadManager::modify_metadata(&config, get_object_output).unwrap();
+        let metadata = get_object_output.metadata().unwrap();
+
+        assert_eq!(metadata.len(), 2);
+        assert_eq!(metadata.get("key1").unwrap(), "value1");
+        assert_eq!(
+            metadata
+                .get(S3SYNC_ORIGIN_LAST_MODIFIED_METADATA_KEY)
+                .unwrap(),
+            "1970-01-01T00:00:00+00:00"
+        );
+    }
+
+    #[test]
+    fn modify_metadata_with_metadata_option_only() {
+        init_dummy_tracing_subscriber();
+
+        let config = build_config(&["--metadata", "key1=value1"]);
+        let get_object_output = GetObjectOutput::builder()
+            .last_modified(DateTime::from_secs(0))
+            .version_id("version1")
+            .metadata("source_key", "source_value")
+            .build();
+
+        let get_object_output = UploadManager::modify_metadata(&config, get_object_output).unwrap();
+        let metadata = get_object_output.metadata().unwrap();
+
+        assert_eq!(metadata.len(), 1);
+        assert_eq!(metadata.get("key1").unwrap(), "value1");
     }
 
     #[test]

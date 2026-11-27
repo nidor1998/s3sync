@@ -5118,6 +5118,60 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_with_last_modified_metadata_and_metadata_option() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--put-last-modified-metadata",
+                "--metadata",
+                "key1=value1",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, 5);
+            assert_eq!(stats.sync_warning, 0);
+
+            let object = helper.get_object(&bucket2, "data1", None).await;
+            let metadata = object.metadata.unwrap();
+            assert_eq!(metadata.get("key1").unwrap(), "value1");
+            assert!(metadata.contains_key("s3sync_origin_last_modified"));
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_with_etag_check() {
         TestHelper::init_dummy_tracing_subscriber();
 
