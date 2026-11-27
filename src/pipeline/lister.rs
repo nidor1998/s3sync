@@ -48,6 +48,7 @@ impl ObjectLister {
                     self.base.sender.as_ref().unwrap(),
                     max_keys,
                     self.base.config.warn_as_error,
+                    self.base.config.sync_with_delete,
                 )
                 .await?;
         }
@@ -79,6 +80,7 @@ impl ObjectLister {
                 self.base.sender.as_ref().unwrap(),
                 max_keys,
                 self.base.config.warn_as_error,
+                self.base.config.sync_with_delete,
             )
             .await?;
         debug!("list target objects has been completed.");

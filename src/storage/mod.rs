@@ -114,6 +114,7 @@ pub trait StorageTrait: DynClone {
         sender: &Sender<S3syncObject>,
         max_keys: i32,
         warn_as_error: bool,
+        sync_with_delete: bool,
     ) -> Result<()>;
     async fn list_object_versions(
         &self,

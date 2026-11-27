@@ -1013,6 +1013,7 @@ impl LocalStorage {
     }
 
     // skipcq: RS-R1000
+    #[allow(clippy::too_many_arguments)]
     fn list_objects_with_parallel<'a>(
         &'a self,
         prefix: &'a str,
@@ -1021,6 +1022,7 @@ impl LocalStorage {
         current_depth: usize,
         permit: tokio::sync::OwnedSemaphorePermit,
         warn_as_error: bool,
+        sync_with_delete: bool,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let is_root_prefix = prefix.is_empty();
@@ -1087,7 +1089,8 @@ impl LocalStorage {
                     event_data.message = Some(format!("{message}: {error}"));
                     self.config.event_manager.trigger_event(event_data).await;
 
-                    if warn_as_error {
+                    if warn_as_error || sync_with_delete {
+                        self.cancellation_token.cancel();
                         return Err(anyhow!("failed to local list(): {:?}.", e));
                     }
                     continue;
@@ -1127,6 +1130,7 @@ impl LocalStorage {
                                 current_depth + 1,
                                 new_permit,
                                 warn_as_error,
+                                sync_with_delete,
                             )
                             .await
                     });
@@ -1284,6 +1288,7 @@ impl StorageTrait for LocalStorage {
         sender: &Sender<S3syncObject>,
         _max_keys: i32,
         warn_as_error: bool,
+        sync_with_delete: bool,
     ) -> Result<()> {
         if self.object_to_list.is_none() && self.config.max_parallel_listings > 1 {
             debug!(
@@ -1299,7 +1304,15 @@ impl StorageTrait for LocalStorage {
                 .unwrap();
 
             return self
-                .list_objects_with_parallel("", sender, _max_keys, 1, permit, warn_as_error)
+                .list_objects_with_parallel(
+                    "",
+                    sender,
+                    _max_keys,
+                    1,
+                    permit,
+                    warn_as_error,
+                    sync_with_delete,
+                )
                 .await;
         }
 
@@ -1341,7 +1354,8 @@ impl StorageTrait for LocalStorage {
                 event_data.message = Some(format!("{message}: {error}"));
                 self.config.event_manager.trigger_event(event_data).await;
 
-                if warn_as_error {
+                if warn_as_error || sync_with_delete {
+                    self.cancellation_token.cancel();
                     return Err(anyhow!("failed to list(): {:?}.", e));
                 }
                 continue;
@@ -2257,7 +2271,10 @@ mod tests {
         .await;
 
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
-        storage.list_objects(&sender, 1000, false).await.unwrap();
+        storage
+            .list_objects(&sender, 1000, false, false)
+            .await
+            .unwrap();
 
         assert_eq!(receiver.len(), TEST_SOURCE_OBJECTS_COUNT);
 
@@ -2300,7 +2317,10 @@ mod tests {
         .await;
 
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
-        storage.list_objects(&sender, 1000, false).await.unwrap();
+        storage
+            .list_objects(&sender, 1000, false, false)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -2335,7 +2355,10 @@ mod tests {
         .await;
 
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
-        storage.list_objects(&sender, 1000, false).await.unwrap();
+        storage
+            .list_objects(&sender, 1000, false, false)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -2379,7 +2402,12 @@ mod tests {
         .await;
 
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
-        assert!(storage.list_objects(&sender, 1000, true).await.is_err());
+        assert!(
+            storage
+                .list_objects(&sender, 1000, true, false)
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -2493,7 +2521,10 @@ mod tests {
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
 
         cancellation_token.cancel();
-        storage.list_objects(&sender, 1000, false).await.unwrap();
+        storage
+            .list_objects(&sender, 1000, false, false)
+            .await
+            .unwrap();
 
         assert_eq!(receiver.len(), 0);
     }
@@ -2545,7 +2576,12 @@ mod tests {
 
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
 
-        assert!(storage.list_objects(&sender, 1000, true).await.is_err());
+        assert!(
+            storage
+                .list_objects(&sender, 1000, true, false)
+                .await
+                .is_err()
+        );
 
         permissions = fs::metadata("./test_data/denied_dir6")
             .unwrap()
@@ -2602,7 +2638,12 @@ mod tests {
         permissions.set_mode(0o755);
         fs::set_permissions("./test_data/denied_dir4", permissions).unwrap();
 
-        assert!(storage.list_objects(&sender, 1000, false).await.is_ok());
+        assert!(
+            storage
+                .list_objects(&sender, 1000, false, false)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -2650,7 +2691,12 @@ mod tests {
         permissions.set_mode(0o644);
         fs::set_permissions("./test_data/denied/denied", permissions).unwrap();
 
-        assert!(storage.list_objects(&sender, 1000, false).await.is_ok());
+        assert!(
+            storage
+                .list_objects(&sender, 1000, false, false)
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]
@@ -4188,7 +4234,7 @@ mod tests {
         fs::set_permissions(&denied_dir, permissions.clone()).unwrap();
 
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
-        let result = storage.list_objects(&sender, 1000, false).await;
+        let result = storage.list_objects(&sender, 1000, false, false).await;
 
         permissions.set_mode(0o755);
         fs::set_permissions(&denied_dir, permissions).unwrap();
@@ -4245,7 +4291,7 @@ mod tests {
         // Nobody receives yet, so every subdirectory task blocks on send() while holding its permit.
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1);
         let listing_task =
-            tokio::spawn(async move { storage.list_objects(&sender, 1000, false).await });
+            tokio::spawn(async move { storage.list_objects(&sender, 1000, false, false).await });
 
         let all_subdirectories_listing =
             tokio::time::timeout(std::time::Duration::from_secs(10), async {
@@ -4301,7 +4347,10 @@ mod tests {
             );
 
             let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
-            storage.list_objects(&sender, 1000, false).await.unwrap();
+            storage
+                .list_objects(&sender, 1000, false, false)
+                .await
+                .unwrap();
             drop(sender);
 
             let mut keys = BTreeSet::new();
@@ -4354,7 +4403,95 @@ mod tests {
         fs::set_permissions(&denied_dir, permissions.clone()).unwrap();
 
         let (sender, _receiver) = async_channel::bounded::<S3syncObject>(1000);
-        let result = storage.list_objects(&sender, 1000, true).await;
+        let result = storage.list_objects(&sender, 1000, true, false).await;
+
+        permissions.set_mode(0o755);
+        fs::set_permissions(&denied_dir, permissions).unwrap();
+
+        assert!(result.is_err());
+        assert!(cancellation_token.is_cancelled());
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn list_storage_parallel_permission_denied_dir_sync_with_delete() {
+        init_dummy_tracing_subscriber();
+
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let accessible_dir = temp_dir.path().join("accessible");
+        fs::create_dir(&accessible_dir).unwrap();
+        fs::write(accessible_dir.join("a.dat"), b"data").unwrap();
+        let denied_dir = temp_dir.path().join("denied");
+        fs::create_dir(&denied_dir).unwrap();
+        fs::write(denied_dir.join("b.dat"), b"data").unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let config = build_parallel_listing_test_config(&target_path, "16");
+        let cancellation_token = create_pipeline_cancellation_token();
+        let storage = build_local_storage_struct(
+            &config,
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+
+        let mut permissions = fs::metadata(&denied_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&denied_dir, permissions.clone()).unwrap();
+
+        let (sender, _receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let result = storage.list_objects(&sender, 1000, false, true).await;
+
+        permissions.set_mode(0o755);
+        fs::set_permissions(&denied_dir, permissions).unwrap();
+
+        assert!(result.is_err());
+        assert!(cancellation_token.is_cancelled());
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn list_storage_permission_denied_dir_sync_with_delete() {
+        init_dummy_tracing_subscriber();
+
+        use std::fs;
+        use std::os::unix::fs::PermissionsExt;
+
+        assert!(
+            !nix::unistd::geteuid().is_root(),
+            "tests must not run as root"
+        );
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let accessible_dir = temp_dir.path().join("accessible");
+        fs::create_dir(&accessible_dir).unwrap();
+        fs::write(accessible_dir.join("a.dat"), b"data").unwrap();
+        let denied_dir = temp_dir.path().join("denied");
+        fs::create_dir(&denied_dir).unwrap();
+        fs::write(denied_dir.join("b.dat"), b"data").unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let config = build_parallel_listing_test_config(&target_path, "1");
+        let cancellation_token = create_pipeline_cancellation_token();
+        let storage = build_local_storage_struct(
+            &config,
+            cancellation_token.clone(),
+            Arc::new(AtomicBool::new(false)),
+        );
+
+        let mut permissions = fs::metadata(&denied_dir).unwrap().permissions();
+        permissions.set_mode(0o000);
+        fs::set_permissions(&denied_dir, permissions.clone()).unwrap();
+
+        let (sender, _receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let result = storage.list_objects(&sender, 1000, false, true).await;
 
         permissions.set_mode(0o755);
         fs::set_permissions(&denied_dir, permissions).unwrap();
