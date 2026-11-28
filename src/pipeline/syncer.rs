@@ -4244,6 +4244,92 @@ mod tests {
         SdkError::service_error(unhandled_error, response)
     }
 
+    struct NoopPreprocessCallback;
+
+    #[async_trait::async_trait]
+    impl crate::types::preprocess_callback::PreprocessCallback for NoopPreprocessCallback {
+        async fn preprocess_before_upload(
+            &mut self,
+            _key: &str,
+            _source_object: &GetObjectOutput,
+            _metadata: &mut crate::types::preprocess_callback::UploadMetadata,
+        ) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    // Local storage never returns an e_tag, so a registered preprocess callback must not make
+    // a successful sync to a local target look like a cancelled one.
+    #[tokio::test]
+    async fn sync_object_to_local_with_preprocess_callback_is_not_skipped() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--head-each-target",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        config
+            .preprocess_manager
+            .register_callback(NoopPreprocessCallback);
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, stats_receiver) = async_channel::unbounded();
+
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let (next_sender, _next_receiver) = async_channel::bounded::<S3syncObject>(1000);
+
+        sender
+            .send(S3syncObject::NotVersioning(
+                Object::builder()
+                    .key("6byte.dat")
+                    .size(6)
+                    .last_modified(DateTime::from_secs(i32::MAX as i64))
+                    .build(),
+            ))
+            .await
+            .unwrap();
+        sender.close();
+
+        let result = ObjectSyncer::new(
+            Stage::new(
+                config.clone(),
+                Some(dyn_clone::clone_box(&*source)),
+                Some(dyn_clone::clone_box(&*target)),
+                Some(receiver),
+                Some(next_sender),
+                cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
+            ),
+            0,
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
+        )
+        .sync()
+        .await;
+
+        assert!(result.is_ok());
+
+        let mut completed = false;
+        while let Ok(stats) = stats_receiver.try_recv() {
+            match stats {
+                SyncComplete { .. } => completed = true,
+                SyncSkip { .. } => panic!("sync to local storage was counted as skipped"),
+                _ => {}
+            }
+        }
+        assert!(completed, "SyncComplete was not reported");
+    }
+
     async fn build_local_object_syncer(
         config: Config,
         target_key_map: Option<ObjectKeyMap>,
