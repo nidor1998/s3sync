@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       instead of being skipped with a warning.
     - A file that is removed while the local storage is being listed is now skipped without a warning.
       Previously, it was reported as a warning (an error with `--warn-as-error`).
+- Fixed `--if-match` being ignored for single-part objects with `--server-side-copy`. The `If-Match` header was
+  not added to `CopyObject` requests, so the target object was overwritten unconditionally. Multipart copies were
+  not affected.
 
 ### Changed
 

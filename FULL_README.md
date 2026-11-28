@@ -536,7 +536,7 @@ With `--max-delete`, you can limit the maximum number of deletions for safety.
 
 ### Etag-based conditional write/delete support
 
-You can use `--if-match` for conditional write and delete operations(PutObject/CompleteMultipartUpload/DeleteObject)
+You can use `--if-match` for conditional write and delete operations(PutObject/CopyObject/CompleteMultipartUpload/DeleteObject)
 with `If-Match` header.
 And you can use `--copy-source-if-match` for conditional copy operations(CopyObject/UploadPartCopy) with
 `x-amz-copy-source-if-match` header.
@@ -1648,7 +1648,7 @@ Advanced:
           When used in combination with --delete options, supplied --filter-exclude-regex patterns will not prevent an object from being deleted.
            [env: DELETE_EXCLUDED=]
       --if-match
-          Add an If-Match header for PutObject/CompleteMultipartUpload/DeleteObject requests.
+          Add an If-Match header for PutObject/CopyObject/CompleteMultipartUpload/DeleteObject requests.
           This is for like an optimistic lock. [env: IF_MATCH=]
       --copy-source-if-match
           Add an x-amz-copy-source-if-match header for CopyObject/UploadPartCopy requests.

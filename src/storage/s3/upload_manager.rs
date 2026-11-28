@@ -2028,6 +2028,7 @@ impl UploadManager {
                 .set_acl(upload_metadata.acl)
                 .set_checksum_algorithm(self.config.additional_checksum_algorithm.as_ref().cloned())
                 .set_copy_source_if_match(self.copy_source_if_match.clone())
+                .set_if_match(self.if_match.clone())
                 .set_if_none_match(self.if_none_match.clone())
                 .send()
                 .await?;

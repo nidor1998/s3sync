@@ -890,7 +890,7 @@ Valid choices: bash, fish, zsh, powershell, elvish."#)]
 "#)]
     delete_excluded: bool,
 
-    #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time"], default_value_t = DEFAULT_IF_MATCH, help_heading = "Advanced", long_help=r#"Add an If-Match header for PutObject/CompleteMultipartUpload/DeleteObject requests.
+    #[arg(long, env, conflicts_with_all = ["enable_versioning", "point_in_time"], default_value_t = DEFAULT_IF_MATCH, help_heading = "Advanced", long_help=r#"Add an If-Match header for PutObject/CopyObject/CompleteMultipartUpload/DeleteObject requests.
 This is for like an optimistic lock."#)]
     if_match: bool,
 
