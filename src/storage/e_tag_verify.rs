@@ -877,6 +877,80 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn generate_e_tag_hash_from_path_for_check_single_part_small_file_test() {
+        init_dummy_tracing_subscriber();
+
+        // (content, MD5 digest): an empty file, and a file much smaller than the hash buffer.
+        let test_cases = [
+            (b"".as_slice(), "\"d41d8cd98f00b204e9800998ecf8427e\""),
+            (b"abc".as_slice(), "\"900150983cd24fb0d6963f7d28e17f72\""),
+        ];
+
+        for (content, expected_e_tag) in test_cases {
+            let path = std::env::temp_dir().join(format!("s3sync_e_tag_{}", uuid::Uuid::new_v4()));
+            tokio::fs::write(&path, content).await.unwrap();
+
+            let e_tag = generate_e_tag_hash_from_path_for_check(
+                &path,
+                &Some(expected_e_tag.to_string()),
+                vec![],
+                8 * 1024 * 1024,
+                8 * 1024 * 1024,
+                create_pipeline_cancellation_token(),
+            )
+            .await;
+            tokio::fs::remove_file(&path).await.unwrap();
+
+            assert_eq!(e_tag.unwrap(), expected_e_tag.to_string());
+        }
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_for_check_single_part_cancel_test() {
+        init_dummy_tracing_subscriber();
+
+        create_large_file(LARGE_FILE_PATH, LARGE_FILE_DIR, LARGE_FILE_SIZE).await;
+
+        let cancellation_token = create_pipeline_cancellation_token();
+        cancellation_token.cancel();
+
+        let result = generate_e_tag_hash_from_path_for_check(
+            &PathBuf::from(LARGE_FILE_PATH),
+            &Some(LARGE_FILE_MD5_DIGEST.to_string()),
+            vec![],
+            8 * 1024 * 1024,
+            8 * 1024 * 1024,
+            cancellation_token,
+        )
+        .await;
+
+        assert!(matches!(
+            result.unwrap_err().downcast_ref::<S3syncError>(),
+            Some(S3syncError::Cancelled)
+        ));
+    }
+
+    #[tokio::test]
+    async fn generate_e_tag_hash_from_path_for_check_single_part_missing_file_test() {
+        init_dummy_tracing_subscriber();
+
+        // A child of a fresh temporary directory can never collide with an existing file.
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        let result = generate_e_tag_hash_from_path_for_check(
+            &temp_dir.path().join("not_exist"),
+            &Some(LARGE_FILE_MD5_DIGEST.to_string()),
+            vec![],
+            8 * 1024 * 1024,
+            8 * 1024 * 1024,
+            create_pipeline_cancellation_token(),
+        )
+        .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
     async fn generate_e_tag_hash_from_path_for_check_multipart_e_tag_without_parts_test() {
         init_dummy_tracing_subscriber();
 

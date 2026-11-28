@@ -2506,6 +2506,7 @@ pub fn get_additional_checksum_from_multipart_upload_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::StorageFactory;
     use aws_sdk_s3::primitives::DateTime;
     use tracing_subscriber::EnvFilter;
 
@@ -2983,6 +2984,333 @@ mod tests {
             .last_modified(DateTime::from_secs(40_000_000_000_000))
             .build();
         assert!(UploadManager::update_versioning_metadata(get_object_output).is_err());
+    }
+
+    // One request received by the fake S3 endpoint.
+    #[derive(Debug, Clone)]
+    struct RecordedRequest {
+        method: String,
+        target: String,
+        headers: std::collections::HashMap<String, String>,
+    }
+
+    impl RecordedRequest {
+        fn header(&self, name: &str) -> Option<&str> {
+            self.headers.get(name).map(|value| value.as_str())
+        }
+    }
+
+    // A minimal S3 endpoint on localhost. It records every request and answers with the status
+    // and the XML body chosen by `respond`, so the requests that UploadManager sends can be
+    // checked without AWS.
+    struct FakeS3 {
+        endpoint_url: String,
+        requests: Arc<Mutex<Vec<RecordedRequest>>>,
+        accept_task: JoinHandle<()>,
+    }
+
+    impl FakeS3 {
+        async fn start(respond: fn(&RecordedRequest) -> (u16, &'static str)) -> Self {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let endpoint_url = format!("http://{}", listener.local_addr().unwrap());
+            let requests = Arc::new(Mutex::new(Vec::new()));
+
+            let recorded_requests = requests.clone();
+            let accept_task = task::spawn(async move {
+                loop {
+                    let (stream, _) = listener.accept().await.unwrap();
+                    let recorded_requests = recorded_requests.clone();
+                    task::spawn(async move {
+                        Self::serve(stream, recorded_requests, respond).await;
+                    });
+                }
+            });
+
+            Self {
+                endpoint_url,
+                requests,
+                accept_task,
+            }
+        }
+
+        // Serves one request per connection.
+        async fn serve(
+            mut stream: tokio::net::TcpStream,
+            recorded_requests: Arc<Mutex<Vec<RecordedRequest>>>,
+            respond: fn(&RecordedRequest) -> (u16, &'static str),
+        ) {
+            use tokio::io::AsyncWriteExt;
+
+            let mut received = Vec::new();
+            let mut buffer = vec![0u8; 64 * 1024];
+            let header_end = loop {
+                if let Some(position) = received.windows(4).position(|window| window == b"\r\n\r\n")
+                {
+                    break position + 4;
+                }
+                let read_size = stream.read(&mut buffer).await.unwrap_or(0);
+                if read_size == 0 {
+                    return;
+                }
+                received.extend_from_slice(&buffer[..read_size]);
+            };
+
+            let header_text = String::from_utf8_lossy(&received[..header_end]).to_string();
+            let mut lines = header_text.split("\r\n");
+            let mut request_line = lines.next().unwrap().split(' ');
+            let request = RecordedRequest {
+                method: request_line.next().unwrap().to_string(),
+                target: request_line.next().unwrap().to_string(),
+                headers: lines
+                    .filter_map(|line| line.split_once(':'))
+                    .map(|(name, value)| (name.to_ascii_lowercase(), value.trim().to_string()))
+                    .collect(),
+            };
+
+            // The body is read to the end, so that the response is not lost by closing a
+            // connection with unread data.
+            let content_length: usize = request
+                .header("content-length")
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(0);
+            let mut body_size = received.len() - header_end;
+            while body_size < content_length {
+                let read_size = stream.read(&mut buffer).await.unwrap_or(0);
+                if read_size == 0 {
+                    break;
+                }
+                body_size += read_size;
+            }
+
+            let (status, body) = respond(&request);
+            recorded_requests.lock().unwrap().push(request);
+
+            let response = format!(
+                "HTTP/1.1 {status} Fake\r\nContent-Type: application/xml\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let _ = stream.write_all(response.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        }
+
+        fn requests(&self) -> Vec<RecordedRequest> {
+            self.requests.lock().unwrap().clone()
+        }
+    }
+
+    impl Drop for FakeS3 {
+        fn drop(&mut self) {
+            self.accept_task.abort();
+        }
+    }
+
+    const FAKE_S3_SOURCE_E_TAG: &str = "\"0123456789abcdef0123456789abcdef\"";
+    const FAKE_S3_TARGET_E_TAG: &str = "\"fedcba9876543210fedcba9876543210\"";
+    const FAKE_S3_ERROR_RESPONSE: &str =
+        "<Error><Code>InternalError</Code><Message>fake error</Message></Error>";
+
+    fn build_fake_s3_config(fake_s3: &FakeS3, extra_args: &[&str]) -> Config {
+        let mut args = vec![
+            "s3sync",
+            "--source-access-key",
+            "source_access_key",
+            "--source-secret-access-key",
+            "source_secret_access_key",
+            "--source-region",
+            "us-east-1",
+            "--target-access-key",
+            "target_access_key",
+            "--target-secret-access-key",
+            "target_secret_access_key",
+            "--target-region",
+            "us-east-1",
+            "--target-endpoint-url",
+            fake_s3.endpoint_url.as_str(),
+            "--target-force-path-style",
+            "--aws-max-attempts",
+            "1",
+        ];
+        args.extend_from_slice(extra_args);
+        args.extend_from_slice(&["s3://source-bucket", "s3://target-bucket"]);
+        Config::try_from(crate::config::args::parse_from_args(args).unwrap()).unwrap()
+    }
+
+    // Builds an UploadManager whose target is the fake S3 endpoint and whose source is an S3 bucket.
+    async fn build_fake_s3_upload_manager(
+        config: Config,
+        source_total_size: u64,
+        if_match: Option<String>,
+    ) -> UploadManager {
+        let cancellation_token = crate::types::token::create_pipeline_cancellation_token();
+        let (stats_sender, _) = async_channel::unbounded();
+        let has_warning = Arc::new(AtomicBool::new(false));
+
+        let source = crate::storage::s3::S3StorageFactory::create(
+            config.clone(),
+            config.source.clone(),
+            cancellation_token.clone(),
+            stats_sender.clone(),
+            config.source_client_config.clone(),
+            None,
+            None,
+            None,
+            has_warning.clone(),
+            None,
+        )
+        .await;
+        let client = config
+            .target_client_config
+            .as_ref()
+            .unwrap()
+            .create_client()
+            .await;
+
+        UploadManager::new(
+            Arc::new(client),
+            config,
+            None,
+            cancellation_token,
+            stats_sender,
+            None,
+            None,
+            false,
+            source,
+            "source-key".to_string(),
+            source_total_size,
+            None,
+            if_match,
+            None,
+            None,
+            has_warning,
+        )
+    }
+
+    fn build_source_get_object_output(body: Vec<u8>) -> GetObjectOutput {
+        GetObjectOutput::builder()
+            .e_tag(FAKE_S3_SOURCE_E_TAG)
+            .content_length(body.len() as i64)
+            .last_modified(DateTime::from_secs(1_700_000_000))
+            .body(ByteStream::from(body))
+            .build()
+    }
+
+    fn respond_to_copy_object(_request: &RecordedRequest) -> (u16, &'static str) {
+        (
+            200,
+            "<CopyObjectResult><ETag>&quot;0123456789abcdef0123456789abcdef&quot;</ETag>\
+             <LastModified>2026-01-01T00:00:00.000Z</LastModified></CopyObjectResult>",
+        )
+    }
+
+    #[tokio::test]
+    async fn singlepart_server_side_copy_sends_if_match() {
+        init_dummy_tracing_subscriber();
+
+        let fake_s3 = FakeS3::start(respond_to_copy_object).await;
+        let config = build_fake_s3_config(&fake_s3, &["--server-side-copy", "--if-match"]);
+        let mut upload_manager =
+            build_fake_s3_upload_manager(config, 4, Some(FAKE_S3_TARGET_E_TAG.to_string())).await;
+
+        upload_manager
+            .upload(
+                "target-bucket",
+                "target-key",
+                build_source_get_object_output(b"data".to_vec()),
+            )
+            .await
+            .unwrap();
+
+        let requests = fake_s3.requests();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].method, "PUT");
+        assert!(requests[0].target.starts_with("/target-bucket/target-key"));
+        assert_eq!(
+            requests[0].header("x-amz-copy-source"),
+            Some("source-bucket/source-key")
+        );
+        // Without this header, the target object is overwritten unconditionally.
+        assert_eq!(requests[0].header("if-match"), Some(FAKE_S3_TARGET_E_TAG));
+    }
+
+    #[tokio::test]
+    async fn singlepart_server_side_copy_without_if_match_sends_no_if_match() {
+        init_dummy_tracing_subscriber();
+
+        let fake_s3 = FakeS3::start(respond_to_copy_object).await;
+        let config = build_fake_s3_config(&fake_s3, &["--server-side-copy"]);
+        let mut upload_manager = build_fake_s3_upload_manager(config, 4, None).await;
+
+        upload_manager
+            .upload(
+                "target-bucket",
+                "target-key",
+                build_source_get_object_output(b"data".to_vec()),
+            )
+            .await
+            .unwrap();
+
+        let requests = fake_s3.requests();
+        assert_eq!(requests.len(), 1);
+        assert!(requests[0].header("x-amz-copy-source").is_some());
+        assert_eq!(requests[0].header("if-match"), None);
+    }
+
+    // CreateMultipartUpload succeeds, and UploadPart and AbortMultipartUpload fail.
+    fn respond_with_failing_part_and_abort(request: &RecordedRequest) -> (u16, &'static str) {
+        if request.method == "POST" && request.target.ends_with("?uploads") {
+            return (
+                200,
+                "<InitiateMultipartUploadResult><Bucket>target-bucket</Bucket><Key>target-key</Key>\
+                 <UploadId>fake-upload-id</UploadId></InitiateMultipartUploadResult>",
+            );
+        }
+
+        (500, FAKE_S3_ERROR_RESPONSE)
+    }
+
+    #[tokio::test]
+    async fn multipart_upload_keeps_upload_error_when_abort_fails() {
+        init_dummy_tracing_subscriber();
+
+        const SOURCE_SIZE: usize = 5 * 1024 * 1024;
+
+        let fake_s3 = FakeS3::start(respond_with_failing_part_and_abort).await;
+        let config = build_fake_s3_config(
+            &fake_s3,
+            &[
+                "--multipart-threshold",
+                "5MiB",
+                "--multipart-chunksize",
+                "5MiB",
+            ],
+        );
+        let mut upload_manager =
+            build_fake_s3_upload_manager(config, SOURCE_SIZE as u64, None).await;
+
+        let error = upload_manager
+            .upload(
+                "target-bucket",
+                "target-key",
+                build_source_get_object_output(vec![0u8; SOURCE_SIZE]),
+            )
+            .await
+            .unwrap_err();
+
+        // The upload error decides whether the object is force-retried, so the failed abort
+        // must not replace it.
+        let error_chain = format!("{error:?}");
+        assert!(error_chain.contains("upload_parts() failed."));
+        assert!(!error_chain.contains("abort_multipart_upload() failed."));
+
+        let requests = fake_s3.requests();
+        assert!(
+            requests.iter().any(|request| request.method == "PUT"
+                && request.target.contains("uploadId=fake-upload-id"))
+        );
+        // The abort was attempted, and it was the last request.
+        let last_request = requests.last().unwrap();
+        assert_eq!(last_request.method, "DELETE");
+        assert!(last_request.target.contains("uploadId=fake-upload-id"));
     }
 
     fn init_dummy_tracing_subscriber() {
