@@ -2472,7 +2472,10 @@ mod tests {
         .await;
 
         let (sender, _) = async_channel::bounded::<S3syncObject>(1000);
-        storage.list_objects(&sender, 1000, false).await.unwrap();
+        storage
+            .list_objects(&sender, 1000, false, false)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -2507,7 +2510,10 @@ mod tests {
         .await;
 
         let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
-        storage.list_objects(&sender, 1000, false).await.unwrap();
+        storage
+            .list_objects(&sender, 1000, false, false)
+            .await
+            .unwrap();
 
         if let S3syncObject::NotVersioning(object) = receiver.recv().await.unwrap() {
             assert_eq!(object.key().unwrap(), "dir1/data1");
