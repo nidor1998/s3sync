@@ -961,7 +961,9 @@ impl ObjectSyncer {
                 }
 
                 // If preprocess_callback is registered and preprocess was cancelled, e_tag will be None.
+                // Local storage never runs the preprocess callback and never returns an e_tag.
                 if self.base.config.preprocess_manager.is_callback_registered()
+                    && !self.base.target.as_ref().unwrap().is_local_storage()
                     && put_object_output_result.as_ref().unwrap().e_tag.is_none()
                 {
                     is_callback_cancelled = true;
