@@ -1,6 +1,6 @@
 [package]
 name = "s3sync"
-version = "1.64.0"
+version = "1.64.1"
 edition = "2024"
 authors = ["nidor1998 <nidor1998@gmail.com>"]
 description = "Reliable, flexible, and fast synchronization tool for S3."
@@ -13,25 +13,25 @@ keywords = ["AWS", "Amazon", "S3", "sync"]
 categories = ["command-line-utilities", "filesystem", "asynchronous", "concurrency"]
 
 [dependencies]
-anyhow = { version = "1.0.104" }
+anyhow = { version = "1.0.105" }
 async-trait = "0.1.92"
 async-channel = "2.5.0"
 aws-config = { version = "1.13.3", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio", "credentials-process", "sso"] }
 aws-runtime = "1.10.4"
 aws-sdk-s3 = { version = "1.161.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
-aws-smithy-runtime-api = "1.22.0"
-aws-smithy-types = { version = "1.9.4" }
+aws-smithy-runtime-api = "1.22.1"
+aws-smithy-types = { version = "1.9.5" }
 aws-smithy-types-convert = { version = "0.62.0", features = ["convert-time"] }
 aws-types = "1.7.0"
 bitflags = "2.13.2"
 base64 = "0.23.1"
 byte-unit = "5.2.6"
 cfg-if = "1.0.5"
-clap = { version = "4.6.9", features = ["derive", "env", "cargo", "string"] }
+clap = { version = "4.6.10", features = ["derive", "env", "cargo", "string"] }
 clap_complete = "4.6.12"
 clap-verbosity-flag = "3.0.4"
 crc32c = "0.6.9"
-crc32fast = "1.5.5"
+crc32fast = "1.5.6"
 crc-fast = "1.10.0"
 dyn-clone = "1.0.20"
 fancy-regex = "0.20.2"
@@ -42,7 +42,7 @@ md5 = "0.8.1"
 mime_guess = "2.0.5"
 hex = "0.4.3"
 http-body-util = "0.1.5"
-hyper = "1.12.0"
+hyper = "1.13.0"
 indicatif = "0.18.6"
 log = "0.4.35"
 pin-project = "1.2.0"
