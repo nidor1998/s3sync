@@ -10,6 +10,7 @@ use tokio::time::Instant;
 use tracing::debug;
 
 const UNKNOWN_E_TAG_VALUE: &str = "UNKNOWN";
+const WHOLE_FILE_HASH_BUFFER_SIZE: usize = 8 * 1024 * 1024;
 
 pub fn verify_e_tag(
     verify_multipart_upload: bool,
@@ -201,6 +202,49 @@ pub async fn generate_e_tag_hash_from_path_with_auto_chunksize(
     hash
 }
 
+/// Generates the ETag of a single-part object from a local file: the MD5 digest of the whole file.
+///
+/// The file is digested through a fixed-size buffer, so the memory usage does not depend on the file size.
+async fn generate_whole_file_e_tag_hash_from_path(
+    path: &Path,
+    cancellation_token: PipelineCancellationToken,
+) -> Result<String> {
+    debug!(
+        path = path.to_str(),
+        "generate_whole_file_e_tag_hash_from_path() start. It will take a time if the file is large."
+    );
+
+    let etag_generate_start_time = Instant::now();
+
+    let mut file = File::open(path).await?;
+    let mut buffer = vec![0u8; WHOLE_FILE_HASH_BUFFER_SIZE];
+    let mut md5_context = md5::Context::new();
+    loop {
+        let read_size = file.read(buffer.as_mut_slice()).await?;
+        if read_size == 0 {
+            break;
+        }
+        md5_context.consume(&buffer[..read_size]);
+
+        if cancellation_token.is_cancelled() {
+            debug!(
+                path = path.to_str(),
+                "generate_whole_file_e_tag_hash_from_path() cancelled"
+            );
+            return Err(anyhow!(S3syncError::Cancelled));
+        }
+    }
+
+    let hash = generate_e_tag_hash(md5_context.finalize().as_slice(), 0);
+    debug!(
+        path = path.to_str(),
+        duration_ms = etag_generate_start_time.elapsed().as_millis(),
+        "generate_whole_file_e_tag_hash_from_path() end."
+    );
+
+    Ok(hash)
+}
+
 /// Generates the ETag of a local file for comparison with an S3 object when `--auto-chunksize` is enabled.
 ///
 /// `object_parts` are the part sizes of the S3 object. If it is empty, the S3 object has no parts
@@ -225,14 +269,7 @@ pub async fn generate_e_tag_hash_from_path_for_check(
     if !is_multipart_upload_e_tag(s3_e_tag) {
         // The S3 object is a single-part object, and its ETag is the MD5 digest of the whole object
         // regardless of the size. So we need to calculate the ETag from the whole file.
-        let file_size = tokio::fs::metadata(path).await?.len() as usize;
-        return generate_e_tag_hash_from_path(
-            path,
-            file_size + 1,
-            file_size + 1,
-            cancellation_token,
-        )
-        .await;
+        return generate_whole_file_e_tag_hash_from_path(path, cancellation_token).await;
     }
 
     // The S3 object is a multipart upload, but the parts information is not available.
