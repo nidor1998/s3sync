@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.64.1] - 2026-11-28
+
+Bug fix release.
 
 ### Fixed
 
@@ -33,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   these errors failed the sync immediately.
     - A failure to abort the multipart upload after such an error no longer replaces the original error, so the
       object is still force-retried. The abort failure is logged as a warning.
+- Fixed the remaining parts of a multipart upload continuing to upload after one part had failed. They kept
+  uploading to the aborted multipart upload, held upload permits, and had their bytes counted a second time when
+  the object was retried. The remaining parts are now stopped as soon as a part fails.
 - Fixed a false ETag mismatch with `--check-etag` and `--auto-chunksize` when an object had been uploaded in a
   single part but the local file was not smaller than the multipart threshold of the checking run. An ETag without
   the `-N` suffix is the MD5 digest of the whole object, so the whole local file is now digested instead of
@@ -63,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--filter-larger-size`, `--rate-limit-bandwidth`, `--multipart-threshold`, `--multipart-chunksize`, and
   `--lua-vm-memory-limit`, and in a new `Size suffixes` section of `FULL_README.md`. A suffix ending in a lowercase
   `b` means bits, not bytes (e.g. `8mb` is 1MB). The behavior is unchanged.
+- Updated other dependencies
 
 ## [1.64.0] - 2026-11-24
 
