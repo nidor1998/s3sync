@@ -186,6 +186,9 @@ impl LocalStorage {
             warn!(path = path, error = error, source = source, message);
 
             if warn_as_error || self.config.sync_with_delete {
+                // Cancel here, not only in the caller: with --delete, the deletion stage must
+                // never start from an incomplete source listing.
+                self.cancellation_token.cancel();
                 return Err(anyhow!("failed to is_regular_file(): {:?}.", e));
             }
 
@@ -1065,9 +1068,9 @@ impl LocalStorage {
                 usize::MAX // effectively unlimited
             };
 
-            let mut current_permit = Some(permit);
-
-            let mut join_set = JoinSet::new();
+            // Child directories are listed only after this directory's own entries are done, so
+            // that this worker holds its permit for as long as it does any work of its own.
+            let mut child_dirs = Vec::new();
             for entry in WalkDir::new(&path)
                 .follow_links(self.config.follow_symlinks)
                 .max_depth(max_depth)
@@ -1099,7 +1102,7 @@ impl LocalStorage {
                     event_data.message = Some(format!("{message}: {error}"));
                     self.config.event_manager.trigger_event(event_data).await;
 
-                    if warn_as_error || sync_with_delete {
+                    if is_fatal_walkdir_error(&e, warn_as_error, sync_with_delete) {
                         self.cancellation_token.cancel();
                         return Err(anyhow!("failed to local list(): {:?}.", e));
                     }
@@ -1110,46 +1113,8 @@ impl LocalStorage {
                     && entry.as_ref().unwrap().file_type().is_dir()
                     && entry.as_ref().unwrap().path() != path
                 {
-                    let storage = self.clone();
-                    let sender = sender.clone();
-                    let entry = entry.as_ref().unwrap().clone();
-
-                    if let Some(permit) = current_permit {
-                        drop(permit);
-                        current_permit = None;
-                    }
-
-                    let new_permit = self
-                        .listing_worker_semaphore
-                        .clone()
-                        .acquire_owned()
-                        .await
-                        .unwrap();
-
-                    join_set.spawn(async move {
-                        trace!(
-                            "is_root_prefix: {}, child dir: {:?}",
-                            is_root_prefix,
-                            &entry.path().to_string_lossy()
-                        );
-                        storage
-                            .list_objects_with_parallel(
-                                &entry.path().to_string_lossy(),
-                                &sender,
-                                _max_keys,
-                                current_depth + 1,
-                                new_permit,
-                                warn_as_error,
-                                sync_with_delete,
-                            )
-                            .await
-                    });
-                }
-
-                // Reap finished child directories without waiting, so that a failure is reported
-                // promptly while the other child directories are listed concurrently.
-                while let Some(join_result) = join_set.try_join_next() {
-                    self.check_child_listing_result(join_result)?;
+                    child_dirs.push(entry.unwrap());
+                    continue;
                 }
 
                 if !self
@@ -1225,13 +1190,55 @@ impl LocalStorage {
                 }
             }
 
-            // Waiting here, not inside the loop above, is what lets child directories run in parallel.
-            while let Some(join_result) = join_set.join_next().await {
-                self.check_child_listing_result(join_result)?;
+            // Release the permit before waiting for the children; holding it would deadlock once
+            // every permit is held by a waiting parent. From here on this task only waits, so the
+            // number of directories being walked never exceeds --max-parallel-listings.
+            drop(permit);
+
+            let mut join_set = JoinSet::new();
+            for child_dir in child_dirs {
+                // Reap finished child directories without waiting, so that a failure is reported
+                // promptly while the other child directories are listed concurrently.
+                while let Some(join_result) = join_set.try_join_next() {
+                    self.check_child_listing_result(join_result)?;
+                }
+
+                if self.cancellation_token.is_cancelled() {
+                    debug!("list() canceled.");
+                    break;
+                }
+
+                let child_permit = self
+                    .listing_worker_semaphore
+                    .clone()
+                    .acquire_owned()
+                    .await
+                    .unwrap();
+
+                let storage = self.clone();
+                let sender = sender.clone();
+                join_set.spawn(async move {
+                    trace!(
+                        "is_root_prefix: {}, child dir: {:?}",
+                        is_root_prefix,
+                        &child_dir.path().to_string_lossy()
+                    );
+                    storage
+                        .list_objects_with_parallel(
+                            &child_dir.path().to_string_lossy(),
+                            &sender,
+                            _max_keys,
+                            current_depth + 1,
+                            child_permit,
+                            warn_as_error,
+                            sync_with_delete,
+                        )
+                        .await
+                });
             }
 
-            if let Some(permit) = current_permit {
-                drop(permit);
+            while let Some(join_result) = join_set.join_next().await {
+                self.check_child_listing_result(join_result)?;
             }
 
             Ok(())
@@ -1364,7 +1371,7 @@ impl StorageTrait for LocalStorage {
                 event_data.message = Some(format!("{message}: {error}"));
                 self.config.event_manager.trigger_event(event_data).await;
 
-                if warn_as_error || sync_with_delete {
+                if is_fatal_walkdir_error(&e, warn_as_error, sync_with_delete) {
                     self.cancellation_token.cancel();
                     return Err(anyhow!("failed to list(): {:?}.", e));
                 }
@@ -1947,6 +1954,19 @@ async fn simulate_not_found_test_case() {
             let _ = tokio::fs::remove_file(PathBuf::from(NOT_FOUND_TEST_FILE)).await;
         }
     }
+}
+
+/// Decides whether a WalkDir error must fail the listing.
+///
+/// With `--delete`, only a real I/O failure is fatal, because it can hide source files and so
+/// cause target objects to be deleted by mistake. A symlink loop has no I/O error and hides
+/// nothing: the files behind it are listed through their real path.
+fn is_fatal_walkdir_error(
+    error: &walkdir::Error,
+    warn_as_error: bool,
+    sync_with_delete: bool,
+) -> bool {
+    warn_as_error || (sync_with_delete && error.io_error().is_some())
 }
 
 fn remove_local_path_prefix(path: &str, prefix: &str) -> String {
@@ -4236,11 +4256,9 @@ mod tests {
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let has_warning = Arc::new(AtomicBool::new(false));
-        let storage = build_local_storage_struct(
-            &config,
-            create_pipeline_cancellation_token(),
-            has_warning.clone(),
-        );
+        let cancellation_token = create_pipeline_cancellation_token();
+        let storage =
+            build_local_storage_struct(&config, cancellation_token.clone(), has_warning.clone());
 
         let mut permissions = fs::metadata(&sub_dir).unwrap().permissions();
         permissions.set_mode(0o000);
@@ -4253,6 +4271,8 @@ mod tests {
 
         assert!(error_result.is_err());
         assert!(has_warning.load(Ordering::SeqCst));
+        // The deletion stage must not start from an incomplete source listing.
+        assert!(cancellation_token.is_cancelled());
     }
 
     #[tokio::test]
@@ -4431,6 +4451,106 @@ mod tests {
         assert!(listing_task.await.unwrap().is_ok());
         assert_eq!(object_count, SUB_DIR_COUNT * 2);
         assert_eq!(semaphore.available_permits(), MAX_PARALLEL_LISTINGS);
+    }
+
+    #[tokio::test]
+    async fn list_storage_parallel_holds_permit_while_listing_own_files() {
+        init_dummy_tracing_subscriber();
+
+        use std::fs;
+
+        const MAX_PARALLEL_LISTINGS: usize = 16;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        for dir_index in 0..8 {
+            fs::create_dir(temp_dir.path().join(format!("dir{dir_index}"))).unwrap();
+        }
+        for file_index in 0..3 {
+            fs::write(temp_dir.path().join(format!("{file_index}.dat")), b"data").unwrap();
+        }
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+        let config = build_parallel_listing_test_config(&target_path, "16");
+        let storage = build_local_storage_struct(
+            &config,
+            create_pipeline_cancellation_token(),
+            Arc::new(AtomicBool::new(false)),
+        );
+        let semaphore = storage.listing_worker_semaphore.clone();
+
+        // Nobody receives yet, so the root directory blocks on send() with files left to list.
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1);
+        let listing_task =
+            tokio::spawn(async move { storage.list_objects(&sender, 1000, false, false).await });
+
+        let root_blocked = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+            while !receiver.is_full() {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await;
+        assert!(root_blocked.is_ok());
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        // The root directory still has files to list, so it must still hold its permit.
+        assert_eq!(semaphore.available_permits(), MAX_PARALLEL_LISTINGS - 1);
+
+        let mut object_count = 0;
+        while receiver.recv().await.is_ok() {
+            object_count += 1;
+        }
+
+        assert!(listing_task.await.unwrap().is_ok());
+        assert_eq!(object_count, 3);
+        assert_eq!(semaphore.available_permits(), MAX_PARALLEL_LISTINGS);
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn list_storage_symlink_loop_is_not_fatal_for_sync_with_delete() {
+        init_dummy_tracing_subscriber();
+
+        use std::fs;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let sub_dir = temp_dir.path().join("a");
+        fs::create_dir(&sub_dir).unwrap();
+        fs::write(sub_dir.join("file.dat"), b"data").unwrap();
+        std::os::unix::fs::symlink("..", sub_dir.join("self")).unwrap();
+
+        let target_path = format!("{}/", temp_dir.path().to_str().unwrap());
+
+        for max_parallel_listings in ["1", "16"] {
+            let config = build_parallel_listing_test_config(&target_path, max_parallel_listings);
+            assert!(config.follow_symlinks);
+
+            // With --delete, the loop is a warning and every file is still listed.
+            let cancellation_token = create_pipeline_cancellation_token();
+            let has_warning = Arc::new(AtomicBool::new(false));
+            let storage = build_local_storage_struct(
+                &config,
+                cancellation_token.clone(),
+                has_warning.clone(),
+            );
+            let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+            let result = storage.list_objects(&sender, 1000, false, true).await;
+            assert!(result.is_ok(), "{result:?}");
+            assert!(!cancellation_token.is_cancelled());
+            assert!(has_warning.load(Ordering::SeqCst));
+            assert_eq!(receiver.len(), 1);
+
+            // --warn-as-error still makes it fatal.
+            let cancellation_token = create_pipeline_cancellation_token();
+            let storage = build_local_storage_struct(
+                &config,
+                cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
+            );
+            let (sender, _receiver) = async_channel::bounded::<S3syncObject>(1000);
+            let result = storage.list_objects(&sender, 1000, true, false).await;
+            assert!(result.is_err());
+            assert!(cancellation_token.is_cancelled());
+        }
     }
 
     #[tokio::test]
