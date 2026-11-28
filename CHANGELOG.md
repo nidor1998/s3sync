@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed `--if-match` being ignored for single-part objects with `--server-side-copy`. The `If-Match` header was
   not added to `CopyObject` requests, so the target object was overwritten unconditionally. Multipart copies were
   not affected.
+- Fixed every object synced from S3 to local storage being counted as skipped when a preprocess callback was
+  registered (e.g. `--preprocess-callback-lua-script`). A `SYNC_CANCEL` event was also triggered for each object.
+  The files themselves were downloaded correctly. A preprocess callback is not called for a local target, so
+  these objects are now counted as synced.
 
 ### Changed
 
