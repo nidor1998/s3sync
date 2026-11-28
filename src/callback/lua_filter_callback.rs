@@ -82,7 +82,7 @@ impl LuaFilterCallback {
 mod tests {
     use super::*;
     use aws_sdk_s3::primitives::DateTime;
-    use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumType, Object};
+    use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumType, DeleteMarkerEntry, Object};
 
     #[tokio::test]
     async fn create_callback() {
@@ -113,5 +113,26 @@ mod tests {
 
         // The lua filter returns a match for keys containing "dir21/".
         assert!(callback.filter(&object).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn filter_delete_marker() {
+        let mut callback = LuaFilterCallback::new(8 * 1024 * 1024, false, false, 5000);
+        callback
+            .load_and_compile("./test_data/script/filter_callback.lua")
+            .unwrap();
+
+        // With --enable-versioning/--point-in-time, delete markers reach the filter
+        // before packing. They have no checksum, so those fields must be nil.
+        let delete_marker = S3syncObject::DeleteMarker(
+            DeleteMarkerEntry::builder()
+                .key("dir21/deleted.dat")
+                .version_id("version1")
+                .is_latest(true)
+                .last_modified(DateTime::from_secs(1))
+                .build(),
+        );
+
+        assert!(callback.filter(&delete_marker).await.unwrap());
     }
 }

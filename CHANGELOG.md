@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed S3 prefix parsing so that the prefix of an S3 path (`s3://bucket/prefix`) is used exactly as given, because
+  any UTF-8 string is a valid S3 key. Previously, the path was parsed as a URL, so a different key could be
+  addressed silently.
+    - `?` and `#` are now part of the prefix. Previously, the prefix was truncated at these characters (e.g.
+      `s3://bucket/data#old/` was treated as `data`).
+    - Percent escapes are no longer decoded (e.g. `%20` stays `%20` instead of becoming a space), and a prefix such
+      as `%FF` is no longer rejected.
+    - `.` and `..` segments are no longer collapsed (e.g. `a/../b` stays `a/../b` instead of becoming `b`).
+    - `?` or `#` directly after the bucket name (e.g. `s3://bucket?x`) is rejected with an argument error.
+- Fixed a panic when a sync warning (a force retryable error, object not found, access denied, a failed
+  precondition, or a Glacier `InvalidObjectState`) occurred with `--enable-versioning`. The warning event for an
+  object with several versions now has no source version ID.
+- Fixed a panic when a ranged `GetObject` for the second or later part failed while downloading an object from S3
+  to local storage in multiple parts. The error is now returned and handled like any other download error.
+- Fixed a panic in the Lua filter callback when a delete marker reached it with `--enable-versioning` or
+  `--point-in-time`. A delete marker has no checksum, so its checksum fields are now `nil`.
+- Fixed `--metadata` discarding the s3sync origin metadata added by `--enable-versioning` and
+  `--put-last-modified-metadata`. With `--enable-versioning`, the missing origin version ID caused the same
+  versions to be synced again on every run.
+- Fixed force retry (`--force-retry-count`) not being applied to timeouts and connection errors in
+  `CreateMultipartUpload`, `UploadPart`, `UploadPartCopy`, `CompleteMultipartUpload` and `CopyObject`. Previously,
+  these errors failed the sync immediately.
+    - A failure to abort the multipart upload after such an error no longer replaces the original error, so the
+      object is still force-retried. The abort failure is logged as a warning.
+- Fixed a false ETag mismatch with `--check-etag` and `--auto-chunksize` when an object had been uploaded in a
+  single part but the local file was not smaller than the multipart threshold of the checking run. An ETag without
+  the `-N` suffix is the MD5 digest of the whole object, so the whole local file is now digested instead of
+  calculating a multipart ETag. Previously, such objects were treated as modified.
+- Fixed parallel listing of local directories (`--max-parallel-listings`) listing subdirectories one at a time.
+  Subdirectories are now listed concurrently.
+- Fixed `--delete` deleting target objects that still existed in the local source. A local directory or file that
+  could not be read (e.g. permission denied) was skipped with a warning, so the objects under it were treated as
+  removed from the source and deleted from the target. With `--delete`, such a failure is now an error and
+  nothing is deleted.
+    - This also applies to a local target, so a target directory or file that cannot be read now fails the sync
+      instead of being skipped with a warning.
+    - A file that is removed while the local storage is being listed is now skipped without a warning.
+      Previously, it was reported as a warning (an error with `--warn-as-error`).
+    - A symbolic link loop is still skipped with a warning, because it hides no files.
+- Fixed `--if-match` being ignored for single-part objects with `--server-side-copy`. The `If-Match` header was
+  not added to `CopyObject` requests, so the target object was overwritten unconditionally. Multipart copies were
+  not affected.
+- Fixed every object synced from S3 to local storage being counted as skipped when a preprocess callback was
+  registered (e.g. `--preprocess-callback-lua-script`). A `SYNC_CANCEL` event was also triggered for each object.
+  The files themselves were downloaded correctly. A preprocess callback is not called for a local target, so
+  these objects are now counted as synced.
+
+### Changed
+
+- Removed the `percent-encoding` crate.
+- Documented that size suffixes are case-sensitive in the help text of `--filter-smaller-size`,
+  `--filter-larger-size`, `--rate-limit-bandwidth`, `--multipart-threshold`, `--multipart-chunksize`, and
+  `--lua-vm-memory-limit`, and in a new `Size suffixes` section of `FULL_README.md`. A suffix ending in a lowercase
+  `b` means bits, not bytes (e.g. `8mb` is 1MB). The behavior is unchanged.
+
 ## [1.64.0] - 2026-11-24
 
 Added support for the MD5, SHA512, XXHASH128, XXHASH3 and XXHASH64 additional checksum algorithms.

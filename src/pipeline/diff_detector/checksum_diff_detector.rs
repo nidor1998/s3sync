@@ -249,7 +249,7 @@ impl ChecksumDiffDetector {
                     target_version_id = head_target_object_output.version_id().unwrap_or_default(),
                     source_last_modified = source_last_modified,
                     target_last_modified = target_last_modified,
-                    source_size = source_version_id.clone().unwrap_or_default(),
+                    source_size = head_source_object_output.content_length().unwrap(),
                     target_size = head_target_object_output.content_length().unwrap(),
                 );
 

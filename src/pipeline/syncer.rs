@@ -26,6 +26,7 @@ use crate::types::{
 use anyhow::{Context, Error, Result, anyhow};
 use aws_sdk_s3::operation::complete_multipart_upload::CompleteMultipartUploadError;
 use aws_sdk_s3::operation::copy_object::CopyObjectError;
+use aws_sdk_s3::operation::create_multipart_upload::CreateMultipartUploadError;
 use aws_sdk_s3::operation::delete_object::{DeleteObjectError, DeleteObjectOutput};
 use aws_sdk_s3::operation::delete_object_annotation::DeleteObjectAnnotationError;
 use aws_sdk_s3::operation::delete_object_tagging::DeleteObjectTaggingError;
@@ -39,6 +40,7 @@ use aws_sdk_s3::operation::list_object_versions::ListObjectVersionsError;
 use aws_sdk_s3::operation::put_object::{PutObjectError, PutObjectOutput};
 use aws_sdk_s3::operation::put_object_annotation::PutObjectAnnotationError;
 use aws_sdk_s3::operation::put_object_tagging::PutObjectTaggingError;
+use aws_sdk_s3::operation::upload_part::UploadPartError;
 use aws_sdk_s3::operation::upload_part_copy::UploadPartCopyError;
 use aws_sdk_s3::types::builders::ObjectPartBuilder;
 use aws_sdk_s3::types::{ChecksumAlgorithm, ChecksumMode, ObjectPart, Tag, Tagging};
@@ -185,8 +187,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -224,8 +225,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -259,8 +259,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -294,8 +293,7 @@ impl ObjectSyncer {
 
                     let mut event_data = EventData::new(EventType::SYNC_WARNING);
                     event_data.key = Some(object.key().to_string());
-                    event_data.source_version_id =
-                        object.version_id().map(|version_id| version_id.to_string());
+                    event_data.source_version_id = event_source_version_id(&object);
                     event_data.message = Some(message.to_string());
                     self.base
                         .config
@@ -323,8 +321,7 @@ impl ObjectSyncer {
 
                         let mut event_data = EventData::new(EventType::SYNC_WARNING);
                         event_data.key = Some(object.key().to_string());
-                        event_data.source_version_id =
-                            object.version_id().map(|version_id| version_id.to_string());
+                        event_data.source_version_id = event_source_version_id(&object);
                         event_data.message = Some(message.to_string());
                         self.base
                             .config
@@ -964,7 +961,9 @@ impl ObjectSyncer {
                 }
 
                 // If preprocess_callback is registered and preprocess was cancelled, e_tag will be None.
+                // Local storage never runs the preprocess callback and never returns an e_tag.
                 if self.base.config.preprocess_manager.is_callback_registered()
+                    && !self.base.target.as_ref().unwrap().is_local_storage()
                     && put_object_output_result.as_ref().unwrap().e_tag.is_none()
                 {
                     is_callback_cancelled = true;
@@ -2647,6 +2646,14 @@ impl ObjectSyncer {
     }
 }
 
+// PackedVersions holds several versions, so there is no single source version id.
+fn event_source_version_id(object: &S3syncObject) -> Option<String> {
+    match object {
+        S3syncObject::PackedVersions(_) => None,
+        _ => object.version_id().map(|version_id| version_id.to_string()),
+    }
+}
+
 fn is_force_retryable_error(e: &Error) -> bool {
     if let Some(error) = e.downcast_ref::<SdkError<HeadObjectError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
@@ -2700,6 +2707,29 @@ fn is_force_retryable_error(e: &Error) -> bool {
     if let Some(error) =
         e.downcast_ref::<SdkError<DeleteObjectAnnotationError, Response<SdkBody>>>()
     {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<CreateMultipartUploadError, Response<SdkBody>>>()
+    {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<UploadPartError, Response<SdkBody>>>() {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<UploadPartCopyError, Response<SdkBody>>>() {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) =
+        e.downcast_ref::<SdkError<CompleteMultipartUploadError, Response<SdkBody>>>()
+    {
+        return is_force_sdk_retryable_error(error);
+    }
+
+    if let Some(error) = e.downcast_ref::<SdkError<CopyObjectError, Response<SdkBody>>>() {
         return is_force_sdk_retryable_error(error);
     }
 
@@ -3014,6 +3044,42 @@ mod tests {
         )));
         assert!(is_force_retryable_error(&anyhow!(
             build_delete_object_annotation_timeout_error()
+        )));
+
+        assert!(is_force_retryable_error(&anyhow!(
+            build_create_multipart_upload_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_upload_part_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_upload_part_copy_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_complete_multipart_upload_timeout_error()
+        )));
+        assert!(is_force_retryable_error(&anyhow!(
+            build_copy_object_timeout_error()
+        )));
+
+        // upload_manager wraps SDK errors in several context layers.
+        assert!(is_force_retryable_error(
+            &anyhow!(build_upload_part_timeout_error())
+                .context("aws_sdk_s3::client::Client upload_part() failed.")
+                .context("upload_parts() failed.")
+        ));
+
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_copy_object_precondition_failed_error()
+        )));
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_upload_part_copy_precondition_failed_error()
+        )));
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_complete_multipart_upload_precondition_failed_error()
+        )));
+        assert!(!is_force_retryable_error(&anyhow!(
+            build_copy_object_access_denied_error()
         )));
 
         assert!(!is_force_retryable_error(&anyhow!("error")));
@@ -3360,7 +3426,7 @@ mod tests {
             "--force-retry-interval-milliseconds",
             "1",
             "./test_data/source/dir1/",
-            "s3://invalid_bucket?name!",
+            "s3://invalid_bucket",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let cancellation_token = create_pipeline_cancellation_token();
@@ -3424,7 +3490,7 @@ mod tests {
             "1",
             "--force-retry-interval-milliseconds",
             "1",
-            "s3://invalid_bucket?name!",
+            "s3://invalid_bucket",
             "./test_data/empty",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
@@ -3490,7 +3556,7 @@ mod tests {
             "--force-retry-interval-milliseconds",
             "1",
             "./test_data/source/dir1",
-            "s3://invalid_bucket?name!",
+            "s3://invalid_bucket",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
         let cancellation_token = create_pipeline_cancellation_token();
@@ -4005,6 +4071,28 @@ mod tests {
         SdkError::timeout_error("timeout_error")
     }
 
+    fn build_create_multipart_upload_timeout_error()
+    -> SdkError<CreateMultipartUploadError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_upload_part_timeout_error() -> SdkError<UploadPartError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_upload_part_copy_timeout_error() -> SdkError<UploadPartCopyError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_complete_multipart_upload_timeout_error()
+    -> SdkError<CompleteMultipartUploadError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
+    fn build_copy_object_timeout_error() -> SdkError<CopyObjectError, Response<SdkBody>> {
+        SdkError::timeout_error("timeout_error")
+    }
+
     fn build_get_object_tagging_timeout_error() -> SdkError<GetObjectTaggingError, Response<SdkBody>>
     {
         SdkError::timeout_error("timeout_error")
@@ -4156,6 +4244,92 @@ mod tests {
         SdkError::service_error(unhandled_error, response)
     }
 
+    struct NoopPreprocessCallback;
+
+    #[async_trait::async_trait]
+    impl crate::types::preprocess_callback::PreprocessCallback for NoopPreprocessCallback {
+        async fn preprocess_before_upload(
+            &mut self,
+            _key: &str,
+            _source_object: &GetObjectOutput,
+            _metadata: &mut crate::types::preprocess_callback::UploadMetadata,
+        ) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    // Local storage never returns an e_tag, so a registered preprocess callback must not make
+    // a successful sync to a local target look like a cancelled one.
+    #[tokio::test]
+    async fn sync_object_to_local_with_preprocess_callback_is_not_skipped() {
+        init_dummy_tracing_subscriber();
+
+        let args = vec![
+            "s3sync",
+            "--allow-both-local-storage",
+            "--head-each-target",
+            "./test_data/source/dir1/",
+            "./test_data/target/dir1/",
+        ];
+        let mut config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+        config
+            .preprocess_manager
+            .register_callback(NoopPreprocessCallback);
+        let cancellation_token = create_pipeline_cancellation_token();
+        let (stats_sender, stats_receiver) = async_channel::unbounded();
+
+        let StoragePair { source, target } = create_storage_pair(
+            config.clone(),
+            cancellation_token.clone(),
+            stats_sender,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await;
+        let (sender, receiver) = async_channel::bounded::<S3syncObject>(1000);
+        let (next_sender, _next_receiver) = async_channel::bounded::<S3syncObject>(1000);
+
+        sender
+            .send(S3syncObject::NotVersioning(
+                Object::builder()
+                    .key("6byte.dat")
+                    .size(6)
+                    .last_modified(DateTime::from_secs(i32::MAX as i64))
+                    .build(),
+            ))
+            .await
+            .unwrap();
+        sender.close();
+
+        let result = ObjectSyncer::new(
+            Stage::new(
+                config.clone(),
+                Some(dyn_clone::clone_box(&*source)),
+                Some(dyn_clone::clone_box(&*target)),
+                Some(receiver),
+                Some(next_sender),
+                cancellation_token.clone(),
+                Arc::new(AtomicBool::new(false)),
+            ),
+            0,
+            Arc::new(Mutex::new(SyncStatsReport::default())),
+            None,
+        )
+        .sync()
+        .await;
+
+        assert!(result.is_ok());
+
+        let mut completed = false;
+        while let Ok(stats) = stats_receiver.try_recv() {
+            match stats {
+                SyncComplete { .. } => completed = true,
+                SyncSkip { .. } => panic!("sync to local storage was counted as skipped"),
+                _ => {}
+            }
+        }
+        assert!(completed, "SyncComplete was not reported");
+    }
+
     async fn build_local_object_syncer(
         config: Config,
         target_key_map: Option<ObjectKeyMap>,
@@ -4260,6 +4434,47 @@ mod tests {
                 .build(),
         );
         let _ = syncer.sync_or_delete_object(object, None).await;
+    }
+
+    #[test]
+    fn event_source_version_id_packed_versions_is_none() {
+        let version = S3syncObject::Versioning(
+            aws_sdk_s3::types::ObjectVersion::builder()
+                .key("key1")
+                .version_id("version1")
+                .build(),
+        );
+        let packed = crate::types::pack_object_versions("key1", &vec![version]);
+
+        assert_eq!(event_source_version_id(&packed), None);
+    }
+
+    #[test]
+    fn event_source_version_id_unpacked_objects() {
+        let version = S3syncObject::Versioning(
+            aws_sdk_s3::types::ObjectVersion::builder()
+                .key("key1")
+                .version_id("version1")
+                .build(),
+        );
+        assert_eq!(
+            event_source_version_id(&version),
+            Some("version1".to_string())
+        );
+
+        let delete_marker = S3syncObject::DeleteMarker(
+            aws_sdk_s3::types::DeleteMarkerEntry::builder()
+                .key("key1")
+                .version_id("version2")
+                .build(),
+        );
+        assert_eq!(
+            event_source_version_id(&delete_marker),
+            Some("version2".to_string())
+        );
+
+        let not_versioning = S3syncObject::NotVersioning(Object::builder().key("key1").build());
+        assert_eq!(event_source_version_id(&not_versioning), None);
     }
 
     fn init_dummy_tracing_subscriber() {

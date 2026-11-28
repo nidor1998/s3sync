@@ -211,6 +211,66 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn s3_to_s3_with_metadata_option_does_not_resync() {
+        TestHelper::init_dummy_tracing_subscriber();
+
+        let helper = TestHelper::new().await;
+        let bucket1 = TestHelper::generate_bucket_name();
+        let bucket2 = TestHelper::generate_bucket_name();
+
+        {
+            let target_bucket_url = format!("s3://{}", bucket1);
+
+            helper.create_bucket(&bucket1, REGION).await;
+            helper.create_bucket(&bucket2, REGION).await;
+            helper.enable_bucket_versioning(&bucket1).await;
+            helper.enable_bucket_versioning(&bucket2).await;
+
+            helper.sync_test_data(&target_bucket_url).await;
+        }
+
+        let source_bucket_url = format!("s3://{}", bucket1);
+        let target_bucket_url = format!("s3://{}", bucket2);
+
+        // The second run must find every version already synced.
+        for expected_sync_complete in [5, 0] {
+            let args = vec![
+                "s3sync",
+                "--source-profile",
+                "s3sync-e2e-test",
+                "--target-profile",
+                "s3sync-e2e-test",
+                "--enable-versioning",
+                "--metadata",
+                "key1=value1",
+                &source_bucket_url,
+                &target_bucket_url,
+            ];
+
+            let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
+            let cancellation_token = create_pipeline_cancellation_token();
+            let mut pipeline = Pipeline::new(config.clone(), cancellation_token).await;
+
+            pipeline.run().await;
+            assert!(!pipeline.has_error());
+            let stats = TestHelper::get_stats_count(pipeline.get_stats_receiver());
+            assert_eq!(stats.sync_complete, expected_sync_complete);
+
+            let object_versions_list = helper.list_object_versions(&bucket2, "").await;
+            assert_eq!(object_versions_list.len(), 5);
+
+            let object = helper.get_object(&bucket2, "data1", None).await;
+            let metadata = object.metadata.unwrap();
+            assert_eq!(metadata.get("key1").unwrap(), "value1");
+            assert!(metadata.contains_key("s3sync_origin_version_id"));
+            assert!(metadata.contains_key("s3sync_origin_last_modified"));
+        }
+
+        helper.delete_bucket_with_cascade(&bucket1).await;
+        helper.delete_bucket_with_cascade(&bucket2).await;
+    }
+
+    #[tokio::test]
     async fn s3_to_s3_without_prefix() {
         TestHelper::init_dummy_tracing_subscriber();
 

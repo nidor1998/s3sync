@@ -486,6 +486,7 @@ impl StorageTrait for S3Storage {
         sender: &Sender<S3syncObject>,
         max_keys: i32,
         _warn_as_error: bool,
+        _sync_with_delete: bool,
     ) -> Result<()> {
         if self.config.max_parallel_listings > 1 {
             if !self.is_express_onezone_storage() {

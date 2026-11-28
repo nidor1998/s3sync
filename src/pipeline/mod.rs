@@ -1187,8 +1187,8 @@ mod tests {
             "1",
             "--force-retry-interval-milliseconds",
             "1",
-            "s3://invalid_bucket?name!",
-            "s3://invalid_bucket?name!",
+            "s3://invalid_bucket",
+            "s3://invalid_bucket",
         ];
         let config = Config::try_from(parse_from_args(args).unwrap()).unwrap();
 

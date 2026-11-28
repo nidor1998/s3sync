@@ -2584,7 +2584,6 @@ dependencies = [
  "mlua",
  "nix",
  "once_cell",
- "percent-encoding",
  "pin-project",
  "regex",
  "rusty-fork",
