@@ -934,8 +934,11 @@ mod tests {
     async fn generate_e_tag_hash_from_path_for_check_single_part_missing_file_test() {
         init_dummy_tracing_subscriber();
 
+        // A child of a fresh temporary directory can never collide with an existing file.
+        let temp_dir = tempfile::tempdir().unwrap();
+
         let result = generate_e_tag_hash_from_path_for_check(
-            &PathBuf::from("./playground/large_data/not_exist"),
+            &temp_dir.path().join("not_exist"),
             &Some(LARGE_FILE_MD5_DIGEST.to_string()),
             vec![],
             8 * 1024 * 1024,
