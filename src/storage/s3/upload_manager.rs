@@ -487,8 +487,16 @@ impl UploadManager {
             .await
             .context("upload_parts() failed.");
         if upload_result.is_err() {
-            self.abort_multipart_upload(bucket, key, upload_id).await?;
-            return Err(upload_result.err().unwrap());
+            // The upload error is returned even if the abort fails, because it decides whether
+            // the object is force-retried.
+            if let Err(e) = self.abort_multipart_upload(bucket, key, upload_id).await {
+                warn!(
+                    key = key,
+                    upload_id = upload_id,
+                    "failed to abort the multipart upload: {e:?}"
+                );
+            }
+            return upload_result;
         }
 
         upload_result

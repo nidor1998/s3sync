@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed force retry (`--force-retry-count`) not being applied to timeouts and connection errors in
   `CreateMultipartUpload`, `UploadPart`, `UploadPartCopy`, `CompleteMultipartUpload` and `CopyObject`. Previously,
   these errors failed the sync immediately.
+    - A failure to abort the multipart upload after such an error no longer replaces the original error, so the
+      object is still force-retried. The abort failure is logged as a warning.
 - Fixed a false ETag mismatch with `--check-etag` and `--auto-chunksize` when an object had been uploaded in a
   single part but the local file was not smaller than the multipart threshold of the checking run. An ETag without
   the `-N` suffix is the MD5 digest of the whole object, so the whole local file is now digested instead of
