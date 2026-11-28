@@ -521,20 +521,20 @@ It may include multipart upload in progress objects in the listing result."#)]
 
     #[arg(long, env, value_parser = human_bytes::check_human_bandwidth, help_heading = "Performance",
     long_help=r#"Rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB
-A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB)."#)]
+A suffix ending in a lowercase b means bits, not bytes (e.g. 64Mib = 8MiB)."#)]
     rate_limit_bandwidth: Option<String>,
 
     #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_THRESHOLD, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings",
     long_help=r#"Object size threshold that s3sync uses for multipart upload
 Allow suffixes: MB, MiB, GB, GiB.
-A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
+A suffix ending in a lowercase b means bits, not bytes (e.g. 64Mib = 8MiB).
 The larger the size, the larger the memory usage."#)]
     multipart_threshold: String,
 
     #[arg(long, env, conflicts_with_all = ["auto_chunksize"], default_value = DEFAULT_MULTIPART_CHUNKSIZE, value_parser = human_bytes::check_human_bytes, help_heading = "Multipart Settings",
     long_help=r#"Chunk size that s3sync uses for multipart upload of individual files
 Allow suffixes: MB, MiB, GB, GiB.
-A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
+A suffix ending in a lowercase b means bits, not bytes (e.g. 64Mib = 8MiB).
 The larger the size, the larger the memory usage."#)]
     multipart_chunksize: String,
 

@@ -1147,8 +1147,9 @@ Options that take a size (`--filter-smaller-size`, `--filter-larger-size`, `--ra
 with a suffix such as `KB`, `KiB`, `MB`, `MiB`, `GB`, `GiB`.
 
 The last letter of the suffix is case-sensitive: an uppercase `B` means bytes, and a lowercase `b` means bits.  
-A value written with a lowercase `b` is accepted without an error, but it is one eighth of the value written with an
-uppercase `B`.
+A value written with a lowercase `b` is parsed as bits, so it is one eighth of the value written with an uppercase `B`.  
+The converted byte count must also meet the minimum of the option. For example, `8mb` (1,000,000 bytes) is rejected by
+`--multipart-threshold` and `--multipart-chunksize` (minimum 5MiB) and by `--rate-limit-bandwidth` (minimum 1MiB).
 
 | Value  | Meaning     | Bytes         |
 |--------|-------------|---------------|
@@ -1480,18 +1481,18 @@ Performance:
           Rate limit objects per second [env: RATE_LIMIT_OBJECTS=]
       --rate-limit-bandwidth <RATE_LIMIT_BANDWIDTH>
           Rate limit bandwidth(bytes per sec). Allow suffixes: MB, MiB, GB, GiB
-          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB). [env: RATE_LIMIT_BANDWIDTH=]
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 64Mib = 8MiB). [env: RATE_LIMIT_BANDWIDTH=]
 
 Multipart Settings:
       --multipart-threshold <MULTIPART_THRESHOLD>
           Object size threshold that s3sync uses for multipart upload
           Allow suffixes: MB, MiB, GB, GiB.
-          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 64Mib = 8MiB).
           The larger the size, the larger the memory usage. [env: MULTIPART_THRESHOLD=] [default: 8MiB]
       --multipart-chunksize <MULTIPART_CHUNKSIZE>
           Chunk size that s3sync uses for multipart upload of individual files
           Allow suffixes: MB, MiB, GB, GiB.
-          A suffix ending in a lowercase b means bits, not bytes (e.g. 8Mb = 1MB).
+          A suffix ending in a lowercase b means bits, not bytes (e.g. 64Mib = 8MiB).
           The larger the size, the larger the memory usage. [env: MULTIPART_CHUNKSIZE=] [default: 8MiB]
       --auto-chunksize
           Automatically adjusts a chunk size to match the source or target.
