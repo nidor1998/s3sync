@@ -50,6 +50,67 @@ pub struct MutipartEtags {
     pub digest: Vec<u8>,
     pub part_number: i32,
 }
+/// The part tasks of one multipart upload attempt.
+///
+/// A failed part makes the whole attempt fail, and the object may then be retried right away.
+/// The other part tasks must not outlive the attempt: they would keep uploading to an aborted
+/// upload ID, hold upload permits and count their bytes a second time. So the remaining tasks
+/// are aborted when the attempt fails, and also when this is dropped by an early return.
+struct UploadPartTasks {
+    join_handles: FuturesUnordered<JoinHandle<Result<()>>>,
+}
+
+impl UploadPartTasks {
+    fn new() -> Self {
+        Self {
+            join_handles: FuturesUnordered::new(),
+        }
+    }
+
+    fn push(&mut self, join_handle: JoinHandle<Result<()>>) {
+        self.join_handles.push(join_handle);
+    }
+
+    async fn join_all(&mut self, cancellation_token: &PipelineCancellationToken) -> Result<()> {
+        while let Some(join_result) = self.join_handles.next().await {
+            let result = match join_result {
+                Err(join_error) => Err(anyhow!(join_error)),
+                Ok(Err(task_error)) => Err(task_error),
+                Ok(Ok(())) if cancellation_token.is_cancelled() => {
+                    Err(anyhow!(S3syncError::Cancelled))
+                }
+                Ok(Ok(())) => Ok(()),
+            };
+
+            if result.is_err() {
+                self.abort_and_wait().await;
+                return result;
+            }
+        }
+
+        Ok(())
+    }
+
+    // Waits until the aborted tasks have actually stopped, so that the caller can abort the
+    // multipart upload and retry without a part of this attempt still being in flight.
+    async fn abort_and_wait(&mut self) {
+        self.abort();
+        while self.join_handles.next().await.is_some() {}
+    }
+
+    fn abort(&self) {
+        for join_handle in self.join_handles.iter() {
+            join_handle.abort();
+        }
+    }
+}
+
+impl Drop for UploadPartTasks {
+    fn drop(&mut self) {
+        self.abort();
+    }
+}
+
 pub struct UploadManager {
     client: Arc<Client>,
     config: Config,
@@ -721,7 +782,7 @@ impl UploadManager {
 
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
-        let mut upload_parts_join_handles = FuturesUnordered::new();
+        let mut upload_part_tasks = UploadPartTasks::new();
         for (part_number, offset) in
             (1_i32..).zip((0..self.source_total_size as usize).step_by(config_chunksize))
         {
@@ -1175,15 +1236,10 @@ impl UploadManager {
                 Ok(())
             });
 
-            upload_parts_join_handles.push(task);
+            upload_part_tasks.push(task);
         }
 
-        while let Some(result) = upload_parts_join_handles.next().await {
-            result??;
-            if self.cancellation_token.is_cancelled() {
-                return Err(anyhow!(S3syncError::Cancelled));
-            }
-        }
+        upload_part_tasks.join_all(&self.cancellation_token).await?;
 
         let total_upload_size: i64 = shared_total_upload_size.lock().unwrap().iter().sum();
         if total_upload_size == self.source_total_size as i64 {
@@ -1233,7 +1289,7 @@ impl UploadManager {
         let first_chunk_size = get_object_output_first_chunk.content_length().unwrap();
         let mut body = get_object_output_first_chunk.body.into_async_read();
 
-        let mut upload_parts_join_handles = FuturesUnordered::new();
+        let mut upload_part_tasks = UploadPartTasks::new();
         let mut part_number = 1;
         let mut offset = 0;
 
@@ -1696,18 +1752,13 @@ impl UploadManager {
                 Ok(())
             });
 
-            upload_parts_join_handles.push(task);
+            upload_part_tasks.push(task);
 
             offset += object_part_chunksize;
             part_number += 1;
         }
 
-        while let Some(result) = upload_parts_join_handles.next().await {
-            result??;
-            if self.cancellation_token.is_cancelled() {
-                return Err(anyhow!(S3syncError::Cancelled));
-            }
-        }
+        upload_part_tasks.join_all(&self.cancellation_token).await?;
 
         let total_upload_size: i64 = shared_total_upload_size.lock().unwrap().iter().sum();
         if total_upload_size == self.source_total_size as i64 {
@@ -2449,6 +2500,84 @@ mod tests {
     use super::*;
     use aws_sdk_s3::primitives::DateTime;
     use tracing_subscriber::EnvFilter;
+
+    // Reports when the task that owns it has stopped, whether it finished or was aborted.
+    struct StoppedFlag(Arc<AtomicBool>);
+
+    impl Drop for StoppedFlag {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    fn spawn_never_ending_part_task(tasks: &mut UploadPartTasks) -> Arc<AtomicBool> {
+        let stopped = Arc::new(AtomicBool::new(false));
+        let stopped_flag = StoppedFlag(stopped.clone());
+        tasks.push(task::spawn(async move {
+            let _stopped_flag = stopped_flag;
+            std::future::pending::<()>().await;
+            Ok(())
+        }));
+        stopped
+    }
+
+    #[tokio::test]
+    async fn upload_part_tasks_join_all_succeeds() {
+        let mut tasks = UploadPartTasks::new();
+        tasks.push(task::spawn(async { Ok(()) }));
+        tasks.push(task::spawn(async { Ok(()) }));
+
+        let cancellation_token = crate::types::token::create_pipeline_cancellation_token();
+        assert!(tasks.join_all(&cancellation_token).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn upload_part_tasks_failed_part_stops_other_parts() {
+        let mut tasks = UploadPartTasks::new();
+        let stopped = spawn_never_ending_part_task(&mut tasks);
+        tasks.push(task::spawn(async { Err(anyhow!("upload_part() failed.")) }));
+
+        let cancellation_token = crate::types::token::create_pipeline_cancellation_token();
+        let result = tasks.join_all(&cancellation_token).await;
+
+        assert_eq!(result.unwrap_err().to_string(), "upload_part() failed.");
+        // No waiting here: join_all() returns only after the other part has stopped.
+        assert!(stopped.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn upload_part_tasks_cancellation_stops_other_parts() {
+        let mut tasks = UploadPartTasks::new();
+        let stopped = spawn_never_ending_part_task(&mut tasks);
+        tasks.push(task::spawn(async { Ok(()) }));
+
+        let cancellation_token = crate::types::token::create_pipeline_cancellation_token();
+        cancellation_token.cancel();
+        let result = tasks.join_all(&cancellation_token).await;
+
+        let error = result.unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<S3syncError>(),
+            Some(S3syncError::Cancelled)
+        ));
+        assert!(stopped.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn upload_part_tasks_drop_aborts_parts() {
+        let mut tasks = UploadPartTasks::new();
+        let stopped = spawn_never_ending_part_task(&mut tasks);
+
+        drop(tasks);
+
+        let part_stopped = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+            while !stopped.load(Ordering::SeqCst) {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await;
+        assert!(part_stopped.is_ok());
+    }
 
     // Every checksum field has a distinct value, so reading a wrong field is detected.
     const ALL_ADDITIONAL_CHECKSUMS: [(ChecksumAlgorithm, &str); 10] = [
